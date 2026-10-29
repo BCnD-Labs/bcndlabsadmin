@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Blackwall Admin | BCnD Labs</title>
+
+  <link rel="stylesheet" href="css/theme.css" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <script src="js/main.js" defer></script>
+</head>
+
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+
+  <div class="app-layout">
+    <aside class="sidebar">
+      <a class="brand" href="index.html">
+        <span class="brand-mark" aria-hidden="true">B</span>
+        <span>
+          <strong>Blackwall</strong>
+          <small>BCnD Labs / Admin</small>
+        </span>
+      </a>
+
+      <nav class="navigation" aria-label="Main navigation">
+        <a class="nav-link" href="#home">Home</a>
+
+        <details class="nav-group">
+          <summary class="nav-link">CMS</summary>
+
+          <div class="nav-submenu">
+            <a class="nav-link" href="#blog">Blog post</a>
+            <a class="nav-link" href="#newsletter">Newsletter</a>
+            <a class="nav-link" href="#assets">Assets</a>
+          </div>
+        </details>
+        <a class="nav-link" href="#notes">Notes</a>
+        <a class="nav-link" href="#todo">Todo</a>
+        <a class="nav-link" href="#projects">Projects</a>
+        <a class="nav-link" href="#tools">Tools</a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a class="nav-link" href="#settings">
+          <span aria-hidden="true">⚙</span>
+          Settings
+        </a>
+      </div>
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar">
+        <p>BCnD Labs <span>/ Blackwall Admin</span></p>
+        <span class="badge">Local prototype</span>
+      </header>
+      <main id="main-content">
+        <section class="view" id="home">
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">Workspace</p>
+              <h1>Home</h1>
+              <p class="muted">Your starting point for BCnD Labs.</p>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h2>Start here</h2>
+            <p>Capture a note or keep track of something you need to do.</p>
+
+            <div class="form-actions">
+              <a class="button button-primary" href="#notes">Open notes</a>
+              <a class="button button-secondary" href="#todo">Open todo</a>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="blog" hidden>
+          <h1>Blog post</h1>
+          <p class="muted">We’ll decide how the blog editor works later.</p>
+        </section>
+
+        <section class="view" id="newsletter" hidden>
+          <h1>Newsletter</h1>
+          <p class="muted">A place for future newsletter tools.</p>
+        </section>
+
+        <section class="view" id="assets" hidden>
+          <h1>Assets</h1>
+          <p class="muted">A place for website images and other files.</p>
+        </section>
+
+        <section class="view" id="notes" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">Capture</p>
+              <h1>Notes</h1>
+              <p class="muted">Simple notes for things worth keeping nearby.</p>
+            </div>
+          </div>
+
+          <p class="notice">Notes currently clear when you refresh the page.</p>
+
+          <div class="content-grid">
+            <div class="panel">
+              <h2>New note</h2>
+
+              <form id="note-form">
+                <div class="form-field">
+                  <label for="note-title">Title</label>
+                  <input id="note-title" name="title" type="text" required>
+                </div>
+
+                <div class="form-field">
+                  <label for="note-body">Note</label>
+                  <textarea id="note-body" name="body" rows="6" required></textarea>
+                </div>
+
+                <button class="button button-primary" type="submit">
+                  Add note
+                </button>
+              </form>
+            </div>
+
+            <div class="panel">
+              <h2>Your notes</h2>
+              <p class="muted" id="notes-empty">No notes yet.</p>
+              <ul class="item-list" id="note-list"></ul>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" id="todo" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">Keep moving</p>
+              <h1>Todo</h1>
+              <p class="muted">One task at a time.</p>
+            </div>
+          </div>
+
+          <p class="notice">Tasks currently clear when you refresh the page.</p>
+
+          <div class="panel">
+            <form id="task-form">
+              <div class="form-field">
+                <label for="task-text">New task</label>
+                <input id="task-text" name="task" type="text" placeholder="What needs to get done?" required>
+              </div>
+
+              <button class="button button-primary" type="submit">
+                Add task
+              </button>
+            </form>
+
+            <p class="muted" id="tasks-empty">No tasks yet.</p>
+            <ul class="item-list" id="task-list"></ul>
+          </div>
+        </section>
+
+        <section class="view" id="projects" hidden>
+          <h1>Projects</h1>
+          <p class="muted">We’ll shape this around your project workflow later.</p>
+        </section>
+
+        <section class="view" id="tools" hidden>
+          <h1>Tools</h1>
+          <p class="muted">
+            Future pages for Azure, Cloudflare, and other services.
+          </p>
+        </section>
+
+        <section class="view" id="settings" hidden>
+          <h1>Settings</h1>
+          <p class="muted">Workspace preferences will live here.</p>
+        </section>
+      </main>
+
+      <footer class="page-footer">
+        Blackwall Admin · Build a little. Use it. Improve it.
+      </footer>
+    </div>
+  </div>
+
+  <!-- An empty live region for future JavaScript notifications. -->
+  <div class="toast-region" id="toast-region" role="status" aria-live="polite"></div>
+</body>
+
+</html>
