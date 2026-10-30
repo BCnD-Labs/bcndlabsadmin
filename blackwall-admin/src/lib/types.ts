@@ -6,46 +6,36 @@ export type DateKey = string
 /** ISO timestamp. */
 export type Timestamp = string
 
-export type Priority = "low" | "medium" | "high" | "urgent"
-export type TaskStatus = "todo" | "in-progress" | "done"
-
+/** A to-do, Google Tasks style: no priorities, tags, links or dependencies. */
 export interface Task {
   id: ID
   title: string
-  notes?: string
-  status: TaskStatus
-  priority: Priority
+  details?: string
   due?: DateKey
-  projectId?: ID
-  createdAt: Timestamp
-  updatedAt: Timestamp
+  starred: boolean
+  done: boolean
   completedAt?: Timestamp
-}
-
-export interface CalendarEvent {
-  id: ID
-  title: string
-  date: DateKey
-  /** `HH:mm`; omitted for all-day events. */
-  start?: string
-  end?: string
-  location?: string
-  notes?: string
-  projectId?: ID
   createdAt: Timestamp
   updatedAt: Timestamp
 }
 
-export type NoteKind = "note" | "reference" | "link"
+export type NoteColor = "plain" | "amber" | "teal" | "rose" | "blue"
 
+/** A sticky / quick note. */
 export interface Note {
   id: ID
-  title: string
-  body: string
-  kind: NoteKind
-  url?: string
+  text: string
+  color: NoteColor
+  /** Pinned notes show on Home. */
   pinned: boolean
-  projectId?: ID
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+
+/** One daily log entry per day; `id` is the date. */
+export interface JournalEntry {
+  id: DateKey
+  text: string
   createdAt: Timestamp
   updatedAt: Timestamp
 }

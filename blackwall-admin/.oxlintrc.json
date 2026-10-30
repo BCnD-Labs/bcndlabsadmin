@@ -1,14 +1,27 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
+  "plugins": [
+    "react",
+    "typescript",
+    "oxc"
+  ],
   "rules": {
     "react/only-export-components": "off"
   },
   "overrides": [
     {
-      "files": ["src/features/home/**", "src/features/work/**"],
-      "rules": { "react/purity": "off" }
+      "files": [
+        "src/features/home/**",
+        "src/features/work/**",
+        "src/features/analytics/**",
+        "src/features/journal/**"
+      ],
+      "rules": {
+        "react/purity": "off"
+      }
     }
   ],
-  "ignorePatterns": ["dist"]
+  "ignorePatterns": [
+    "dist"
+  ]
 }

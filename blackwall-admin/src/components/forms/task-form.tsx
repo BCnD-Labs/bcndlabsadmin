@@ -1,56 +1,43 @@
+import { Star } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { PRIORITY_LABEL } from "@/components/common/tags"
-import type { Priority, Task, TaskStatus } from "@/lib/types"
+import type { Task } from "@/lib/types"
 import { useWorkspace } from "@/stores/workspace"
-import { Field, OptionSelect, ProjectSelect } from "./fields"
+import { Field } from "./fields"
 import { FormFrame } from "./form-frame"
-
-const PRIORITIES = (["urgent", "high", "medium", "low"] as Priority[]).map((value) => ({
-  value,
-  label: PRIORITY_LABEL[value],
-}))
-const STATUSES: { value: TaskStatus; label: string }[] = [
-  { value: "todo", label: "To do" },
-  { value: "in-progress", label: "In progress" },
-  { value: "done", label: "Done" },
-]
 
 export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Partial<Task>; onDone: () => void }) {
   const existing = useWorkspace((s) => s.tasks.find((t) => t.id === id))
   const { create, update, remove } = useWorkspace.getState()
+  const base = existing ?? defaults
   const [draft, setDraft] = useState({
-    title: existing?.title ?? defaults?.title ?? "",
-    notes: existing?.notes ?? defaults?.notes ?? "",
-    priority: existing?.priority ?? defaults?.priority ?? ("medium" as Priority),
-    status: existing?.status ?? defaults?.status ?? ("todo" as TaskStatus),
-    due: existing?.due ?? defaults?.due ?? "",
-    projectId: existing?.projectId ?? defaults?.projectId,
+    title: base?.title ?? "",
+    details: base?.details ?? "",
+    due: base?.due ?? "",
+    starred: base?.starred ?? false,
+    done: base?.done ?? false,
   })
   const set = (patch: Partial<typeof draft>) => setDraft((d) => ({ ...d, ...patch }))
 
   const save = () => {
     const values = {
       title: draft.title.trim(),
-      notes: draft.notes.trim() || undefined,
-      priority: draft.priority,
-      status: draft.status,
+      details: draft.details.trim() || undefined,
       due: draft.due || undefined,
-      projectId: draft.projectId,
+      starred: draft.starred,
+      done: draft.done,
     }
     if (existing) {
-      const completedAt =
-        values.status === "done" ? (existing.completedAt ?? new Date().toISOString()) : undefined
+      const completedAt = values.done ? (existing.completedAt ?? new Date().toISOString()) : undefined
       update("tasks", existing.id, { ...values, completedAt })
       toast.success("Task updated")
     } else {
-      create("tasks", {
-        ...values,
-        completedAt: values.status === "done" ? new Date().toISOString() : undefined,
-      })
-      toast.success("Task created")
+      create("tasks", { ...values, completedAt: values.done ? new Date().toISOString() : undefined })
+      toast.success("Task added")
     }
     onDone()
   }
@@ -71,25 +58,28 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
       }
     >
       <Field label="Title" htmlFor="task-title">
-        <Input id="task-title" autoFocus required value={draft.title} onChange={(e) => set({ title: e.target.value })} placeholder="What needs doing?" />
+        <Input id="task-title" autoFocus value={draft.title} onChange={(e) => set({ title: e.target.value })} placeholder="What needs doing?" />
       </Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Priority" htmlFor="task-priority">
-          <OptionSelect id="task-priority" value={draft.priority} onChange={(priority) => set({ priority })} options={PRIORITIES} />
-        </Field>
-        <Field label="Status" htmlFor="task-status">
-          <OptionSelect id="task-status" value={draft.status} onChange={(status) => set({ status })} options={STATUSES} />
-        </Field>
-        <Field label="Due date" htmlFor="task-due">
+      <Field label="Details" htmlFor="task-details">
+        <Textarea id="task-details" rows={3} value={draft.details} onChange={(e) => set({ details: e.target.value })} placeholder="Optional" />
+      </Field>
+      <div className="flex flex-wrap items-end gap-4">
+        <Field label="Due date" htmlFor="task-due" className="w-44">
           <Input id="task-due" type="date" value={draft.due} onChange={(e) => set({ due: e.target.value })} />
         </Field>
-        <Field label="Project" htmlFor="task-project">
-          <ProjectSelect id="task-project" value={draft.projectId} onChange={(projectId) => set({ projectId })} />
-        </Field>
+        <div className="flex items-center gap-2 pb-1.5">
+          <Switch id="task-star" checked={draft.starred} onCheckedChange={(starred) => set({ starred })} />
+          <Label htmlFor="task-star" className="inline-flex items-center gap-1">
+            <Star className="size-3.5 text-amber" aria-hidden /> Starred
+          </Label>
+        </div>
+        {existing && (
+          <div className="flex items-center gap-2 pb-1.5">
+            <Switch id="task-done" checked={draft.done} onCheckedChange={(done) => set({ done })} />
+            <Label htmlFor="task-done">Done</Label>
+          </div>
+        )}
       </div>
-      <Field label="Notes" htmlFor="task-notes">
-        <Textarea id="task-notes" rows={3} value={draft.notes} onChange={(e) => set({ notes: e.target.value })} />
-      </Field>
     </FormFrame>
   )
 }

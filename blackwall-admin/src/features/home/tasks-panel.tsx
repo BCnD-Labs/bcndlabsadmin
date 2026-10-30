@@ -6,80 +6,66 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { EmptyState, Panel } from "@/components/common/panel"
-import { SourceBadge } from "@/components/common/source-badge"
-import { ProjectSelect } from "@/components/forms/fields"
-import { todayKey } from "@/lib/dates"
+import { daysUntil, relativeDue, todayKey } from "@/lib/dates"
+import { parseQuickAdd } from "@/lib/quick-add"
+import type { Task } from "@/lib/types"
 import { useUi } from "@/stores/ui"
-import { useProjectMap, useWorkspace } from "@/stores/workspace"
+import { useWorkspace } from "@/stores/workspace"
 import { TaskRow } from "@/features/work/task-row"
-import { TASK_FILTERS, compareTasks, matchesFilter, needsAttention, type TaskFilter } from "@/features/work/task-utils"
+import { TASK_FILTERS, compareTasks, matchesFilter, type TaskFilter } from "@/features/work/task-utils"
+
+const EMPTY: Record<TaskFilter, string> = {
+  today: "Nothing due today. Starred tasks also show here.",
+  upcoming: "Nothing else coming up.",
+  all: "No open tasks.",
+  done: "Nothing completed yet.",
+}
+
+/** "Today" splits into what's due and what you starred, so the counts read clearly. */
+function sections(filter: TaskFilter, items: Task[]): { name?: string; items: Task[] }[] {
+  if (filter !== "today") return [{ items }]
+  const due = items.filter((t) => t.due && daysUntil(t.due) <= 0)
+  const starred = items.filter((t) => !due.includes(t))
+  return [
+    { name: "Overdue & due today", items: due },
+    { name: "Starred", items: starred },
+  ].filter((s) => s.items.length)
+}
 
 export function TasksPanel({ className }: { className?: string }) {
   const tasks = useWorkspace((s) => s.tasks)
   const create = useWorkspace((s) => s.create)
   const openForm = useUi((s) => s.openForm)
-  const projects = useProjectMap()
-  const [filter, setFilter] = useState<TaskFilter>("attention")
-  const [projectId, setProjectId] = useState<string | undefined>()
+  const [filter, setFilter] = useState<TaskFilter>("today")
   const [quick, setQuick] = useState("")
-  // Tasks completed here stay visible (struck through) until the filter changes.
+  // Tasks checked off here stay visible (struck through) until the filter changes.
   const [lingering, setLingering] = useState<Set<string>>(new Set())
 
   const visible = useMemo(
-    () =>
-      tasks
-        .filter((t) => (projectId ? t.projectId === projectId : true))
-        .filter((t) => matchesFilter(t, filter) || lingering.has(t.id))
-        .sort(compareTasks),
-    [tasks, filter, projectId, lingering],
+    () => tasks.filter((t) => matchesFilter(t, filter) || lingering.has(t.id)).sort(compareTasks),
+    [tasks, filter, lingering],
   )
-
-  // With the attention filter, fill spare room with the next open tasks.
-  const nextUp = useMemo(
-    () =>
-      filter !== "attention"
-        ? []
-        : tasks
-            .filter((t) => (projectId ? t.projectId === projectId : true))
-            .filter((t) => t.status !== "done" && !needsAttention(t) && !lingering.has(t.id))
-            .sort(compareTasks)
-            .slice(0, 5),
-    [tasks, filter, projectId, lingering],
+  const counts = useMemo(
+    () => Object.fromEntries(TASK_FILTERS.map((f) => [f.value, tasks.filter((t) => matchesFilter(t, f.value)).length])) as Record<TaskFilter, number>,
+    [tasks],
   )
-
-  const counts = useMemo(() => {
-    const scoped = tasks.filter((t) => (projectId ? t.projectId === projectId : true))
-    return Object.fromEntries(
-      TASK_FILTERS.map((f) => [f.value, scoped.filter((t) => matchesFilter(t, f.value)).length]),
-    ) as Record<TaskFilter, number>
-  }, [tasks, projectId])
-
-  const changeFilter = (f: TaskFilter) => {
-    setFilter(f)
-    setLingering(new Set())
-  }
 
   const quickAdd = (e: FormEvent) => {
     e.preventDefault()
-    const title = quick.trim()
-    if (!title) return
-    create("tasks", {
-      title,
-      status: "todo",
-      priority: "medium",
-      due: filter === "upcoming" ? undefined : todayKey(),
-      projectId,
-    })
+    if (!quick.trim()) return
+    const parsed = parseQuickAdd(quick)
+    const due = parsed.due ?? (filter === "today" ? todayKey() : undefined)
+    create("tasks", { title: parsed.title, due, starred: false, done: false })
     setQuick("")
-    toast.success("Task added", { description: filter === "upcoming" ? "No due date" : "Due today" })
+    toast.success("Task added", { description: due ? `Due ${relativeDue(due).toLowerCase()}` : "No due date" })
   }
 
   return (
     <Panel
       id="tasks"
-      title="Today · needs attention"
+      title="Tasks"
       icon={<ListChecks />}
-      badge={<SourceBadge status="local" />}
+      accent="amber"
       className={className}
       bodyClassName="flex flex-col"
       actions={
@@ -87,7 +73,7 @@ export function TasksPanel({ className }: { className?: string }) {
           <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
             <Link to="/work/tasks">All tasks</Link>
           </Button>
-          <Button size="sm" variant="outline" onClick={() => openForm({ kind: "task", defaults: { projectId } })}>
+          <Button size="sm" variant="outline" onClick={() => openForm({ kind: "task", defaults: filter === "today" ? { due: todayKey() } : {} })}>
             <Plus /> Task
           </Button>
         </>
@@ -99,18 +85,21 @@ export function TasksPanel({ className }: { className?: string }) {
           size="sm"
           variant="outline"
           value={filter}
-          onValueChange={(v) => v && changeFilter(v as TaskFilter)}
+          onValueChange={(v) => {
+            if (!v) return
+            setFilter(v as TaskFilter)
+            setLingering(new Set())
+          }}
           aria-label="Filter tasks"
           className="flex-wrap"
         >
           {TASK_FILTERS.map((f) => (
-            <ToggleGroupItem key={f.value} value={f.value} className="gap-1.5 px-2 text-xs data-[state=on]:text-amber">
+            <ToggleGroupItem key={f.value} value={f.value} className="gap-1.5 px-2 text-xs">
               {f.label}
-              <span className="font-mono text-[0.68rem] text-muted-foreground tabular-nums">{counts[f.value]}</span>
+              <span className="font-mono text-[0.68rem] tabular-nums opacity-70">{counts[f.value]}</span>
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
-        <ProjectSelect allowAll value={projectId} onChange={setProjectId} className="ml-auto h-7 w-40 text-xs" />
       </div>
 
       <form onSubmit={quickAdd} className="flex items-center gap-2 border-b px-3 py-2">
@@ -118,7 +107,7 @@ export function TasksPanel({ className }: { className?: string }) {
         <Input
           value={quick}
           onChange={(e) => setQuick(e.target.value)}
-          placeholder={filter === "upcoming" ? "Add a task without a due date…" : "Add a task due today… (Enter)"}
+          placeholder={filter === "today" ? "Add a task for today, or end with tomorrow / fri…" : "Add a task, end with today / tomorrow / fri to set a date"}
           aria-label="Quick add task"
           className="h-7 border-transparent bg-transparent px-1 shadow-none focus-visible:border-input dark:bg-transparent"
         />
@@ -126,32 +115,23 @@ export function TasksPanel({ className }: { className?: string }) {
 
       <div className="max-h-[26rem] min-h-0 flex-1 overflow-y-auto lg:max-h-none lg:basis-0">
         {visible.length ? (
-          <ul aria-label="Tasks">
-            {visible.map((t) => (
-              <TaskRow
-                key={t.id}
-                task={t}
-                project={t.projectId ? projects.get(t.projectId) : undefined}
-                onToggle={(task) =>
-                  task.status !== "done" && setLingering((s) => new Set(s).add(task.id))
-                }
-              />
-            ))}
-          </ul>
+          sections(filter, visible).map((sec) => (
+            <section key={sec.name} aria-label={sec.name ?? "Tasks"}>
+              {sec.name && <h3 className="eyebrow border-b bg-recessed/40 px-3 py-1">{sec.name} · {sec.items.length}</h3>}
+              <ul>
+                {sec.items.map((t) => (
+                  <TaskRow
+                    key={t.id}
+                    task={t}
+                    showDetails
+                    onToggle={(task) => !task.done && setLingering((s) => new Set(s).add(task.id))}
+                  />
+                ))}
+              </ul>
+            </section>
+          ))
         ) : (
-          <EmptyState className="py-6">
-            {filter === "attention" ? "Nothing needs attention. Clear runway." : "No tasks match this filter."}
-          </EmptyState>
-        )}
-        {nextUp.length > 0 && (
-          <>
-            <h3 className="eyebrow border-y bg-recessed/40 px-3 py-1.5">Next up</h3>
-            <ul aria-label="Next up">
-              {nextUp.map((t) => (
-                <TaskRow key={t.id} task={t} project={t.projectId ? projects.get(t.projectId) : undefined} />
-              ))}
-            </ul>
-          </>
+          <EmptyState className="py-6">{tasks.length === 0 ? "No tasks yet. Type one above and press Enter." : EMPTY[filter]}</EmptyState>
         )}
       </div>
     </Panel>

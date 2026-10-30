@@ -2,7 +2,6 @@ import { Plus } from "lucide-react"
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { EmptyState, PageHeader } from "@/components/common/panel"
-import { SourceBadge } from "@/components/common/source-badge"
 import { ProjectTag } from "@/components/common/tags"
 import { timeAgo } from "@/lib/dates"
 import { projectHref } from "@/lib/routes"
@@ -19,7 +18,7 @@ export const STATUS_STYLE: Record<ProjectStatus, string> = {
 }
 
 export function ProjectsPage() {
-  const { projects, tasks, notes, drafts, repos } = useWorkspace()
+  const { projects, drafts, repos } = useWorkspace()
   const openForm = useUi((s) => s.openForm)
   const order: ProjectStatus[] = ["active", "planned", "paused", "done"]
   const sorted = [...projects].sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status) || a.name.localeCompare(b.name))
@@ -28,17 +27,13 @@ export function ProjectsPage() {
     <>
       <PageHeader
         title="Projects"
-        badge={<SourceBadge status="local" />}
-        description="Projects connect tasks, notes, repository links and drafts."
+        description="What you're building, with its repositories and content drafts."
         actions={<Button onClick={() => openForm({ kind: "project" })}><Plus /> New project</Button>}
       />
       {sorted.length ? (
         <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {sorted.map((p) => {
-            const open = tasks.filter((t) => t.projectId === p.id && t.status !== "done").length
             const counts = [
-              [open, "open tasks"],
-              [notes.filter((n) => n.projectId === p.id).length, "notes"],
               [drafts.filter((d) => d.projectId === p.id).length, "drafts"],
               [repos.filter((r) => r.projectId === p.id).length, "repos"],
             ] as const
@@ -46,7 +41,7 @@ export function ProjectsPage() {
               <li key={p.id}>
                 <Link
                   to={projectHref(p.id)}
-                  className="flex h-full flex-col gap-2 rounded-lg border bg-card p-3 outline-none hover:border-teal/50 focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex h-full flex-col gap-2 brutal rounded-xl bg-card p-3 outline-none hover:border-teal/50 focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <div className="flex items-center gap-2">
                     <ProjectTag project={p} />

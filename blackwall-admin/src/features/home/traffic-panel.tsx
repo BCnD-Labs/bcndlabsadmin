@@ -2,46 +2,46 @@ import { Activity } from "lucide-react"
 import { useState } from "react"
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Panel } from "@/components/common/panel"
+import { FeedFallback, hasData } from "@/components/common/feed-fallback"
 import { SourceBadge } from "@/components/common/source-badge"
 import { RangeToggle, TrafficChart, TrafficSummary } from "@/features/analytics/traffic-chart"
-import { services } from "@/services"
+import { useAnalytics } from "@/services/data"
 import type { TrafficRange } from "@/services/types"
-import { useServiceData } from "@/services/use-service"
 
 export function TrafficPanel({ className }: { className?: string }) {
   const [range, setRange] = useState<TrafficRange>(30)
-  const data = useServiceData(() => services.analytics.getTraffic(range), [range])
+  const feed = useAnalytics(range)
 
   return (
     <Panel
       id="traffic"
       title="Website traffic"
       icon={<Activity />}
-      badge={<SourceBadge status={services.analytics.source.status} hint="Generated sample series. Not bcndlabs.com traffic." />}
+      accent="blue"
+      badge={<SourceBadge status={feed.status} detail={feed.status === "live" ? feed.provider : undefined} />}
       className={className}
       actions={
         <>
           <RangeToggle value={range} onChange={setRange} />
           <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
-            <Link to="/analytics">Details</Link>
+            <Link to="/analytics?view=website">Details</Link>
           </Button>
         </>
       }
       bodyClassName="flex flex-col gap-2 px-3 pt-2 pb-2"
     >
-      {data ? (
+      {hasData(feed) ? (
         <>
-          <TrafficSummary data={data} />
-          <TrafficChart data={data} range={range} className="h-60 sm:h-64 lg:h-auto lg:min-h-72 lg:flex-1" />
+          <TrafficSummary data={feed.data.traffic} />
+          <TrafficChart data={feed.data.traffic} range={range} className="h-60 sm:h-64 lg:h-auto lg:min-h-72 lg:flex-1" />
+          <p className="text-xs text-muted-foreground">Daily counts for the last {range} days, ending yesterday.</p>
         </>
       ) : (
-        <Skeleton className="h-72" />
+        <div className="flex flex-1 items-center justify-center">
+          <FeedFallback feed={feed} provider="analytics" what="visitors and pageviews" />
+        </div>
       )}
-      <p className="text-xs text-muted-foreground">
-        Daily counts, last {range} days ending yesterday. Sample data until an analytics provider is connected.
-      </p>
     </Panel>
   )
 }

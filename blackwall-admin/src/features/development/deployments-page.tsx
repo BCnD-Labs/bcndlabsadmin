@@ -1,7 +1,6 @@
 import { ExternalLink, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { EmptyState, PageHeader } from "@/components/common/panel"
-import { SourceBadge } from "@/components/common/source-badge"
 import { ProjectTag } from "@/components/common/tags"
 import { useUi } from "@/stores/ui"
 import { useProjectMap, useWorkspace } from "@/stores/workspace"
@@ -23,10 +22,9 @@ export function DeploymentsPage() {
     <>
       <PageHeader
         title="Deployment links"
-        badge={<SourceBadge status="local" />}
-        description="Production and preview URLs saved on repository links. Deployment status is not connected."
+        description="Production and preview links for your tracked repositories."
       />
-      <div className="overflow-x-auto rounded-lg border bg-card">
+      <div className="overflow-x-auto brutal rounded-xl bg-card">
         {repos.length ? (
           <table className="w-full min-w-[560px] text-sm">
             <thead>

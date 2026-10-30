@@ -1,26 +1,22 @@
-import { ArrowLeft, CalendarDays, ExternalLink, FileText, GitBranch, ListChecks, NotebookText, Pencil, Plus } from "lucide-react"
+import { ArrowLeft, ExternalLink, FileText, GitBranch, Pencil, Plus } from "lucide-react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { EmptyState, Panel } from "@/components/common/panel"
-import { SourceBadge } from "@/components/common/source-badge"
 import { DraftStatusTag, ProjectTag } from "@/components/common/tags"
 import { useCreateDraft } from "@/features/content/use-create-draft"
-import { EventRow, byTime } from "@/features/home/agenda-panel"
-import { timeAgo, todayKey } from "@/lib/dates"
-import { draftHref, noteHref } from "@/lib/routes"
+import { timeAgo } from "@/lib/dates"
+import { draftHref } from "@/lib/routes"
 import { cn } from "@/lib/utils"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
 import { STATUS_STYLE } from "./projects-page"
-import { TaskRow } from "./task-row"
-import { compareTasks } from "./task-utils"
 
 export function ProjectDetail() {
   const { id = "" } = useParams()
   const navigate = useNavigate()
   const openForm = useUi((s) => s.openForm)
   const createDraft = useCreateDraft()
-  const { projects, tasks, notes, drafts, repos, events } = useWorkspace()
+  const { projects, drafts, repos } = useWorkspace()
   const project = projects.find((p) => p.id === id)
 
   if (!project) {
@@ -31,11 +27,8 @@ export function ProjectDetail() {
     )
   }
 
-  const pTasks = tasks.filter((t) => t.projectId === id).sort(compareTasks)
-  const pNotes = notes.filter((n) => n.projectId === id)
   const pDrafts = drafts.filter((d) => d.projectId === id)
   const pRepos = repos.filter((r) => r.projectId === id)
-  const pEvents = events.filter((e) => e.projectId === id && e.date >= todayKey()).sort(byTime)
 
   return (
     <>
@@ -48,7 +41,6 @@ export function ProjectDetail() {
             <ProjectTag project={project} />
             <h1 className="text-xl font-bold">{project.name}</h1>
             <span className={cn("text-sm capitalize", STATUS_STYLE[project.status])}>{project.status}</span>
-            <SourceBadge status="local" />
           </div>
           <p className="mt-1 max-w-prose text-sm text-muted-foreground">{project.description}</p>
         </div>
@@ -59,51 +51,9 @@ export function ProjectDetail() {
 
       <div className="grid gap-3 lg:grid-cols-12">
         <Panel
-          title="Tasks"
-          icon={<ListChecks />}
-          className="lg:col-span-7"
-          actions={<Button size="sm" variant="outline" onClick={() => openForm({ kind: "task", defaults: { projectId: id } })}><Plus /> Task</Button>}
-        >
-          {pTasks.length ? (
-            <ul>{pTasks.map((t) => <TaskRow key={t.id} task={t} showProject={false} />)}</ul>
-          ) : (
-            <EmptyState>No tasks linked.</EmptyState>
-          )}
-        </Panel>
-        <Panel
-          title="Upcoming events"
-          icon={<CalendarDays />}
-          className="lg:col-span-5"
-          actions={<Button size="sm" variant="outline" onClick={() => openForm({ kind: "event", defaults: { projectId: id } })}><Plus /> Event</Button>}
-          bodyClassName="p-1.5"
-        >
-          {pEvents.length ? <ul>{pEvents.map((e) => <EventRow key={e.id} event={e} showDate />)}</ul> : <EmptyState>No upcoming events.</EmptyState>}
-        </Panel>
-        <Panel
-          title="Notes"
-          icon={<NotebookText />}
-          className="lg:col-span-4"
-          actions={<Button size="sm" variant="outline" onClick={() => openForm({ kind: "note", defaults: { projectId: id } })}><Plus /> Note</Button>}
-        >
-          {pNotes.length ? (
-            <ul className="py-1">
-              {pNotes.map((n) => (
-                <li key={n.id}>
-                  <Link to={noteHref(n)} className="flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-muted/40">
-                    <span className="min-w-0 flex-1 truncate">{n.title}</span>
-                    <span className="text-xs text-muted-foreground capitalize">{n.kind}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyState>No notes linked.</EmptyState>
-          )}
-        </Panel>
-        <Panel
           title="Drafts"
           icon={<FileText />}
-          className="lg:col-span-4"
+          className="lg:col-span-6"
           actions={<Button size="sm" variant="outline" onClick={() => navigate(draftHref(createDraft({ projectId: id }).id))}><Plus /> Draft</Button>}
         >
           {pDrafts.length ? (
@@ -124,7 +74,7 @@ export function ProjectDetail() {
         <Panel
           title="Repositories"
           icon={<GitBranch />}
-          className="lg:col-span-4"
+          className="lg:col-span-6"
           actions={<Button size="sm" variant="outline" onClick={() => openForm({ kind: "repo", defaults: { projectId: id } })}><Plus /> Repo</Button>}
         >
           {pRepos.length ? (

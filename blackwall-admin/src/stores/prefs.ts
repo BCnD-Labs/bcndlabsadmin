@@ -4,28 +4,30 @@ import { safeLocalStorage } from "./storage"
 
 /** Per-browser interface preferences (not workspace data). */
 interface PrefsState {
-  railPinned: boolean
-  edgeReveal: boolean
   retroDetails: boolean
+  /** Fill unconnected panels with sample data (clearly labelled) to preview layouts. */
+  showSamples: boolean
+  /** Shown beside the Blackwall wordmark. */
+  workspaceName: string
   set: (patch: Partial<Omit<PrefsState, "set">>) => void
 }
 
 export const usePrefs = create<PrefsState>()(
   persist(
     (set) => ({
-      railPinned: false,
-      edgeReveal: true,
       retroDetails: true,
+      showSamples: false,
+      workspaceName: "",
       set: (patch) => set(patch),
     }),
     {
       name: "blackwall.prefs",
       version: 1,
       storage: createJSONStorage(() => safeLocalStorage),
-      partialize: ({ railPinned, edgeReveal, retroDetails }) => ({
-        railPinned,
-        edgeReveal,
+      partialize: ({ retroDetails, showSamples, workspaceName }) => ({
         retroDetails,
+        showSamples,
+        workspaceName,
       }),
     },
   ),

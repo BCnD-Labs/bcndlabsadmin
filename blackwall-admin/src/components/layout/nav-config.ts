@@ -1,11 +1,11 @@
 import {
   BarChart3,
-  BookOpen,
   Briefcase,
   Code2,
   FileText,
   Home,
   Settings,
+  StickyNote,
   type LucideIcon,
 } from "lucide-react"
 
@@ -36,7 +36,7 @@ export const NAV: NavDestination[] = [
     children: [
       { label: "Tasks", to: "/work/tasks" },
       { label: "Projects", to: "/work/projects" },
-      { label: "Calendar", to: "/work/calendar" },
+      { label: "Calendar & daily log", to: "/work/calendar" },
     ],
   },
   {
@@ -69,20 +69,12 @@ export const NAV: NavDestination[] = [
     icon: BarChart3,
     to: "/analytics",
     match: "/analytics",
-    children: [{ label: "Website traffic", to: "/analytics" }],
-  },
-  {
-    id: "knowledge",
-    label: "Knowledge",
-    icon: BookOpen,
-    to: "/knowledge/notes",
-    match: "/knowledge",
     children: [
-      { label: "Notes", to: "/knowledge/notes" },
-      { label: "References", to: "/knowledge/references" },
-      { label: "Links", to: "/knowledge/links" },
+      { label: "You", to: "/analytics" },
+      { label: "Website traffic", to: "/analytics?view=website" },
     ],
   },
+  { id: "notes", label: "Notes", icon: StickyNote, to: "/notes", match: "/notes" },
   {
     id: "settings",
     label: "Settings",
@@ -92,7 +84,7 @@ export const NAV: NavDestination[] = [
     children: [
       { label: "Appearance", to: "/settings/appearance" },
       { label: "Navigation", to: "/settings/navigation" },
-      { label: "Integrations", to: "/settings/integrations" },
+      { label: "Connections", to: "/settings/connections" },
     ],
   },
 ]

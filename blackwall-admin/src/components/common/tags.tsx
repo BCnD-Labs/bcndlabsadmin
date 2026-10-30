@@ -1,33 +1,5 @@
-import { AlertTriangle, ArrowDown, ArrowUp, Minus } from "lucide-react"
 import { cn } from "@/lib/utils"
-import type { DraftStatus, Priority, Project, ProjectColor } from "@/lib/types"
-
-export const PRIORITY_LABEL: Record<Priority, string> = {
-  urgent: "Urgent",
-  high: "High",
-  medium: "Medium",
-  low: "Low",
-}
-
-const PRIORITY_STYLE: Record<Priority, { icon: typeof ArrowUp; className: string }> = {
-  urgent: { icon: AlertTriangle, className: "text-red-text" },
-  high: { icon: ArrowUp, className: "text-amber" },
-  medium: { icon: Minus, className: "text-muted-foreground" },
-  low: { icon: ArrowDown, className: "text-muted-foreground" },
-}
-
-export function PriorityTag({ priority, compact }: { priority: Priority; compact?: boolean }) {
-  const { icon: Icon, className } = PRIORITY_STYLE[priority]
-  return (
-    <span
-      className={cn("inline-flex items-center gap-1 text-xs", className)}
-      title={`${PRIORITY_LABEL[priority]} priority`}
-    >
-      <Icon className="size-3.5" aria-hidden />
-      <span className={cn(compact && "sr-only")}>{PRIORITY_LABEL[priority]}</span>
-    </span>
-  )
-}
+import type { DraftStatus, Project, ProjectColor } from "@/lib/types"
 
 export const PROJECT_DOT: Record<ProjectColor, string> = {
   teal: "bg-teal",
@@ -41,7 +13,7 @@ export function ProjectTag({ project, className }: { project?: Project; classNam
   return (
     <span
       className={cn(
-        "inline-flex max-w-full items-center gap-1.5 rounded-sm border bg-recessed px-1.5 py-px font-mono text-[0.7rem] text-muted-foreground",
+        "inline-flex max-w-full items-center gap-1.5 rounded-full border-2 border-edge bg-recessed px-2 py-px font-mono text-[0.68rem] text-muted-foreground",
         className,
       )}
       title={project.name}
@@ -67,7 +39,7 @@ export function DraftStatusTag({ status }: { status: DraftStatus }) {
         ? "border-amber/50 text-amber"
         : "border-border text-muted-foreground"
   return (
-    <span className={cn("inline-flex h-5 items-center rounded-sm border px-1.5 text-xs", cls)}>
+    <span className={cn("inline-flex h-5 items-center rounded-full border-2 px-2 font-mono text-[0.68rem] uppercase", cls)}>
       {DRAFT_STATUS_LABEL[status]}
     </span>
   )

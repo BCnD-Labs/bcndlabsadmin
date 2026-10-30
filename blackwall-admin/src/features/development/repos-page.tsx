@@ -1,16 +1,18 @@
 import { ExternalLink, Pencil, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { EmptyState, PageHeader, Panel } from "@/components/common/panel"
-import { SourceBadge } from "@/components/common/source-badge"
 import { ProjectTag } from "@/components/common/tags"
-import { ACTIVITY_ICON, useDevData } from "@/features/home/dev-attention"
+import { ACTIVITY_ICON } from "@/features/home/dev-attention"
+import { FeedFallback, hasData } from "@/components/common/feed-fallback"
+import { SourceBadge } from "@/components/common/source-badge"
 import { timeAgo } from "@/lib/dates"
-import { services } from "@/services"
+import { useDevelopment } from "@/services/data"
 import { useUi } from "@/stores/ui"
-import { useProjectMap } from "@/stores/workspace"
+import { useProjectMap, useWorkspace } from "@/stores/workspace"
 
 export function ReposPage() {
-  const { repos, activity } = useDevData()
+  const repos = useWorkspace((s) => s.repos)
+  const feed = useDevelopment()
   const projects = useProjectMap()
   const openForm = useUi((s) => s.openForm)
 
@@ -18,12 +20,11 @@ export function ReposPage() {
     <>
       <PageHeader
         title="Repositories"
-        badge={<SourceBadge status="local" hint="Repository links are local records." />}
-        description="Tracked repository links. Activity requires the GitHub integration."
+        description="Repositories you track. Checks, issues and activity load through your GitHub connection."
         actions={<Button onClick={() => openForm({ kind: "repo" })}><Plus /> Track repository</Button>}
       />
       <div className="grid gap-3 lg:grid-cols-12">
-        <Panel title="Tracked" badge={<SourceBadge status="local" />} className="lg:col-span-7">
+        <Panel title="Tracked" className="lg:col-span-7">
           {repos.length ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -57,22 +58,26 @@ export function ReposPage() {
             <EmptyState>No repositories tracked.</EmptyState>
           )}
         </Panel>
-        <Panel title="Activity" badge={<SourceBadge status={services.development.source.status} />} className="lg:col-span-5">
-          <ul className="py-1">
-            {(activity ?? []).map((a) => {
-              const Icon = ACTIVITY_ICON[a.kind]
-              return (
-                <li key={a.id} className="flex items-start gap-2.5 px-3 py-1.5 text-sm">
-                  <Icon className="mt-0.5 size-4 text-muted-foreground" aria-hidden />
-                  <span className="min-w-0 flex-1">
-                    <span className="block">{a.summary}</span>
-                    <span className="font-mono text-xs text-muted-foreground">{a.repo} · {a.actor} · {timeAgo(a.at)}</span>
-                  </span>
-                </li>
-              )
-            })}
-            {activity?.length === 0 && <EmptyState>No sample activity for these repositories.</EmptyState>}
-          </ul>
+        <Panel title="Activity" badge={<SourceBadge status={feed.status} detail={feed.status === "live" ? feed.provider : undefined} />} className="lg:col-span-5">
+          {hasData(feed) ? (
+            <ul className="py-1">
+              {feed.data.activity.map((a) => {
+                const Icon = ACTIVITY_ICON[a.kind]
+                return (
+                  <li key={a.id} className="flex items-start gap-2.5 px-3 py-1.5 text-sm">
+                    <Icon className="mt-0.5 size-4 text-muted-foreground" aria-hidden />
+                    <span className="min-w-0 flex-1">
+                      <span className="block">{a.summary}</span>
+                      <span className="font-mono text-xs text-muted-foreground">{a.repo} · {a.actor} · {timeAgo(a.at)}</span>
+                    </span>
+                  </li>
+                )
+              })}
+              {feed.data.activity.length === 0 && <EmptyState>No recent activity.</EmptyState>}
+            </ul>
+          ) : (
+            <FeedFallback feed={feed} provider="github" what="repository activity" />
+          )}
         </Panel>
       </div>
     </>

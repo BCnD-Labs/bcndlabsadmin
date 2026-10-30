@@ -14,7 +14,7 @@ import { NAV, isActive } from "./nav-config"
 export function MobileNav() {
   const open = useUi((s) => s.mobileNavOpen)
   const setOpen = useUi((s) => s.setMobileNavOpen)
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -50,12 +50,10 @@ export function MobileNav() {
                           <NavLink
                             to={c.to}
                             onClick={() => setOpen(false)}
-                            className={({ isActive: here }) =>
-                              cn(
-                                "flex h-10 items-center rounded-md px-3 text-sm text-muted-foreground outline-none hover:bg-card hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
-                                here && "text-amber",
-                              )
-                            }
+                            className={cn(
+                              "flex h-10 items-center rounded-md px-3 text-sm text-muted-foreground outline-none hover:bg-card hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
+                              (pathname + search === c.to || pathname.startsWith(c.to + "/")) && "text-amber",
+                            )}
                           >
                             {c.label}
                           </NavLink>

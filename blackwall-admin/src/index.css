@@ -7,6 +7,8 @@
 @import "@fontsource/atkinson-hyperlegible-mono/400.css";
 @import "@fontsource/atkinson-hyperlegible-mono/500.css";
 @import "@fontsource/jersey-10/400.css";
+@import "@fontsource/space-grotesk/500.css";
+@import "@fontsource/space-grotesk/700.css";
 
 /*
  * Blackwall is a single dim-graphite theme. The `dark` class is always set on
@@ -19,7 +21,7 @@
 @theme inline {
   --font-sans: "Atkinson Hyperlegible", ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", Roboto, sans-serif;
-  --font-heading: var(--font-sans);
+  --font-heading: "Space Grotesk", var(--font-sans);
   --font-mono: "Atkinson Hyperlegible Mono", ui-monospace, SFMono-Regular,
     Menlo, Consolas, monospace;
   --font-pixel: "Jersey 10", var(--font-mono);
@@ -43,6 +45,13 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-recessed: var(--recessed);
+  --color-edge: var(--edge);
+  --color-magenta: var(--magenta);
+  --color-lime: var(--lime);
+  --color-blue: var(--blue);
+  --shadow-brutal-sm: 2px 2px 0 0 var(--shadow-ink);
+  --shadow-brutal: 4px 4px 0 0 var(--shadow-ink);
+  --shadow-brutal-lg: 6px 6px 0 0 var(--shadow-ink);
   --color-teal: var(--teal);
   --color-teal-foreground: var(--teal-foreground);
   --color-amber: var(--amber);
@@ -75,58 +84,63 @@
 :root,
 .dark {
   color-scheme: dark;
-  --radius: 0.5rem;
+  --radius: 0.625rem;
 
-  /* Surfaces */
-  --background: #3b3e44;
-  --recessed: #303339; /* navigation, wells, inputs */
-  --card: #41444a; /* panels */
-  --popover: #44474e; /* menus & dialogs sit a step above panels */
-  --muted: #4a4e55; /* hover / selected rows */
-  --secondary: #4a4e55;
-  --accent: #4a4e55;
+  /* Surfaces: near-black graphite, stepped up for depth */
+  --background: #13171d;
+  --recessed: #0e1116; /* wells, inputs, header */
+  --card: #1a1f27; /* panels */
+  --popover: #1e242e; /* menus & dialogs */
+  --muted: #232a35; /* hover / selected rows */
+  --secondary: #232a35;
+  --accent: #232a35;
 
   /* Ink */
-  --foreground: #e6e8eb;
-  --card-foreground: #e6e8eb;
-  --popover-foreground: #e6e8eb;
-  --secondary-foreground: #e6e8eb;
-  --accent-foreground: #e6e8eb;
-  --muted-foreground: #bcc2ca; /* lifted from #b4bac3 to keep 4.5:1 on hover surfaces */
+  --foreground: #edf1f5;
+  --card-foreground: #edf1f5;
+  --popover-foreground: #edf1f5;
+  --secondary-foreground: #edf1f5;
+  --accent-foreground: #edf1f5;
+  --muted-foreground: #a3aebb; /* 7.3:1 on panels */
 
-  /* Lines */
-  --border: #555a63;
-  --input: #858b95; /* stronger than --border so form fields read as controls */
-  --ring: #86bdb9;
+  /* Lines. --edge is the chunky outer border; --border the quieter inner rules. */
+  --edge: #3b4757;
+  --border: #2a323d;
+  --input: #56657a;
+  --ring: #2de2c4;
+  --shadow-ink: #000;
 
-  /* Accents */
-  --teal: #86bdb9;
-  --teal-foreground: #1e2124;
-  --amber: #d8b477;
-  --amber-foreground: #1e2124;
-  --red: #d78f88;
-  --red-text: #e6a8a1; /* lifted from #d78f88 for 4.5:1 text on panels */
+  /* Neon accents (all ≥ 5.9:1 on panels) */
+  --teal: #2de2c4;
+  --teal-foreground: #0b0d10;
+  --amber: #ffb224;
+  --amber-foreground: #0b0d10;
+  --magenta: #ff5fb0;
+  --lime: #a6e35a;
+  --blue: #7fb2ff;
+  --red: #ff6b6b;
+  --red-text: #ff6b6b;
 
-  /* Amber is the action colour (as on bcndlabs.com); teal marks structure. */
-  --primary: #d8b477;
-  --primary-foreground: #1e2124;
-  --destructive: #e6a8a1;
+  /* Amber is the action colour; teal marks focus and structure. */
+  --primary: #ffb224;
+  --primary-foreground: #0b0d10;
+  --destructive: #ff6b6b;
 
-  /* Chart marks: saturated steps of teal/amber validated for CVD separation */
-  --chart-1: #32a89e;
-  --chart-2: #be8832;
-  --chart-3: #86bdb9;
-  --chart-4: #d8b477;
-  --chart-5: #b4bac3;
+  /* Chart marks: neon teal / amber (CVD separation ΔE 16.7) */
+  --chart-1: #2de2c4;
+  --chart-2: #ffb224;
+  --chart-3: #ff5fb0;
+  --chart-4: #7fb2ff;
+  --chart-5: #a6e35a;
 
-  --sidebar: #303339;
-  --sidebar-foreground: #e6e8eb;
-  --sidebar-primary: #d8b477;
-  --sidebar-primary-foreground: #1e2124;
-  --sidebar-accent: #41444a;
-  --sidebar-accent-foreground: #e6e8eb;
-  --sidebar-border: #555a63;
-  --sidebar-ring: #86bdb9;
+  --sidebar: #0e1116;
+  --sidebar-foreground: #edf1f5;
+  --sidebar-primary: #ffb224;
+  --sidebar-primary-foreground: #0b0d10;
+  --sidebar-accent: #1a1f27;
+  --sidebar-accent-foreground: #edf1f5;
+  --sidebar-border: #3b4757;
+  --sidebar-ring: #2de2c4;
 }
 
 @layer base {
@@ -141,6 +155,18 @@
   body {
     @apply bg-background text-foreground;
     min-height: 100dvh;
+    /* Faint grid behind everything, Tron-style; panels sit on top with solid fills. */
+    background-image:
+      linear-gradient(color-mix(in oklab, var(--teal) 5%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in oklab, var(--teal) 5%, transparent) 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-attachment: fixed;
+  }
+  html[data-retro="off"] body {
+    background-image: none;
+  }
+  h1, h2, h3 {
+    font-family: var(--font-heading);
   }
   ::selection {
     background: color-mix(in oklab, var(--teal) 40%, transparent);
@@ -149,50 +175,67 @@
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--edge);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
 }
 
 @layer components {
-  /* Wordmark: pixel face, only used for the Blackwall name */
+  /* Wordmark: pixel face with a faint neon glow */
   .wordmark {
     font-family: var(--font-pixel);
     letter-spacing: 0.04em;
     line-height: 1;
+    text-shadow: 0 0 12px color-mix(in oklab, var(--teal) 55%, transparent);
   }
 
-  /* Small "raised" teal edge used on the header and active nav item */
-  .raised-edge {
-    box-shadow:
-      inset 0 1px 0 color-mix(in oklab, var(--teal) 28%, transparent),
-      inset 0 -1px 0 color-mix(in oklab, black 30%, transparent);
+  /* Neo-brutal block: chunky border + hard offset shadow, rounded corners */
+  .brutal {
+    border: 2px solid var(--edge);
+    box-shadow: var(--shadow-brutal);
   }
 
-  /* Subtle dot field for chrome only (header, rail) — never behind dense content */
+  /* Big pixel numerals for stats */
+  .pixel-num {
+    font-family: var(--font-pixel);
+    line-height: 0.9;
+    letter-spacing: 0.02em;
+  }
+
   .retro-dots {
-    background-image: radial-gradient(
-      color-mix(in oklab, var(--teal) 14%, transparent) 1px,
-      transparent 1px
-    );
+    background-image: radial-gradient(color-mix(in oklab, var(--teal) 16%, transparent) 1px, transparent 1px);
     background-size: 6px 6px;
   }
   .retro-scanlines {
-    background-image: repeating-linear-gradient(
-      to bottom,
-      color-mix(in oklab, white 3%, transparent) 0 1px,
-      transparent 1px 3px
-    );
+    background-image: repeating-linear-gradient(to bottom, color-mix(in oklab, white 3%, transparent) 0 1px, transparent 1px 3px);
   }
   html[data-retro="off"] .retro-dots,
   html[data-retro="off"] .retro-scanlines {
     background-image: none;
   }
 
-  /* Panel title row: small pixel-ish uppercase eyebrow */
+  /* Terminal-style label: mono caps */
   .eyebrow {
     font-family: var(--font-mono);
     font-size: 0.7rem;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--muted-foreground);
+  }
+
+  /* Neon glow for the active / focused accent */
+  .glow-teal {
+    box-shadow: 0 0 0 1px var(--teal), 0 0 14px color-mix(in oklab, var(--teal) 45%, transparent);
+  }
+  .glow-amber {
+    box-shadow: 0 0 0 1px var(--amber), 0 0 14px color-mix(in oklab, var(--amber) 45%, transparent);
   }
 }
 

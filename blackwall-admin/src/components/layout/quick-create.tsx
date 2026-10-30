@@ -1,10 +1,10 @@
 import {
-  CalendarPlus,
   FilePlus2,
   FolderPlus,
   GitBranchPlus,
   ListPlus,
   NotebookPen,
+  PenLine,
   Plus,
 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
@@ -18,6 +18,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useCreateDraft } from "@/features/content/use-create-draft"
+import { logHref } from "@/features/journal/daily-log-page"
+import { todayKey } from "@/lib/dates"
 import { useUi } from "@/stores/ui"
 
 export function QuickCreate() {
@@ -28,7 +30,7 @@ export function QuickCreate() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button className="h-8 gap-1.5 px-2.5" aria-label="Create new">
+        <Button className="gap-1.5 px-3" aria-label="Create new">
           <Plus className="size-4" />
           <span className="hidden sm:inline">New</span>
         </Button>
@@ -38,8 +40,8 @@ export function QuickCreate() {
         <DropdownMenuItem onSelect={() => openForm({ kind: "task" })}>
           <ListPlus /> Task
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => openForm({ kind: "event" })}>
-          <CalendarPlus /> Event
+        <DropdownMenuItem onSelect={() => navigate(logHref(todayKey()))}>
+          <PenLine /> Today's log
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => openForm({ kind: "note" })}>
           <NotebookPen /> Note

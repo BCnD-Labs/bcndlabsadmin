@@ -1,18 +1,11 @@
 import { addDays, getDay } from "date-fns"
 import { toDateKey } from "@/lib/dates"
 import { mulberry32 } from "./prng"
-import type {
-  AnalyticsService,
-  PageStat,
-  ReferrerStat,
-  TrafficPoint,
-  TrafficRange,
-} from "./types"
+import type { AnalyticsReport, TrafficPoint, TrafficRange } from "./types"
 
 /**
- * Demo analytics adapter. Generates a plausible, deterministic 90-day series
- * ending yesterday. It is NOT website data — the UI labels it "Demo data".
- * Replace with an adapter for whichever provider bcndlabs.com uses.
+ * Sample analytics, shown only when "Show sample data" is on and no analytics
+ * provider is connected. Deterministic so it's stable across reloads.
  */
 function buildSeries(): TrafficPoint[] {
   const rand = mulberry32(20261029)
@@ -41,9 +34,9 @@ const series = buildSeries()
 const pages: Array<[string, number]> = [
   ["/", 0.34],
   ["/projects", 0.18],
-  ["/writing/introducing-blackwall", 0.12],
+  ["/blog/first-post", 0.12],
   ["/about", 0.1],
-  ["/projects/mikoshi", 0.07],
+  ["/projects/example", 0.07],
   ["/contact", 0.05],
 ]
 
@@ -55,28 +48,13 @@ const referrers: Array<[string, number]> = [
   ["Other", 0.06],
 ]
 
-const slice = (range: TrafficRange) => series.slice(-range)
-
-export const demoAnalytics: AnalyticsService = {
-  source: { status: "demo", provider: "Sample generator" },
-  async getTraffic(range) {
-    return slice(range)
-  },
-  async getTopPages(range): Promise<PageStat[]> {
-    const s = slice(range)
-    const pv = s.reduce((a, p) => a + p.pageviews, 0)
-    const v = s.reduce((a, p) => a + p.visitors, 0)
-    return pages.map(([path, share]) => ({
-      path,
-      pageviews: Math.round(pv * share),
-      visitors: Math.round(v * share * 0.9),
-    }))
-  },
-  async getReferrers(range): Promise<ReferrerStat[]> {
-    const v = slice(range).reduce((a, p) => a + p.visitors, 0)
-    return referrers.map(([source, share]) => ({
-      source,
-      visitors: Math.round(v * share),
-    }))
-  },
+export function sampleAnalytics(range: TrafficRange): AnalyticsReport {
+  const traffic = series.slice(-range)
+  const pv = traffic.reduce((a, p) => a + p.pageviews, 0)
+  const v = traffic.reduce((a, p) => a + p.visitors, 0)
+  return {
+    traffic,
+    pages: pages.map(([path, share]) => ({ path, pageviews: Math.round(pv * share), visitors: Math.round(v * share * 0.9) })),
+    referrers: referrers.map(([source, share]) => ({ source, visitors: Math.round(v * share) })),
+  }
 }

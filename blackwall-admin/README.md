@@ -1,8 +1,16 @@
 # Blackwall
 
-Internal workspace for **bcndlabs**: projects, tasks, agenda, content drafts, knowledge, and (eventually) development and analytics integrations. The public website is the bcndlabs hub. Blackwall is where you go to get work done.
+A personal workspace for keeping track: simple to-dos, a calendar that opens a daily log, sticky notes, charts of your own activity, plus connections to the services you use (GitHub, Azure, Cloudflare, website analytics, or anything else).
 
-> **Local prototype.** No authentication and no server. Records live in this browser's `localStorage`. Don't store secrets here.
+## The pieces
+
+- **Tasks:** Google Tasks style. Title, optional details, optional due date, star, done. No priorities, tags, links or dependencies. "Today" shows overdue, due-today and starred tasks; the Tasks page groups everything by when it's due.
+- **Calendar & daily log:** internal only. Click any day (on Home or Work → Calendar) to open that day's log, a plain journal note that saves as you type. The log page also lists tasks due and completed that day. Teal dots mark days with a log; amber dots mark days with open tasks.
+- **Notes:** sticky notes. Type, pick a colour, pin the ones you want on Home. They save as you type; an emptied note is removed.
+- **Analytics → You:** charts computed from your tasks and logs (tasks completed per day, open tasks by due date, a log heatmap, streaks). **Analytics → Website** shows your analytics provider once connected.
+- **Projects, Development, Content:** a lighter layer for what you're building: repository links, deployment links, content drafts.
+
+> **Local prototype.** No sign-in. Workspace records live in this browser. Credentials live in a gitignored file on this machine, held by a small local connector. Run it only on your own computer.
 
 ## Run it
 
@@ -14,34 +22,46 @@ npm run dev          # http://localhost:5173
 
 | Command | What it does |
 | --- | --- |
-| `npm run dev` | Vite dev server |
+| `npm run dev` | Vite dev server + local connector |
 | `npm run build` | Type-check (`tsc -b`), then production build to `dist/` |
 | `npm run typecheck` | TypeScript only |
 | `npm run lint` | oxlint |
 | `npm run check` | typecheck + lint + build |
-| `npm run preview` | Serve the production build |
+| `npm run preview` | Serve the production build (connector included) |
 
 Stack: React 19, TypeScript, Vite 8, Tailwind CSS 4, shadcn/ui (Radix, `radix-nova` style), Lucide icons, Recharts (through shadcn `chart`), Zustand, date-fns, React Router 7.
 
-## What's real and what's simulated
+## Connections
 
-| Area | Source | Notes |
+Settings → Connections is where you add, edit, test and remove accounts. Nothing is hard-coded.
+
+| Type | What you enter | What it feeds |
 | --- | --- | --- |
-| Tasks, events, notes, projects, repository links, content drafts | **Local** | Full create/edit/delete, persisted across reloads |
-| Home counts and status line | **Local** | Derived from stored records |
-| Search (⌘K or `/`) | **Local** | Searches tasks, projects, notes, drafts; also navigation and create actions |
-| Website traffic (Home, Analytics) | **Demo data** | Deterministic sample series (`services/analytics-demo.ts`). Not bcndlabs.com traffic |
-| Reviews, failed checks, issues, repo activity | **Demo data** | Sample GitHub data, filtered to locally tracked repos (`services/github-demo.ts`) |
-| External calendar | **Not connected** | Agenda shows local events only |
-| Media library, publishing, SQL backend | **Not connected** | Explained in Settings → Integrations |
+| GitHub | Fine-grained personal access token | Development panel, Reviews & issues, repository activity (for repos you track) |
+| Azure | Tenant ID, client ID, client secret (service principal), optional subscription | Subscription, resource group and resource counts on the connection card |
+| Cloudflare | API token, optional account ID | Zones and their status on the connection card |
+| Website analytics | Plausible, Umami or Cloudflare Web Analytics, plus site ID and API key | Home traffic chart, Analytics page |
+| Any service | URL, username, password/key, your own extra fields, optional check URL (with Bearer, Basic or custom-header auth) | A reachability check on the connection card |
 
-Every panel shows a badge (`Local`, `Demo data`, or `Not connected`) so sample data can't be mistaken for live data.
+Saving a connection runs a live test against the provider and shows the result (account name, counts, or the provider's error message). You can add several of each type.
 
-## Local data
+**How credentials are handled.** The browser sends secrets once to the local connector (`server/`, mounted at `/api` on the Vite dev and preview servers). It stores them in `.blackwall/connections.json` (gitignored, mode 600) and makes all provider calls itself. The API only returns redacted records ("saved, ends in …a1b2"), only answers requests from a loopback host, and requires an `X-Blackwall` header, which other websites can't send without a CORS preflight it never approves. A static `vite build` deployed elsewhere has no connector, and the UI says so.
 
-- `blackwall.workspace`: workspace records. Versioned Zustand `persist` store (`src/stores/workspace.ts`, `WORKSPACE_VERSION = 1`). When the schema changes, bump the version and add a step to `migrate`.
-- `blackwall.prefs`: interface preferences (pinned rail, edge reveal, retro details).
-- On first load the workspace is seeded with starter records (`src/stores/seed.ts`). These are ordinary local records. Settings → Appearance can **restore starter data** or **clear the workspace**.
+**Verification status.** "Any service" checks were tested end to end. The GitHub, Azure and Cloudflare error paths were tested against the real APIs with invalid credentials. Success paths for GitHub, Azure, Cloudflare and all three analytics providers follow their documented APIs but haven't been run against real accounts yet.
+
+## What's local and what's external
+
+| Area | Source |
+| --- | --- |
+| Tasks, daily logs, notes, projects, repository links, drafts, search, your activity charts | Saved in this browser |
+| Website traffic, development data | Your connections, labelled **Live**, **Error** or **Not connected** |
+| Sample data | Off by default. Settings → Appearance → *Show sample data* fills unconnected panels with made-up data labelled **Sample data**, for previewing layouts |
+
+## Your data
+
+- `blackwall.workspace`: workspace records. A versioned Zustand `persist` store (`src/stores/workspace.ts`, `WORKSPACE_VERSION = 3`). The workspace starts empty. Migrations: v1→v2 removed the example records v1 seeded. v2→v3 converted tasks (high/urgent priority became starred; projects dropped), turned notes into sticky notes, and moved calendar events into the matching day's log as lines.
+- `blackwall.prefs`: interface preferences (workspace name, pinned rail, edge reveal, retro details, sample data).
+- Settings → Appearance can **export** and **import** the workspace as JSON, or clear it.
 - If storage is unavailable (private mode, quota), the store falls back to memory for the session.
 
 ## Navigation
@@ -53,19 +73,15 @@ Every panel shows a badge (`Local`, `Demo data`, or `Not connected`) so sample d
 
 ## Theme
 
-A single dim-graphite theme defined as semantic CSS variables in `src/index.css`. The `dark` class is always on `<html>`, so shadcn's dark variants apply.
+**Neo-brutalism × retro hacker / Tron, with rounded corners.** Defined as semantic CSS variables in `src/index.css`. The `dark` class is always on `<html>`, so shadcn's dark variants apply.
 
-Changes from the starting palette, made for contrast (WCAG AA):
+- **Blocks:** panels, buttons, dialogs and menus use a 2px "edge" border and a hard offset shadow (`.brutal`, `shadow-brutal*`). Primary buttons are amber with an ink border and press down on click.
+- **Terminal touches:** mono uppercase labels, a faint 32px grid behind the page, scanlines on the header, a dotted rail, a neon-glow wordmark and active states, `[ NO SIGNAL ]` for unconnected panels.
+- **Colour coding:** each area gets an accent chip (Tasks amber, Calendar teal, Notes magenta, Traffic blue, Development lime) so you can find things at a glance.
+- **Type:** Space Grotesk for headings, Atkinson Hyperlegible for text, Atkinson Hyperlegible Mono for labels and data, Jersey 10 (pixel) for the wordmark and big numbers.
+- **Sticky notes:** bright paper colours with dark ink.
 
-| Token | Start | Used | Why |
-| --- | --- | --- | --- |
-| `--muted-foreground` | `#B4BAC3` | `#BCC2CA` | Keeps ≥ 4.5:1 on hover/selected surfaces (`#4A4E55`) |
-| `--red-text` / `--destructive` | `#D78F88` | `#E6A8A1` | `#D78F88` is only 3.8:1 on panels; kept for fills and dots |
-| `--input` | n/a | `#858B95` | Form-field borders need more contrast than `--border` |
-| `--popover` | n/a | `#44474E` | Menus and dialogs sit one step above panels |
-| `--chart-1` / `--chart-2` | teal / amber | `#32A89E` / `#BE8832` | Saturated steps of the brand hues. They pass a colour-vision-deficiency separation check against the panel surface |
-
-Amber (`--primary`) is the action colour and teal marks structure (focus rings, borders, local badges), matching bcndlabs.com. Type: Atkinson Hyperlegible for the interface, Atkinson Hyperlegible Mono for technical metadata, Jersey 10 for the wordmark only. All fonts are self-hosted through `@fontsource`. Retro dots and scanlines appear only on chrome (header, rail) and can be turned off. Motion is minimal and switched off under `prefers-reduced-motion`.
+All text colours are at least 5.9:1 against panels; secondary text is 7.3:1. The chart teal/amber pair is deliberately brighter than a muted palette would be (part of the neon look) and still passes colour-blind separation (ΔE 16.7) and 3:1 contrast. Retro texture can be turned off in Settings → Appearance, and motion respects `prefers-reduced-motion`.
 
 ## Project layout
 
@@ -77,22 +93,20 @@ src/
     forms/       record dialogs (task, event, note, project, repo) + shared fields
     common/      panel, source badge, tags
   features/      home, work, development, content, analytics, knowledge, settings
-  services/      typed integration interfaces + demo/unconnected adapters
-  stores/        workspace (versioned persistence), prefs, ui state, seed data
+  services/      connector client, data feeds (live / sample / not connected)
+  stores/        workspace (versioned persistence), prefs, ui state
+shared/          connection types and provider field definitions (UI + connector)
+server/          local connector: storage, /api routes, provider adapters
   lib/           types, dates, ids, routes
 ```
 
-## Future integration points
+## Adding a provider
 
-All external data goes through the interfaces in `src/services/types.ts`. Adapters are registered in `src/services/index.ts`.
+1. Add its fields to `PROVIDERS` in `shared/connections.ts`. Mark secret fields `secret: true`, and the form picks them up automatically.
+2. Write a `test…` function in `server/providers/` and register it in `server/providers/index.ts`.
+3. If it feeds a panel, add a route in `server/plugin.ts` and a feed hook in `src/services/data.ts`.
 
-- **GitHub** → `DevelopmentService` (pull requests, failed checks, issues, activity).
-- **Website analytics** → `AnalyticsService` (traffic, top pages, referrers). No provider is assumed.
-- **Calendar** → `CalendarService.listEvents`. Provider-agnostic (CalDAV, ICS, or an API).
-- **Workspace backend (SQL / "Soulkiller")** → swap the bodies of the workspace store's `create` / `update` / `remove` actions for API calls. Components never touch storage directly.
-- **Media** → a `MediaService` still to be defined.
-
-**Credentials must never reach the browser.** Real adapters should call a small server-side boundary (a serverless function or API) that holds tokens. That boundary is also where authentication belongs once Blackwall stops being local-only. Data/SQL tooling is deliberately out of scope: there is no arbitrary SQL execution UI.
+A SQL-backed workspace backend would replace the bodies of the workspace store's `create` / `update` / `remove` actions; components never touch storage directly. There is deliberately no arbitrary SQL execution UI.
 
 ## Upstream sources and licenses
 

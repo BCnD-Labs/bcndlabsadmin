@@ -1,102 +1,51 @@
-import { Pin, PinOff } from "lucide-react"
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type KeyboardEvent,
-  type MouseEvent,
-  type PointerEvent,
-} from "react"
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { cn } from "@/lib/utils"
-import { usePrefs } from "@/stores/prefs"
-import { useUi } from "@/stores/ui"
 import { NAV, isActive, type NavDestination } from "./nav-config"
 
 /** Hover-intent timings (ms). */
-const OPEN_DELAY = 120 // edge hover → rail appears
-const SWITCH_DELAY = 110 // moving between icons while a flyout is open
-const CLOSE_DELAY = 380 // pointer leaves rail + flyout
+const OPEN_DELAY = 60 // first hover; avoids flicker when the cursor just passes over
+const CLOSE_DELAY = 220 // leaving the expanded item
 
 /**
- * Desktop navigation: a floating icon rail that is hidden until the left edge
- * is hovered (or the header menu button is used), with a flyout that shows
- * only the hovered/focused destination's label and submenu. It overlays the
- * page; only the optional pinned mode reserves space.
+ * Desktop navigation: a thin, always-visible icon strip (like a collapsed
+ * browser sidebar). Hovering or focusing one icon expands only that item into
+ * its label plus its sub-pages; the other icons stay compact and reachable.
  */
 export function NavRail({ focusMain }: { focusMain: () => void }) {
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const navigate = useNavigate()
-  const pinned = usePrefs((s) => s.railPinned)
-  const edgeReveal = usePrefs((s) => s.edgeReveal)
-  const setPrefs = usePrefs((s) => s.set)
-  const railOpen = useUi((s) => s.railOpen)
-  const setRailOpen = useUi((s) => s.setRailOpen)
-  const railFocusRequest = useUi((s) => s.railFocusRequest)
-  const menuButton = useUi((s) => s.menuButton)
-
-  const visible = pinned || railOpen
-  const [activeId, setActiveId] = useState<string | null>(null)
-  const [flyoutTop, setFlyoutTop] = useState(0)
-
-  const navRef = useRef<HTMLElement>(null)
+  const [openId, setOpenId] = useState<string | null>(null)
   const itemRefs = useRef(new Map<string, HTMLAnchorElement>())
-  const flyoutRef = useRef<HTMLDivElement>(null)
-  const timers = useRef<{ open?: number; close?: number; switch?: number }>({})
-  const pointerType = useRef<string>("mouse")
+  const panelRefs = useRef(new Map<string, HTMLDivElement>())
+  const timer = useRef<number | undefined>(undefined)
+  const pointerType = useRef("mouse")
 
-  const clear = (k: "open" | "close" | "switch") => {
-    window.clearTimeout(timers.current[k])
-    timers.current[k] = undefined
+  const clearTimer = () => window.clearTimeout(timer.current)
+  const collapse = useCallback(() => {
+    clearTimer()
+    setOpenId(null)
+  }, [])
+
+  const hoverOpen = (id: string) => {
+    clearTimer()
+    if (openId) setOpenId(id) // already expanded: switch straight away
+    else timer.current = window.setTimeout(() => setOpenId(id), OPEN_DELAY)
+  }
+  const hoverClose = () => {
+    clearTimer()
+    timer.current = window.setTimeout(() => setOpenId(null), CLOSE_DELAY)
   }
 
-  const close = useCallback(
-    (opts?: { restoreFocus?: boolean }) => {
-      clear("open")
-      clear("close")
-      clear("switch")
-      setActiveId(null)
-      if (!usePrefs.getState().railPinned) setRailOpen(false)
-      if (opts?.restoreFocus) menuButton?.focus()
-    },
-    [menuButton, setRailOpen],
-  )
+  useEffect(() => () => clearTimer(), [])
 
-  const scheduleClose = () => {
-    clear("close")
-    timers.current.close = window.setTimeout(() => close(), CLOSE_DELAY)
-  }
-
-  // Position the flyout next to the active icon.
-  useLayoutEffect(() => {
-    if (!activeId) return
-    const el = itemRefs.current.get(activeId)
-    if (el) setFlyoutTop(el.offsetTop)
-  }, [activeId])
-
-  // The header menu button asks for focus to move into the rail.
+  // Escape collapses from anywhere; a tap outside collapses on touch screens.
   useEffect(() => {
-    if (!railFocusRequest) return
-    const current = NAV.find((d) => isActive(d, pathname)) ?? NAV[0]
-    requestAnimationFrame(() => itemRefs.current.get(current.id)?.focus())
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [railFocusRequest])
-
-  // Escape and outside taps close an open rail/flyout from anywhere.
-  useEffect(() => {
-    if (!railOpen && !activeId) return
-    const onKey = (e: globalThis.KeyboardEvent) => {
-      if (e.key !== "Escape" || e.defaultPrevented) return
-      const inside = navRef.current?.contains(document.activeElement)
-      // When pinned the rail stays, so focus can stay on the rail item.
-      close({ restoreFocus: inside && !usePrefs.getState().railPinned })
-    }
-    const onDown = (e: globalThis.PointerEvent) => {
+    if (!openId) return
+    const onKey = (e: globalThis.KeyboardEvent) => e.key === "Escape" && collapse()
+    const onDown = (e: PointerEvent) => {
       const t = e.target as Node
-      if (navRef.current?.contains(t) || menuButton?.contains(t)) return
-      close()
+      if (![...itemRefs.current.values(), ...panelRefs.current.values()].some((el) => el.contains(t))) collapse()
     }
     document.addEventListener("keydown", onKey)
     document.addEventListener("pointerdown", onDown)
@@ -104,260 +53,182 @@ export function NavRail({ focusMain }: { focusMain: () => void }) {
       document.removeEventListener("keydown", onKey)
       document.removeEventListener("pointerdown", onDown)
     }
-  }, [railOpen, activeId, close, menuButton])
+  }, [openId, collapse])
 
-  useEffect(() => () => Object.values(timers.current).forEach(window.clearTimeout), [])
-
-  // --- pointer -----------------------------------------------------------
-  const onEdgeEnter = () => {
-    if (!edgeReveal || visible) return
-    clear("close")
-    timers.current.open = window.setTimeout(() => setRailOpen(true), OPEN_DELAY)
-  }
-  const onEdgeLeave = () => {
-    clear("open")
-    if (railOpen && !pinned) scheduleClose()
-  }
-
-  const onItemPointerEnter = (id: string) => {
-    clear("close")
-    if (activeId === null || activeId === id) {
-      clear("switch")
-      setActiveId(id)
-      return
-    }
-    clear("switch")
-    timers.current.switch = window.setTimeout(() => setActiveId(id), SWITCH_DELAY)
-  }
-
-  const onItemClick = (e: MouseEvent, d: NavDestination) => {
-    // On touch, the first tap reveals the submenu instead of navigating.
-    if (pointerType.current === "touch" && d.children && activeId !== d.id) {
-      e.preventDefault()
-      setActiveId(d.id)
-      return
-    }
-    afterSelect()
-  }
-
-  const afterSelect = () => {
-    close()
-    // Let the route render, then move focus to the page for keyboard users.
+  const select = (to: string) => (e: MouseEvent) => {
+    e.preventDefault()
+    navigate(to)
+    collapse()
     requestAnimationFrame(focusMain)
   }
 
   // --- keyboard ----------------------------------------------------------
-  const railItems = () => NAV.map((d) => itemRefs.current.get(d.id)!).filter(Boolean)
-  const flyoutLinks = () =>
-    Array.from(flyoutRef.current?.querySelectorAll<HTMLAnchorElement>("a[href]") ?? [])
+  const items = () => NAV.map((d) => itemRefs.current.get(d.id)!).filter(Boolean)
+  const subLinks = (id: string) =>
+    Array.from(panelRefs.current.get(id)?.querySelectorAll<HTMLAnchorElement>("[data-sub]") ?? [])
 
-  const onRailKeyDown = (e: KeyboardEvent, d: NavDestination) => {
-    const items = railItems()
-    const i = items.indexOf(e.currentTarget as HTMLAnchorElement)
-    const focusAt = (n: number) => items[(n + items.length) % items.length]?.focus()
-    switch (e.key) {
-      case "ArrowDown":
-        e.preventDefault()
-        focusAt(i + 1)
-        break
-      case "ArrowUp":
-        e.preventDefault()
-        focusAt(i - 1)
-        break
-      case "Home":
-        e.preventDefault()
-        focusAt(0)
-        break
-      case "End":
-        e.preventDefault()
-        focusAt(items.length - 1)
-        break
-      case "ArrowRight":
-        if (d.children) {
-          e.preventDefault()
-          setActiveId(d.id)
-          requestAnimationFrame(() => {
-            // Index 0 is the destination label; land on the first submenu entry.
-            const links = flyoutLinks()
-            ;(links[1] ?? links[0])?.focus()
-          })
-        }
-        break
+  const onItemKey = (e: KeyboardEvent, d: NavDestination) => {
+    const list = items()
+    const i = list.indexOf(e.currentTarget as HTMLAnchorElement)
+    const go = (n: number) => list[(n + list.length) % list.length]?.focus()
+    if (e.key === "ArrowDown") {
+      e.preventDefault()
+      go(i + 1)
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault()
+      go(i - 1)
+    } else if (e.key === "Home") {
+      e.preventDefault()
+      go(0)
+    } else if (e.key === "End") {
+      e.preventDefault()
+      go(list.length - 1)
+    } else if (e.key === "ArrowRight" && d.children) {
+      e.preventDefault()
+      setOpenId(d.id)
+      requestAnimationFrame(() => subLinks(d.id)[0]?.focus())
     }
   }
 
-  const onFlyoutKeyDown = (e: KeyboardEvent) => {
-    const links = flyoutLinks()
+  const onSubKey = (e: KeyboardEvent, id: string) => {
+    const links = subLinks(id)
     const i = links.indexOf(document.activeElement as HTMLAnchorElement)
-    switch (e.key) {
-      case "ArrowDown":
-        e.preventDefault()
-        links[(i + 1) % links.length]?.focus()
-        break
-      case "ArrowUp":
-        e.preventDefault()
-        links[(i - 1 + links.length) % links.length]?.focus()
-        break
-      case "ArrowLeft":
-        e.preventDefault()
-        if (activeId) itemRefs.current.get(activeId)?.focus()
-        break
+    if (e.key === "ArrowDown") {
+      e.preventDefault()
+      links[(i + 1) % links.length]?.focus()
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault()
+      links[(i - 1 + links.length) % links.length]?.focus()
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault()
+      itemRefs.current.get(id)?.focus()
     }
   }
 
-  const onNavBlur = (e: React.FocusEvent) => {
+  // Collapse when focus leaves an item and its expansion entirely.
+  const onBlurWithin = (id: string) => (e: React.FocusEvent<HTMLLIElement>) => {
     const next = e.relatedTarget as Node | null
-    if (next && navRef.current?.contains(next)) return
-    if (next && menuButton?.contains(next)) return
-    // Focus left the navigation entirely.
-    if (next) close()
+    if (!next || !e.currentTarget.contains(next)) setOpenId((o) => (o === id ? null : o))
   }
 
-  const active = NAV.find((d) => d.id === activeId)
-
-  return (
-    <>
-      {/* Left-edge activation region */}
-      {edgeReveal && !pinned && (
-        <div
-          aria-hidden
-          data-testid="nav-edge"
-          className="fixed inset-y-0 left-0 z-40 hidden w-2.5 md:block"
-          onPointerEnter={onEdgeEnter}
-          onPointerLeave={onEdgeLeave}
-        />
-      )}
-
-      <nav
-        ref={navRef}
-        aria-label="Main navigation"
-        data-state={visible ? "open" : "closed"}
-        data-testid="nav-rail"
-        inert={!visible}
-        className="fixed top-[3.75rem] left-2 z-50 hidden md:block"
-        onPointerEnter={() => clear("close")}
-        onPointerLeave={() => {
-          clear("switch")
-          scheduleClose()
-        }}
-        onPointerDown={(e: PointerEvent) => (pointerType.current = e.pointerType)}
-        onBlur={onNavBlur}
+  const renderItem = (d: NavDestination) => {
+    const Icon = d.icon
+    const current = isActive(d, pathname)
+    const open = openId === d.id
+    return (
+      <li
+        key={d.id}
+        className="relative"
+        onPointerEnter={() => hoverOpen(d.id)}
+        onPointerLeave={hoverClose}
+        onBlur={onBlurWithin(d.id)}
       >
-        <div
+        {/* The strip icon: always present, focusable, navigates to the section. */}
+        <Link
+          ref={(el) => {
+            if (el) itemRefs.current.set(d.id, el)
+            else itemRefs.current.delete(d.id)
+          }}
+          to={d.to}
+          aria-label={d.label}
+          aria-current={current ? "page" : undefined}
+          aria-haspopup={d.children ? "menu" : undefined}
+          aria-expanded={d.children ? open : undefined}
+          data-nav-id={d.id}
+          onPointerDown={(e) => (pointerType.current = e.pointerType)}
+          onFocus={() => setOpenId(d.id)}
+          onClick={(e) => {
+            // Touch: the first tap expands, a second tap navigates.
+            if (pointerType.current === "touch" && d.children && !open) {
+              e.preventDefault()
+              setOpenId(d.id)
+              return
+            }
+            select(d.to)(e)
+          }}
+          onKeyDown={(e) => onItemKey(e, d)}
           className={cn(
-            "retro-dots raised-edge flex flex-col gap-1 rounded-xl border bg-recessed p-1.5 shadow-lg shadow-black/25",
-            "transition-[transform,opacity] duration-150 ease-out motion-reduce:transition-none",
-            visible ? "translate-x-0 opacity-100" : "pointer-events-none -translate-x-[calc(100%+1rem)] opacity-0",
+            "relative z-10 flex size-10 items-center justify-center rounded-lg text-muted-foreground outline-none transition-colors",
+            "hover:text-teal focus-visible:ring-2 focus-visible:ring-ring",
+            current && "border-2 border-black bg-amber text-black shadow-brutal-sm hover:text-black",
           )}
         >
-          <ul className="flex flex-col gap-1">
-            {NAV.map((d) => {
-              const Icon = d.icon
-              const current = isActive(d, pathname)
-              const highlighted = activeId === d.id
-              return (
-                <li key={d.id}>
-                  <Link
-                    ref={(el) => {
-                      if (el) itemRefs.current.set(d.id, el)
-                      else itemRefs.current.delete(d.id)
-                    }}
-                    to={d.to}
-                    aria-label={d.label}
-                    aria-current={current ? "page" : undefined}
-                    aria-haspopup={d.children ? "menu" : undefined}
-                    aria-expanded={d.children ? highlighted : undefined}
-                    data-nav-id={d.id}
-                    onPointerEnter={() => onItemPointerEnter(d.id)}
-                    onFocus={() => {
-                      clear("close")
-                      setActiveId(d.id)
-                    }}
-                    onClick={(e) => onItemClick(e, d)}
-                    onKeyDown={(e) => onRailKeyDown(e, d)}
-                    className={cn(
-                      "relative flex size-10 items-center justify-center rounded-lg text-muted-foreground outline-none",
-                      "hover:bg-card hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
-                      highlighted && "bg-card text-foreground",
-                      current &&
-                        "bg-card text-amber before:absolute before:top-2 before:bottom-2 before:-left-1.5 before:w-0.5 before:rounded-full before:bg-amber",
-                    )}
-                  >
-                    <Icon className="size-[1.15rem]" aria-hidden />
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
-          <div className="mx-1 my-0.5 h-px bg-border" />
-          <button
-            type="button"
-            aria-pressed={pinned}
-            aria-label={pinned ? "Unpin navigation rail" : "Pin navigation rail"}
-            title={pinned ? "Unpin rail" : "Pin rail"}
-            onClick={() => setPrefs({ railPinned: !pinned })}
-            onPointerEnter={() => {
-              clear("switch")
-              setActiveId(null)
-            }}
-            onFocus={() => setActiveId(null)}
-            className="flex size-10 items-center justify-center rounded-lg text-muted-foreground outline-none hover:bg-card hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring aria-pressed:text-teal"
-          >
-            {pinned ? <PinOff className="size-4" aria-hidden /> : <Pin className="size-4" aria-hidden />}
-          </button>
-        </div>
+          <Icon className="size-[1.15rem]" aria-hidden />
+        </Link>
 
-        {/* Flyout: label + submenu for the one active destination only.
-            The left padding bridges the gap so moving across it keeps it open. */}
-        {visible && active && (
-          <div
-            ref={flyoutRef}
-            data-testid="nav-flyout"
-            className="absolute left-full pl-1.5 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-left-1"
-            style={{ top: flyoutTop + 6 /* rail padding */ - 4 }}
-            onPointerEnter={() => clear("switch")}
-            onKeyDown={onFlyoutKeyDown}
+        {/* Expansion grows out of the icon: the label pill covers only the icon's row,
+            and the sub-pages hang to the right of the strip so the other icons stay reachable. */}
+        <div
+          ref={(el) => {
+            if (el) panelRefs.current.set(d.id, el)
+            else panelRefs.current.delete(d.id)
+          }}
+          data-testid={open ? "nav-expanded" : undefined}
+          data-open={open}
+          className="pointer-events-none absolute top-0 left-0 z-20 data-[open=true]:pointer-events-auto"
+        >
+          <Link
+            to={d.to}
+            tabIndex={-1}
+            aria-hidden
+            onClick={select(d.to)}
+            className={cn(
+              "flex h-10 items-center gap-3 overflow-hidden rounded-lg border-2 pr-4 pl-[9px] whitespace-nowrap",
+              "transition-[max-width,opacity] duration-200 ease-out motion-reduce:transition-none",
+              current ? "border-black bg-amber text-black shadow-brutal-sm" : "glow-teal border-teal bg-card text-teal",
+              open ? "max-w-72 opacity-100" : "max-w-10 opacity-0",
+            )}
           >
-            <div className="min-w-48 rounded-lg border bg-popover p-1 shadow-lg shadow-black/25">
-              <Link
-                to={active.to}
-                onClick={afterSelect}
-                className="flex h-8 items-center rounded-md px-2 text-sm font-bold outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                {active.label}
-              </Link>
-              {active.children && (
-                <ul role="menu" aria-label={`${active.label} sections`} className="mt-0.5 border-t pt-1">
-                  {active.children.map((c) => {
-                    const here = pathname === c.to || pathname.startsWith(c.to + "/")
-                    return (
-                      <li key={c.to} role="none">
-                        <Link
-                          role="menuitem"
-                          to={c.to}
-                          aria-current={here ? "page" : undefined}
-                          onClick={(e) => {
-                            e.preventDefault()
-                            navigate(c.to)
-                            afterSelect()
-                          }}
-                          className={cn(
-                            "flex h-8 items-center rounded-md px-2 text-sm text-muted-foreground outline-none",
-                            "hover:bg-muted hover:text-foreground focus-visible:bg-muted focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
-                            here && "text-amber",
-                          )}
-                        >
-                          {c.label}
-                        </Link>
-                      </li>
-                    )
-                  })}
-                </ul>
+            <Icon className="size-[1.15rem] shrink-0" aria-hidden />
+            <span className="font-heading text-sm font-bold tracking-wide uppercase">{d.label}</span>
+          </Link>
+          {d.children && (
+            <div
+              className={cn(
+                "ml-12 pt-1.5 transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none",
+                open ? "translate-y-0 opacity-100" : "invisible -translate-y-1 opacity-0",
               )}
+            >
+              <ul role="menu" aria-label={`${d.label} pages`} className="brutal min-w-52 rounded-xl bg-popover p-1.5">
+                {d.children.map((c) => {
+                  const here = pathname + search === c.to || pathname.startsWith(c.to + "/")
+                  return (
+                    <li key={c.to} role="none">
+                      <Link
+                        role="menuitem"
+                        data-sub
+                        to={c.to}
+                        tabIndex={open ? 0 : -1}
+                        aria-current={here ? "page" : undefined}
+                        onClick={select(c.to)}
+                        onKeyDown={(e) => onSubKey(e, d.id)}
+                        className={cn(
+                          "flex h-8 items-center rounded-md px-2.5 text-sm whitespace-nowrap text-muted-foreground outline-none",
+                          "hover:bg-muted hover:text-teal focus-visible:bg-muted focus-visible:text-teal focus-visible:ring-2 focus-visible:ring-ring",
+                          here && "text-amber before:mr-1.5 before:content-['▸']",
+                        )}
+                      >
+                        {c.label}
+                      </Link>
+                    </li>
+                  )
+                })}
+              </ul>
             </div>
-          </div>
-        )}
-      </nav>
-    </>
+          )}
+        </div>
+      </li>
+    )
+  }
+
+  return (
+    <nav
+      aria-label="Main navigation"
+      data-testid="nav-rail"
+      className="retro-dots fixed top-14 bottom-0 left-0 z-40 hidden w-14 flex-col items-center border-r-2 border-edge bg-recessed py-3 md:flex"
+    >
+      <ul className="flex flex-col items-center gap-1.5">{NAV.filter((d) => d.id !== "settings").map(renderItem)}</ul>
+      <ul className="mt-auto flex flex-col items-center gap-1.5">{NAV.filter((d) => d.id === "settings").map(renderItem)}</ul>
+    </nav>
   )
 }

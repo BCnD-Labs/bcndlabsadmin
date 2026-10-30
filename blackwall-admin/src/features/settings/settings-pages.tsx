@@ -1,33 +1,32 @@
-import { ArrowRight, Database } from "lucide-react"
-import { useState } from "react"
+import { Database, Download, Upload } from "lucide-react"
+import { useRef, useState } from "react"
 import { NavLink } from "react-router-dom"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Kbd } from "@/components/ui/kbd"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { PageHeader, Panel } from "@/components/common/panel"
-import { SourceBadge } from "@/components/common/source-badge"
 import { cn } from "@/lib/utils"
-import { integrations } from "@/services"
 import { usePrefs } from "@/stores/prefs"
 import { WORKSPACE_STORAGE_KEY, WORKSPACE_VERSION, useWorkspace } from "@/stores/workspace"
 
-function SettingsTabs() {
+export function SettingsTabs() {
   const tabs = [
     ["Appearance", "/settings/appearance"],
     ["Navigation", "/settings/navigation"],
-    ["Integrations", "/settings/integrations"],
+    ["Connections", "/settings/connections"],
   ]
   return (
-    <nav aria-label="Settings sections" className="mb-4 flex gap-1 border-b">
+    <nav aria-label="Settings sections" className="mb-4 flex gap-1 border-b-2 border-edge">
       {tabs.map(([label, to]) => (
         <NavLink
           key={to}
           to={to}
           className={({ isActive }) =>
             cn(
-              "-mb-px border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground hover:text-foreground",
+              "-mb-0.5 border-b-2 border-transparent px-3 py-2 font-heading text-sm font-bold tracking-wide text-muted-foreground uppercase hover:text-teal",
               isActive && "border-amber text-foreground",
             )
           }
@@ -65,10 +64,44 @@ const SWATCHES: Array<[string, string, string]> = [
 
 export function AppearanceSettings() {
   const retro = usePrefs((s) => s.retroDetails)
+  const samples = usePrefs((s) => s.showSamples)
+  const workspaceName = usePrefs((s) => s.workspaceName)
   const set = usePrefs((s) => s.set)
-  const resetToSeed = useWorkspace((s) => s.resetToSeed)
   const clearAll = useWorkspace((s) => s.clearAll)
-  const [confirm, setConfirm] = useState<null | "reset" | "clear">(null)
+  const [confirm, setConfirm] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const exportData = () => {
+    const raw = localStorage.getItem(WORKSPACE_STORAGE_KEY) ?? "{}"
+    const url = URL.createObjectURL(new Blob([raw], { type: "application/json" }))
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `blackwall-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const [pending, setPending] = useState<{ raw: unknown; summary: string } | null>(null)
+  const describe = (s: Record<string, unknown[] | undefined>) =>
+    `${s.tasks?.length ?? 0} tasks, ${s.journal?.length ?? 0} logs, ${s.notes?.length ?? 0} notes`
+
+  const readImport = async (file: File) => {
+    try {
+      const parsed = JSON.parse(await file.text())
+      if (!parsed?.state || typeof parsed.version !== "number") throw new Error("Not a Blackwall export")
+      setPending({ raw: parsed, summary: describe(parsed.state) })
+    } catch (e) {
+      toast.error(`Import failed: ${(e as Error).message}`)
+    }
+  }
+
+  const applyImport = async () => {
+    if (!pending) return
+    localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(pending.raw))
+    await useWorkspace.persist.rehydrate()
+    setPending(null)
+    toast.success("Workspace imported")
+  }
 
   return (
     <>
@@ -76,7 +109,23 @@ export function AppearanceSettings() {
       <SettingsTabs />
       <div className="grid gap-3 lg:grid-cols-2">
         <Panel title="Appearance">
-          <SettingRow id="retro" label="Retro details" description="Dot field and scanlines on the header and rail. Content backgrounds stay plain." checked={retro} onChange={(v) => set({ retroDetails: v })} />
+          <div className="flex flex-wrap items-center gap-3 px-3 py-3">
+            <div className="flex-1">
+              <Label htmlFor="ws-name" className="text-sm font-bold">Workspace name</Label>
+              <p className="text-sm text-muted-foreground">Shown next to the Blackwall wordmark.</p>
+            </div>
+            <Input id="ws-name" className="w-48" maxLength={32} placeholder="e.g. your org" value={workspaceName} onChange={(e) => set({ workspaceName: e.target.value })} />
+          </div>
+          <div className="border-t" />
+          <SettingRow id="retro" label="Retro details" description="Dot texture and scanlines on the header and navigation rail." checked={retro} onChange={(v) => set({ retroDetails: v })} />
+          <div className="border-t" />
+          <SettingRow
+            id="samples"
+            label="Show sample data"
+            description="Fill panels that aren't connected yet (traffic, development) with made-up data, labelled “Sample data”. Useful for previewing the layout."
+            checked={samples}
+            onChange={(v) => set({ showSamples: v })}
+          />
           <div className="border-t px-3 py-3">
             <h3 className="eyebrow mb-2">Palette</h3>
             <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -90,47 +139,52 @@ export function AppearanceSettings() {
                 </li>
               ))}
             </ul>
-            <p className="mt-2 text-xs text-muted-foreground">
-              * Lifted for contrast. Motion follows your system's reduced-motion setting.
-            </p>
+            <p className="mt-2 text-xs text-muted-foreground">* Lightened for contrast.</p>
           </div>
         </Panel>
-        <Panel title="Local data" icon={<Database />} badge={<SourceBadge status="local" />}>
+        <Panel title="Your data" icon={<Database />}>
           <div className="space-y-2 px-3 py-3 text-sm">
             <p>
-              Workspace records are stored in this browser's localStorage under{" "}
-              <code className="font-mono text-xs">{WORKSPACE_STORAGE_KEY}</code> (schema v{WORKSPACE_VERSION}). They don't
-              sync to other devices. Interface preferences use <code className="font-mono text-xs">blackwall.prefs</code>.
+              Tasks, notes, daily logs, projects, repositories and drafts are saved in this browser (
+              <code className="font-mono text-xs">{WORKSPACE_STORAGE_KEY}</code>, v{WORKSPACE_VERSION}). They don't sync between
+              browsers or devices, so export a copy now and then.
             </p>
-            <p className="text-muted-foreground">
-              Blackwall is a local prototype without authentication. Don't store secrets or credentials here.
-            </p>
+            <p className="text-muted-foreground">There's no sign-in. Anyone using this browser profile can see your workspace.</p>
           </div>
+          {pending && (
+            <div className="space-y-2 border-t bg-recessed/50 px-3 py-3 text-sm" role="alert">
+              <p>
+                Replace what's here now ({describe(useWorkspace.getState() as unknown as Record<string, unknown[]>)}) with the file ({pending.summary})?
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={exportData}><Download /> Export current first</Button>
+                <Button size="sm" variant="destructive" onClick={applyImport}>Replace</Button>
+                <Button size="sm" variant="ghost" onClick={() => setPending(null)}>Cancel</Button>
+              </div>
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-2 border-t px-3 py-3">
+            <Button size="sm" variant="outline" onClick={exportData}><Download /> Export</Button>
+            <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}><Upload /> Import</Button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                if (f) readImport(f)
+                e.target.value = ""
+              }}
+            />
             {confirm ? (
-              <>
-                <span className="text-sm text-red-text">
-                  {confirm === "reset" ? "Replace all records with starter data?" : "Delete all local records?"}
-                </span>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => {
-                    if (confirm === "reset") resetToSeed()
-                    else clearAll()
-                    toast.success(confirm === "reset" ? "Starter data restored" : "Workspace cleared")
-                    setConfirm(null)
-                  }}
-                >
-                  Confirm
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setConfirm(null)}>Cancel</Button>
-              </>
+              <span className="ml-auto flex items-center gap-2">
+                <span className="text-sm text-red-text">Delete everything?</span>
+                <Button size="sm" variant="destructive" onClick={() => { clearAll(); setConfirm(false); toast.success("Workspace cleared") }}>Delete</Button>
+                <Button size="sm" variant="ghost" onClick={() => setConfirm(false)}>Cancel</Button>
+              </span>
             ) : (
-              <>
-                <Button size="sm" variant="outline" onClick={() => setConfirm("reset")}>Restore starter data</Button>
-                <Button size="sm" variant="ghost" className="text-red-text" onClick={() => setConfirm("clear")}>Clear workspace</Button>
-              </>
+              <Button size="sm" variant="ghost" className="ml-auto text-red-text" onClick={() => setConfirm(true)}>Clear workspace</Button>
             )}
           </div>
         </Panel>
@@ -140,68 +194,28 @@ export function AppearanceSettings() {
 }
 
 export function NavigationSettings() {
-  const { railPinned, edgeReveal, set } = usePrefs()
   return (
     <>
       <PageHeader title="Settings" />
       <SettingsTabs />
       <div className="grid gap-3 lg:grid-cols-2">
-        <Panel title="Navigation rail">
-          <SettingRow id="pin" label="Pin rail" description="Keep the icon rail visible. The page reserves space for it." checked={railPinned} onChange={(v) => set({ railPinned: v })} />
-          <div className="border-t" />
-          <SettingRow id="edge" label="Reveal on left-edge hover" description="Hovering the far left edge shows the rail. Turn off to use only the menu button." checked={edgeReveal} onChange={(v) => set({ edgeReveal: v })} />
+        <Panel title="Sidebar">
+          <div className="space-y-2 px-3 py-3 text-sm">
+            <p>The icon strip on the left is always there. Hover an icon (or Tab to it) and just that item opens into its label and pages; click to go.</p>
+            <p className="text-muted-foreground">On a phone, use the ☰ button for the full menu.</p>
+          </div>
         </Panel>
         <Panel title="Keyboard">
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 px-3 py-3 text-sm">
-            <dt><Kbd>⌘K</Kbd> / <Kbd>/</Kbd></dt><dd className="text-muted-foreground">Search workspace</dd>
-            <dt><Kbd>Tab</Kbd> to menu, <Kbd>Enter</Kbd></dt><dd className="text-muted-foreground">Open the rail and focus the current section</dd>
-            <dt><Kbd>↑</Kbd> <Kbd>↓</Kbd></dt><dd className="text-muted-foreground">Move between rail destinations</dd>
-            <dt><Kbd>→</Kbd> / <Kbd>←</Kbd></dt><dd className="text-muted-foreground">Enter / leave a submenu</dd>
-            <dt><Kbd>Esc</Kbd></dt><dd className="text-muted-foreground">Close the rail or flyout</dd>
-            <dt><Kbd>⌘S</Kbd></dt><dd className="text-muted-foreground">Save in draft and note editors</dd>
+            <dt><Kbd>⌘K</Kbd> / <Kbd>/</Kbd></dt><dd className="text-muted-foreground">Search everything</dd>
+            <dt><Kbd>Tab</Kbd></dt><dd className="text-muted-foreground">Into the sidebar after the header</dd>
+            <dt><Kbd>↑</Kbd> <Kbd>↓</Kbd></dt><dd className="text-muted-foreground">Move between sidebar items</dd>
+            <dt><Kbd>→</Kbd> / <Kbd>←</Kbd></dt><dd className="text-muted-foreground">Into / out of an item's pages</dd>
+            <dt><Kbd>Esc</Kbd></dt><dd className="text-muted-foreground">Close the open item</dd>
+            <dt><Kbd>⌘</Kbd> + <Kbd>Enter</Kbd></dt><dd className="text-muted-foreground">Add a note from the Notes composer</dd>
           </dl>
         </Panel>
       </div>
-    </>
-  )
-}
-
-export function IntegrationSettings() {
-  return (
-    <>
-      <PageHeader title="Settings" />
-      <SettingsTabs />
-      <p className="mb-3 max-w-prose text-sm text-muted-foreground">
-        Nothing external is connected. Each integration sits behind a typed service interface in{" "}
-        <code className="font-mono text-xs">src/services</code>. Real adapters need a server-side boundary to hold
-        credentials; tokens must never go in browser code or localStorage.
-      </p>
-      <ul className="grid gap-3 lg:grid-cols-2">
-        {integrations.map((i) => (
-          <li key={i.id} className="rounded-lg border bg-card">
-            <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
-              <h2 className="text-sm font-bold">{i.name}</h2>
-              <SourceBadge status={i.status} />
-              <code className="ml-auto font-mono text-xs text-muted-foreground">{i.contract}</code>
-            </div>
-            <div className="space-y-2 px-3 py-3 text-sm">
-              <p><span className="text-muted-foreground">Feeds: </span>{i.serves}</p>
-              <p><span className="text-muted-foreground">Now: </span>{i.current}</p>
-              <div>
-                <p className="text-muted-foreground">Needed next:</p>
-                <ol className="mt-1 space-y-1">
-                  {i.next.map((n) => (
-                    <li key={n} className="flex gap-2">
-                      <ArrowRight className="mt-0.5 size-3.5 shrink-0 text-teal" aria-hidden />
-                      {n}
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            </div>
-          </li>
-        ))}
-      </ul>
     </>
   )
 }

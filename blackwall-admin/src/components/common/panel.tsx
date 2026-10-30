@@ -1,10 +1,26 @@
 import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
-/** Dashboard panel: compact header row, plain body. */
+export type Accent = "teal" | "amber" | "magenta" | "lime" | "blue" | "red"
+
+const CHIP: Record<Accent, string> = {
+  teal: "bg-teal",
+  amber: "bg-amber",
+  magenta: "bg-magenta",
+  lime: "bg-lime",
+  blue: "bg-blue",
+  red: "bg-red",
+}
+
+/**
+ * Dashboard panel: a neo-brutal block (chunky border, hard shadow, rounded) with
+ * a terminal-style title bar. The accent colours the icon chip so each area of
+ * the app is recognisable at a glance.
+ */
 export function Panel({
   title,
   icon,
+  accent = "teal",
   badge,
   actions,
   children,
@@ -14,6 +30,7 @@ export function Panel({
 }: {
   title: ReactNode
   icon?: ReactNode
+  accent?: Accent
   badge?: ReactNode
   actions?: ReactNode
   children: ReactNode
@@ -26,18 +43,25 @@ export function Panel({
     <section
       id={id}
       aria-labelledby={headingId}
-      className={cn(
-        "flex min-w-0 flex-col rounded-lg border bg-card text-card-foreground",
-        className,
-      )}
+      className={cn("brutal flex min-w-0 flex-col overflow-hidden rounded-xl bg-card text-card-foreground", className)}
     >
-      <header className="flex min-h-11 flex-wrap items-center gap-2 border-b px-3 py-1.5">
-        {icon && <span className="text-teal [&_svg]:size-4">{icon}</span>}
-        <h2 id={headingId} className="text-sm font-bold">
+      <header className="flex min-h-12 flex-wrap items-center gap-2.5 border-b-2 border-edge bg-recessed/70 px-3 py-1.5">
+        {icon && (
+          <span
+            className={cn(
+              "flex size-7 shrink-0 items-center justify-center rounded-md border-2 border-black text-black shadow-brutal-sm [&_svg]:size-4",
+              CHIP[accent],
+            )}
+            aria-hidden
+          >
+            {icon}
+          </span>
+        )}
+        <h2 id={headingId} className="font-heading text-sm font-bold tracking-wide uppercase">
           {title}
         </h2>
         {badge}
-        <div className="ml-auto flex items-center gap-1">{actions}</div>
+        <div className="ml-auto flex items-center gap-1.5">{actions}</div>
       </header>
       <div className={cn("min-h-0 flex-1", bodyClassName)}>{children}</div>
     </section>
@@ -82,7 +106,7 @@ export function PageHeader({
     <div className="mb-4 flex flex-wrap items-end gap-3">
       <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <h1 className="text-xl font-bold">{title}</h1>
+          <h1 className="font-heading text-2xl font-bold tracking-tight">{title}</h1>
           {badge}
         </div>
         {description && (

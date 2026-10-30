@@ -1,4 +1,4 @@
-import { ArrowLeft, Info, Save, Trash2 } from "lucide-react"
+import { ArrowLeft, Save, Trash2 } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { Link, useBlocker, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { EmptyState } from "@/components/common/panel"
-import { SourceBadge } from "@/components/common/source-badge"
 import { DRAFT_STATUS_LABEL } from "@/components/common/tags"
 import { Field, OptionSelect, ProjectSelect } from "@/components/forms/fields"
 import { slugify } from "@/lib/ids"
@@ -95,7 +94,6 @@ function Editor({ draft }: { draft: Draft }) {
         <Button variant="ghost" size="sm" asChild className="-ml-2 text-muted-foreground">
           <Link to="/content/drafts"><ArrowLeft /> Drafts</Link>
         </Button>
-        <SourceBadge status="local" />
         <span className="text-xs text-muted-foreground" aria-live="polite" data-testid="save-state">
           {dirty ? "Unsaved changes" : `Saved ${timeAgo(draft.updatedAt)}`}
         </span>
@@ -127,7 +125,7 @@ function Editor({ draft }: { draft: Draft }) {
       )}
 
       <div className="grid gap-3 lg:grid-cols-[1fr_18rem]">
-        <div className="flex min-w-0 flex-col gap-3 rounded-lg border bg-card p-3">
+        <div className="flex min-w-0 flex-col gap-3 brutal rounded-xl bg-card p-3">
           <label className="sr-only" htmlFor="draft-title">Title</label>
           <Input
             id="draft-title"
@@ -149,7 +147,7 @@ function Editor({ draft }: { draft: Draft }) {
             />
           </Field>
         </div>
-        <aside className="flex flex-col gap-3 self-start rounded-lg border bg-card p-3">
+        <aside className="flex flex-col gap-3 self-start brutal rounded-xl bg-card p-3">
           <Field label="Type" htmlFor="draft-kind">
             <OptionSelect id="draft-kind" value={value.kind} onChange={(kind) => set({ kind })} options={KINDS} />
           </Field>
@@ -162,12 +160,7 @@ function Editor({ draft }: { draft: Draft }) {
           <Field label="Project" htmlFor="draft-project">
             <ProjectSelect id="draft-project" value={value.projectId} onChange={(projectId) => set({ projectId })} />
           </Field>
-          <div className="flex gap-2 rounded-md border border-dashed p-2 text-xs text-muted-foreground">
-            <Info className="mt-px size-3.5 shrink-0" aria-hidden />
-            <p>
-              Saved to this browser only. Publishing to bcndlabs.com is <SourceBadge status="not-connected" className="align-middle" /> in this phase.
-            </p>
-          </div>
+          <p className="text-xs text-muted-foreground">Saved in this browser. Publishing to your site isn't set up yet.</p>
         </aside>
       </div>
     </>

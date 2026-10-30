@@ -4,7 +4,6 @@ import { Link, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { EmptyState, PageHeader } from "@/components/common/panel"
-import { SourceBadge } from "@/components/common/source-badge"
 import { DraftStatusTag, ProjectTag } from "@/components/common/tags"
 import { timeAgo } from "@/lib/dates"
 import { draftHref } from "@/lib/routes"
@@ -29,20 +28,19 @@ export function ContentList({ mode }: { mode: "all" | "drafts" }) {
     <>
       <PageHeader
         title={mode === "all" ? "Pages & posts" : "Drafts"}
-        badge={<SourceBadge status="local" />}
-        description="Local drafts. Publishing to the website is not connected in this phase."
+        description="Saved in this browser. Publishing isn't set up yet."
         actions={
           <Button onClick={() => navigate(draftHref(createDraft(kind === "page" ? { kind: "page" } : undefined).id))}>
             <Plus /> New draft
           </Button>
         }
       />
-      <div className="rounded-lg border bg-card">
+      <div className="brutal rounded-xl bg-card">
         <div className="flex items-center gap-2 border-b px-3 py-2">
           <ToggleGroup type="single" size="sm" variant="outline" value={kind} onValueChange={(v) => v && setKind(v as DraftKind | "any")} aria-label="Content type">
-            <ToggleGroupItem value="any" className="px-2 text-xs data-[state=on]:text-amber">All</ToggleGroupItem>
-            <ToggleGroupItem value="post" className="px-2 text-xs data-[state=on]:text-amber">Posts</ToggleGroupItem>
-            <ToggleGroupItem value="page" className="px-2 text-xs data-[state=on]:text-amber">Pages</ToggleGroupItem>
+            <ToggleGroupItem value="any" className="px-2 text-xs">All</ToggleGroupItem>
+            <ToggleGroupItem value="post" className="px-2 text-xs">Posts</ToggleGroupItem>
+            <ToggleGroupItem value="page" className="px-2 text-xs">Pages</ToggleGroupItem>
           </ToggleGroup>
           <span className="ml-auto text-xs text-muted-foreground">{rows.length} items</span>
         </div>

@@ -3,7 +3,7 @@ import {
   Circle,
   FileText,
   FolderKanban,
-  Link2,
+  PenLine,
   NotebookText,
   Plus,
 } from "lucide-react"
@@ -22,9 +22,30 @@ import {
 import { draftHref, noteHref, projectHref } from "@/lib/routes"
 import { DRAFT_STATUS_LABEL } from "@/components/common/tags"
 import { useCreateDraft } from "@/features/content/use-create-draft"
+import { logHref } from "@/features/journal/daily-log-page"
+import { noteTitle } from "@/features/notes/note-colors"
+import { format } from "date-fns"
+import { parseKey, todayKey } from "@/lib/dates"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
 import { NAV } from "./nav-config"
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+
+/**
+ * Every word you type must appear in the item's text. Ranking: starts with the
+ * query > a word starts with it > contains it > words found separately.
+ */
+function rank(_value: string, search: string, keywords?: string[]): number {
+  const q = search.trim().toLowerCase()
+  if (!q) return 1
+  const hay = (keywords ?? []).join(" \u2022 ").toLowerCase()
+  if (!q.split(/\s+/).every((w) => hay.includes(w))) return 0
+  if (hay.startsWith(q)) return 1
+  if (new RegExp(`\\b${escapeRe(q)}`).test(hay)) return 0.9
+  if (hay.includes(q)) return 0.75
+  return 0.5
+}
 
 /** Global search over local records plus navigation and create actions. */
 export function CommandSearch() {
@@ -33,7 +54,7 @@ export function CommandSearch() {
   const openForm = useUi((s) => s.openForm)
   const navigate = useNavigate()
   const createDraft = useCreateDraft()
-  const { tasks, projects, notes, drafts } = useWorkspace()
+  const { tasks, projects, notes, drafts, journal } = useWorkspace()
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -57,18 +78,17 @@ export function CommandSearch() {
     setOpen(false)
     fn()
   }
-  const projectName = (id?: string) => projects.find((p) => p.id === id)?.code ?? ""
 
   return (
     <CommandDialog
       open={open}
       onOpenChange={setOpen}
       title="Search workspace"
-      description="Search tasks, projects, notes and drafts"
+      description="Search tasks, notes, daily logs, projects and drafts"
       className="sm:max-w-xl"
     >
-      <Command>
-      <CommandInput placeholder="Search tasks, projects, notes, drafts…" />
+      <Command filter={rank}>
+      <CommandInput placeholder="Search tasks, notes, logs, projects, drafts…" />
       <CommandList className="max-h-[min(60vh,420px)]">
         <CommandEmpty>No local records match.</CommandEmpty>
 
@@ -77,12 +97,13 @@ export function CommandSearch() {
             {tasks.map((t) => (
               <CommandItem
                 key={t.id}
-                value={`task ${t.title} ${projectName(t.projectId)} ${t.id}`}
+                value={`task-${t.id}`}
+                keywords={[t.title, t.details ?? ""]}
                 onSelect={() => run(() => openForm({ kind: "task", id: t.id }))}
               >
-                {t.status === "done" ? <CheckCircle2 className="text-teal" /> : <Circle />}
-                <span className={t.status === "done" ? "text-muted-foreground line-through" : ""}>{t.title}</span>
-                <span className="ml-auto font-mono text-xs text-muted-foreground">{projectName(t.projectId)}</span>
+                {t.done ? <CheckCircle2 className="text-teal" /> : <Circle />}
+                <span className={t.done ? "text-muted-foreground line-through" : ""}>{t.title}</span>
+                {t.due && <span className="ml-auto font-mono text-xs text-muted-foreground">{t.due}</span>}
               </CommandItem>
             ))}
           </CommandGroup>
@@ -93,7 +114,8 @@ export function CommandSearch() {
             {projects.map((p) => (
               <CommandItem
                 key={p.id}
-                value={`project ${p.name} ${p.code} ${p.id}`}
+                value={`project-${p.id}`}
+                keywords={[p.name, p.code]}
                 onSelect={() => run(() => navigate(projectHref(p.id)))}
               >
                 <FolderKanban />
@@ -109,12 +131,24 @@ export function CommandSearch() {
             {notes.map((n) => (
               <CommandItem
                 key={n.id}
-                value={`note ${n.title} ${n.body.slice(0, 200)} ${n.id}`}
-                onSelect={() => run(() => navigate(noteHref(n)))}
+                value={`note-${n.id}`}
+                keywords={[n.text.slice(0, 500)]}
+                onSelect={() => run(() => navigate(noteHref(n.id)))}
               >
-                {n.kind === "link" ? <Link2 /> : <NotebookText />}
-                {n.title}
-                <span className="ml-auto text-xs text-muted-foreground capitalize">{n.kind}</span>
+                <NotebookText />
+                <span className="truncate">{noteTitle(n.text)}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {journal.length > 0 && (
+          <CommandGroup heading="Daily logs">
+            {[...journal].sort((a, b) => b.id.localeCompare(a.id)).map((j) => (
+              <CommandItem key={j.id} value={`log-${j.id}`} keywords={[j.id, format(parseKey(j.id), "EEEE MMMM d"), j.text.slice(0, 2000)]} onSelect={() => run(() => navigate(logHref(j.id)))}>
+                <PenLine />
+                <span className="font-mono text-xs">{j.id}</span>
+                <span className="truncate text-muted-foreground">{j.text.split("\n")[0]}</span>
               </CommandItem>
             ))}
           </CommandGroup>
@@ -125,7 +159,8 @@ export function CommandSearch() {
             {drafts.map((d) => (
               <CommandItem
                 key={d.id}
-                value={`draft ${d.title} ${d.slug} ${d.id}`}
+                value={`draft-${d.id}`}
+                keywords={[d.title, d.slug]}
                 onSelect={() => run(() => navigate(draftHref(d.id)))}
               >
                 <FileText />
@@ -143,7 +178,7 @@ export function CommandSearch() {
               const Icon = d.icon
               const label = d.children ? `${d.label} › ${c.label}` : c.label
               return (
-                <CommandItem key={c.to} value={`go ${label}`} onSelect={() => run(() => navigate(c.to))}>
+                <CommandItem key={c.to} value={`go-${c.to}`} keywords={["go to", label]} onSelect={() => run(() => navigate(c.to))}>
                   <Icon />
                   {label}
                 </CommandItem>
@@ -152,17 +187,22 @@ export function CommandSearch() {
           )}
         </CommandGroup>
         <CommandGroup heading="Create">
-          {(["task", "event", "note", "project", "repo"] as const).map((kind) => (
+          {(["task", "note", "project", "repo"] as const).map((kind) => (
             <CommandItem
               key={kind}
-              value={`create new ${kind === "repo" ? "repository link" : kind}`}
+              value={`create-${kind}`}
+              keywords={["new", kind === "repo" ? "repository link" : kind]}
               onSelect={() => run(() => openForm({ kind }))}
             >
               <Plus />
               New {kind === "repo" ? "repository link" : kind}
             </CommandItem>
           ))}
-          <CommandItem value="create new content draft" onSelect={() => run(() => navigate(draftHref(createDraft().id)))}>
+          <CommandItem value="create-log" keywords={["today's log", "daily log", "journal", "write"]} onSelect={() => run(() => navigate(logHref(todayKey())))}>
+            <PenLine />
+            Today's log
+          </CommandItem>
+          <CommandItem value="create-draft" keywords={["new", "content draft"]} onSelect={() => run(() => navigate(draftHref(createDraft().id)))}>
             <Plus />
             New content draft
           </CommandItem>

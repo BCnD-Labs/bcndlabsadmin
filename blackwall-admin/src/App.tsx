@@ -8,9 +8,10 @@ import { DeploymentsPage } from "@/features/development/deployments-page"
 import { ReposPage } from "@/features/development/repos-page"
 import { ReviewsPage } from "@/features/development/reviews-page"
 import { HomePage } from "@/features/home/home-page"
-import { KnowledgePage } from "@/features/knowledge/knowledge-page"
-import { AppearanceSettings, IntegrationSettings, NavigationSettings } from "@/features/settings/settings-pages"
-import { CalendarPage } from "@/features/work/calendar-page"
+import { DailyLogPage } from "@/features/journal/daily-log-page"
+import { NotesPage } from "@/features/notes/notes-page"
+import { ConnectionsPage } from "@/features/settings/connections-page"
+import { AppearanceSettings, NavigationSettings } from "@/features/settings/settings-pages"
 import { ProjectDetail } from "@/features/work/project-detail"
 import { ProjectsPage } from "@/features/work/projects-page"
 import { TasksPage } from "@/features/work/tasks-page"
@@ -27,7 +28,8 @@ const router = createBrowserRouter([
       { path: "work/tasks", element: <TasksPage /> },
       { path: "work/projects", element: <ProjectsPage /> },
       { path: "work/projects/:id", element: <ProjectDetail /> },
-      { path: "work/calendar", element: <CalendarPage /> },
+      { path: "work/calendar", element: <DailyLogPage /> },
+      { path: "work/calendar/:date", element: <DailyLogPage /> },
       { path: "development", element: <Navigate to="/development/repositories" replace /> },
       { path: "development/repositories", element: <ReposPage /> },
       { path: "development/reviews", element: <ReviewsPage /> },
@@ -38,14 +40,13 @@ const router = createBrowserRouter([
       { path: "content/drafts/:id", element: <DraftEditor /> },
       { path: "content/media", element: <MediaPage /> },
       { path: "analytics", element: <AnalyticsPage /> },
-      { path: "knowledge", element: <Navigate to="/knowledge/notes" replace /> },
-      { path: "knowledge/notes", element: <KnowledgePage key="note" kind="note" /> },
-      { path: "knowledge/references", element: <KnowledgePage key="reference" kind="reference" /> },
-      { path: "knowledge/links", element: <KnowledgePage key="link" kind="link" /> },
+      { path: "notes", element: <NotesPage /> },
+      { path: "knowledge/*", element: <Navigate to="/notes" replace /> },
       { path: "settings", element: <Navigate to="/settings/appearance" replace /> },
       { path: "settings/appearance", element: <AppearanceSettings /> },
       { path: "settings/navigation", element: <NavigationSettings /> },
-      { path: "settings/integrations", element: <IntegrationSettings /> },
+      { path: "settings/connections", element: <ConnectionsPage /> },
+      { path: "settings/integrations", element: <Navigate to="/settings/connections" replace /> },
       { path: "*", element: <EmptyState>That page doesn't exist.</EmptyState> },
     ],
   },

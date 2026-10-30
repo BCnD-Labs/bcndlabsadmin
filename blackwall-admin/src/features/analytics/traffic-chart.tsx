@@ -39,7 +39,7 @@ export function RangeToggle({
       aria-label="Date range"
     >
       {RANGES.map((r) => (
-        <ToggleGroupItem key={r} value={String(r)} className="px-2 font-mono text-xs data-[state=on]:text-amber" aria-label={`Last ${r} days`}>
+        <ToggleGroupItem key={r} value={String(r)} className="px-2 font-mono text-xs" aria-label={`Last ${r} days`}>
           {r}d
         </ToggleGroupItem>
       ))}
@@ -59,17 +59,17 @@ export function TrafficSummary({ data, className }: { data: TrafficPoint[]; clas
         <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <span className="size-2 rounded-[2px] bg-chart-1" aria-hidden /> Visitors
         </dt>
-        <dd className="font-mono text-base tabular-nums">{full.format(totals.visitors)}</dd>
+        <dd className="pixel-num text-2xl">{full.format(totals.visitors)}</dd>
       </div>
       <div className="flex items-baseline gap-2">
         <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <span className="size-2 rounded-[2px] bg-chart-2" aria-hidden /> Pageviews
         </dt>
-        <dd className="font-mono text-base tabular-nums">{full.format(totals.pageviews)}</dd>
+        <dd className="pixel-num text-2xl">{full.format(totals.pageviews)}</dd>
       </div>
       <div className="flex items-baseline gap-2">
         <dt className="text-xs text-muted-foreground">Pages / visitor</dt>
-        <dd className="font-mono text-base tabular-nums">{totals.depth.toFixed(2)}</dd>
+        <dd className="pixel-num text-2xl">{totals.depth.toFixed(2)}</dd>
       </div>
     </dl>
   )
@@ -81,7 +81,7 @@ function TrafficTooltip({ active, payload }: TipProps) {
   const p = payload?.[0]?.payload
   if (!active || !p) return null
   return (
-    <div className="min-w-40 rounded-md border bg-popover px-2.5 py-2 text-xs shadow-lg shadow-black/30">
+    <div className="brutal min-w-40 rounded-lg bg-popover px-2.5 py-2 text-xs">
       <div className="mb-1.5 font-bold">{format(parseKey(p.date), "EEE, MMM d, yyyy")}</div>
       <div className="flex items-center gap-2">
         <span className="size-2 rounded-[2px] bg-chart-1" aria-hidden />
@@ -116,21 +116,21 @@ export function TrafficChart({
   return (
     <figure className={cn("relative", className)}>
       <figcaption className="sr-only">
-        Daily website visitors and pageviews over the last {range} days (demo data).
+        Daily website visitors and pageviews over the last {range} days.
       </figcaption>
       <ChartContainer config={trafficConfig} className="aspect-auto h-full w-full">
         <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} accessibilityLayer>
           <defs>
             <linearGradient id="fill-pageviews" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--color-pageviews)" stopOpacity={0.28} />
+              <stop offset="0%" stopColor="var(--color-pageviews)" stopOpacity={0.35} />
               <stop offset="100%" stopColor="var(--color-pageviews)" stopOpacity={0.02} />
             </linearGradient>
             <linearGradient id="fill-visitors" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--color-visitors)" stopOpacity={0.34} />
+              <stop offset="0%" stopColor="var(--color-visitors)" stopOpacity={0.4} />
               <stop offset="100%" stopColor="var(--color-visitors)" stopOpacity={0.04} />
             </linearGradient>
           </defs>
-          <CartesianGrid vertical={false} stroke="var(--border)" strokeOpacity={0.6} />
+          <CartesianGrid vertical={false} stroke="var(--edge)" strokeDasharray="2 4" />
           <XAxis
             dataKey="date"
             ticks={ticks}
@@ -158,7 +158,7 @@ export function TrafficChart({
             dataKey="pageviews"
             type="monotone"
             stroke="var(--color-pageviews)"
-            strokeWidth={2}
+            strokeWidth={2.5}
             fill="url(#fill-pageviews)"
             activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--card)" }}
             isAnimationActive={false}
@@ -167,7 +167,7 @@ export function TrafficChart({
             dataKey="visitors"
             type="monotone"
             stroke="var(--color-visitors)"
-            strokeWidth={2}
+            strokeWidth={2.5}
             fill="url(#fill-visitors)"
             activeDot={{ r: 4, strokeWidth: 2, stroke: "var(--card)" }}
             isAnimationActive={false}
