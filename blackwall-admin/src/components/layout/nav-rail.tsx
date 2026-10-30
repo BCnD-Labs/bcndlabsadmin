@@ -157,7 +157,8 @@ export function NavRail({ focusMain }: { focusMain: () => void }) {
         </Link>
 
         {/* Expansion grows out of the icon: the label pill covers only the icon's row,
-            and the sub-pages hang to the right of the strip so the other icons stay reachable. */}
+            and the sub-pages hang to the right of the strip so the other icons stay reachable.
+            Only the pill and the page list take pointer events, never the empty box around them. */}
         <div
           ref={(el) => {
             if (el) panelRefs.current.set(d.id, el)
@@ -165,7 +166,7 @@ export function NavRail({ focusMain }: { focusMain: () => void }) {
           }}
           data-testid={open ? "nav-expanded" : undefined}
           data-open={open}
-          className="pointer-events-none absolute top-0 left-0 z-20 data-[open=true]:pointer-events-auto"
+          className="pointer-events-none absolute top-0 left-0 z-20"
         >
           <Link
             to={d.to}
@@ -176,7 +177,7 @@ export function NavRail({ focusMain }: { focusMain: () => void }) {
               "flex h-10 items-center gap-3 overflow-hidden rounded-lg border-2 pr-4 pl-[9px] whitespace-nowrap",
               "transition-[max-width,opacity] duration-200 ease-out motion-reduce:transition-none",
               current ? "border-black bg-amber text-black shadow-brutal-sm" : "glow-teal border-teal bg-card text-teal",
-              open ? "max-w-72 opacity-100" : "max-w-10 opacity-0",
+              open ? "pointer-events-auto max-w-72 opacity-100" : "max-w-10 opacity-0",
             )}
           >
             <Icon className="size-[1.15rem] shrink-0" aria-hidden />
@@ -189,7 +190,11 @@ export function NavRail({ focusMain }: { focusMain: () => void }) {
                 open ? "translate-y-0 opacity-100" : "invisible -translate-y-1 opacity-0",
               )}
             >
-              <ul role="menu" aria-label={`${d.label} pages`} className="brutal min-w-52 rounded-xl bg-popover p-1.5">
+              <ul
+                role="menu"
+                aria-label={`${d.label} pages`}
+                className={cn("brutal min-w-52 rounded-xl bg-popover p-1.5", open && "pointer-events-auto")}
+              >
                 {d.children.map((c) => {
                   const here = pathname + search === c.to || pathname.startsWith(c.to + "/")
                   return (

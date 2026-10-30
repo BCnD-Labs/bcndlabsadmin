@@ -66,10 +66,9 @@ Saving a connection runs a live test against the provider and shows the result (
 
 ## Navigation
 
-- **Desktop:** the rail starts hidden. Hover the far-left edge (a 10px strip), or press the header menu button, to bring up a floating icon rail. Hovering or focusing one icon opens a flyout with only that destination's label and sub-sections. A padded bridge plus open, switch, and close delays (120 / 110 / 380 ms in `nav-rail.tsx`) keep the flyout open while you move between rail and flyout. The rail overlays the page and doesn't shift content.
-- **Keyboard:** Tab to the menu button and press Enter (focus lands on the current section). ↑/↓/Home/End move between destinations, → enters the submenu, ← returns, Enter selects, Esc closes and gives focus back to the menu button. After you navigate, focus moves to the main region.
-- **Pin rail:** the pin button at the bottom of the rail, or Settings → Navigation. Saved locally. Pinned mode reserves space for the rail.
-- **Touch and small screens:** below 768px the menu button opens a conventional sheet with the full tree. On touch devices at desktop widths, the first tap on an icon opens its submenu.
+- **Desktop:** a thin icon strip is always on the left, like a collapsed browser sidebar, with Settings at the bottom. Hover an icon (or Tab to it) and only that item grows out into its label and its pages; click the label or a page to go. The other icons stay compact and reachable, and the expansion overlays the page, so nothing shifts. Hover delays are 60 ms to open and 220 ms to close (`nav-rail.tsx`).
+- **Keyboard:** Tab from the header into the strip. ↑/↓/Home/End move between items, → enters an item's pages, ← returns, Enter goes, Esc closes. After you navigate, focus moves to the page.
+- **Phones and small screens:** the ☰ button opens a sheet with the full menu. On touch devices at desktop widths, the first tap on an icon opens it and a second tap goes.
 
 ## Theme
 
