@@ -3,54 +3,38 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSy
 import path from "node:path"
 import type { ConnectionInput, PublicConnection } from "../shared/connections.ts"
 
-/**
- * Connections, including secrets, live in `.blackwall/connections.json` next to
- * the app (gitignored, file mode 600). Only this server process reads secrets;
- * the browser gets redacted copies.
- */
+/** A connection as the server holds it, secrets in the clear (in memory only). */
 export interface StoredConnection extends Omit<PublicConnection, "secrets"> {
   secrets: Record<string, string>
 }
 
-interface StoreFile {
-  version: 1
-  connections: StoredConnection[]
-}
+export type TestOutcome = Pick<StoredConnection, "status" | "account" | "message" | "summary">
 
-export class ConnectionStore {
-  readonly file: string
-  private data: StoreFile
-
-  constructor(root: string) {
-    const dir = path.join(root, ".blackwall")
-    this.file = path.join(dir, "connections.json")
-    if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o700 })
-    this.data = existsSync(this.file)
-      ? (JSON.parse(readFileSync(this.file, "utf8")) as StoreFile)
-      : { version: 1, connections: [] }
-  }
-
-  private save() {
-    const tmp = `${this.file}.tmp`
-    writeFileSync(tmp, JSON.stringify(this.data, null, 2), { mode: 0o600 })
-    renameSync(tmp, this.file)
-    chmodSync(this.file, 0o600)
-  }
+/**
+ * Where connections live. Two backends share all the record logic below:
+ * a local JSON file for development, and Postgres on the home server.
+ */
+export abstract class ConnectionStore {
+  /** Human-readable location, shown by /api/health. */
+  abstract readonly where: string
+  protected abstract all(): Promise<StoredConnection[]>
+  protected abstract save(c: StoredConnection): Promise<void>
+  protected abstract delete(id: string): Promise<boolean>
 
   list() {
-    return this.data.connections
+    return this.all()
   }
 
-  get(id: string) {
-    return this.data.connections.find((c) => c.id === id)
+  async get(id: string) {
+    return (await this.all()).find((c) => c.id === id)
   }
 
-  firstOk(provider: StoredConnection["provider"]) {
-    const all = this.data.connections.filter((c) => c.provider === provider)
+  async firstOk(provider: StoredConnection["provider"]) {
+    const all = (await this.all()).filter((c) => c.provider === provider)
     return all.find((c) => c.status === "ok") ?? all[0]
   }
 
-  create(input: ConnectionInput) {
+  async create(input: ConnectionInput) {
     const now = new Date().toISOString()
     const c: StoredConnection = {
       id: randomUUID().slice(0, 8),
@@ -63,13 +47,12 @@ export class ConnectionStore {
       updatedAt: now,
     }
     applySecrets(c, input.secrets)
-    this.data.connections.push(c)
-    this.save()
+    await this.save(c)
     return c
   }
 
-  update(id: string, input: Partial<ConnectionInput>) {
-    const c = this.get(id)
+  async update(id: string, input: Partial<ConnectionInput>) {
+    const c = await this.get(id)
     if (!c) return undefined
     if (input.label !== undefined) c.label = input.label.trim() || c.label
     if (input.config) c.config = clean(input.config)
@@ -77,23 +60,60 @@ export class ConnectionStore {
     c.status = "untested"
     c.message = undefined
     c.updatedAt = new Date().toISOString()
-    this.save()
+    await this.save(c)
     return c
   }
 
-  setResult(id: string, result: Pick<StoredConnection, "status" | "account" | "message" | "summary">) {
-    const c = this.get(id)
+  async setResult(id: string, result: TestOutcome) {
+    const c = await this.get(id)
     if (!c) return undefined
     Object.assign(c, result, { checkedAt: new Date().toISOString() })
-    this.save()
+    await this.save(c)
     return c
   }
 
   remove(id: string) {
+    return this.delete(id)
+  }
+}
+
+/** Development backend: `.blackwall/connections.json` next to the app (gitignored, mode 600). */
+export class FileConnectionStore extends ConnectionStore {
+  readonly where: string
+  private data: { version: 1; connections: StoredConnection[] }
+
+  constructor(root: string) {
+    super()
+    const dir = path.join(root, ".blackwall")
+    this.where = path.join(dir, "connections.json")
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o700 })
+    this.data = existsSync(this.where) ? JSON.parse(readFileSync(this.where, "utf8")) : { version: 1, connections: [] }
+  }
+
+  protected async all() {
+    return this.data.connections
+  }
+
+  protected async save(c: StoredConnection) {
+    const i = this.data.connections.findIndex((x) => x.id === c.id)
+    if (i >= 0) this.data.connections[i] = c
+    else this.data.connections.push(c)
+    this.flush()
+  }
+
+  protected async delete(id: string) {
     const before = this.data.connections.length
     this.data.connections = this.data.connections.filter((c) => c.id !== id)
-    if (this.data.connections.length !== before) this.save()
-    return this.data.connections.length !== before
+    if (this.data.connections.length === before) return false
+    this.flush()
+    return true
+  }
+
+  private flush() {
+    const tmp = `${this.where}.tmp`
+    writeFileSync(tmp, JSON.stringify(this.data, null, 2), { mode: 0o600 })
+    renameSync(tmp, this.where)
+    chmodSync(this.where, 0o600)
   }
 }
 

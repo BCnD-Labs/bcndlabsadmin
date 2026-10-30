@@ -25,12 +25,49 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new ConnectorError("The local connector isn't reachable", 0)
   }
   if (res.status === 204) return undefined as T
+  if (res.status === 401 && !path.startsWith("login")) useSession.getState().expired()
   const type = res.headers.get("content-type") ?? ""
   if (!type.includes("application/json")) throw new ConnectorError("The local connector isn't running", 0)
   const body = await res.json()
   if (!res.ok) throw new ConnectorError(body.error ?? `HTTP ${res.status}`, res.status)
   return body as T
 }
+
+/**
+ * Sign-in state. On the home server the API requires a password; the local
+ * dev connector doesn't. "offline" means no API at all (e.g. a static build),
+ * in which case the panel still works with its local data.
+ */
+interface SessionState {
+  state: "checking" | "open" | "signin" | "offline"
+  authRequired: boolean
+  check: () => Promise<void>
+  login: (password: string) => Promise<void>
+  logout: () => Promise<void>
+  expired: () => void
+}
+
+export const useSession = create<SessionState>()((set) => ({
+  state: "checking",
+  authRequired: false,
+  check: async () => {
+    try {
+      const s = await api<{ authRequired: boolean; authenticated: boolean }>("session")
+      set({ authRequired: s.authRequired, state: s.authenticated ? "open" : "signin" })
+    } catch {
+      set({ state: "offline", authRequired: false })
+    }
+  },
+  login: async (password) => {
+    await api("login", { method: "POST", body: JSON.stringify({ password }) })
+    set({ state: "open" })
+  },
+  logout: async () => {
+    await api("logout", { method: "POST" })
+    set({ state: "signin" })
+  },
+  expired: () => set((s) => (s.authRequired ? { state: "signin" } : s)),
+}))
 
 interface ConnectionsState {
   /** null until the first load finishes */

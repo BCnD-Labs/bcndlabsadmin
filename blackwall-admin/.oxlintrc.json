@@ -14,7 +14,8 @@
         "src/features/home/**",
         "src/features/work/**",
         "src/features/analytics/**",
-        "src/features/journal/**"
+        "src/features/journal/**",
+        "src/features/settings/**"
       ],
       "rules": {
         "react/purity": "off"

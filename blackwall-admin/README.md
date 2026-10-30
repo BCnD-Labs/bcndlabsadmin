@@ -10,7 +10,7 @@ A personal workspace for keeping track: simple to-dos, a calendar that opens a d
 - **Analytics → You:** charts computed from your tasks and logs (tasks completed per day, open tasks by due date, a log heatmap, streaks). **Analytics → Website** shows your analytics provider once connected.
 - **Projects, Development, Content:** a lighter layer for what you're building: repository links, deployment links, content drafts.
 
-> **Local prototype.** No sign-in. Workspace records live in this browser. Credentials live in a gitignored file on this machine, held by a small local connector. Run it only on your own computer.
+> **Two ways to run it.** `npm run dev` runs everything on your computer (no sign-in; credentials in a gitignored `.blackwall/` file). The **home-server deployment** (Portainer stack: Postgres + app + backups, behind Tailscale and a password) is the source of truth for connections and credentials. See [deploy/README.md](./deploy/README.md). Tasks, notes and logs are still saved per browser for now.
 
 ## Run it
 
@@ -28,6 +28,8 @@ npm run dev          # http://localhost:5173
 | `npm run lint` | oxlint |
 | `npm run check` | typecheck + lint + build |
 | `npm run preview` | Serve the production build (connector included) |
+| `node server/main.ts` | Standalone server (what the Docker image runs; needs the env vars in `deploy/.env.example`) |
+| `node server/cli.ts …` | `gen-key`, `hash-password`, `import <connections.json>` |
 
 Stack: React 19, TypeScript, Vite 8, Tailwind CSS 4, shadcn/ui (Radix, `radix-nova` style), Lucide icons, Recharts (through shadcn `chart`), Zustand, date-fns, React Router 7.
 
@@ -45,7 +47,7 @@ Settings → Connections is where you add, edit, test and remove accounts. Nothi
 
 Saving a connection runs a live test against the provider and shows the result (account name, counts, or the provider's error message). You can add several of each type.
 
-**How credentials are handled.** The browser sends secrets once to the local connector (`server/`, mounted at `/api` on the Vite dev and preview servers). It stores them in `.blackwall/connections.json` (gitignored, mode 600) and makes all provider calls itself. The API only returns redacted records ("saved, ends in …a1b2"), only answers requests from a loopback host, and requires an `X-Blackwall` header, which other websites can't send without a CORS preflight it never approves. A static `vite build` deployed elsewhere has no connector, and the UI says so.
+**How credentials are handled.** The browser sends secrets once to Blackwall's server (`server/`), which makes all provider calls itself. On the home server they're encrypted with AES-256-GCM (key from `BLACKWALL_SECRET_KEY`, never stored in the database) before going into Postgres. In local development they're in `.blackwall/connections.json` (gitignored, mode 600). The home server requires a password (scrypt hash, signed HttpOnly SameSite cookie, rate-limited login). The API only returns redacted records ("saved, ends in …a1b2"), only answers requests from a loopback host, and requires an `X-Blackwall` header, which other websites can't send without a CORS preflight it never approves. A static `vite build` deployed elsewhere has no connector, and the UI says so.
 
 **Verification status.** "Any service" checks were tested end to end. The GitHub, Azure and Cloudflare error paths were tested against the real APIs with invalid credentials. Success paths for GitHub, Azure, Cloudflare and all three analytics providers follow their documented APIs but haven't been run against real accounts yet.
 
@@ -95,7 +97,8 @@ src/
   services/      connector client, data feeds (live / sample / not connected)
   stores/        workspace (versioned persistence), prefs, ui state
 shared/          connection types and provider field definitions (UI + connector)
-server/          local connector: storage, /api routes, provider adapters
+server/          API (app.ts), dev plugin, standalone server (main.ts), stores (file / Postgres), auth, provider adapters
+deploy/          Portainer stack, backup job, deployment guide
   lib/           types, dates, ids, routes
 ```
 

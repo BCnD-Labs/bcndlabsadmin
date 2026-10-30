@@ -4,7 +4,8 @@ import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { FormHost } from "@/components/forms/form-host"
 import { CommandSearch } from "@/components/layout/command-search"
-import { useConnections } from "@/services/connector"
+import { useConnections, useSession } from "@/services/connector"
+import { SignIn } from "./sign-in"
 import { usePrefs } from "@/stores/prefs"
 import { Header } from "./header"
 import { MobileNav } from "./mobile-nav"
@@ -17,10 +18,15 @@ export function AppShell() {
 
   const focusMain = useCallback(() => mainRef.current?.focus({ preventScroll: true }), [])
 
-  // Load connection statuses once so panels know what's connected.
+  const session = useSession((s) => s.state)
+
+  // Check sign-in first; then load connection statuses so panels know what's connected.
   useEffect(() => {
-    useConnections.getState().refresh()
+    void useSession.getState().check()
   }, [])
+  useEffect(() => {
+    if (session === "open") void useConnections.getState().refresh()
+  }, [session])
 
   useEffect(() => {
     document.documentElement.dataset.retro = retro ? "on" : "off"
@@ -29,6 +35,15 @@ export function AppShell() {
   useEffect(() => {
     window.scrollTo({ top: 0 })
   }, [pathname])
+
+  if (session === "signin") {
+    return (
+      <>
+        <SignIn />
+        <Toaster position="bottom-right" />
+      </>
+    )
+  }
 
   return (
     <TooltipProvider delayDuration={300}>

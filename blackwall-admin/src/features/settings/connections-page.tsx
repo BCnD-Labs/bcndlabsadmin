@@ -104,9 +104,9 @@ export function ConnectionsPage() {
       <SettingsTabs />
 
       <p className="mb-3 max-w-prose text-sm text-muted-foreground">
-        Passwords, tokens and private links go to Blackwall's local connector and are saved in{" "}
-        <code className="font-mono text-xs">.blackwall/connections.json</code> on this computer. They aren't kept in the browser and
-        aren't shown again after you save.
+        Passwords, tokens and private links go to Blackwall's server, which stores them encrypted (on the home server, in
+        Postgres; in local development, in <code className="font-mono text-xs">.blackwall/connections.json</code>). They aren't kept in
+        the browser and aren't shown again after you save.
       </p>
 
       {available === false && (

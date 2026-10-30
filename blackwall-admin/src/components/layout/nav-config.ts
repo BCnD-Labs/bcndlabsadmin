@@ -85,6 +85,7 @@ export const NAV: NavDestination[] = [
       { label: "Appearance", to: "/settings/appearance" },
       { label: "Navigation", to: "/settings/navigation" },
       { label: "Connections", to: "/settings/connections" },
+      { label: "Server & backups", to: "/settings/server" },
     ],
   },
 ]

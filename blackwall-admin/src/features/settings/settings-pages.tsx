@@ -17,16 +17,17 @@ export function SettingsTabs() {
     ["Appearance", "/settings/appearance"],
     ["Navigation", "/settings/navigation"],
     ["Connections", "/settings/connections"],
+    ["Server", "/settings/server"],
   ]
   return (
-    <nav aria-label="Settings sections" className="mb-4 flex gap-1 border-b-2 border-edge">
+    <nav aria-label="Settings sections" className="mb-4 flex gap-1 overflow-x-auto border-b-2 border-edge">
       {tabs.map(([label, to]) => (
         <NavLink
           key={to}
           to={to}
           className={({ isActive }) =>
             cn(
-              "-mb-0.5 border-b-2 border-transparent px-3 py-2 font-heading text-sm font-bold tracking-wide text-muted-foreground uppercase hover:text-teal",
+              "-mb-0.5 shrink-0 border-b-2 border-transparent px-3 py-2 font-heading text-sm font-bold tracking-wide whitespace-nowrap text-muted-foreground uppercase hover:text-teal",
               isActive && "border-amber text-foreground",
             )
           }
