@@ -52,15 +52,15 @@ function SettingRow({ id, label, description, checked, onChange }: { id: string;
 }
 
 const SWATCHES: Array<[string, string, string]> = [
-  ["Background", "var(--background)", "#3B3E44"],
-  ["Recessed / nav", "var(--recessed)", "#303339"],
-  ["Panel", "var(--card)", "#41444A"],
-  ["Border", "var(--border)", "#555A63"],
-  ["Text", "var(--foreground)", "#E6E8EB"],
-  ["Secondary text", "var(--muted-foreground)", "#BCC2CA*"],
-  ["Teal", "var(--teal)", "#86BDB9"],
-  ["Amber (actions)", "var(--amber)", "#D8B477"],
-  ["Red", "var(--red)", "#D78F88"],
+  ["Ground", "var(--bw-ground)", "#0A0D13"],
+  ["Panel", "var(--bw-panel)", "#161719"],
+  ["Raised", "var(--bw-raised)", "#1C1D20"],
+  ["Well", "var(--bw-well)", "#0F1012"],
+  ["Ledge", "var(--bw-ledge)", "#2A2C30"],
+  ["Text", "var(--bw-text)", "#EDEFF2"],
+  ["Muted text", "var(--bw-muted)", "#9499A3"],
+  ["Red (accent)", "var(--bw-red)", "#BC1515"],
+  ["Amber", "var(--bw-amber)", "#E0A526"],
 ]
 
 export function AppearanceSettings() {
@@ -118,7 +118,7 @@ export function AppearanceSettings() {
             <Input id="ws-name" className="w-48" maxLength={32} placeholder="e.g. your org" value={workspaceName} onChange={(e) => set({ workspaceName: e.target.value })} />
           </div>
           <div className="border-t" />
-          <SettingRow id="retro" label="Retro details" description="Dot texture and scanlines on the header and navigation rail." checked={retro} onChange={(v) => set({ retroDetails: v })} />
+          <SettingRow id="retro" label="Retro details" description="Background grid and panel scanlines." checked={retro} onChange={(v) => set({ retroDetails: v })} />
           <div className="border-t" />
           <SettingRow
             id="samples"
@@ -140,7 +140,6 @@ export function AppearanceSettings() {
                 </li>
               ))}
             </ul>
-            <p className="mt-2 text-xs text-muted-foreground">* Lightened for contrast.</p>
           </div>
         </Panel>
         <Panel title="Your data" icon={<Database />}>

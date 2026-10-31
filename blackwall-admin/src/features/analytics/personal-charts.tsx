@@ -122,7 +122,7 @@ export function Stat({ label, value, sub, tone }: { label: string; value: string
   return (
     <div className="min-w-0">
       <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className={cn("pixel-num text-4xl text-foreground", tone === "red" && "text-red")}>
+      <dd className={cn("pixel-num text-4xl text-foreground", tone === "red" && "text-red-text")}>
         {value}
         {sub && <span className="ml-1.5 font-sans text-xs tracking-normal text-muted-foreground">{sub}</span>}
       </dd>
