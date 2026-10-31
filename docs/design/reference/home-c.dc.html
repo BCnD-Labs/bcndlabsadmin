@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Blackwall home</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&amp;family=Silkscreen&amp;family=Space+Grotesk:wght@500;700&amp;display=swap">
+<style>
+body{margin:0;background:#0A0D13}
+.bw-ground{background-color:#0A0D13;background-image:linear-gradient(rgba(120,160,190,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(120,160,190,.06) 1px,transparent 1px);background-size:24px 24px}
+.bw-panel{position:relative;background:#161719;border-radius:12px;border-style:solid;border-color:#2A2C30;border-width:0 4px 4px 0;overflow:hidden;min-width:0}
+.bw-panel::after{content:"";position:absolute;inset:0;pointer-events:none;background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.018) 0,rgba(255,255,255,.018) 1px,transparent 1px,transparent 3px)}
+.bw-head{height:40px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 8px 0 14px;border-bottom:1px solid #26282C;font-size:12px;color:#9499A3;white-space:nowrap}
+.bw-p{color:#BC1515;font-weight:700}
+.bw-lab{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#7C818B}
+.bw-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:28px;padding:0 10px;background:#BC1515;border-style:solid;border-color:#6E0C0C;border-width:0 2px 2px 0;border-radius:7px;color:#fff;font:600 11px 'JetBrains Mono',monospace;cursor:pointer}
+.bw-ghost{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:28px;padding:0 10px;background:transparent;border-style:solid;border-color:#2A2C31;border-width:1px 2px 2px 1px;border-radius:7px;color:#C9CDD3;font:11px 'JetBrains Mono',monospace;cursor:pointer;box-sizing:border-box}
+.bw-ghost:hover{background:#1C1D20}
+.bw-well{background:#0F1012;border:1px solid #2A2C31;border-radius:8px}
+.bw-sel{height:26px;padding:0 6px;background:#0F1012;border:1px solid #2A2C31;border-radius:6px;color:#C9CDD3;font:11px 'JetBrains Mono',monospace;cursor:pointer}
+.bw-status{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.bw-quad{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.bw-prodgrid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)}
+.bw-row:hover,.bw-day:hover{background-color:#1C1D20}
+.bw-notif:hover{background-color:#1A1B1E}
+.bw-in::placeholder,.bw-ta::placeholder{color:#7C818B}
+
+/* left rail: each button grows into one continuous pill (label + subpages) and floats over the page */
+.bw-rail{position:relative;z-index:30;overflow:visible!important}
+.bw-rail::after{display:none}
+.bw-ri{position:relative;width:40px;height:40px;flex:none}
+.bw-pill{position:absolute;left:0;top:0;width:40px;box-sizing:border-box;border-radius:10px;overflow:hidden;background:transparent;border-style:solid;border-color:transparent;border-width:0 3px 3px 0;transition:width .2s cubic-bezier(.2,.8,.2,1),background-color .14s ease,border-color .14s ease,box-shadow .2s ease;z-index:1}
+.bw-ri:hover .bw-pill,.bw-ri:focus-within .bw-pill{width:220px;background:#1C1D20;border-color:#2E3035;box-shadow:0 14px 30px rgba(0,0,0,.45);z-index:5}
+.bw-pillhead{display:flex;align-items:center;width:217px;height:40px;border-radius:10px;text-decoration:none;color:#FFFFFF;transition:background-color .14s ease}
+.bw-ri:hover .bw-pillhead.is-idle{background:#26282C}
+.bw-pillicon{width:40px;height:40px;flex:none;display:flex;align-items:center;justify-content:center}
+.bw-pilllabel{flex:1;display:flex;align-items:center;justify-content:space-between;gap:8px;padding-right:12px;opacity:0;transform:translateX(-6px);transition:opacity .14s ease .04s,transform .2s cubic-bezier(.2,.8,.2,1)}
+.bw-ri:hover .bw-pilllabel,.bw-ri:focus-within .bw-pilllabel{opacity:1;transform:none}
+.bw-subs{display:grid;grid-template-rows:0fr;transition:grid-template-rows .22s cubic-bezier(.2,.8,.2,1)}
+.bw-ri:hover .bw-subs,.bw-ri:focus-within .bw-subs{grid-template-rows:1fr}
+.bw-subs>div{min-height:0;overflow:hidden;width:217px}
+.bw-subs a{display:flex;align-items:center;justify-content:space-between;height:30px;margin:0 6px;padding:0 10px 0 34px;border-radius:6px;color:#A3A8B1;font:12px 'JetBrains Mono',monospace;text-decoration:none}
+.bw-subs a:hover,.bw-subs a:focus{background:#26282C;color:#FFFFFF;outline:none}
+.bw-subs .bw-subpad{height:6px}
+
+/* floating calendar + notifications */
+.bw-calpop{position:absolute;right:0;top:calc(100% + 10px);z-index:40;width:300px;transition:opacity .18s ease,transform .22s cubic-bezier(.2,.8,.2,1)}
+.bw-notifcard{position:absolute;top:12px;right:12px;bottom:12px;width:340px;z-index:50;display:flex;flex-direction:column;box-shadow:0 20px 44px rgba(0,0,0,.55);transition:transform .28s cubic-bezier(.2,.8,.2,1),opacity .2s ease}
+.bw-drain{height:2px;background:#BC1515;transform-origin:left center;animation:bw-drain 5s linear forwards}
+@keyframes bw-drain{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+
+@media (max-width:1100px){.bw-quad{grid-template-columns:1fr}.bw-status{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:720px){.bw-rail{flex-direction:row!important;width:100%!important;padding:8px!important;overflow-x:auto!important}.bw-railfill{display:none!important}.bw-ri:hover .bw-pill{width:40px}.bw-status{grid-template-columns:1fr}.bw-calpop{width:calc(100vw - 48px)}.bw-notifcard{width:auto;left:12px}.bw-prodgrid{grid-template-columns:1fr}}
+</style>
+</helmet>
+<div class="bw-ground" style="position: relative; min-height: 1000px; box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px; padding: 12px; overflow: hidden; font-family: 'JetBrains Mono', monospace; color: #EDEFF2">
+
+  <nav aria-label="Sections" class="bw-panel bw-rail" style="width: 60px; flex: none; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 0; align-self: stretch">
+    <div style="width: 34px; height: 34px; flex: none; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; background: #BC1515; border-radius: 8px; border-style: solid; border-color: #6E0C0C; border-width: 0 3px 3px 0; font-family: 'Silkscreen', monospace; font-size: 12px; color: #FFFFFF">BW</div>
+    <sc-for list="{{rail}}" as="r" hint-placeholder-count="7">
+      <div class="bw-ri">
+        <div class="bw-pill">
+          <a href="#" class="{{r.headClass}}" aria-current="{{r.current}}" style="background: {{r.bg}}">
+            <span class="bw-pillicon"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{r.color}}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{r.icon}}"></path></svg></span>
+            <span class="bw-pilllabel">
+              <span style="font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 700">{{r.label}}</span>
+              <span style="font-size: 10px; color: {{r.hintColor}}">{{r.hint}}</span>
+            </span>
+          </a>
+          <sc-if value="{{r.hasSubs}}" hint-placeholder-val="{{false}}">
+            <div class="bw-subs"><div>
+              <div class="bw-subpad"></div>
+              <sc-for list="{{r.subs}}" as="s" hint-placeholder-count="3">
+                <a href="#">{{s.label}}<span style="font-size: 10px; color: #7C818B">{{s.n}}</span></a>
+              </sc-for>
+              <div class="bw-subpad"></div>
+            </div></div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-for>
+    <div class="bw-railfill" style="flex: 1"></div>
+    <div style="width: 34px; height: 34px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: #26282C; font-family: 'Silkscreen', monospace; font-size: 10px">B4</div>
+  </nav>
+
+  <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 12px">
+
+    <header class="bw-panel" style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 10px 10px 16px; overflow: visible; z-index: 20">
+      <div style="display: flex; flex-direction: column; gap: 3px">
+        <span class="bw-lab">Friday · Oct 30 · 9:42 am</span>
+        <h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700; line-height: 1.1">Good morning, Blackwall404</h1>
+      </div>
+      <div style="position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+        <label class="bw-well" style="display: flex; align-items: center; gap: 8px; width: 220px; max-width: 100%; height: 32px; padding: 0 10px; box-sizing: border-box">
+          <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7C818B" stroke-width="2" stroke-linecap="round"><path d="M11 4a7 7 0 100 14 7 7 0 000-14zM20 20l-4-4"></path></svg>
+          <input class="bw-in" aria-label="Search workspace" placeholder="search" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: #EDEFF2; font: 12px 'JetBrains Mono', monospace">
+          <span style="padding: 1px 5px; border: 1px solid #2A2C31; border-radius: 4px; font-size: 10px; color: #7C818B">⌘K</span>
+        </label>
+        <button class="bw-btn" style="height: 32px">+ New</button>
+        <button onClick="{{toggleCal}}" aria-expanded="{{calOpenAttr}}" aria-label="Calendar" class="bw-ghost" style="height: 32px; background: {{calBtnBg}}">
+          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C9CDD3" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v15H4zM4 10h16M9 3v4M15 3v4"></path></svg>
+          <span>Oct 30</span>
+          <span style="width: 6px; height: 6px; border-radius: 1.5px; background: #E0A526"></span>
+        </button>
+        <button onClick="{{toggleNotif}}" aria-expanded="{{notifOpenAttr}}" aria-label="Notifications" class="bw-ghost" style="position: relative; width: 32px; height: 32px; padding: 0; background: {{notifBtnBg}}">
+          <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C9CDD3" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16v-5a6 6 0 0112 0v5l2 2H4zM10 21h4"></path></svg>
+          <sc-if value="{{hasUnread}}" hint-placeholder-val="{{true}}"><span style="position: absolute; top: -5px; right: -5px; min-width: 16px; height: 16px; padding: 0 4px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 4px; background: #BC1515; color: #FFFFFF; font-size: 9px; font-weight: 700">{{unread}}</span></sc-if>
+        </button>
+
+        <div class="bw-calpop" onMouseEnter="{{calEnter}}" onMouseLeave="{{calLeave}}" aria-hidden="{{calHidden}}" style="opacity: {{calOp}}; transform: {{calTf}}; pointer-events: {{calPe}}; visibility: {{calVis}}">
+          <section aria-label="Calendar" class="bw-panel" style="border-width: 1px 4px 4px 1px; border-color: #2E3035; box-shadow: 0 18px 40px rgba(0,0,0,.5)">
+            <div class="bw-head">
+              <span><span class="bw-p">❯</span> cal <span style="color: #5F646D">$</span> <span style="color: #EDEFF2">Oct 2026</span></span>
+              <button onClick="{{toggleCal}}" aria-label="Collapse calendar" class="bw-ghost" style="height: 24px; padding: 0 8px">hide</button>
+            </div>
+            <sc-if value="{{calLeaving}}" hint-placeholder-val="{{false}}"><div class="bw-drain"></div></sc-if>
+            <div style="padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 6px">
+              <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; font-size: 9px; letter-spacing: .06em; color: #7C818B; text-align: center"><span>SU</span><span>MO</span><span>TU</span><span>WE</span><span>TH</span><span>FR</span><span>SA</span></div>
+              <div role="grid" aria-label="October 2026" style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px">
+                <sc-for list="{{cal}}" as="c" hint-placeholder-count="35">
+                  <button class="bw-day" onClick="{{c.pick}}" aria-label="{{c.aria}}" disabled="{{c.off}}" style="height: 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0; box-sizing: border-box; background: {{c.bg}}; border-style: solid; border-color: {{c.edge}}; border-width: 0 2px 2px 0; border-radius: 6px; color: {{c.color}}; font: {{c.w}} 11px 'JetBrains Mono', monospace; cursor: pointer">{{c.n}}<span style="display: flex; gap: 2px; height: 3px"><sc-for list="{{c.dots}}" as="d" hint-placeholder-count="0"><span style="width: 3px; height: 3px; border-radius: 1px; background: {{d}}"></span></sc-for></span></button>
+                </sc-for>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px dashed #26282C">
+                <div style="display: flex; justify-content: space-between"><span class="bw-lab">Today</span><span style="font-size: 10px; color: #7C818B">click a day → log</span></div>
+                <sc-for list="{{agendaToday}}" as="a" hint-placeholder-count="3">
+                  <div style="display: grid; grid-template-columns: 42px 8px minmax(0, 1fr); gap: 8px; align-items: center; font-size: 11px"><span style="color: #9499A3">{{a.t}}</span><span style="width: 6px; height: 6px; border-radius: 1.5px; background: {{a.c}}"></span><span style="color: #EDEFF2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{a.title}}</span></div>
+                </sc-for>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </header>
+
+    <section aria-label="Critical services" style="display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 0 2px">
+        <span class="bw-lab">Status · pinned services</span>
+        <button onClick="{{toggleEdit}}" aria-pressed="{{editAttr}}" class="bw-ghost" style="height: 24px">{{editLabel}}</button>
+      </div>
+      <div class="bw-status">
+        <sc-for list="{{status}}" as="s" hint-placeholder-count="4">
+          <div class="bw-panel" style="display: flex; flex-direction: column; gap: 8px; padding: 12px 14px 12px">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 26px">
+              <sc-if value="{{s.editing}}" hint-placeholder-val="{{false}}">
+                <select class="bw-sel" aria-label="{{s.selLabel}}" value="{{s.key}}" onChange="{{s.change}}" style="flex: 1; min-width: 0">
+                  <sc-for list="{{s.options}}" as="o" hint-placeholder-count="8"><option value="{{o.key}}">{{o.label}}</option></sc-for>
+                </select>
+              </sc-if>
+              <sc-if value="{{s.viewing}}" hint-placeholder-val="{{true}}">
+                <span class="bw-lab" style="color: #9499A3">{{s.label}}</span>
+              </sc-if>
+              <span style="width: 8px; height: 8px; flex: none; border-radius: 2px; background: {{s.c}}"></span>
+            </div>
+            <span style="font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700; line-height: 1">{{s.v}}</span>
+            <div style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 2px"><sc-for list="{{s.cells}}" as="c" hint-placeholder-count="12"><span style="height: 6px; border-radius: 1.5px; background: {{c}}"></span></sc-for></div>
+            <span style="font-size: 10px; color: #7C818B">{{s.meta}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <div class="bw-quad">
+      <sc-for list="{{slots}}" as="sl" hint-placeholder-count="4">
+        <section aria-label="{{sl.title}}" class="bw-panel" style="display: flex; flex-direction: column; min-height: 340px">
+          <div class="bw-head">
+            <span><span class="bw-p">❯</span> {{sl.cmd}}</span>
+            <div style="display: flex; align-items: center; gap: 6px">
+              <span style="font-size: 11px">{{sl.meta}}</span>
+              <select class="bw-sel" aria-label="{{sl.swapLabel}}" value="{{sl.type}}" onChange="{{sl.change}}">
+                <option value="productivity">Productivity</option>
+                <option value="traffic">Traffic</option>
+                <option value="github">GitHub</option>
+                <option value="services">Services</option>
+                <option value="containers">Containers</option>
+              </select>
+            </div>
+          </div>
+
+          <sc-if value="{{sl.isProd}}" hint-placeholder-val="{{false}}">
+            <div class="bw-prodgrid" style="flex: 1">
+              <div style="padding: 12px 12px 14px 14px; display: flex; flex-direction: column; gap: 9px; border-right: 1px solid #26282C; min-width: 0">
+                <div role="tablist" aria-label="Task views" class="bw-well" style="display: flex; gap: 3px; padding: 3px">
+                  <sc-for list="{{sl.d.tabs}}" as="t" hint-placeholder-count="3">
+                    <button role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; height: 24px; background: {{t.bg}}; border-style: solid; border-color: {{t.edge}}; border-width: 0 2px 2px 0; border-radius: 5px; color: {{t.color}}; font: 11px 'JetBrains Mono', monospace; cursor: pointer">{{t.label}}<span style="padding: 0 4px; border-radius: 3px; background: {{t.cbg}}; font-size: 9px; color: {{t.cc}}">{{t.n}}</span></button>
+                  </sc-for>
+                </div>
+                <label style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px; background: #0F1012; border: 1px dashed #3A3D43; border-radius: 7px">
+                  <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7C818B" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+                  <input class="bw-in" aria-label="New task" value="{{sl.d.draft}}" onChange="{{sl.d.onType}}" onKeyDown="{{sl.d.onKey}}" placeholder="Add a task… Enter" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: #EDEFF2; font: 11px 'JetBrains Mono', monospace">
+                </label>
+                <div style="display: flex; flex-direction: column">
+                  <sc-for list="{{sl.d.rows}}" as="r" hint-placeholder-count="4">
+                    <div class="bw-row" style="display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 4px; border-radius: 6px; border-bottom: 1px solid #1E1F22">
+                      <button role="checkbox" aria-checked="{{r.checked}}" aria-label="{{r.aria}}" onClick="{{r.toggle}}" style="width: 15px; height: 15px; flex: none; display: flex; align-items: center; justify-content: center; padding: 0; background: {{r.boxBg}}; border: 1.5px solid {{r.boxBd}}; border-radius: 4px; cursor: pointer">
+                        <sc-if value="{{r.done}}" hint-placeholder-val="{{false}}"><svg aria-hidden="true" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></sc-if>
+                      </button>
+                      <span style="flex: 1; min-width: 0; font-size: 11px; color: {{r.tc}}; text-decoration: {{r.strike}}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{r.title}}</span>
+                      <span style="display: inline-flex; align-items: center; gap: 4px; padding: 1px 6px; border: 1px solid #2A2C31; border-radius: 4px; font-size: 9px; color: {{r.dc}}; white-space: nowrap"><span style="width: 5px; height: 5px; border-radius: 1px; background: {{r.dd}}"></span>{{r.due}}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="padding: 12px 14px 14px 12px; display: flex; flex-direction: column; gap: 7px; min-width: 0">
+                <div style="display: flex; align-items: center; justify-content: space-between"><span class="bw-lab">Pinned notes</span><button class="bw-ghost" aria-label="New note" style="width: 24px; height: 22px; padding: 0">+</button></div>
+                <sc-for list="{{sl.d.notes}}" as="n" hint-placeholder-count="3">
+                  <article style="display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; background: #1C1D20; border-style: solid; border-color: #2A2C30; border-width: 1px 3px 3px 1px; border-radius: 8px">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px"><span style="font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{n.title}}</span><span style="font-size: 9px; color: #7C818B">{{n.when}}</span></div>
+                    <p style="margin: 0; font-size: 10px; line-height: 1.5; color: #A3A8B1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden">{{n.body}}</p>
+                  </article>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{sl.isTraffic}}" hint-placeholder-val="{{false}}">
+            <div style="padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 10px">
+              <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 10px">
+                <div style="display: flex; gap: 22px">
+                  <div style="display: flex; flex-direction: column; gap: 3px"><span class="bw-lab" style="color: #9499A3">Visitors 7d</span><span style="font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700; line-height: 1">1,284</span></div>
+                  <div style="display: flex; flex-direction: column; gap: 3px"><span class="bw-lab" style="color: #9499A3">Online</span><span style="font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700; line-height: 1">7</span></div>
+                </div>
+                <span style="font-size: 11px; color: #5EF0B5">▲ 12%</span>
+              </div>
+              <div role="img" aria-label="Visitors per day, last 14 days" class="bw-well" style="height: 92px; display: flex; align-items: flex-end; gap: 4px; padding: 8px; box-sizing: border-box">
+                <sc-for list="{{sl.d.bars}}" as="b" hint-placeholder-count="14"><span style="flex: 1; height: {{b.h}}; border-radius: 2px 2px 0 0; background: {{b.c}}"></span></sc-for>
+              </div>
+              <sc-for list="{{sl.d.pages}}" as="p" hint-placeholder-count="3">
+                <div style="display: grid; grid-template-columns: minmax(0, 1fr) 90px 40px; gap: 10px; align-items: center; font-size: 11px">
+                  <span style="color: #EDEFF2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{p.path}}</span>
+                  <div style="height: 5px; border-radius: 2px; background: #26282C; overflow: hidden"><div style="width: {{p.w}}; height: 100%; background: #BC1515"></div></div>
+                  <span style="text-align: right; color: #C9CDD3">{{p.u}}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{sl.isGithub}}" hint-placeholder-val="{{false}}">
+            <div style="padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 10px">
+              <div role="img" aria-label="Contribution heatmap, last 18 weeks" class="bw-well" style="display: grid; grid-template-columns: repeat(18, minmax(0, 1fr)); grid-template-rows: repeat(7, 9px); grid-auto-flow: column; gap: 3px; padding: 8px">
+                <sc-for list="{{sl.d.heat}}" as="h" hint-placeholder-count="126"><span style="border-radius: 2px; background: {{h}}"></span></sc-for>
+              </div>
+              <sc-for list="{{sl.d.prs}}" as="p" hint-placeholder-count="3">
+                <div style="display: grid; grid-template-columns: minmax(0, 1fr) 84px 28px; gap: 10px; align-items: center; padding: 5px 0; border-bottom: 1px solid #1E1F22">
+                  <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0"><span style="font-size: 11px; color: #EDEFF2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{p.title}}</span><span style="font-size: 10px; color: #7C818B">{{p.repo}}</span></div>
+                  <span style="display: inline-flex; align-items: center; gap: 5px; justify-self: start; padding: 2px 7px; border: 1px solid #2A2C31; border-radius: 5px; font-size: 10px; color: #C9CDD3"><span style="width: 6px; height: 6px; border-radius: 1.5px; background: {{p.c}}"></span>{{p.s}}</span>
+                  <span style="text-align: right; font-size: 10px; color: #7C818B">{{p.age}}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{sl.isServices}}" hint-placeholder-val="{{false}}">
+            <div style="padding: 14px; display: flex; flex-direction: column; gap: 11px">
+              <sc-for list="{{sl.d.svc}}" as="s" hint-placeholder-count="6">
+                <div style="display: grid; grid-template-columns: 104px minmax(0, 1fr) 50px; gap: 10px; align-items: center">
+                  <div style="display: flex; flex-direction: column; gap: 1px"><span style="font-size: 12px; color: #EDEFF2">{{s.name}}</span><span style="font-size: 10px; color: #7C818B">{{s.ms}}</span></div>
+                  <div style="display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 2px"><sc-for list="{{s.beats}}" as="b" hint-placeholder-count="24"><span style="height: 14px; border-radius: 1.5px; background: {{b}}"></span></sc-for></div>
+                  <span style="text-align: right; font-size: 10px; color: {{s.pc}}">{{s.pct}}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{sl.isContainers}}" hint-placeholder-val="{{false}}">
+            <div style="padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 10px">
+              <div style="display: flex; align-items: baseline; gap: 10px"><span style="font-family: 'Space Grotesk', sans-serif; font-size: 30px; font-weight: 700; line-height: 1">15</span><span style="font-size: 12px; color: #9499A3">running · <span style="color: #EDEFF2">0 down</span> · 4 stacks</span></div>
+              <div class="bw-well" style="display: grid; grid-template-columns: repeat(15, minmax(0, 1fr)); gap: 3px; padding: 4px"><sc-for list="{{sl.d.meter}}" as="m" hint-placeholder-count="15"><span style="height: 10px; border-radius: 2px; background: #BC1515"></span></sc-for></div>
+              <sc-for list="{{sl.d.ctr}}" as="r" hint-placeholder-count="5">
+                <div style="display: grid; grid-template-columns: 104px minmax(0, 1fr) 80px 50px; gap: 10px; align-items: center; height: 28px; border-top: 1px solid #1E1F22; font-size: 11px">
+                  <span style="display: flex; align-items: center; gap: 8px; color: #EDEFF2"><span style="width: 6px; height: 6px; border-radius: 1.5px; background: #BC1515"></span>{{r.name}}</span>
+                  <span style="color: #7C818B; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{r.image}}</span>
+                  <div style="height: 4px; border-radius: 999px; background: #26282C; overflow: hidden"><div style="width: {{r.w}}; height: 100%; background: #BC1515"></div></div>
+                  <span style="text-align: right; color: #9499A3">{{r.up}}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </section>
+      </sc-for>
+    </div>
+  </main>
+
+  <aside aria-label="Notifications" aria-hidden="{{notifHidden}}" class="bw-panel bw-notifcard" onMouseEnter="{{notifEnter}}" onMouseLeave="{{notifLeave}}" style="transform: {{notifTf}}; opacity: {{notifOp}}; pointer-events: {{notifPe}}; visibility: {{notifVis}}; border-width: 1px 4px 4px 1px; border-color: #2E3035">
+    <div class="bw-head">
+      <span style="display: flex; align-items: center; gap: 8px"><span class="bw-p">❯</span> notifications <span style="min-width: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 4px; background: {{badgeBg}}; color: #FFFFFF; font-size: 10px; text-align: center">{{unread}}</span></span>
+      <div style="display: flex; gap: 4px">
+        <button onClick="{{markAll}}" class="bw-ghost" style="height: 24px; padding: 0 8px">read all</button>
+        <button onClick="{{toggleNotif}}" aria-label="Hide notifications" class="bw-ghost" style="width: 24px; height: 24px; padding: 0">✕</button>
+      </div>
+    </div>
+    <sc-if value="{{notifLeaving}}" hint-placeholder-val="{{false}}"><div class="bw-drain"></div></sc-if>
+    <div style="padding: 10px 12px 6px">
+      <div role="tablist" aria-label="Filter notifications" class="bw-well" style="display: flex; gap: 3px; padding: 3px">
+        <sc-for list="{{filters}}" as="f" hint-placeholder-count="4">
+          <button role="tab" aria-selected="{{f.on}}" onClick="{{f.pick}}" style="flex: 1; height: 26px; background: {{f.bg}}; border-style: solid; border-color: {{f.edge}}; border-width: 0 2px 2px 0; border-radius: 6px; color: {{f.color}}; font: 11px 'JetBrains Mono', monospace; cursor: pointer">{{f.label}}</button>
+        </sc-for>
+      </div>
+    </div>
+    <div style="flex: 1; display: flex; flex-direction: column; padding: 4px 6px 8px; overflow: auto">
+      <sc-for list="{{groups}}" as="g" hint-placeholder-count="2">
+        <div style="display: flex; flex-direction: column">
+          <span class="bw-lab" style="padding: 10px 8px 6px">{{g.label}}</span>
+          <sc-for list="{{g.items}}" as="n" hint-placeholder-count="4">
+            <button class="bw-notif" onClick="{{n.read}}" aria-label="{{n.aria}}" style="display: grid; grid-template-columns: 30px minmax(0, 1fr) 8px; gap: 10px; align-items: start; width: 100%; padding: 9px 8px; background: transparent; border: 0; border-radius: 8px; text-align: left; cursor: pointer">
+              <span style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; background: #1C1D20; border-style: solid; border-color: #2A2C30; border-width: 0 2px 2px 0; border-radius: 7px">
+                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="{{n.c}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{n.icon}}"></path></svg>
+              </span>
+              <span style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+                <span style="font: {{n.weight}} 12px 'JetBrains Mono', monospace; color: {{n.tc}}">{{n.title}}</span>
+                <span style="font: 11px/1.45 'JetBrains Mono', monospace; color: #9499A3">{{n.body}}</span>
+                <span style="font: 10px 'JetBrains Mono', monospace; color: #7C818B">{{n.src}} · {{n.t}}</span>
+              </span>
+              <span style="width: 7px; height: 7px; margin-top: 5px; border-radius: 2px; background: {{n.dot}}"></span>
+            </button>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+    <div style="padding: 10px 14px; border-top: 1px solid #26282C; display: flex; justify-content: space-between; font-size: 10px; color: #9499A3"><span>auto-hides 5s after mouse leaves</span><a href="#" style="color: #C9CDD3; text-decoration: none">settings →</a></div>
+  </aside>
+
+  <sc-if value="{{logOpen}}" hint-placeholder-val="{{false}}">
+    <div style="position: absolute; inset: 0; z-index: 60; display: flex; align-items: flex-start; justify-content: center; padding: 120px 16px 16px; background: rgba(10, 13, 19, 0.72)">
+      <div role="dialog" aria-label="{{logTitle}}" style="width: 420px; max-width: 100%; display: flex; flex-direction: column; background: #161719; border-style: solid; border-color: #2E3035; border-width: 1px 4px 4px 1px; border-radius: 12px; overflow: hidden">
+        <div class="bw-head">
+          <span><span class="bw-p">❯</span> log <span style="color: #5F646D">$</span> <span style="color: #EDEFF2">{{logCmd}}</span></span>
+          <button onClick="{{closeLog}}" aria-label="Close log" class="bw-ghost" style="width: 28px; padding: 0">✕</button>
+        </div>
+        <div style="padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 10px">
+          <span style="font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700">{{logTitle}}</span>
+          <sc-if value="{{hasDayAgenda}}" hint-placeholder-val="{{false}}">
+            <div class="bw-well" style="display: flex; flex-direction: column; gap: 5px; padding: 8px 10px">
+              <sc-for list="{{dayAgenda}}" as="a" hint-placeholder-count="2">
+                <div style="display: grid; grid-template-columns: 50px 8px minmax(0, 1fr); gap: 8px; align-items: center; font-size: 11px"><span style="color: #9499A3">{{a.t}}</span><span style="width: 6px; height: 6px; border-radius: 1.5px; background: {{a.c}}"></span><span style="color: #EDEFF2">{{a.title}}</span></div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px">
+            <sc-for list="{{prompts}}" as="p" hint-placeholder-count="4"><button onClick="{{p.add}}" class="bw-ghost" style="height: 24px">+ {{p.label}}</button></sc-for>
+          </div>
+          <textarea class="bw-ta bw-well" aria-label="Log entry" value="{{logText}}" onChange="{{onLogType}}" placeholder="What did you ship, learn, or get stuck on?" style="height: 130px; padding: 10px; box-sizing: border-box; resize: none; outline: none; color: #EDEFF2; font: 12px/1.6 'JetBrains Mono', monospace"></textarea>
+          <div style="display: flex; align-items: center; justify-content: space-between">
+            <span style="font-size: 10px; color: #7C818B">{{logStatus}}</span>
+            <div style="display: flex; gap: 6px"><button onClick="{{closeLog}}" class="bw-ghost">Cancel</button><button onClick="{{saveLog}}" class="bw-btn">Save log</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"autoHideSeconds":{"editor":"range","default":5,"min":2,"max":15,"step":1,"unit":"s"},"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.timers = {};
+    this.state = {
+      calOpen: false, notifOpen: false, calLeaving: false, notifLeaving: false, editStatus: false,
+      statusKeys: ['containers', 'node', 'site', 'dragonwilds'],
+      slotTypes: ['productivity', 'traffic', 'github', 'services'],
+      tab: 'today', draft: '', nextId: 30, filter: 'all', logDay: null, logText: '', logSaved: false,
+      logs: { 20: 'Set up Umami on Mikoshi.', 21: 'VLSM drills.', 22: 'Speech topic picked.', 24: 'Dragonwilds patched.', 27: 'VLSM 18/20.', 29: 'Locked Blackwall panel style.' },
+      tasks: [
+        { id: 1, title: 'Wire Umami API key into Blackwall', due: 'today', when: 'today', done: false },
+        { id: 2, title: 'GEG-123 reading: ch. 7 renewables', due: '5 pm', when: 'today', done: false },
+        { id: 3, title: 'Fix dragonwilds arm64 healthcheck', due: 'overdue', when: 'today', done: false },
+        { id: 4, title: 'Subnetting drill × 20', due: 'today', when: 'today', done: true },
+        { id: 5, title: 'Draft speech outline', due: 'Mon', when: 'upcoming', done: false },
+        { id: 6, title: 'Write Safari ports blog post', due: 'Wed', when: 'upcoming', done: false }
+      ],
+      notifs: [
+        { id: 1, type: 'alerts', title: 'Healthcheck failing', body: 'dragonwilds-docker container restarted 3× in 1h.', src: 'mikoshi', t: '5m', day: 'Today', unread: true },
+        { id: 2, type: 'dev', title: 'Check failed on PR #17', body: 'build-arm64 exited with code 1.', src: 'github', t: '5h', day: 'Today', unread: true },
+        { id: 3, type: 'site', title: 'Traffic spike', body: '/blog/porting-chrome-extensions-to-safari +240% from reddit.', src: 'umami', t: '6h', day: 'Today', unread: true },
+        { id: 4, type: 'alerts', title: 'gitea slow', body: 'Response time 640ms (threshold 500ms).', src: 'kuma', t: '6h', day: 'Today', unread: false },
+        { id: 5, type: 'dev', title: 'Review requested', body: 'layerlab #9 · Subnetting drill: VLSM mode.', src: 'github', t: '1d', day: 'Yesterday', unread: false },
+        { id: 6, type: 'school', title: 'Due tomorrow', body: 'GEG-123 quiz 5 opens at 8:00 am.', src: 'calendar', t: '1d', day: 'Yesterday', unread: false },
+        { id: 7, type: 'dev', title: 'PR #42 checks passed', body: 'blackwall · Add Umami analytics panel.', src: 'github', t: '1d', day: 'Yesterday', unread: false }
+      ]
+    };
+  }
+  componentWillUnmount() { Object.keys(this.timers).forEach(k => clearTimeout(this.timers[k])); }
+  arm(which) {
+    clearTimeout(this.timers[which]);
+    const secs = this.props.autoHideSeconds ?? 5;
+    this.setState(which === 'cal' ? { calLeaving: true } : { notifLeaving: true });
+    this.timers[which] = setTimeout(() => {
+      this.setState(which === 'cal' ? { calOpen: false, calLeaving: false } : { notifOpen: false, notifLeaving: false });
+    }, secs * 1000);
+  }
+  disarm(which) {
+    clearTimeout(this.timers[which]);
+    this.setState(which === 'cal' ? { calLeaving: false } : { notifLeaving: false });
+  }
+  renderVals() {
+    const s = this.state;
+    const R = '#BC1515', A = '#E0A526', G = '#5EF0B5', W = '#C9CDD3', OFF = '#2C2E33', GR = '#4A4E56';
+    const I = {
+      home: 'M3 11l9-7 9 7v9H3zM9 20v-6h6v6',
+      check: 'M4 6h3M4 12h3M4 18h3M10 6h10M10 12h10M10 18h10',
+      chart: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
+      code: 'M8 7l-5 5 5 5M16 7l5 5-5 5',
+      box: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9',
+      cap: 'M2 9l10-5 10 5-10 5zM6 11v5c3 2 9 2 12 0v-5',
+      gear: 'M12 9a3 3 0 100 6 3 3 0 000-6zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9L7 7M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1',
+      alert: 'M12 3l10 18H2zM12 10v4M12 17h.01',
+      branch: 'M6 3v12M18 9a3 3 0 100-6 3 3 0 000 6zM6 21a3 3 0 100-6 3 3 0 000 6zM18 9c0 6-12 3-12 9',
+      globe: 'M12 3a9 9 0 100 18 9 9 0 000-18zM3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18',
+      calSm: 'M4 5h16v15H4zM4 10h16M9 3v4M15 3v4'
+    };
+    const railDef = [
+      ['Home', 'home', 'overview', []],
+      ['Productivity', 'check', '4 open', [['Tasks', '4'], ['Calendar', '3'], ['Notes', '12'], ['Log', '']]],
+      ['Analytics', 'chart', 'bcndlabs.dev', [['Overview', ''], ['Pages', ''], ['Sources', '']]],
+      ['Development', 'code', '1 failing', [['GitHub', '3 PRs'], ['Deploys', ''], ['Projects', '5']]],
+      ['Homelab', 'box', '23/24 up', [['Containers', '15'], ['Nodes', '1'], ['Game servers', '2']]],
+      ['School', 'cap', '3 due', [['Courses', '3'], ['Deadlines', '3']]],
+      ['Settings', 'gear', '', [['General', ''], ['Integrations', ''], ['Account', '']]]
+    ];
+    const rail = railDef.map((r, i) => ({
+      label: r[0], icon: I[r[1]], hint: r[2], current: i === 0 ? 'page' : undefined,
+      subs: r[3].map(x => ({ label: x[0], n: x[1] })), hasSubs: r[3].length > 0,
+      headClass: i === 0 ? 'bw-pillhead' : 'bw-pillhead is-idle',
+      bg: i === 0 ? R : 'transparent', color: i === 0 ? '#FFFFFF' : '#7C818B', hintColor: i === 0 ? '#F3C9C9' : '#7C818B'
+    }));
+
+    const seg = (n, c) => { const o = []; for (let i = 0; i < 12; i++) o.push(i < n ? c : OFF); return o; };
+    const catalog = {
+      containers: { label: 'Containers', v: '15 / 15', c: R, cells: seg(12, R), meta: '0 down · 4 stacks' },
+      node: { label: 'mikoshi-01', v: 'CPU 34%', c: R, cells: seg(4, R), meta: 'mem 70% · disk 78% · 54°C' },
+      site: { label: 'bcndlabs.dev', v: '99.98%', c: R, cells: seg(12, R), meta: 'uptime 30d · 7 online' },
+      dragonwilds: { label: 'Dragonwilds', v: '0 players', c: A, cells: seg(0, R), meta: 'up · healthcheck failing' },
+      minecraft: { label: 'Minecraft', v: '2 players', c: R, cells: seg(2, R), meta: 'bedrock · up 4d' },
+      pihole: { label: 'Pi-hole', v: '18.4%', c: R, cells: seg(2, R), meta: '48.2k queries · blocked' },
+      kuma: { label: 'Services', v: '23 / 24', c: A, cells: seg(11, R), meta: '1 slow · 0 down' },
+      ci: { label: 'GitHub CI', v: '1 failing', c: R, cells: seg(9, R), meta: '3 repos passing' }
+    };
+    const optKeys = Object.keys(catalog);
+    const status = s.statusKeys.map((k, i) => Object.assign({}, catalog[k], {
+      key: k, editing: s.editStatus, viewing: !s.editStatus, selLabel: 'Status box ' + (i + 1) + ' service',
+      options: optKeys.map(o => ({ key: o, label: catalog[o].label })),
+      change: e => { const ks = s.statusKeys.slice(); ks[i] = e.target.value; this.setState({ statusKeys: ks }); }
+    }));
+
+    const ev = {
+      30: [['09:30', 'GEG-123 lecture', W], ['14:00', 'CCNA lab block', R], ['17:00', 'GEG reading due', A]],
+      31: [['all day', 'Back up Mikoshi volumes', R]],
+      28: [['09:30', 'GEG-123 lecture', W]],
+      23: [['23:59', 'Energy quiz 4', A]],
+      16: [['—', 'Push LayerLab v0.3', R]]
+    };
+    const cal = [];
+    for (let i = 0; i < 35; i++) {
+      const d = i - 3, inM = d >= 1 && d <= 31, n = inM ? d : (d < 1 ? 30 + d : d - 31), today = inM && d === 30;
+      const dots = [];
+      if (inM) { (ev[d] || []).forEach(e => { if (dots.indexOf(e[2]) === -1) dots.push(e[2]); }); if (s.logs[d]) dots.push(GR); }
+      cal.push({
+        n: n, off: !inM, aria: inM ? 'October ' + d + ', open log' : '',
+        bg: today ? R : 'transparent', edge: today ? '#6E0C0C' : 'transparent',
+        color: today ? '#FFFFFF' : (inM ? '#C9CDD3' : '#3A3D43'), w: today ? 700 : 400,
+        dots: today ? dots.map(() => '#FFFFFF') : dots,
+        pick: () => { if (inM) this.setState({ logDay: d, logText: s.logs[d] || '', logSaved: false }); }
+      });
+    }
+    const toAg = a => ({ t: a[0], title: a[1], c: a[2] });
+
+    const inTab = t => s.tab === 'done' ? t.done : t.when === s.tab;
+    const count = k => s.tasks.filter(t => k === 'done' ? t.done : !t.done && t.when === k).length;
+    const tabs = [['today', 'Today'], ['upcoming', 'Next'], ['done', 'Done']].map(d => {
+      const on = s.tab === d[0];
+      return { label: d[1], n: count(d[0]), on: on ? 'true' : 'false', bg: on ? '#202125' : 'transparent', edge: on ? '#2E3035' : 'transparent', color: on ? '#FFFFFF' : '#9499A3', cbg: on ? R : '#26282C', cc: on ? '#FFFFFF' : '#9499A3', pick: () => this.setState({ tab: d[0] }) };
+    });
+    const rows = s.tasks.filter(inTab).slice(0, 5).map(t => {
+      const od = t.due === 'overdue' && !t.done;
+      return {
+        title: t.title, due: t.due, done: t.done, checked: t.done ? 'true' : 'false', aria: 'Complete: ' + t.title,
+        boxBg: t.done ? R : 'transparent', boxBd: t.done ? R : '#4A4E56', tc: t.done ? '#7C818B' : '#EDEFF2', strike: t.done ? 'line-through' : 'none',
+        dc: od ? A : '#C9CDD3', dd: od ? A : (t.when === 'today' ? R : '#5F646D'),
+        toggle: () => this.setState({ tasks: s.tasks.map(x => x.id === t.id ? Object.assign({}, x, { done: !x.done }) : x) })
+      };
+    });
+
+    const vv = [96, 120, 104, 138, 150, 131, 148, 171, 236, 205, 182, 160, 182, 214];
+    const lv = ['#1E1F22', '#4A1416', '#7A1719', R, '#E2302F'];
+    const heat = [];
+    for (let i = 0; i < 126; i++) { const wk = Math.floor(i / 7), d = i % 7; let r = (i * 29 + wk * wk * 3 + d * 11) % 17; if (d === 0 || d === 6) r -= 5; if (wk > 13) r += 4; heat.push(lv[r > 15 ? 4 : r > 12 ? 3 : r > 8 ? 2 : r > 4 ? 1 : 0]); }
+    const beat = bad => { const o = []; for (let i = 0; i < 24; i++) o.push(bad.indexOf(i) !== -1 ? A : R); return o; };
+    const meter = []; for (let i = 0; i < 15; i++) meter.push(i);
+
+    const D = {
+      tabs: tabs, rows: rows, draft: s.draft,
+      onType: e => this.setState({ draft: e.target.value }),
+      onKey: e => {
+        if (e.key !== 'Enter' || !s.draft.trim()) return;
+        this.setState({ tasks: [{ id: s.nextId, title: s.draft.trim(), due: 'today', when: 'today', done: false }].concat(s.tasks), draft: '', nextId: s.nextId + 1, tab: 'today' });
+      },
+      notes: [
+        { title: 'Blackwall panel spec', body: 'Charcoal #161719, 12px radius, 4px ledge right + bottom, prompt header.', when: '12m' },
+        { title: 'CCNA · subnet cheat sheet', body: '/26 = 64 hosts, /27 = 32, /28 = 16. Magic number = 256 − mask.', when: '2h' },
+        { title: 'Mikoshi backup plan', body: 'Nightly restic to external drive, weekly offsite, monthly restore test.', when: '1d' }
+      ],
+      bars: vv.map((n, i) => ({ h: Math.round(n / 240 * 74) + 'px', c: i === vv.length - 1 ? R : (i >= 7 ? '#8E1414' : '#3A3D43') })),
+      pages: [['/', 486], ['/labs', 312], ['/blog/porting-chrome-extensions-to-safari', 228]].map(p => ({ path: p[0], u: p[1], w: Math.round(p[1] / 486 * 100) + '%' })),
+      heat: heat,
+      prs: [
+        { title: 'Add Umami analytics panel', repo: 'blackwall #42', s: 'passing', c: G, age: '2h' },
+        { title: 'Fix healthcheck on arm64 image', repo: 'dragonwilds-docker #17', s: 'failed', c: R, age: '5h' },
+        { title: 'Subnetting drill: VLSM mode', repo: 'layerlab #9', s: 'review', c: A, age: '1d' }
+      ],
+      svc: [
+        { name: 'jellyfin', ms: '42ms', beats: beat([]), pct: '99.98%', pc: W },
+        { name: 'nextcloud', ms: '118ms', beats: beat([7]), pct: '99.91%', pc: W },
+        { name: 'vaultwarden', ms: '21ms', beats: beat([]), pct: '100%', pc: W },
+        { name: 'gitea', ms: '640ms', beats: beat([18, 19, 20, 21, 22, 23]), pct: '97.40%', pc: A },
+        { name: 'homeassistant', ms: '35ms', beats: beat([13]), pct: '99.95%', pc: W },
+        { name: 'tailscale', ms: '12ms', beats: beat([]), pct: '100%', pc: W }
+      ],
+      meter: meter,
+      ctr: [
+        { name: 'jellyfin', image: 'jellyfin/jellyfin:10.9', w: '54%', up: 'up 12d' },
+        { name: 'nextcloud', image: 'nextcloud:29-apache', w: '27%', up: 'up 12d' },
+        { name: 'vaultwarden', image: 'vaultwarden/server', w: '6%', up: 'up 30d' },
+        { name: 'pihole', image: 'pihole/pihole:latest', w: '12%', up: 'up 41d' },
+        { name: 'gitea', image: 'gitea/gitea:1.22', w: '18%', up: 'up 3d' }
+      ]
+    };
+    const meta = {
+      productivity: ['productivity $ today', count('today') + ' open · 12 notes', 'Productivity'],
+      traffic: ['umami $ traffic --7d', 'bcndlabs.dev', 'Traffic'],
+      github: ['gh $ status', '412 contributions', 'GitHub'],
+      services: ['kuma $ status', '23 up · 1 slow', 'Services'],
+      containers: ['portainer $ ps', 'mikoshi-01', 'Containers']
+    };
+    const slots = s.slotTypes.map((t, i) => ({
+      type: t, cmd: meta[t][0], meta: meta[t][1], title: meta[t][2], swapLabel: 'Panel ' + (i + 1) + ': choose what to show',
+      isProd: t === 'productivity', isTraffic: t === 'traffic', isGithub: t === 'github', isServices: t === 'services', isContainers: t === 'containers',
+      d: D,
+      change: e => { const ts = s.slotTypes.slice(); ts[i] = e.target.value; this.setState({ slotTypes: ts }); }
+    }));
+
+    const cats = { alerts: [I.alert, R], dev: [I.branch, W], site: [I.globe, W], school: [I.calSm, A] };
+    const shown = s.notifs.filter(n => s.filter === 'all' || n.type === s.filter);
+    const groups = ['Today', 'Yesterday'].map(day => ({
+      label: day,
+      items: shown.filter(n => n.day === day).map(n => ({
+        title: n.title, body: n.body, src: n.src, t: n.t, aria: n.title + (n.unread ? ', unread' : ''),
+        icon: cats[n.type][0], c: n.type === 'dev' && n.title.indexOf('failed') !== -1 ? R : cats[n.type][1],
+        weight: n.unread ? 600 : 400, tc: n.unread ? '#FFFFFF' : '#C9CDD3', dot: n.unread ? R : 'transparent',
+        read: () => this.setState({ notifs: s.notifs.map(x => x.id === n.id ? Object.assign({}, x, { unread: false }) : x) })
+      }))
+    })).filter(g => g.items.length);
+    const unread = s.notifs.filter(n => n.unread).length;
+    const filters = [['all', 'All'], ['alerts', 'Alerts'], ['dev', 'Dev'], ['site', 'Site']].map(f => {
+      const on = s.filter === f[0];
+      return { label: f[1], on: on ? 'true' : 'false', bg: on ? '#202125' : 'transparent', edge: on ? '#2E3035' : 'transparent', color: on ? '#FFFFFF' : '#9499A3', pick: () => this.setState({ filter: f[0] }) };
+    });
+
+    const ld = s.logDay;
+    const wd = ld ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date(2026, 9, ld).getDay()] : '';
+    const dayAgenda = ld ? (ev[ld] || []).map(toAg) : [];
+    const co = s.calOpen, no = s.notifOpen;
+
+    return {
+      rail: rail, status: status, slots: slots,
+      editLabel: s.editStatus ? 'done' : 'customize', editAttr: s.editStatus ? 'true' : 'false',
+      toggleEdit: () => this.setState({ editStatus: !s.editStatus }),
+
+      calOpenAttr: co ? 'true' : 'false', calBtnBg: co ? '#202125' : 'transparent', calHidden: co ? 'false' : 'true',
+      calOp: co ? 1 : 0, calTf: co ? 'translateY(0) scale(1)' : 'translateY(-6px) scale(.98)', calPe: co ? 'auto' : 'none', calVis: co ? 'visible' : 'hidden',
+      calLeaving: co && s.calLeaving,
+      toggleCal: () => { this.disarm('cal'); this.setState({ calOpen: !co }); },
+      calEnter: () => this.disarm('cal'),
+      calLeave: () => { if (this.state.calOpen) this.arm('cal'); },
+
+      notifOpenAttr: no ? 'true' : 'false', notifBtnBg: no ? '#202125' : 'transparent', notifHidden: no ? 'false' : 'true',
+      notifTf: no ? 'translateX(0)' : 'translateX(calc(100% + 28px))', notifOp: no ? 1 : 0, notifPe: no ? 'auto' : 'none', notifVis: no ? 'visible' : 'hidden',
+      notifLeaving: no && s.notifLeaving,
+      toggleNotif: () => { this.disarm('notif'); this.setState({ notifOpen: !no }); },
+      notifEnter: () => this.disarm('notif'),
+      notifLeave: () => { if (this.state.notifOpen) this.arm('notif'); },
+
+      cal: cal, agendaToday: ev[30].map(toAg),
+      groups: groups, unread: unread, hasUnread: unread > 0, badgeBg: unread ? R : '#3A3D43', filters: filters,
+      markAll: () => this.setState({ notifs: s.notifs.map(x => Object.assign({}, x, { unread: false })) }),
+      logOpen: ld !== null, logTitle: ld ? wd + ' · Oct ' + ld + (ld === 30 ? ' · today' : '') : '',
+      logCmd: ld === 30 ? 'write --today' : 'open --date 10-' + (ld < 10 ? '0' : '') + ld,
+      logText: s.logText, dayAgenda: dayAgenda, hasDayAgenda: dayAgenda.length > 0,
+      logStatus: s.logSaved ? 'saved' : (s.logs[ld] ? 'editing saved entry' : 'no entry yet'),
+      prompts: ['shipped', 'learned', 'blocked on', 'tomorrow'].map(l => ({ label: l, add: () => this.setState({ logText: (s.logText ? s.logText.replace(/\s*$/, '') + '\n' : '') + '## ' + l + '\n- ', logSaved: false }) })),
+      onLogType: e => this.setState({ logText: e.target.value, logSaved: false }),
+      saveLog: () => { const logs = Object.assign({}, s.logs); if (s.logText.trim()) logs[ld] = s.logText; this.setState({ logs: logs, logSaved: true }); },
+      closeLog: () => this.setState({ logDay: null, calOpen: false })
+    };
+  }
+}
+</script>
+</body>
+</html>
