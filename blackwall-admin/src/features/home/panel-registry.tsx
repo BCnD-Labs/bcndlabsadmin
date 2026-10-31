@@ -1,8 +1,8 @@
 import type { ComponentType } from "react"
 import { Button } from "@/components/ui/button"
-import { EmptyState } from "@/components/common/panel"
 import { PANEL_TYPES, type PanelType } from "@/lib/home-slots"
 import { usePrefs } from "@/stores/prefs"
+import { ProductivityMeta, ProductivityPanel } from "./productivity-panel"
 
 export interface PanelBodyProps {
   /** Which Home square (0–3) the panel is in. */
@@ -50,11 +50,7 @@ function EmptySlot({ slot }: PanelBodyProps) {
   )
 }
 
-function ProductivityBody() {
-  return <EmptyState>Tasks and pinned notes.</EmptyState>
-}
-
 export const PANELS: Record<PanelType, PanelDef> = {
-  productivity: { label: "Productivity", tool: "productivity", command: "today", Body: ProductivityBody },
+  productivity: { label: "Productivity", tool: "productivity", command: "today", Meta: ProductivityMeta, Body: ProductivityPanel },
   empty: { label: "Empty", tool: "slot", command: "empty", Body: EmptySlot },
 }
