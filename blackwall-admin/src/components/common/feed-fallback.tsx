@@ -1,4 +1,5 @@
-import { Plug, RotateCw } from "lucide-react"
+import { RotateCw } from "lucide-react"
+import { NoSignal } from "./no-signal"
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -29,15 +30,7 @@ export function FeedFallback({ feed, provider, what }: { feed: Feed<unknown>; pr
       </div>
     )
   }
-  return (
-    <div className="flex flex-col items-center gap-2 px-4 py-8 text-center text-sm text-muted-foreground">
-      <p className="font-mono text-xs tracking-[0.3em] text-teal/80">[ NO SIGNAL ]</p>
-      <p>Connect {name} to see {what} here.</p>
-      <Button size="sm" variant="outline" asChild>
-        <Link to={`/settings/connections?add=${provider}`}><Plug /> Connect {name}</Link>
-      </Button>
-    </div>
-  )
+  return <NoSignal message={`Connect ${name} to see ${what} here.`} to={`/settings/connections?add=${provider}`} action={`Connect ${name}`} />
 }
 
 export const hasData = <T,>(feed: Feed<T>): feed is Feed<T> & { data: T } =>

@@ -1,8 +1,8 @@
 import * as React from "react"
 import { cn } from "cn"
 import { Checkbox as CheckboxPrimitive } from "radix-ui"
-import { CheckIcon } from "lucide-react"
 
+/** Spec §2 checkbox: 15px square, 1.5px #4A4E56 border; checked = red fill + white check. */
 function Checkbox({
   className,
   ...props
@@ -11,17 +11,17 @@ function Checkbox({
     <CheckboxPrimitive.Root
       data-slot="checkbox"
       className={cn(
-        "peer relative flex size-4 shrink-0 items-center justify-center rounded-[5px] border-2 border-input transition-colors outline-none group-has-disabled/field:opacity-50 group-has-[:focus-visible]/field-label:ring-0 group-has-[:focus-visible]/field-label:not-data-checked:border-input after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 aria-invalid:aria-checked:border-primary dark:bg-recessed dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:border-black data-checked:bg-primary data-checked:text-primary-foreground group-has-[:focus-visible]/field-label:data-checked:border-black dark:data-checked:bg-primary",
+        "peer relative flex size-[15px] shrink-0 items-center justify-center rounded-[4px] border-[1.5px] border-check bg-transparent transition-colors duration-150",
+        "after:absolute after:-inset-x-2 after:-inset-y-2 disabled:cursor-not-allowed disabled:opacity-50",
+        "hover:border-ink-2 data-checked:border-red data-checked:bg-red aria-invalid:border-red-text",
         className
       )}
       {...props}
     >
-      <CheckboxPrimitive.Indicator
-        data-slot="checkbox-indicator"
-        className="grid place-content-center text-current transition-none [&>svg]:size-3.5"
-      >
-        <CheckIcon
-        />
+      <CheckboxPrimitive.Indicator data-slot="checkbox-indicator" className="grid place-content-center">
+        <svg aria-hidden width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M5 12.5l4.5 4.5L19 7" />
+        </svg>
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>
   )

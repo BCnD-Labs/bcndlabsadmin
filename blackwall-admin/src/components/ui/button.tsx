@@ -3,30 +3,38 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
 import { Slot } from "radix-ui"
 
-/* Neo-brutal buttons: 2px ink border, hard offset shadow that "presses" on click. */
+/*
+ * Spec §2 buttons. Primary: red fill, white 11px/600 mono, 2px red ledge on the
+ * right + bottom. Ghost: transparent, 1px border top/left + 2px right/bottom.
+ * Heights are 28px (default) and 32px (lg, the header).
+ */
+const ledge = "border-solid border-t-0 border-l-0 border-r-2 border-b-2"
+const rim = "border-solid border-t border-l border-r-2 border-b-2 border-rim"
+const primary = `${ledge} border-red-ledge bg-red font-semibold text-white hover:bg-[#c81c1c] active:translate-y-px`
+
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border-2 border-transparent bg-clip-padding font-heading text-sm font-bold whitespace-nowrap transition-[transform,box-shadow,background-color,color] duration-100 outline-none select-none focus-visible:ring-3 focus-visible:ring-ring/60 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-[7px] font-mono text-[11px] whitespace-nowrap transition-[background-color,color,transform] duration-150 ease-bw select-none disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
   {
     variants: {
       variant: {
-        default:
-          "border-black bg-primary text-primary-foreground shadow-brutal-sm hover:-translate-x-px hover:-translate-y-px hover:shadow-brutal active:translate-x-0.5 active:translate-y-0.5 active:shadow-none",
-        outline:
-          "border-edge bg-card text-foreground shadow-brutal-sm hover:-translate-x-px hover:-translate-y-px hover:border-teal hover:shadow-brutal active:translate-x-0.5 active:translate-y-0.5 active:shadow-none aria-expanded:border-teal",
-        secondary: "border-edge bg-muted text-foreground hover:border-teal",
-        ghost: "font-sans font-normal hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
-        destructive:
-          "border-black bg-red text-black shadow-brutal-sm hover:-translate-x-px hover:-translate-y-px hover:shadow-brutal active:translate-x-0.5 active:translate-y-0.5 active:shadow-none",
-        link: "font-sans font-normal text-teal underline-offset-4 hover:underline",
+        default: primary,
+        primary,
+        ghost: `${rim} bg-transparent text-ink-2 hover:bg-raised hover:text-ink aria-expanded:bg-selected aria-pressed:bg-selected`,
+        outline: `${rim} bg-transparent text-ink-2 hover:bg-raised hover:text-ink aria-expanded:bg-selected aria-pressed:bg-selected`,
+        secondary: `${ledge} border-ledge-hi bg-raised text-ink hover:bg-selected`,
+        /* Borderless, for dense toolbars on pages that haven't been rebuilt yet. */
+        quiet: "text-ink-2 hover:bg-raised hover:text-ink aria-expanded:bg-raised",
+        destructive: primary,
+        link: "text-ink-2 underline-offset-4 hover:text-ink hover:underline",
       },
       size: {
-        default: "h-9 gap-1.5 px-3 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        xs: "h-6 gap-1 rounded-md px-2 text-xs [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-8 gap-1 rounded-md px-2.5 text-[0.8rem] [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-10 gap-1.5 px-4",
-        icon: "size-9",
-        "icon-xs": "size-6 rounded-md [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm": "size-8 rounded-md",
+        default: "h-7 gap-1.5 px-2.5",
+        xs: "h-[22px] gap-1 rounded-[5px] px-1.5 text-[10px] [&_svg:not([class*='size-'])]:size-3",
+        sm: "h-6 gap-1 rounded-[6px] px-2 [&_svg:not([class*='size-'])]:size-3",
+        lg: "h-8 gap-1.5 px-2.5",
+        icon: "size-8",
+        "icon-xs": "size-6 rounded-[6px] [&_svg:not([class*='size-'])]:size-3",
+        "icon-sm": "size-7",
         "icon-lg": "size-10",
       },
     },
