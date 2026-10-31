@@ -46,3 +46,15 @@ export function formatTime(hhmm?: string): string {
   d.setHours(h, m, 0, 0)
   return format(d, "h:mm a")
 }
+
+/** Compact age for dense lists: "now", "12m", "3h", "2d", "5w". */
+export function shortAgo(iso: string, now = new Date()): string {
+  const d = parseISO(iso)
+  if (!isValid(d)) return ""
+  const m = Math.max(0, Math.floor((now.getTime() - d.getTime()) / 60_000))
+  if (m < 1) return "now"
+  if (m < 60) return `${m}m`
+  if (m < 60 * 24) return `${Math.floor(m / 60)}h`
+  if (m < 60 * 24 * 7) return `${Math.floor(m / 1440)}d`
+  return `${Math.floor(m / 10080)}w`
+}

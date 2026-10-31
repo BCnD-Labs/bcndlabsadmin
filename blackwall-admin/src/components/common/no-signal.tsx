@@ -12,12 +12,14 @@ export function NoSignal({
   message = "No source connected.",
   to = "/settings/connections",
   action = "Connections",
+  onNavigate,
   className,
 }: {
   message?: string
   /** Defaults to Settings → Connections; pass `?add=<provider>` to preselect one. */
   to?: string
   action?: string
+  onNavigate?: () => void
   className?: string
 }) {
   return (
@@ -26,7 +28,9 @@ export function NoSignal({
       <p className="font-mono text-[11px] font-semibold tracking-[0.3em] text-ink-2">[ NO SIGNAL ]</p>
       <p className="max-w-64 text-[11px] leading-relaxed text-muted-foreground">{message}</p>
       <Button variant="ghost" asChild>
-        <Link to={to}>{action} →</Link>
+        <Link to={to} onClick={onNavigate}>
+          {action} →
+        </Link>
       </Button>
     </div>
   )

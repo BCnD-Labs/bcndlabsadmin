@@ -7,6 +7,7 @@ import { usePrefs } from "@/stores/prefs"
 import { useUi } from "@/stores/ui"
 import { NAV, isActive } from "./nav-config"
 import { CalendarMenu } from "./calendar-menu"
+import { Notifications } from "./notifications"
 import { QuickCreate } from "./quick-create"
 
 function greeting(d: Date) {
@@ -78,6 +79,7 @@ export function Header() {
         </button>
         <QuickCreate />
         <CalendarMenu />
+        <Notifications />
       </div>
     </header>
   )

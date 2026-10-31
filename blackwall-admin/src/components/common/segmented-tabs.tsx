@@ -18,6 +18,7 @@ export function SegmentedTabs<V extends string>({
   label,
   idBase,
   className,
+  tabClassName,
 }: {
   tabs: SegmentedTab<V>[]
   value: V
@@ -26,6 +27,7 @@ export function SegmentedTabs<V extends string>({
   /** When set, tabs get ids `${idBase}-tab-${value}` and control `${idBase}-panel`. */
   idBase?: string
   className?: string
+  tabClassName?: string
 }) {
   const ref = useRef<HTMLDivElement>(null)
 
@@ -57,6 +59,7 @@ export function SegmentedTabs<V extends string>({
             className={cn(
               "flex h-6 flex-1 items-center justify-center gap-1.5 rounded-[5px] border-r-2 border-b-2 border-transparent font-mono text-[11px] transition-colors duration-150",
               on ? "border-ledge-hi bg-selected text-white" : "text-muted-foreground hover:text-ink",
+              tabClassName,
             )}
           >
             {t.label}
