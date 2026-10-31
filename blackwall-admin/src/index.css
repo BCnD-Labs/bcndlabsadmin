@@ -189,7 +189,8 @@
     background-size: 24px 24px;
     background-attachment: fixed;
   }
-  html[data-retro="off"] body {
+  html[data-retro="off"] body,
+  html[data-retro="off"] .bw-ground {
     background-image: none;
   }
   h1, h2, h3 {
@@ -219,6 +220,16 @@
 }
 
 @layer components {
+  /* The page ground, for sticky bars that must mask what scrolls under them. */
+  .bw-ground {
+    background-color: var(--bw-ground);
+    background-image:
+      linear-gradient(var(--bw-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--bw-grid) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-attachment: fixed;
+  }
+
   /* §2 panel: charcoal surface, 4px ledge right + bottom, scanlines. */
   .bw-panel {
     position: relative;

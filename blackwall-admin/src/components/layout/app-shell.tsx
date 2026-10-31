@@ -53,17 +53,17 @@ export function AppShell() {
       >
         Skip to content
       </a>
-      <Header />
-      <NavRail focusMain={focusMain} />
       <MobileNav />
-      <main
-        id="main"
-        ref={mainRef}
-        tabIndex={-1}
-        className="mx-auto w-full max-w-[1600px] px-3 py-4 outline-none sm:px-4 md:pl-[4.75rem] lg:pr-6 lg:pl-20"
-      >
-        <Outlet />
-      </main>
+      <div className="px-3 md:pl-[84px]">
+        <div className="bw-ground sticky top-0 z-30 py-3">
+          <Header />
+        </div>
+        {/* Fixed on the left; after the header in tab order. */}
+        <NavRail focusMain={focusMain} />
+        <main id="main" ref={mainRef} tabIndex={-1} className="mx-auto w-full max-w-[1600px] pb-3 outline-none">
+          <Outlet />
+        </main>
+      </div>
       <FormHost />
       <CommandSearch />
       <Toaster position="bottom-right" />
