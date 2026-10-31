@@ -5,7 +5,9 @@ A personal workspace for keeping track: simple to-dos, a calendar that opens a d
 ## The pieces
 
 - **Tasks:** Google Tasks style. Title, optional details, optional due date, star, done. No priorities, tags, links or dependencies. "Today" shows overdue, due-today and starred tasks; the Tasks page groups everything by when it's due.
-- **Calendar & daily log:** internal only. Click any day (on Home or Work → Calendar) to open that day's log, a plain journal note that saves as you type. The log page also lists tasks due and completed that day. Teal dots mark days with a log; amber dots mark days with open tasks.
+- **Calendar & daily log:** internal only. The header's calendar button opens a month card; click a day to open that day's log in a dialog (tasks due that day, quick prompts, Save). Work → Calendar is the full-page version that saves as you type. Day dots: red = open tasks due, amber = overdue, grey = a saved log.
+- **Home:** a 2×2 grid of panels you choose from each panel's header menu (Productivity or Empty for now). Drag a panel by its header onto another square to swap them, or use "Move to slot N" in the menu.
+- **Notifications:** the bell opens a card that slides in from the right. No notification sources exist yet, so it shows **[ NO SIGNAL ]**.
 - **Notes:** sticky notes. Type, pick a colour, pin the ones you want on Home. They save as you type; an emptied note is removed.
 - **Analytics → You:** charts computed from your tasks and logs (tasks completed per day, open tasks by due date, a log heatmap, streaks). **Analytics → Website** shows your analytics provider once connected.
 - **Projects, Development, Content:** a lighter layer for what you're building: repository links, deployment links, content drafts.
@@ -62,27 +64,27 @@ Saving a connection runs a live test against the provider and shows the result (
 ## Your data
 
 - `blackwall.workspace`: workspace records. A versioned Zustand `persist` store (`src/stores/workspace.ts`, `WORKSPACE_VERSION = 3`). The workspace starts empty. Migrations: v1→v2 removed the example records v1 seeded. v2→v3 converted tasks (high/urgent priority became starred; projects dropped), turned notes into sticky notes, and moved calendar events into the matching day's log as lines.
-- `blackwall.prefs`: interface preferences (workspace name, pinned rail, edge reveal, retro details, sample data).
+- `blackwall.prefs`: interface preferences (workspace name, retro details, sample data, auto-hide seconds for the calendar and notification cards, and the Home slot layout). Versioned (`PREFS_VERSION = 2`); v1 → v2 added auto-hide and the slot layout, and stored values are sanitised on load.
 - Settings → Appearance can **export** and **import** the workspace as JSON, or clear it.
 - If storage is unavailable (private mode, quota), the store falls back to memory for the session.
 
 ## Navigation
 
-- **Desktop:** a thin icon strip is always on the left, like a collapsed browser sidebar, with Settings at the bottom. Hover an icon (or Tab to it) and only that item grows out into its label and its pages; click the label or a page to go. The other icons stay compact and reachable, and the expansion overlays the page, so nothing shifts. Hover delays are 60 ms to open and 220 ms to close (`nav-rail.tsx`).
+- **Desktop:** a full-height 60px rail on the left (BW mark at the top, workspace initials at the bottom). Hover an icon (or Tab to it) and that button grows into a 220px pill with its label and a hint from your local data; its pages unfold below the label, starting right of the icon column, so the icons underneath stay uncovered and you can move straight down from icon to icon. The pill overlays the page, so nothing shifts. Hover delays are 60 ms to open and 220 ms to close; moving onto another icon switches instantly (`nav-rail.tsx`).
 - **Keyboard:** Tab from the header into the strip. ↑/↓/Home/End move between items, → enters an item's pages, ← returns, Enter goes, Esc closes. After you navigate, focus moves to the page.
 - **Phones and small screens:** the ☰ button opens a sheet with the full menu. On touch devices at desktop widths, the first tap on an icon opens it and a second tap goes.
 
 ## Theme
 
-**Neo-brutalism × retro hacker / Tron, with rounded corners.** Defined as semantic CSS variables in `src/index.css`. The `dark` class is always on `<html>`, so shadcn's dark variants apply.
+**Home C** (spec: [`docs/design/BLACKWALL_DESIGN.md`](../docs/design/BLACKWALL_DESIGN.md)). Dark only. The `--bw-*` tokens in `src/index.css` are the source of truth, and shadcn's variables point at them so `ui/` components follow.
 
-- **Blocks:** panels, buttons, dialogs and menus use a 2px "edge" border and a hard offset shadow (`.brutal`, `shadow-brutal*`). Primary buttons are amber with an ink border and press down on click.
-- **Terminal touches:** mono uppercase labels, a faint 32px grid behind the page, scanlines on the header, a dotted rail, a neon-glow wordmark and active states, `[ NO SIGNAL ]` for unconnected panels.
-- **Colour coding:** each area gets an accent chip (Tasks amber, Calendar teal, Notes magenta, Traffic blue, Development lime) so you can find things at a glance.
-- **Type:** Space Grotesk for headings, Atkinson Hyperlegible for text, Atkinson Hyperlegible Mono for labels and data, Jersey 10 (pixel) for the wordmark and big numbers.
-- **Sticky notes:** bright paper colours with dark ink.
+- **Panels:** charcoal `#161719`, 12px radius, a 4px ledge on the right and bottom instead of shadows, faint scanlines, and a 40px terminal-prompt header (`❯ tool $ command`). Floating cards (calendar, notifications, menus, dialogs) are the only things with a drop shadow.
+- **One accent:** red `#BC1515` for fills, markers, icons and the `❯` glyph, never for text. Amber means overdue or degraded; green is only for healthy deltas. Status markers are small squares.
+- **Type:** JetBrains Mono for all UI text, Space Grotesk for titles and numbers, Silkscreen for the BW mark and initials.
+- **Text contrast:** nothing darker than `#7C818B`. The only red text is `#F08A8A`, for error copy. The focus ring is `#C9CDD3`, because red only reaches about 2.8:1 on panels.
+- **Legacy aliases:** pages not rebuilt yet still use the old token names (`recessed`, `edge`, `teal`, `.brutal`…); they're aliased to the new palette and get cleaned up as each page is rebuilt.
 
-All text colours are at least 5.9:1 against panels; secondary text is 7.3:1. The chart teal/amber pair is deliberately brighter than a muted palette would be (part of the neon look) and still passes colour-blind separation (ΔE 16.7) and 3:1 contrast. Retro texture can be turned off in Settings → Appearance, and motion respects `prefers-reduced-motion`.
+The background grid and scanlines can be turned off in Settings → Appearance (Retro details), and motion respects `prefers-reduced-motion`.
 
 ## Project layout
 
@@ -92,7 +94,7 @@ src/
     ui/          shadcn components (generated; lightly adjusted for the theme)
     layout/      app shell, header, nav rail, mobile nav, search, quick-create
     forms/       record dialogs (task, event, note, project, repo) + shared fields
-    common/      panel, source badge, tags
+    common/      panel, segmented tabs, due chip, no signal, source badge, tags
   features/      home, work, development, content, analytics, knowledge, settings
   services/      connector client, data feeds (live / sample / not connected)
   stores/        workspace (versioned persistence), prefs, ui state

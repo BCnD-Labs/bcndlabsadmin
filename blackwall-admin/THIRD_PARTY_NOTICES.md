@@ -62,9 +62,9 @@ SOFTWARE.
 
 Self-hosted through `@fontsource` packages. The license text ships in each package under `node_modules/@fontsource/*/LICENSE`.
 
-- **Atkinson Hyperlegible**: Copyright 2020 Braille Institute of America, Inc.
-- **Atkinson Hyperlegible Mono**: Copyright 2020-2024 The Atkinson Hyperlegible Mono Project Authors.
-- **Jersey 10**: Copyright 2023 The Soft Type Project Authors (https://github.com/scfried/soft-type-jersey).
+- **JetBrains Mono**: Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono).
+- **Space Grotesk**: Copyright 2020 The Space Grotesk Project Authors (https://github.com/floriankarsten/space-grotesk).
+- **Silkscreen**: Copyright 2001 The Silkscreen Project Authors (https://github.com/googlefonts/silkscreen).
 
 ## Runtime dependencies
 

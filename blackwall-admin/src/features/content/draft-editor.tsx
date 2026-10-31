@@ -108,7 +108,7 @@ function Editor({ draft }: { draft: Draft }) {
             <Button size="sm" variant="ghost" className="text-red-text" onClick={() => setConfirmDelete(true)}><Trash2 /> Delete</Button>
           )}
           <Button onClick={save} disabled={!dirty}>
-            <Save /> Save <kbd className="ml-1 hidden font-mono text-[0.68rem] opacity-70 sm:inline">⌘S</kbd>
+            <Save /> Save <kbd className="ml-1 hidden font-mono text-[0.68rem] sm:inline">⌘S</kbd>
           </Button>
         </div>
       </div>

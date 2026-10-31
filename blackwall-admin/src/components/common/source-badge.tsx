@@ -43,7 +43,7 @@ export function SourceBadge({
             <span className={cn("size-1.5 shrink-0 rounded-[1.5px]", m.square)} aria-hidden />
           )}
           <span className="uppercase">{m.label}</span>
-          {detail && <span className="truncate normal-case opacity-80">· {detail}</span>}
+          {detail && <span className="truncate normal-case">· {detail}</span>}
         </span>
       </TooltipTrigger>
       <TooltipContent className="max-w-72">{hint ?? m.hint}</TooltipContent>
