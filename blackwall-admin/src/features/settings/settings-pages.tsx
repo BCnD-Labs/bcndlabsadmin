@@ -114,7 +114,7 @@ export function AppearanceSettings() {
           <div className="flex flex-wrap items-center gap-3 px-3 py-3">
             <div className="flex-1">
               <Label htmlFor="ws-name" className="text-sm font-bold">Workspace name</Label>
-              <p className="text-sm text-muted-foreground">Shown next to the Blackwall wordmark.</p>
+              <p className="text-sm text-muted-foreground">Used in the Home greeting and for the initials at the bottom of the rail.</p>
             </div>
             <Input id="ws-name" className="w-48" maxLength={32} placeholder="e.g. your org" value={workspaceName} onChange={(e) => set({ workspaceName: e.target.value })} />
           </div>
