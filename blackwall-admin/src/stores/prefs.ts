@@ -9,6 +9,8 @@ interface PrefsState {
   showSamples: boolean
   /** Shown beside the Blackwall wordmark. */
   workspaceName: string
+  /** Seconds the calendar and notification cards stay open after the pointer leaves. */
+  autoHideSeconds: number
   set: (patch: Partial<Omit<PrefsState, "set">>) => void
 }
 
@@ -18,16 +20,18 @@ export const usePrefs = create<PrefsState>()(
       retroDetails: true,
       showSamples: false,
       workspaceName: "",
+      autoHideSeconds: 5,
       set: (patch) => set(patch),
     }),
     {
       name: "blackwall.prefs",
       version: 1,
       storage: createJSONStorage(() => safeLocalStorage),
-      partialize: ({ retroDetails, showSamples, workspaceName }) => ({
+      partialize: ({ retroDetails, showSamples, workspaceName, autoHideSeconds }) => ({
         retroDetails,
         showSamples,
         workspaceName,
+        autoHideSeconds,
       }),
     },
   ),

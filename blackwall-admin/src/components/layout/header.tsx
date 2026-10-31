@@ -6,6 +6,7 @@ import { useNow } from "@/hooks/use-now"
 import { usePrefs } from "@/stores/prefs"
 import { useUi } from "@/stores/ui"
 import { NAV, isActive } from "./nav-config"
+import { CalendarMenu } from "./calendar-menu"
 import { QuickCreate } from "./quick-create"
 
 function greeting(d: Date) {
@@ -76,6 +77,7 @@ export function Header() {
           <kbd className="rounded-[4px] border border-rim px-[5px] py-px font-mono text-[10px] text-faint">⌘K</kbd>
         </button>
         <QuickCreate />
+        <CalendarMenu />
       </div>
     </header>
   )

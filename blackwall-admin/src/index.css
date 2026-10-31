@@ -260,6 +260,44 @@
     border-radius: 8px;
   }
 
+  /* Floating card enter/exit: fade + 6px drop (spec §4). */
+  .bw-pop {
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.22s var(--bw-ease), visibility 0s linear 0.22s;
+  }
+  .bw-pop[data-open="true"] {
+    visibility: visible;
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+    transition: opacity 0.18s ease, transform 0.22s var(--bw-ease), visibility 0s;
+  }
+  /* Notifications: slides in from the right over the page. */
+  .bw-slide {
+    visibility: hidden;
+    opacity: 0;
+    transform: translateX(calc(100% + 28px));
+    pointer-events: none;
+    transition: transform 0.28s var(--bw-ease), opacity 0.2s ease, visibility 0s linear 0.28s;
+  }
+  .bw-slide[data-open="true"] {
+    visibility: visible;
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+    transition: transform 0.28s var(--bw-ease), opacity 0.2s ease, visibility 0s;
+  }
+  /* Auto-hide countdown: a 2px red bar that drains over --bw-drain seconds. */
+  .bw-drain {
+    height: 2px;
+    background: var(--bw-red);
+    transform-origin: left center;
+    animation: bw-drain var(--bw-drain, 5s) linear forwards;
+  }
+
   /* Logo mark and avatar initials */
   .wordmark {
     font-family: var(--font-pixel);
@@ -306,6 +344,15 @@
   }
 }
 
+@keyframes bw-drain {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -314,5 +361,12 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* Reduced motion: keep the countdown bar visible (static) instead of an instant drain. */
+@media (prefers-reduced-motion: reduce) {
+  .bw-drain {
+    animation: none !important;
   }
 }

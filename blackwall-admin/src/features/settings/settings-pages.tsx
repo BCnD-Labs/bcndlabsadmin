@@ -67,6 +67,7 @@ export function AppearanceSettings() {
   const retro = usePrefs((s) => s.retroDetails)
   const samples = usePrefs((s) => s.showSamples)
   const workspaceName = usePrefs((s) => s.workspaceName)
+  const autoHide = usePrefs((s) => s.autoHideSeconds)
   const set = usePrefs((s) => s.set)
   const clearAll = useWorkspace((s) => s.clearAll)
   const [confirm, setConfirm] = useState(false)
@@ -116,6 +117,27 @@ export function AppearanceSettings() {
               <p className="text-sm text-muted-foreground">Shown next to the Blackwall wordmark.</p>
             </div>
             <Input id="ws-name" className="w-48" maxLength={32} placeholder="e.g. your org" value={workspaceName} onChange={(e) => set({ workspaceName: e.target.value })} />
+          </div>
+          <div className="border-t" />
+          <div className="flex flex-wrap items-center gap-3 px-3 py-3">
+            <div className="flex-1">
+              <Label htmlFor="auto-hide" className="text-sm font-bold">Auto-hide cards</Label>
+              <p className="text-sm text-muted-foreground">How long the calendar and notification cards stay open after the pointer leaves them.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                id="auto-hide"
+                type="range"
+                min={2}
+                max={15}
+                step={1}
+                value={autoHide}
+                onChange={(e) => set({ autoHideSeconds: Number(e.target.value) })}
+                aria-valuetext={`${autoHide} seconds`}
+                className="w-32 accent-[var(--bw-red)]"
+              />
+              <output htmlFor="auto-hide" className="w-8 text-right font-mono text-xs text-ink-2 tabular-nums">{autoHide}s</output>
+            </div>
           </div>
           <div className="border-t" />
           <SettingRow id="retro" label="Retro details" description="Background grid and panel scanlines." checked={retro} onChange={(v) => set({ retroDetails: v })} />
