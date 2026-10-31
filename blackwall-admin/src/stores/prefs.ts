@@ -50,7 +50,8 @@ export const usePrefs = create<PrefsState>()(
       // v1 → v2: adds autoHideSeconds and the Home slot layout.
       migrate: (persisted, version) => {
         const p = (persisted ?? {}) as Partial<Persisted>
-        if (version < 2) return { ...p, autoHideSeconds: 5, homeSlots: [...DEFAULT_SLOTS] }
+        // (autoHideSeconds may already be there: it was saved under v1 before the bump.)
+        if (version < 2) return { ...p, autoHideSeconds: p.autoHideSeconds ?? 5, homeSlots: p.homeSlots ?? [...DEFAULT_SLOTS] }
         return p
       },
       // Never trust stored values blindly: unknown panel types or bad numbers fall back to defaults.
