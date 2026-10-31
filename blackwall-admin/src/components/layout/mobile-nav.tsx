@@ -18,9 +18,12 @@ export function MobileNav() {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetContent id="mobile-nav" side="left" className="w-72 gap-0 bg-recessed p-0">
-        <SheetHeader className="border-b px-4 py-3">
-          <SheetTitle className="font-pixel text-2xl font-normal tracking-wide">Blackwall</SheetTitle>
+      <SheetContent id="mobile-nav" side="left" className="w-72 gap-0 border-r-4 border-ledge bg-panel p-0">
+        <SheetHeader className="border-b border-line px-4 py-3">
+          <SheetTitle className="flex items-center gap-2.5 font-heading text-base font-bold">
+            <span aria-hidden className="flex size-[30px] items-center justify-center rounded-[7px] border-r-[3px] border-b-[3px] border-red-ledge bg-red font-pixel text-[11px] font-normal text-white">BW</span>
+            Blackwall
+          </SheetTitle>
           <SheetDescription className="sr-only">Main navigation</SheetDescription>
         </SheetHeader>
         <nav aria-label="Main navigation" className="flex-1 overflow-y-auto p-2">
@@ -35,8 +38,8 @@ export function MobileNav() {
                     end={d.to === "/"}
                     onClick={() => setOpen(false)}
                     className={cn(
-                      "flex h-11 items-center gap-3 rounded-md px-3 text-sm font-bold outline-none hover:bg-card focus-visible:ring-2 focus-visible:ring-ring",
-                      current && "bg-card text-amber",
+                      "flex h-11 items-center gap-3 rounded-[8px] px-3 font-heading text-[13px] font-bold text-ink-2 hover:bg-raised",
+                      current && "bg-red text-white hover:bg-red",
                     )}
                     aria-current={current && !d.children ? "page" : undefined}
                   >
@@ -44,15 +47,16 @@ export function MobileNav() {
                     {d.label}
                   </NavLink>
                   {d.children && d.children.length > 1 && (
-                    <ul className="mb-1 ml-7 border-l pl-2">
+                    <ul className="mb-1 ml-7 border-l border-line pl-2">
                       {d.children.map((c) => (
                         <li key={c.to}>
                           <NavLink
                             to={c.to}
                             onClick={() => setOpen(false)}
                             className={cn(
-                              "flex h-10 items-center rounded-md px-3 text-sm text-muted-foreground outline-none hover:bg-card hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
-                              (pathname + search === c.to || pathname.startsWith(c.to + "/")) && "text-amber",
+                              "flex h-10 items-center gap-2 rounded-[6px] px-3 font-mono text-xs text-[#A3A8B1] hover:bg-raised hover:text-white",
+                              (pathname + search === c.to || pathname.startsWith(c.to + "/")) &&
+                                "text-white before:size-1.5 before:rounded-[1.5px] before:bg-red before:content-['']",
                             )}
                           >
                             {c.label}

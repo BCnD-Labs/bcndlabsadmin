@@ -5,7 +5,6 @@ import {
   ListPlus,
   NotebookPen,
   PenLine,
-  Plus,
 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
@@ -30,9 +29,8 @@ export function QuickCreate() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button className="gap-1.5 px-3" aria-label="Create new">
-          <Plus className="size-4" />
-          <span className="hidden sm:inline">New</span>
+        <Button size="lg" aria-label="Create new">
+          + <span className="hidden sm:inline">New</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
