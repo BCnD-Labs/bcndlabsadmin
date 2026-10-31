@@ -7,8 +7,8 @@ Runs as a Portainer stack on the Linux/Docker box: **Postgres** (source of truth
 ```bash
 node server/cli.ts gen-key          # → BLACKWALL_SECRET_KEY
 node server/cli.ts hash-password    # → BLACKWALL_PASSWORD_HASH (prompts; 12+ characters)
-openssl rand -base64 24             # → POSTGRES_PASSWORD
-openssl rand -base64 24             # → BACKUP_PASSPHRASE
+openssl rand -hex 24                # → POSTGRES_PASSWORD (hex: it goes inside a URL, where / or + would break it)
+openssl rand -hex 24                # → BACKUP_PASSPHRASE
 ```
 
 Put **BLACKWALL_SECRET_KEY** and **BACKUP_PASSPHRASE** in your password manager. Stored tokens are encrypted with the key, and backups with the passphrase: lose them and those can't be recovered.
