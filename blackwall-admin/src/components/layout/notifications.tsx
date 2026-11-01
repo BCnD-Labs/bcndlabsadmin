@@ -1,6 +1,5 @@
 import { isToday, isYesterday, parseISO } from "date-fns"
 import { useEffect, useId, useRef, useState } from "react"
-import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { DrainBar } from "@/components/common/drain-bar"
 import { NoSignal } from "@/components/common/no-signal"
@@ -9,6 +8,7 @@ import { SegmentedTabs } from "@/components/common/segmented-tabs"
 import { useAutoHide } from "@/hooks/use-auto-hide"
 import { shortAgo } from "@/lib/dates"
 import { cn } from "@/lib/utils"
+import { useUi } from "@/stores/ui"
 import { useNotifications, type BwNotification, type NotificationKind } from "@/services/notifications"
 
 type Filter = "all" | NotificationKind
@@ -108,7 +108,7 @@ export function Notifications() {
         inert={!open}
         onPointerEnter={hide.onPointerEnter}
         onPointerLeave={hide.onPointerLeave}
-        className="bw-panel bw-float bw-slide fixed top-3 right-3 bottom-3 z-50 flex w-[340px] max-w-[calc(100vw-24px)] flex-col overflow-hidden"
+        className="bw-panel bw-float bw-slide fixed top-[var(--bw-header-h,88px)] right-3 bottom-3 z-50 flex w-[340px] max-w-[calc(100vw-24px)] flex-col overflow-hidden"
       >
         <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-line pr-2 pl-3.5">
           <span className="flex items-center gap-2">
@@ -180,9 +180,16 @@ export function Notifications() {
 
         <div className="flex shrink-0 justify-between border-t border-line px-3.5 py-2.5 text-[10px] text-muted-foreground">
           <span>auto-hides {hide.seconds}s after mouse leaves</span>
-          <Link to="/settings/appearance" onClick={close} className="text-ink-2 hover:text-ink">
+          <button
+            type="button"
+            onClick={() => {
+              close()
+              useUi.getState().openSettings("appearance")
+            }}
+            className="rounded-[4px] text-ink-2 hover:text-ink"
+          >
             settings →
-          </Link>
+          </button>
         </div>
       </aside>
     </>

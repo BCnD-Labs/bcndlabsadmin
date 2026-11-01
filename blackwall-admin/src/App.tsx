@@ -10,10 +10,7 @@ import { ReviewsPage } from "@/features/development/reviews-page"
 import { HomePage } from "@/features/home/home-page"
 import { DailyLogPage } from "@/features/journal/daily-log-page"
 import { NotesPage } from "@/features/notes/notes-page"
-import { ConnectionsPage } from "@/features/settings/connections-page"
-import { GeneralSettings } from "@/features/settings/general-page"
-import { ServerSettings } from "@/features/settings/server-page"
-import { AppearanceSettings, ShortcutsSettings } from "@/features/settings/settings-pages"
+import { SettingsRoute } from "@/features/settings/settings-route"
 import { ProjectDetail } from "@/features/work/project-detail"
 import { ProjectsPage } from "@/features/work/projects-page"
 import { TasksPage } from "@/features/work/tasks-page"
@@ -44,14 +41,8 @@ const router = createBrowserRouter([
       { path: "analytics", element: <AnalyticsPage /> },
       { path: "notes", element: <NotesPage /> },
       { path: "knowledge/*", element: <Navigate to="/notes" replace /> },
-      { path: "settings", element: <Navigate to="/settings/general" replace /> },
-      { path: "settings/general", element: <GeneralSettings /> },
-      { path: "settings/appearance", element: <AppearanceSettings /> },
-      { path: "settings/shortcuts", element: <ShortcutsSettings /> },
-      { path: "settings/navigation", element: <Navigate to="/settings/shortcuts" replace /> },
-      { path: "settings/connections", element: <ConnectionsPage /> },
-      { path: "settings/server", element: <ServerSettings /> },
-      { path: "settings/integrations", element: <Navigate to="/settings/connections" replace /> },
+      { path: "settings", element: <SettingsRoute /> },
+      { path: "settings/:section", element: <SettingsRoute /> },
       { path: "*", element: <NotFound /> },
     ],
   },

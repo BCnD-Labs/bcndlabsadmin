@@ -299,6 +299,24 @@
   }
 }
 
+/*
+ * Settings search: while the modal's content has [data-searching], only rows
+ * whose data-match is true stay visible, plus the panels and sections that
+ * contain one. If nothing matches, the "no settings match" note shows.
+ * Unlayered on purpose, so it wins over the display utilities on these elements.
+ */
+[data-searching] [data-settings-section]:not(:has([data-match="true"])),
+[data-searching] [data-settings-section] > :not(:first-child):not(:has([data-match="true"])),
+[data-searching] .bw-panel > div > :not([data-match="true"]):not(:has([data-match="true"])) {
+  display: none;
+}
+.settings-no-match {
+  display: none;
+}
+[data-searching]:not(:has([data-match="true"])) .settings-no-match {
+  display: block;
+}
+
 @keyframes bw-drain {
   from {
     transform: scaleX(1);

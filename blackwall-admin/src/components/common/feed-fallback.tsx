@@ -1,6 +1,6 @@
 import { RotateCw } from "lucide-react"
 import { NoSignal } from "./no-signal"
-import { Link } from "react-router-dom"
+import { useUi } from "@/stores/ui"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { providerDef, type ProviderId } from "@shared/connections"
@@ -25,12 +25,12 @@ export function FeedFallback({ feed, provider, what }: { feed: Feed<unknown>; pr
         {feed.error && <p className="font-mono text-[11px] break-all text-muted-foreground">{feed.error}</p>}
         <div className="mt-1 flex gap-2">
           <Button variant="outline" onClick={feed.refresh}><RotateCw /> Retry</Button>
-          <Button variant="quiet" asChild><Link to="/settings/connections">Connection settings</Link></Button>
+          <Button variant="quiet" onClick={() => useUi.getState().openSettings("connections")}>Connection settings</Button>
         </div>
       </div>
     )
   }
-  return <NoSignal badge={false} message={`Connect ${name} to see ${what} here.`} to={`/settings/connections?add=${provider}`} action={`Connect ${name}`} />
+  return <NoSignal badge={false} message={`Connect ${name} to see ${what} here.`} add={provider} action={`Connect ${name}`} />
 }
 
 export const hasData = <T,>(feed: Feed<T>): feed is Feed<T> & { data: T } =>

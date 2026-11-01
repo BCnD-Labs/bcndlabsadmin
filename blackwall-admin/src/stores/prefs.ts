@@ -14,6 +14,8 @@ interface PrefsState {
   autoHideSeconds: number
   /** What each of the four Home squares shows. */
   homeSlots: PanelType[]
+  /** Desktop sidebar: the full tree (true) or the icon strip with hover flyouts (false). */
+  navExpanded: boolean
   set: (patch: Partial<Omit<PrefsState, "set" | "setSlot" | "swapSlots" | "reset">>) => void
   /** Show `type` in slot `i`; if it's already in another slot, the two swap. */
   setSlot: (i: number, type: PanelType) => void
@@ -22,7 +24,7 @@ interface PrefsState {
   reset: () => void
 }
 
-type Persisted = Pick<PrefsState, "retroDetails" | "showSamples" | "workspaceName" | "autoHideSeconds" | "homeSlots">
+type Persisted = Pick<PrefsState, "retroDetails" | "showSamples" | "workspaceName" | "autoHideSeconds" | "homeSlots" | "navExpanded">
 
 export const PREFS_VERSION = 2
 
@@ -32,6 +34,7 @@ const DEFAULT_PREFS = (): Persisted => ({
   workspaceName: "",
   autoHideSeconds: 5,
   homeSlots: [...DEFAULT_SLOTS],
+  navExpanded: false,
 })
 
 export const usePrefs = create<PrefsState>()(
@@ -47,12 +50,13 @@ export const usePrefs = create<PrefsState>()(
       name: "blackwall.prefs",
       version: PREFS_VERSION,
       storage: createJSONStorage(() => safeLocalStorage),
-      partialize: ({ retroDetails, showSamples, workspaceName, autoHideSeconds, homeSlots }): Persisted => ({
+      partialize: ({ retroDetails, showSamples, workspaceName, autoHideSeconds, homeSlots, navExpanded }): Persisted => ({
         retroDetails,
         showSamples,
         workspaceName,
         autoHideSeconds,
         homeSlots,
+        navExpanded,
       }),
       // v1 → v2: adds autoHideSeconds and the Home slot layout.
       migrate: (persisted, version) => {
@@ -70,6 +74,7 @@ export const usePrefs = create<PrefsState>()(
           ...p,
           autoHideSeconds: Number.isFinite(secs) ? Math.min(15, Math.max(2, Math.round(secs))) : current.autoHideSeconds,
           homeSlots: sanitizeSlots(p.homeSlots),
+          navExpanded: p.navExpanded === true,
         }
       },
     },

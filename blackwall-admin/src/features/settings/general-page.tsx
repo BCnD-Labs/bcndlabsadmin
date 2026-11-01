@@ -265,6 +265,7 @@ function UpdateRow({ info, onRestarted }: { info: SystemInfo; onRestarted: () =>
   return (
     <div role="status" aria-live="polite">
       <SettingRow
+        keywords="updates version check upgrade install"
         title={
           <span className="flex items-center gap-2">
             {tone !== "plain" && (
@@ -379,7 +380,7 @@ function ResetPanel() {
       <SettingRow title="Clear cache" description="Reload the page and fetch fresh data from your connections. Nothing you've saved is affected.">
         <Button variant="outline" onClick={clearCache}>Clear cache</Button>
       </SettingRow>
-      <SettingRow title="Reset preferences" description="Put appearance, card timing and the Home layout back to their defaults in this browser.">
+      <SettingRow title="Reset preferences" description="Put appearance, card timing, the sidebar and the Home layout back to their defaults in this browser.">
         <ConfirmButton confirmLabel="Reset" onConfirm={() => (resetPrefs(), toast.success("Preferences reset"))}>Reset</ConfirmButton>
       </SettingRow>
       <SettingRow title="Clear workspace" description="Delete every task, note and daily log in this browser. Export first if you want to keep them.">

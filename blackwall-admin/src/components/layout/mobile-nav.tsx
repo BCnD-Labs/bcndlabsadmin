@@ -1,3 +1,4 @@
+import { Settings } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import {
   Sheet,
@@ -14,6 +15,7 @@ import { NAV, isActive } from "./nav-config"
 export function MobileNav() {
   const open = useUi((s) => s.mobileNavOpen)
   const setOpen = useUi((s) => s.setMobileNavOpen)
+  const openSettings = useUi((s) => s.openSettings)
   const { pathname, search } = useLocation()
 
   return (
@@ -70,6 +72,17 @@ export function MobileNav() {
             })}
           </ul>
         </nav>
+        <div className="border-t border-line p-2">
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            onClick={() => openSettings()}
+            className="flex h-11 w-full items-center gap-3 rounded-[8px] px-3 font-heading text-[13px] font-bold text-ink-2 hover:bg-raised"
+          >
+            <Settings className="size-4" aria-hidden />
+            Settings
+          </button>
+        </div>
       </SheetContent>
     </Sheet>
   )

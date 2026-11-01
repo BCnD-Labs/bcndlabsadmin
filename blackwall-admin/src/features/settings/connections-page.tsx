@@ -13,7 +13,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import { useEffect, useState, type FormEvent } from "react"
-import { useSearchParams } from "react-router-dom"
+import { useUi } from "@/stores/ui"
 import { toast } from "sonner"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -64,8 +64,7 @@ function StatusPill({ status }: { status: ConnectionStatus }) {
 
 export function ConnectionsPage() {
   const { available, list, busy, refresh, test, remove } = useConnections()
-  const [params, setParams] = useSearchParams()
-  const addParam = params.get("add") as ProviderId | null
+  const addParam = useUi((s) => s.settings?.add ?? null)
   const [dialog, setDialog] = useState<{ provider?: ProviderId; existing?: PublicConnection } | null>(() =>
     addParam && PROVIDERS.some((p) => p.id === addParam) ? { provider: addParam } : null,
   )
@@ -75,10 +74,10 @@ export function ConnectionsPage() {
     refresh()
   }, [refresh])
 
-  // Deep links like /settings/connections?add=github open the form once; drop the param afterwards.
+  // "Connect GitHub" links elsewhere open this section with ?add; open the form once, then forget it.
   useEffect(() => {
-    if (addParam) setParams({}, { replace: true })
-  }, [addParam, setParams])
+    if (addParam) useUi.getState().clearSettingsAdd()
+  }, [addParam])
 
   const runTest = async (c: PublicConnection) => {
     try {

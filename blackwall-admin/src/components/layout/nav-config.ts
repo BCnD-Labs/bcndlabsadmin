@@ -4,7 +4,6 @@ import {
   Code2,
   FileText,
   Home,
-  Settings,
   StickyNote,
   type LucideIcon,
 } from "lucide-react"
@@ -75,20 +74,6 @@ export const NAV: NavDestination[] = [
     ],
   },
   { id: "notes", label: "Notes", icon: StickyNote, to: "/notes", match: "/notes" },
-  {
-    id: "settings",
-    label: "Settings",
-    icon: Settings,
-    to: "/settings/general",
-    match: "/settings",
-    children: [
-      { label: "General", to: "/settings/general" },
-      { label: "Appearance", to: "/settings/appearance" },
-      { label: "Connections", to: "/settings/connections" },
-      { label: "Server & backups", to: "/settings/server" },
-      { label: "Shortcuts", to: "/settings/shortcuts" },
-    ],
-  },
 ]
 
 export function isActive(dest: NavDestination, pathname: string) {

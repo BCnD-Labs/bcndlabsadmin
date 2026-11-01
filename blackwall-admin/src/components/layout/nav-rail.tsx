@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
+import { ChevronRight, PanelLeftClose, Settings } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
+import { useUi } from "@/stores/ui"
 import { usePrefs } from "@/stores/prefs"
 import { NAV, isActive, type NavDestination } from "./nav-config"
-import { initials, useNavHints } from "./nav-hints"
+import { useNavHints } from "./nav-hints"
 
 /** Hover-intent timings (ms). */
 const OPEN_DELAY = 60 // first hover; avoids flicker when the cursor just passes over
@@ -15,11 +18,19 @@ const CLOSE_DELAY = 220 // leaving the expanded item
  * its sub-pages unfold beneath the label starting at x=44px. The pill is an
  * inverted L, so the icon column stays uncovered and the pointer can move
  * straight down from icon to icon. Opening animates; closing is instant.
+ *
+ * The red BW mark switches to the full sidebar (NavTree), where sections open on
+ * click instead of hover. Settings sits at the bottom and opens the settings modal.
  */
 export function NavRail({ focusMain }: { focusMain: () => void }) {
   const { pathname, search } = useLocation()
   const navigate = useNavigate()
-  const workspaceName = usePrefs((s) => s.workspaceName)
+  const expanded = usePrefs((s) => s.navExpanded)
+  const setPrefs = usePrefs((s) => s.set)
+  const toggleExpanded = () => {
+    setOpenId(null)
+    setPrefs({ navExpanded: !expanded })
+  }
   const hints = useNavHints()
   const [openId, setOpenId] = useState<string | null>(null)
   const itemRefs = useRef(new Map<string, HTMLAnchorElement>())
@@ -229,26 +240,199 @@ export function NavRail({ focusMain }: { focusMain: () => void }) {
 
   return (
     <nav
+      id="nav-rail"
       aria-label="Main navigation"
       data-testid="nav-rail"
-      className="bw-panel fixed top-3 bottom-3 left-3 z-40 hidden w-[60px] flex-col items-center gap-2 py-3.5 after:hidden md:flex"
+      data-expanded={expanded}
+      className={cn(
+        "bw-panel fixed top-3 bottom-3 left-3 z-40 hidden flex-col py-3.5 after:hidden md:flex",
+        "transition-[width] duration-200 ease-bw motion-reduce:transition-none",
+        expanded ? "w-[220px] px-2.5" : "w-[60px] items-center gap-2",
+      )}
     >
-      <div
-        aria-hidden
-        className="mb-2 flex size-[34px] shrink-0 items-center justify-center rounded-[8px] border-r-[3px] border-b-[3px] border-red-ledge bg-red font-pixel text-xs text-white"
-      >
-        BW
-      </div>
-      <ul className="flex flex-col items-center gap-2">{NAV.map(renderItem)}</ul>
+      <BrandButton expanded={expanded} onToggle={toggleExpanded} />
+      {expanded ? <NavTree /> : <ul className="mt-2 flex flex-col items-center gap-2">{NAV.map(renderItem)}</ul>}
       <div className="flex-1" />
-      <div
-        role="img"
-        aria-label={workspaceName ? `Workspace: ${workspaceName}` : "Blackwall"}
-        title={workspaceName || undefined}
-        className="flex size-[34px] shrink-0 items-center justify-center rounded-[8px] bg-line font-pixel text-[10px] text-ink"
-      >
-        {initials(workspaceName)}
-      </div>
+      <SettingsButton expanded={expanded} />
     </nav>
+  )
+}
+
+const BW_MARK =
+  "flex size-[34px] shrink-0 items-center justify-center rounded-[8px] border-r-[3px] border-b-[3px] border-red-ledge bg-red font-pixel text-xs text-white"
+
+/** The red BW mark: switches between the icon strip and the full sidebar. */
+function BrandButton({ expanded, onToggle }: { expanded: boolean; onToggle: () => void }) {
+  const label = expanded ? "Collapse sidebar" : "Expand sidebar"
+  if (!expanded) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button type="button" aria-label={label} aria-expanded={false} aria-controls="nav-rail" onClick={onToggle} className={cn(BW_MARK, "transition-transform duration-150 hover:scale-105 active:translate-y-px")}>
+            BW
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right">{label}</TooltipContent>
+      </Tooltip>
+    )
+  }
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      aria-expanded
+      aria-controls="nav-rail"
+      onClick={onToggle}
+      className="group/brand flex items-center gap-2.5 rounded-[10px] py-0.5 pr-1.5 pl-[3px] text-left hover:bg-raised"
+    >
+      <span aria-hidden className={BW_MARK}>BW</span>
+      <span className="min-w-0 flex-1 truncate font-heading text-sm font-bold">Blackwall</span>
+      <PanelLeftClose className="size-4 shrink-0 text-faint group-hover/brand:text-ink-2" strokeWidth={1.8} aria-hidden />
+    </button>
+  )
+}
+
+/** Bottom of the rail: opens the settings modal. */
+function SettingsButton({ expanded }: { expanded: boolean }) {
+  const open = useUi((s) => !!s.settings)
+  const openSettings = useUi((s) => s.openSettings)
+  if (!expanded) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label="Settings"
+            aria-keyshortcuts="Meta+Comma"
+            aria-haspopup="dialog"
+            onClick={() => openSettings()}
+            className={cn(
+              "flex size-10 shrink-0 items-center justify-center rounded-[10px] border-r-[3px] border-b-[3px] border-transparent",
+              open ? "border-red-ledge bg-red text-white" : "text-faint hover:bg-raised hover:text-ink-2",
+            )}
+          >
+            <Settings className="size-[18px]" strokeWidth={1.8} aria-hidden />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right">Settings <span className="ml-1 text-faint">⌘,</span></TooltipContent>
+      </Tooltip>
+    )
+  }
+  return (
+    <button
+      type="button"
+      aria-haspopup="dialog"
+      aria-keyshortcuts="Meta+Comma"
+      onClick={() => openSettings()}
+      className={cn(TREE_ROW, open ? TREE_FILL : "text-ink-2 hover:bg-raised")}
+    >
+      <Settings className={cn("size-[18px] shrink-0", open ? "text-white" : "text-faint")} strokeWidth={1.8} aria-hidden />
+      <span className="flex-1 text-left">Settings</span>
+      <kbd aria-hidden className={cn("font-mono text-[10px] font-normal", open ? "text-[#F3C9C9]" : "text-faint")}>⌘,</kbd>
+    </button>
+  )
+}
+
+const TREE_ROW =
+  "flex h-10 w-full shrink-0 items-center gap-3 rounded-[10px] border-r-[3px] border-b-[3px] border-transparent px-2.5 font-heading text-[13px] font-bold transition-colors duration-150"
+const TREE_FILL = "border-red-ledge bg-red text-white hover:bg-red"
+
+/**
+ * The full sidebar: every destination as a row. Sections with pages open and close
+ * on click like folders (→ / ← too); the one you're in starts open.
+ */
+function NavTree() {
+  const { pathname, search } = useLocation()
+  const hints = useNavHints()
+  const activeId = NAV.find((d) => isActive(d, pathname))?.id
+  const [open, setOpen] = useState<Set<string>>(() => new Set(activeId ? [activeId] : []))
+  const [seen, setSeen] = useState(activeId)
+  if (activeId !== seen) {
+    setSeen(activeId)
+    if (activeId && !open.has(activeId)) setOpen(new Set(open).add(activeId))
+  }
+  const setFolder = (id: string, to: boolean) =>
+    setOpen((o) => {
+      const n = new Set(o)
+      if (to) n.add(id)
+      else n.delete(id)
+      return n
+    })
+
+  return (
+    <ul className="mt-4 -mr-1 flex min-h-0 flex-col gap-1 overflow-y-auto pr-1" aria-label="Destinations">
+      {NAV.map((d) => {
+        const Icon = d.icon
+        const current = isActive(d, pathname)
+        const h = hints[d.id]
+        if (!d.children?.length) {
+          return (
+            <li key={d.id}>
+              <Link to={d.to} aria-current={current ? "page" : undefined} className={cn(TREE_ROW, current ? TREE_FILL : "text-ink-2 hover:bg-raised")}>
+                <Icon className={cn("size-[18px] shrink-0", current ? "text-white" : "text-faint")} strokeWidth={1.8} aria-hidden />
+                <span className="min-w-0 flex-1 truncate">{d.label}</span>
+                {h?.hint && <span className={cn("font-mono text-[10px] font-normal", current ? "text-[#F3C9C9]" : "text-faint")}>{h.hint}</span>}
+              </Link>
+            </li>
+          )
+        }
+        const isOpen = open.has(d.id)
+        const fill = current && !isOpen
+        return (
+          <li key={d.id}>
+            <button
+              type="button"
+              aria-expanded={isOpen}
+              aria-controls={`tree-${d.id}`}
+              onClick={() => setFolder(d.id, !isOpen)}
+              onKeyDown={(e) => {
+                const to = e.key === "ArrowRight" ? true : e.key === "ArrowLeft" ? false : null
+                if (to === null || to === isOpen) return
+                e.preventDefault()
+                setFolder(d.id, to)
+              }}
+              className={cn(TREE_ROW, fill ? TREE_FILL : current ? "text-ink hover:bg-raised" : "text-ink-2 hover:bg-raised")}
+            >
+              <Icon className={cn("size-[18px] shrink-0", fill ? "text-white" : current ? "text-red" : "text-faint")} strokeWidth={1.8} aria-hidden />
+              {/* Counts sit on the pages below, so the label gets the room. */}
+              <span className="min-w-0 flex-1 truncate text-left">{d.label}</span>
+              <ChevronRight
+                className={cn("size-3.5 shrink-0 transition-transform duration-200 motion-reduce:transition-none", isOpen && "rotate-90", fill ? "text-white" : "text-faint")}
+                aria-hidden
+              />
+            </button>
+            <div
+              id={`tree-${d.id}`}
+              className={cn(
+                "grid transition-[grid-template-rows] duration-200 ease-bw motion-reduce:transition-none",
+                isOpen ? "visible grid-rows-[1fr]" : "invisible grid-rows-[0fr]",
+              )}
+            >
+              <ul className="ml-[19px] min-h-0 overflow-hidden border-l border-line pl-2" aria-label={`${d.label} pages`}>
+                {d.children.map((c, i) => {
+                  const here = pathname + search === c.to || pathname.startsWith(c.to + "/")
+                  const count = h?.subs?.[c.to]
+                  return (
+                    <li key={c.to} className={cn(i === 0 && "pt-1", i === d.children!.length - 1 && "pb-1")}>
+                      <Link
+                        to={c.to}
+                        aria-current={here ? "page" : undefined}
+                        className={cn(
+                          "flex h-8 items-center gap-2 rounded-[6px] px-2 font-mono text-xs whitespace-nowrap text-[#A3A8B1] hover:bg-raised hover:text-white",
+                          here && "bg-line text-white before:size-1.5 before:shrink-0 before:rounded-[1.5px] before:bg-red before:content-['']",
+                        )}
+                      >
+                        <span className="min-w-0 flex-1 truncate">{c.label}</span>
+                        {count && <span className="text-[10px] text-faint">{count}</span>}
+                      </Link>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          </li>
+        )
+      })}
+    </ul>
   )
 }

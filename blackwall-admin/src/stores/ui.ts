@@ -1,5 +1,8 @@
 import { create } from "zustand"
+import type { ProviderId } from "@shared/connections"
 import type { Note, Project, RepoLink, Task } from "@/lib/types"
+
+export type SettingsSection = "general" | "appearance" | "connections" | "server" | "shortcuts"
 
 /** Which record form is open. One dialog host renders these app-wide. */
 export type FormRequest =
@@ -14,6 +17,12 @@ interface UiState {
   /** Small screens only; desktop uses the always-visible icon strip. */
   mobileNavOpen: boolean
   setMobileNavOpen: (open: boolean) => void
+  /** The settings modal: which section is showing, and a provider to start connecting. */
+  settings: { section: SettingsSection; add?: ProviderId } | null
+  openSettings: (section?: SettingsSection, add?: ProviderId) => void
+  closeSettings: () => void
+  /** Forget the `add` request once the Connections section has acted on it. */
+  clearSettingsAdd: () => void
   openForm: (req: FormRequest) => void
   closeForm: () => void
   setSearchOpen: (open: boolean) => void
@@ -24,6 +33,10 @@ export const useUi = create<UiState>()((set) => ({
   searchOpen: false,
   mobileNavOpen: false,
   setMobileNavOpen: (mobileNavOpen) => set({ mobileNavOpen }),
+  settings: null,
+  openSettings: (section = "general", add) => set({ settings: { section, add }, mobileNavOpen: false }),
+  closeSettings: () => set({ settings: null }),
+  clearSettingsAdd: () => set((s) => (s.settings ? { settings: { section: s.settings.section } } : {})),
   openForm: (form) => set({ form }),
   closeForm: () => set({ form: null }),
   setSearchOpen: (searchOpen) => set({ searchOpen }),

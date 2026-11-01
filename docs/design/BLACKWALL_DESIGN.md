@@ -102,18 +102,25 @@ Rules:
 
 Easing everywhere: `cubic-bezier(.2,.8,.2,1)`. Quick (150–280ms) but fluid.
 
-### Left rail (hover-extend)
+### Left rail (hover-extend), and the full sidebar
+- Clicking the red BW mark switches between this strip and a 220px sidebar (saved per browser). In the sidebar,
+  sections with pages open on click like a folder tree (→ / ← too), and the current section starts open.
+- The bottom of the rail is a Settings gear (it replaced the workspace initials) that opens the settings modal.
+
+**The strip:**
 - 40×40 icon buttons. Active page = red fill.
 - On hover or keyboard focus, **the button itself** grows into one continuous pill (≈220px wide, 200ms): label + status hint fade/slide in, and subpages unfold beneath (grid-rows 0fr→1fr, 220ms). It floats over content (z-index above main) and never reflows the page.
 - **Known bug to fix:** the expanded pill covers the icon buttons below it, so you can't move straight from one button to the next. Fix: keep the **icon column (x 0–44px) uncovered**. The subpage list starts at x≈44px under the label (an inverted-L shape that still reads as one piece), or open the subpages to the right of the head row. Collapse instantly when the pointer enters another rail icon.
 
-### Calendar (header, top-right)
+### Calendar (header, left of search)
 - Collapsed by default to a small "📅 Oct 30" ghost button (use a line icon, not an emoji).
-- Click opens a dropdown card (fade + 6px drop, 180–220ms) with a month grid and today's agenda. "hide" collapses it.
+- Hovering the button opens the card; moving away closes it at once. Clicking pins it open, and then the
+  auto-hide timer below applies.
+- The card is a dropdown (fade + 6px drop, 180–220ms) with a month grid and today's agenda. "hide" collapses it.
 - Clicking a day opens the **log** dialog for that date (day's events, quick chips: shipped / learned / blocked on / tomorrow, textarea, Save). The log is not on the home page itself.
 
 ### Notifications (floating right card)
-- Bell button in the header with an unread badge toggles it. It slides in from the right (translateX, 280ms) **over** the panels, with no dimming and no layout shift. Hidden by default.
+- Bell button in the header with an unread badge toggles it (click only, no hover). It slides in from the right (translateX, 280ms) **over** the panels, starting below the header bar so it floats, with no dimming and no layout shift. Hidden by default.
 - Filters: All / Alerts / Dev / Site. Grouped Today / Yesterday. Unread = bold title + red square; click marks read; "read all".
 
 ### Auto-hide (calendar + notifications)
@@ -164,10 +171,12 @@ One-line subtitle (12px muted)
 - At most **one primary** action; the rest are `outline`. Actions sit under the title on phones.
 - `back` adds a small "← Projects" link above the title for detail pages. `badge` holds a `SourceBadge`.
 
-### Section sub-nav — `SubNav`
-For pages with several sections (Settings). Desktop (≥ `lg`): a 208px panel on the left, one row per section with a
-muted 16px icon and label; the active row is filled (`--bw-selected`, 2px ledge, red icon). Phones: a select above
-the content. The content column is capped at `max-w-3xl`.
+### Settings modal
+Settings is a modal (`features/settings/settings-modal.tsx`), opened from the gear at the bottom of the rail or
+⌘,. Left: title, a search box and the sections (muted 16px icon and label; the active one is filled with
+`--bw-selected`, a 2px ledge and a red icon). Right: the section's heading, one-line description and its panels,
+capped at a readable width. Searching shows the matching `SettingRow`s from every section. Phones get the search
+and a section select above the content.
 
 ### Panel
 The §2 panel. Header is always the prompt `❯ tool $ command`, with meta and at most one small action group on the

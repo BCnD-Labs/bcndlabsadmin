@@ -1,49 +1,52 @@
-import { useState, type ReactNode } from "react"
-import { Keyboard, Palette, Plug, Server, SlidersHorizontal } from "lucide-react"
-import { useLocation } from "react-router-dom"
+import { createContext, isValidElement, useContext, useState, type ReactNode } from "react"
+import { Keyboard, Palette, Plug, Server, SlidersHorizontal, type LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Kbd } from "@/components/ui/kbd"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { PageHeader } from "@/components/common/page-header"
 import { Panel } from "@/components/common/panel"
-import { SubNav } from "@/components/common/sub-nav"
 import { cn } from "@/lib/utils"
 import { usePrefs } from "@/stores/prefs"
+import type { SettingsSection } from "@/stores/ui"
 
-export const SETTINGS_SECTIONS = [
-  { label: "General", to: "/settings/general", icon: SlidersHorizontal, blurb: "Version and updates, plus the data saved in this browser." },
-  { label: "Appearance", to: "/settings/appearance", icon: Palette, blurb: "How Blackwall looks and behaves in this browser." },
-  { label: "Connections", to: "/settings/connections", icon: Plug, blurb: "Accounts Blackwall reads from. Tokens and passwords are stored encrypted on the server and never sent back to the browser." },
-  { label: "Server & backups", to: "/settings/server", icon: Server, blurb: "Where server-side data lives, your session, and whether backups are running." },
-  { label: "Shortcuts", to: "/settings/shortcuts", icon: Keyboard, blurb: "Keys that work anywhere in Blackwall." },
-] as const
+export const SETTINGS_SECTIONS: { id: SettingsSection; label: string; icon: LucideIcon; blurb: string }[] = [
+  { id: "general", label: "General", icon: SlidersHorizontal, blurb: "Version and updates, plus the data saved in this browser." },
+  { id: "appearance", label: "Appearance", icon: Palette, blurb: "How Blackwall looks and behaves in this browser." },
+  { id: "connections", label: "Connections", icon: Plug, blurb: "Accounts Blackwall reads from. Tokens and passwords are stored encrypted on the server and never sent back to the browser." },
+  { id: "server", label: "Server & backups", icon: Server, blurb: "Where server-side data lives, your session, and whether backups are running." },
+  { id: "shortcuts", label: "Shortcuts", icon: Keyboard, blurb: "Keys that work anywhere in Blackwall." },
+]
 
-/**
- * Settings frame (spec §7): page header, the section sub-nav on the left (a select on
- * phones), then the section's heading and a single readable column of panels.
- */
+/** Which section a SettingsPage belongs to (set by the settings modal). */
+export const SectionContext = createContext<SettingsSection>("general")
+/** The settings search, lowercased; rows that don't match hide while it's set. */
+export const SettingsQuery = createContext("")
+
+/** Plain text of a React node, for matching rows against the settings search. */
+function textOf(node: ReactNode): string {
+  if (node == null || typeof node === "boolean") return ""
+  if (typeof node === "string" || typeof node === "number") return String(node)
+  if (Array.isArray(node)) return node.map(textOf).join(" ")
+  if (isValidElement(node)) return textOf((node.props as { children?: ReactNode }).children)
+  return ""
+}
+
+/** One settings section inside the modal: its heading and description, then its panels. */
 export function SettingsPage({ actions, children }: { actions?: ReactNode; children: ReactNode }) {
-  const { pathname } = useLocation()
-  const section = SETTINGS_SECTIONS.find((s) => pathname.startsWith(s.to)) ?? SETTINGS_SECTIONS[0]
+  const id = useContext(SectionContext)
+  const section = SETTINGS_SECTIONS.find((s) => s.id === id) ?? SETTINGS_SECTIONS[0]
   return (
-    <>
-      <PageHeader title="Settings" subtitle="Preferences for this browser, your connections and the home server." />
-      <div className="grid gap-3 lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-4">
-        <SubNav items={SETTINGS_SECTIONS} label="Settings sections" className="lg:sticky lg:top-[92px]" />
-        <div className="grid max-w-3xl min-w-0 content-start gap-3">
-          <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 pt-1">
-            <div className="min-w-0">
-              <h2 className="font-heading text-base font-bold">{section.label}</h2>
-              <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{section.blurb}</p>
-            </div>
-            {actions && <div className="flex items-center gap-2">{actions}</div>}
-          </div>
-          {children}
+    <div data-settings-section={id} className="grid min-w-0 content-start gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+        <div className="min-w-0">
+          <h2 className="font-heading text-lg font-bold">{section.label}</h2>
+          <p className="mt-0.5 max-w-2xl text-xs leading-relaxed text-muted-foreground">{section.blurb}</p>
         </div>
+        {actions && <div className="flex items-center gap-2">{actions}</div>}
       </div>
-    </>
+      {children}
+    </div>
   )
 }
 
@@ -55,6 +58,7 @@ export function SettingRow({
   children,
   className,
   inline,
+  keywords,
 }: {
   title: ReactNode
   description?: ReactNode
@@ -63,9 +67,17 @@ export function SettingRow({
   className?: string
   /** Keep the control on the right even on phones (switches and other small controls). */
   inline?: boolean
+  /** Extra words the settings search should find this row by. */
+  keywords?: string
 }) {
+  const query = useContext(SettingsQuery)
+  const match = query ? `${textOf(title)} ${textOf(description)} ${keywords ?? ""}`.toLowerCase().includes(query) : undefined
   return (
-    <div className={cn("flex gap-2 px-3.5 py-3 sm:items-center sm:gap-4", inline ? "items-center gap-4" : "flex-col sm:flex-row", className)}>
+    <div
+      data-setting-row
+      data-match={match}
+      className={cn("flex gap-2 px-3.5 py-3 sm:items-center sm:gap-4", inline ? "items-center gap-4" : "flex-col sm:flex-row", className)}
+    >
       <div className="min-w-0 flex-1">
         {htmlFor ? (
           <Label htmlFor={htmlFor} className="text-[13px]">{title}</Label>
@@ -138,9 +150,10 @@ export function AppearanceSettings() {
 /** Each entry: the keys (pressed together), an optional alternative, and what it does. */
 const SHORTCUTS: Array<{ keys: string[]; or?: string[]; does: string }> = [
   { keys: ["⌘K"], or: ["/"], does: "Search everything" },
+  { keys: ["⌘", ","], does: "Open settings" },
   { keys: ["Tab"], does: "Move from the header into the sidebar" },
-  { keys: ["↑", "↓"], does: "Move between sidebar items" },
-  { keys: ["→", "←"], does: "Into and out of an item's pages" },
+  { keys: ["↑", "↓"], does: "Move between icon-strip items" },
+  { keys: ["→", "←"], does: "Into and out of an item's pages; open and close a section in the full sidebar" },
   { keys: ["Esc"], does: "Close the open item or card" },
   { keys: ["⌘", "Enter"], does: "Add a note from the Notes composer" },
 ]
