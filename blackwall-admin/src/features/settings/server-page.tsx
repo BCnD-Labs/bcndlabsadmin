@@ -1,11 +1,11 @@
 import { formatDistanceToNowStrict } from "date-fns"
-import { Archive, CloudUpload, Database, LogOut, RotateCw, Server } from "lucide-react"
+import { LogOut, RotateCw } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { PageHeader, Panel } from "@/components/common/panel"
+import { Panel } from "@/components/common/panel"
 import { cn } from "@/lib/utils"
 import { api, useSession } from "@/services/connector"
-import { SettingsTabs } from "./settings-pages"
+import { SettingRow, SettingsPage } from "./settings-pages"
 
 interface Health {
   ok: boolean
@@ -22,9 +22,18 @@ interface Backups {
 const ago = (iso: string) => formatDistanceToNowStrict(new Date(iso), { addSuffix: true })
 const size = (b: number) => (b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(1)} KB` : `${(b / 1048576).toFixed(1)} MB`)
 
+function Marker({ tone }: { tone: "ok" | "warn" | "error" | "off" }) {
+  return (
+    <span
+      className={cn("inline-block size-2 shrink-0", tone === "ok" && "bg-green", tone === "warn" && "bg-amber", tone === "error" && "bg-[var(--bw-red)]", tone === "off" && "bg-ledge")}
+      aria-hidden
+    />
+  )
+}
+
 /** Where Blackwall's server-side data lives, sign-out, and backup health. */
 export function ServerSettings() {
-  const { state, authRequired, logout } = useSession()
+  const { authRequired, logout } = useSession()
   const [health, setHealth] = useState<Health | null>(null)
   const [backups, setBackups] = useState<Backups | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -43,68 +52,98 @@ export function ServerSettings() {
   const onServer = authRequired
   const last = backups?.status
   const stale = last ? Date.now() - new Date(last.at).getTime() > 36 * 3600_000 : false
+  const backupTone = !last ? "off" : !last.ok ? "error" : stale ? "warn" : "ok"
+  const offsite = last?.offsite ?? "off"
 
   return (
-    <>
-      <PageHeader title="Settings" actions={<Button variant="outline" size="sm" onClick={() => setNonce((n) => n + 1)}><RotateCw /> Refresh</Button>} />
-      <SettingsTabs />
-      {state === "offline" || error ? (
-        <div className="brutal max-w-xl rounded-xl bg-card p-4 text-sm">
-          <p className="text-red-text">Can't reach Blackwall's server{error ? `: ${error}` : "."}</p>
+    <SettingsPage
+      actions={
+        <Button variant="outline" size="sm" onClick={() => setNonce((n) => n + 1)}>
+          <RotateCw /> Refresh
+        </Button>
+      }
+    >
+      {error ? (
+        <Panel tool="server" command="status" bodyClassName="px-3.5 py-3 text-sm">
+          <p className="text-red-text">Can't reach Blackwall's server: {error}</p>
           <p className="mt-1 text-muted-foreground">The panel still works with the data in this browser.</p>
-        </div>
+        </Panel>
       ) : (
-        <div className="grid gap-3 lg:grid-cols-2">
-          <Panel title="Server" icon={<Server />} accent="teal" bodyClassName="space-y-2 px-3 py-3 text-sm">
-            <p>
-              <span className="text-muted-foreground">Mode </span>
-              {onServer ? "Home server (sign-in required)" : "Local development (this computer only)"}
-            </p>
-            <p className="flex items-center gap-1.5">
-              <Database className="size-3.5 text-muted-foreground" aria-hidden />
-              <span className="text-muted-foreground">Connections stored in </span>
-              <code className="font-mono text-xs break-all">{health?.store ?? "…"}</code>
-            </p>
-            <p className="text-muted-foreground">
-              Tokens and passwords are encrypted before they're stored and never sent to the browser. Tasks, notes and logs are still saved in each browser.
-            </p>
+        <>
+          <Panel tool="server" command="status" meta={health?.database === "ok" ? "database ok" : undefined} bodyClassName="divide-y divide-line">
+            <SettingRow
+              title="Running on"
+              description={onServer ? "Home server. Signing in is required." : "This computer (local development). No sign-in."}
+            />
+            <SettingRow
+              title="Connections stored in"
+              description={
+                <>
+                  <code className="font-mono break-all text-foreground">{health?.store ?? "…"}</code>
+                  <span className="block">Tokens and passwords are encrypted before they're stored and never sent to the browser.</span>
+                </>
+              }
+            />
             {onServer && (
-              <Button variant="outline" size="sm" onClick={() => void logout()}>
-                <LogOut /> Sign out
-              </Button>
+              <SettingRow title="Sign out" description="End your session in this browser.">
+                <Button variant="outline" size="sm" onClick={() => void logout()}>
+                  <LogOut /> Sign out
+                </Button>
+              </SettingRow>
             )}
           </Panel>
 
-          <Panel title="Backups" icon={<Archive />} accent="amber" bodyClassName="space-y-3 px-3 py-3 text-sm">
+          <Panel tool="server" command="backups" meta={backups?.configured ? `${backups.count ?? 0} on the server` : undefined} bodyClassName="divide-y divide-line">
             {!backups?.configured ? (
-              <p className="text-muted-foreground">
-                {onServer
-                  ? "No backup folder is mounted. Check the backup service in the Portainer stack."
-                  : "Backups run on the home server. In local development your connections are only in .blackwall/connections.json."}
-              </p>
+              <SettingRow
+                title="Backups"
+                description={
+                  onServer
+                    ? "No backup folder is mounted. Check the backup service in the Portainer stack."
+                    : "Backups run on the home server. In local development, connections are only in .blackwall/connections.json."
+                }
+              />
             ) : (
               <>
-                <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
-                  <dt className="text-muted-foreground">Last backup</dt>
-                  <dd className={cn(!last ? "text-muted-foreground" : !last.ok || stale ? "text-red-text" : "text-teal")}>
-                    {last ? `${last.ok ? "OK" : "Failed"} · ${ago(last.at)}${stale ? " (overdue)" : ""}` : "None yet"}
-                    {last?.error && <span className="block text-xs">{last.error}</span>}
-                  </dd>
-                  <dt className="text-muted-foreground">Local copies</dt>
-                  <dd>{backups.count ?? 0} on the server</dd>
-                  <dt className="flex items-center gap-1 text-muted-foreground">
-                    <CloudUpload className="size-3.5" aria-hidden /> Off-site
-                  </dt>
-                  <dd className={cn(last?.offsite === "ok" ? "text-teal" : last?.offsite === "failed" ? "text-red-text" : "text-muted-foreground")}>
-                    {last?.offsite === "ok" ? `Uploaded to ${last.offsiteRemote}` : last?.offsite === "failed" ? `Upload failed${last.offsiteError ? `: ${last.offsiteError}` : ""}` : "Not set up"}
-                  </dd>
-                </dl>
+                <SettingRow
+                  title={
+                    <span className="flex items-center gap-2">
+                      <Marker tone={backupTone} />
+                      Last backup
+                    </span>
+                  }
+                  description={
+                    <span className={cn((backupTone === "error" || backupTone === "warn") && "text-red-text")}>
+                      {last ? `${last.ok ? "Succeeded" : "Failed"} ${ago(last.at)}${stale ? ". Overdue: backups run every day." : "."}` : "None yet. The first one runs shortly after the stack starts."}
+                      {last?.error && <span className="block">{last.error}</span>}
+                    </span>
+                  }
+                />
+                <SettingRow
+                  title={
+                    <span className="flex items-center gap-2">
+                      <Marker tone={offsite === "ok" ? "ok" : offsite === "failed" ? "error" : "off"} />
+                      Off-site copy
+                    </span>
+                  }
+                  description={
+                    <span className={cn(offsite === "failed" && "text-red-text")}>
+                      {offsite === "ok"
+                        ? `Uploaded to ${last?.offsiteRemote}.`
+                        : offsite === "failed"
+                          ? `Upload failed${last?.offsiteError ? `: ${last.offsiteError}` : "."}`
+                          : "Not set up. Backups stay on the server only (see deploy/README.md to add one)."}
+                    </span>
+                  }
+                />
                 {backups.files && backups.files.length > 0 && (
-                  <ul className="max-h-48 overflow-y-auto rounded-md border-2 border-edge bg-recessed font-mono text-xs">
+                  <ul className="max-h-56 overflow-y-auto font-mono text-xs" aria-label="Backup files">
                     {backups.files.map((f) => (
-                      <li key={f.name} className="flex justify-between gap-3 border-b border-border px-2 py-1 last:border-0">
+                      <li key={f.name} className="flex justify-between gap-3 border-b border-line px-3.5 py-1.5 last:border-0">
                         <span className="truncate">{f.name}</span>
-                        <span className="shrink-0 text-muted-foreground">{size(f.bytes)} · {ago(f.at)}</span>
+                        <span className="shrink-0 text-muted-foreground">
+                          {size(f.bytes)} · {ago(f.at)}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -112,8 +151,8 @@ export function ServerSettings() {
               </>
             )}
           </Panel>
-        </div>
+        </>
       )}
-    </>
+    </SettingsPage>
   )
 }

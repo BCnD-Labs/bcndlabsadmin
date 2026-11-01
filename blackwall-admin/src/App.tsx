@@ -13,7 +13,7 @@ import { NotesPage } from "@/features/notes/notes-page"
 import { ConnectionsPage } from "@/features/settings/connections-page"
 import { GeneralSettings } from "@/features/settings/general-page"
 import { ServerSettings } from "@/features/settings/server-page"
-import { AppearanceSettings, NavigationSettings } from "@/features/settings/settings-pages"
+import { AppearanceSettings, ShortcutsSettings } from "@/features/settings/settings-pages"
 import { ProjectDetail } from "@/features/work/project-detail"
 import { ProjectsPage } from "@/features/work/projects-page"
 import { TasksPage } from "@/features/work/tasks-page"
@@ -47,7 +47,8 @@ const router = createBrowserRouter([
       { path: "settings", element: <Navigate to="/settings/general" replace /> },
       { path: "settings/general", element: <GeneralSettings /> },
       { path: "settings/appearance", element: <AppearanceSettings /> },
-      { path: "settings/navigation", element: <NavigationSettings /> },
+      { path: "settings/shortcuts", element: <ShortcutsSettings /> },
+      { path: "settings/navigation", element: <Navigate to="/settings/shortcuts" replace /> },
       { path: "settings/connections", element: <ConnectionsPage /> },
       { path: "settings/server", element: <ServerSettings /> },
       { path: "settings/integrations", element: <Navigate to="/settings/connections" replace /> },

@@ -7,7 +7,7 @@ A personal workspace for keeping track: simple to-dos, a calendar that opens a d
 - **Tasks:** Google Tasks style. Title, optional details, optional due date, star, done. No priorities, tags, links or dependencies. "Today" shows overdue, due-today and starred tasks; the Tasks page groups everything by when it's due.
 - **Calendar & daily log:** internal only. The header's calendar button opens a month card; click a day to open that day's log in a dialog (tasks due that day, quick prompts, Save). Work → Calendar is the full-page version that saves as you type. Day dots: red = open tasks due, amber = overdue, grey = a saved log.
 - **Home:** a 2×2 grid of panels you choose from each panel's header menu (Productivity or Empty for now). Drag a panel by its header onto another square to swap them, or use "Move to slot N" in the menu.
-- **Settings → General:** the running version, check for updates and an **Update** button (home server; it asks Portainer to pull, rebuild and restart the stack), export/import/clear your workspace, clear the cache, and reset preferences.
+- **Settings:** General (version, Check for updates, and an Update button when one is found; export, import, clear cache, reset), Appearance, Connections, Server & backups, Shortcuts. One column of panels with a row per setting.
 - **Notifications:** the bell opens a card that slides in from the right. No notification sources exist yet, so it shows **[ NO SIGNAL ]**.
 - **Notes:** sticky notes. Type, pick a colour, pin the ones you want on Home. They save as you type; an emptied note is removed.
 - **Analytics → You:** charts computed from your tasks and logs (tasks completed per day, open tasks by due date, a log heatmap, streaks). **Analytics → Website** shows your analytics provider once connected.
@@ -60,7 +60,7 @@ Saving a connection runs a live test against the provider and shows the result (
 | --- | --- |
 | Tasks, daily logs, notes, projects, repository links, drafts, search, your activity charts | Saved in this browser |
 | Website traffic, development data | Your connections, labelled **Live**, **Error** or **Not connected** |
-| Sample data | Off by default. Settings → Appearance → *Show sample data* fills unconnected panels with made-up data labelled **Sample data**, for previewing layouts |
+| Sample data | Off by default. Settings → Appearance → *Sample data* fills unconnected panels with made-up data labelled **Sample data**, for previewing layouts |
 
 ## Your data
 

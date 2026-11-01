@@ -20,7 +20,6 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { PageHeader } from "@/components/common/panel"
 import { Field, OptionSelect } from "@/components/forms/fields"
 import { timeAgo } from "@/lib/dates"
 import { cn } from "@/lib/utils"
@@ -34,7 +33,8 @@ import {
   type ProviderId,
   type PublicConnection,
 } from "@shared/connections"
-import { SettingsTabs } from "./settings-pages"
+import { Panel } from "@/components/common/panel"
+import { SettingRow, SettingsHeader } from "./settings-pages"
 
 export const PROVIDER_ICON: Record<ProviderId, LucideIcon> = {
   github: GitBranch,
@@ -91,26 +91,16 @@ export function ConnectionsPage() {
 
   return (
     <>
-      <PageHeader
-        title="Settings"
-        actions={
-          available && (
-            <Button onClick={() => setDialog({})}>
-              <Plus /> Add connection
-            </Button>
-          )
-        }
-      />
-      <SettingsTabs />
+      <SettingsHeader />
 
-      <p className="mb-3 max-w-prose text-sm text-muted-foreground">
-        Passwords, tokens and private links go to Blackwall's server, which stores them encrypted (on the home server, in
-        Postgres; in local development, in <code className="font-mono text-xs">.blackwall/connections.json</code>). They aren't kept in
-        the browser and aren't shown again after you save.
+      <div className="grid max-w-3xl gap-3">
+      <p className="px-1 text-xs leading-relaxed text-muted-foreground">
+        Tokens and passwords are sent once to Blackwall's server and stored encrypted
+        (in Postgres on the home server, or <code className="font-mono">.blackwall/connections.json</code> in local development). They're never sent back to the browser.
       </p>
 
       {available === false && (
-        <Alert className="mb-3 border-amber/50">
+        <Alert className="border-amber/50">
           <AlertDescription className="text-foreground">
             The local connector isn't responding. It runs inside <code className="font-mono text-xs">npm run dev</code> and{" "}
             <code className="font-mono text-xs">npm run preview</code>; a static build has no connector.
@@ -122,74 +112,74 @@ export function ConnectionsPage() {
       )}
 
       {available && list.length > 0 && (
-        <ul className="mb-4 grid gap-3 lg:grid-cols-2" aria-label="Connections">
+        <ul className="grid gap-3" aria-label="Connections">
           {list.map((c) => {
-            const Icon = PROVIDER_ICON[c.provider]
             const working = busy[c.id]
             return (
-              <li key={c.id} className="flex flex-col brutal rounded-xl bg-card" data-testid="connection-card">
-                <div className="flex flex-wrap items-center gap-2 border-b-2 border-edge bg-recessed/70 px-3 py-2">
-                  <Icon className="size-4 text-teal" aria-hidden />
-                  <h2 className="font-heading text-sm font-bold tracking-wide uppercase">{c.label}</h2>
-                  {c.label !== providerDef(c.provider).name && (
-                    <span className="text-xs text-muted-foreground">{providerDef(c.provider).name}</span>
-                  )}
-                  <StatusPill status={c.status} />
-                  <div className="ml-auto flex items-center gap-1">
-                    <Button size="sm" variant="ghost" onClick={() => runTest(c)} disabled={working}>
-                      {working ? <Loader2 className="animate-spin" /> : <RotateCw />} Test
-                    </Button>
-                    <Button size="icon-sm" variant="ghost" aria-label={`Edit ${c.label}`} onClick={() => setDialog({ existing: c })}>
-                      <Pencil />
-                    </Button>
-                    <Button size="icon-sm" variant="ghost" aria-label={`Remove ${c.label}`} className="text-red-text" onClick={() => setConfirmRemove(c.id)}>
-                      <Trash2 />
-                    </Button>
+              <li key={c.id} data-testid="connection-card">
+                <Panel
+                  tool={providerDef(c.provider).name.toLowerCase()}
+                  command={c.label}
+                  badge={<StatusPill status={c.status} />}
+                  actions={
+                    <>
+                      <Button size="sm" variant="ghost" onClick={() => runTest(c)} disabled={working}>
+                        {working ? <Loader2 className="animate-spin" /> : <RotateCw />} Test
+                      </Button>
+                      <Button size="icon-sm" variant="ghost" aria-label={`Edit ${c.label}`} onClick={() => setDialog({ existing: c })}>
+                        <Pencil />
+                      </Button>
+                      <Button size="icon-sm" variant="ghost" aria-label={`Remove ${c.label}`} className="text-red-text" onClick={() => setConfirmRemove(c.id)}>
+                        <Trash2 />
+                      </Button>
+                    </>
+                  }
+                  bodyClassName="divide-y divide-line"
+                >
+                  <div className="space-y-1.5 px-3.5 py-3 text-sm">
+                    {c.account && (
+                      <p>
+                        <span className="text-muted-foreground">Account </span>
+                        {c.account}
+                      </p>
+                    )}
+                    {c.provider === "other" && <OtherDetails c={c} />}
+                    {c.message && <p className={c.status === "error" ? "break-words text-red-text" : "text-muted-foreground"}>{c.message}</p>}
+                    {c.summary?.length ? (
+                      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+                        {c.summary.map((s) => (
+                          <div key={s.label} className="contents">
+                            <dt className="text-muted-foreground">{s.label}</dt>
+                            <dd className="min-w-0 break-words">{s.value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    ) : null}
+                    {!c.account && !c.message && !c.summary?.length && c.provider !== "other" && <p className="text-muted-foreground">Not tested yet.</p>}
                   </div>
-                </div>
-                <div className="flex-1 space-y-1.5 px-3 py-2.5 text-sm">
-                  {c.account && (
-                    <p>
-                      <span className="text-muted-foreground">Account </span>
-                      {c.account}
-                    </p>
-                  )}
-                  {c.provider === "other" && <OtherDetails c={c} />}
-                  {c.message && <p className={c.status === "error" ? "break-words text-red-text" : "text-muted-foreground"}>{c.message}</p>}
-                  {c.summary?.length ? (
-                    <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
-                      {c.summary.map((s) => (
-                        <div key={s.label} className="contents">
-                          <dt className="text-muted-foreground">{s.label}</dt>
-                          <dd className="min-w-0 break-words">{s.value}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  ) : null}
-                  {!c.account && !c.message && !c.summary?.length && c.provider !== "other" && <p className="text-muted-foreground">Not tested yet.</p>}
-                </div>
-                <div className="flex items-center gap-2 border-t px-3 py-1.5 text-xs text-muted-foreground">
-                  {c.checkedAt ? `Checked ${timeAgo(c.checkedAt)}` : "Never checked"}
-                  {confirmRemove === c.id && (
-                    <span className="ml-auto flex items-center gap-2">
-                      <span className="text-red-text">Remove this connection and its saved secrets?</span>
-                      <Button
-                        size="xs"
-                        variant="destructive"
-                        onClick={async () => {
-                          await remove(c.id)
-                          setConfirmRemove(null)
-                          toast(`${c.label} removed`)
-                        }}
-                      >
-                        Remove
-                      </Button>
-                      <Button size="xs" variant="ghost" onClick={() => setConfirmRemove(null)}>
-                        Keep
-                      </Button>
-                    </span>
-                  )}
-                </div>
+                  <div className="flex flex-wrap items-center gap-2 px-3.5 py-2 text-xs text-muted-foreground">
+                    {c.checkedAt ? `Checked ${timeAgo(c.checkedAt)}` : "Never checked"}
+                    {confirmRemove === c.id && (
+                      <span className="ml-auto flex flex-wrap items-center gap-2">
+                        <span className="text-red-text">Remove this connection and its saved secrets?</span>
+                        <Button
+                          size="xs"
+                          variant="destructive"
+                          onClick={async () => {
+                            await remove(c.id)
+                            setConfirmRemove(null)
+                            toast(`${c.label} removed`)
+                          }}
+                        >
+                          Remove
+                        </Button>
+                        <Button size="xs" variant="ghost" onClick={() => setConfirmRemove(null)}>
+                          Keep
+                        </Button>
+                      </span>
+                    )}
+                  </div>
+                </Panel>
               </li>
             )
           })}
@@ -197,32 +187,29 @@ export function ConnectionsPage() {
       )}
 
       {available && (
-        <section aria-labelledby="add-heading">
-          <h2 id="add-heading" className="eyebrow mb-2">
-            {list.length ? "Add another" : "Connect a service"}
-          </h2>
-          <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-            {PROVIDERS.map((p) => {
-              const Icon = PROVIDER_ICON[p.id]
-              return (
-                <li key={p.id}>
-                  <button
-                    type="button"
-                    onClick={() => setDialog({ provider: p.id })}
-                    className="flex h-full w-full items-start gap-3 rounded-xl border-2 border-dashed border-edge bg-card/60 p-3 text-left outline-none hover:border-teal/60 hover:bg-card focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <Icon className="mt-0.5 size-4 shrink-0 text-teal" aria-hidden />
-                    <span>
-                      <span className="block text-sm font-bold">{p.name}</span>
-                      <span className="block text-xs text-muted-foreground">{p.blurb}</span>
-                    </span>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        </section>
+        <Panel tool="connections" command={list.length ? "add another" : "add"} bodyClassName="divide-y divide-line">
+          {PROVIDERS.map((p) => {
+            const Icon = PROVIDER_ICON[p.id]
+            return (
+              <SettingRow
+                key={p.id}
+                title={
+                  <span className="flex items-center gap-2">
+                    <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                    {p.name}
+                  </span>
+                }
+                description={p.blurb}
+              >
+                <Button size="sm" variant="outline" onClick={() => setDialog({ provider: p.id })} aria-label={`Connect ${p.name}`}>
+                  <Plus /> Connect
+                </Button>
+              </SettingRow>
+            )
+          })}
+        </Panel>
       )}
+      </div>
 
       <Dialog open={!!dialog} onOpenChange={(o) => !o && setDialog(null)}>
         <DialogContent className="gap-0 p-0 sm:max-w-lg">

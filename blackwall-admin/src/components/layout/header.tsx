@@ -19,6 +19,8 @@ function greeting(d: Date) {
 function pageTitle(pathname: string, search: string) {
   const dest = NAV.find((d) => isActive(d, pathname))
   if (!dest) return "Blackwall"
+  // Settings shows its sections as tabs under the header, so the header just says "Settings".
+  if (dest.id === "settings") return dest.label
   const child =
     dest.children?.find((c) => pathname + search === c.to) ??
     dest.children?.find((c) => !c.to.includes("?") && (pathname === c.to || pathname.startsWith(c.to + "/")))

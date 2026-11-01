@@ -84,9 +84,9 @@ export const NAV: NavDestination[] = [
     children: [
       { label: "General", to: "/settings/general" },
       { label: "Appearance", to: "/settings/appearance" },
-      { label: "Navigation", to: "/settings/navigation" },
       { label: "Connections", to: "/settings/connections" },
       { label: "Server & backups", to: "/settings/server" },
+      { label: "Shortcuts", to: "/settings/shortcuts" },
     ],
   },
 ]
