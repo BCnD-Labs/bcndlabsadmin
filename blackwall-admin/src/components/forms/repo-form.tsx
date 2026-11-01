@@ -67,11 +67,12 @@ export function RepoForm({ id, defaults, onDone }: { id?: string; defaults?: Par
       <Field
         label="Repository"
         htmlFor="repo-name"
-        hint={draft.repo && !parsed ? <span className="text-red-text">Use owner/name or a github.com URL.</span> : "Stored locally. Activity needs the GitHub integration."}
+        hint="Stored in this browser. Activity needs a GitHub connection."
+        error={draft.repo && !parsed ? "Use owner/name or a github.com URL." : undefined}
       >
-        <Input id="repo-name" autoFocus className="font-mono" placeholder="owner/name" value={draft.repo} aria-invalid={!!draft.repo && !parsed} onChange={(e) => set({ repo: e.target.value })} />
+        <Input id="repo-name" autoFocus className="font-mono" placeholder="owner/name" value={draft.repo} onChange={(e) => set({ repo: e.target.value })} />
       </Field>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-x-4 gap-y-3.5 sm:grid-cols-2">
         <Field label="Production URL" htmlFor="repo-prod">
           <Input id="repo-prod" type="url" placeholder="https://" value={draft.productionUrl} onChange={(e) => set({ productionUrl: e.target.value })} />
         </Field>

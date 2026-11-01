@@ -69,14 +69,14 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
         </Field>
         <div className="flex items-center gap-2 pb-1.5">
           <Switch id="task-star" checked={draft.starred} onCheckedChange={(starred) => set({ starred })} />
-          <Label htmlFor="task-star" className="inline-flex items-center gap-1">
+          <Label htmlFor="task-star" className="inline-flex items-center gap-1 text-xs font-normal">
             <Star className="size-3.5 text-amber" aria-hidden /> Starred
           </Label>
         </div>
         {existing && (
           <div className="flex items-center gap-2 pb-1.5">
             <Switch id="task-done" checked={draft.done} onCheckedChange={(done) => set({ done })} />
-            <Label htmlFor="task-done">Done</Label>
+            <Label htmlFor="task-done" className="text-xs font-normal">Done</Label>
           </div>
         )}
       </div>

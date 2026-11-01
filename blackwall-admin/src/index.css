@@ -78,22 +78,8 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /*
-   * Legacy aliases from the previous theme. About 30 pages still use these;
-   * each page drops them when it's rebuilt. Red text only exists as --red-text.
-   */
-  --color-recessed: var(--bw-well);
-  --color-edge: var(--bw-ledge);
-  --color-teal: var(--bw-green);
-  --color-teal-foreground: var(--bw-ground);
-  --color-amber-foreground: var(--bw-ground);
-  --color-magenta: var(--bw-text-2);
-  --color-lime: var(--bw-text-2);
-  --color-blue: var(--bw-text-2);
+  /* Error copy: the only red text (#BC1515 fails contrast as text). */
   --color-red-text: #f08a8a;
-  --shadow-brutal-sm: 0 0 #0000;
-  --shadow-brutal: 0 0 #0000;
-  --shadow-brutal-lg: 0 0 #0000;
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -298,33 +284,7 @@
     animation: bw-drain var(--bw-drain, 5s) linear forwards;
   }
 
-  /* Logo mark and avatar initials */
-  .wordmark {
-    font-family: var(--font-pixel);
-    line-height: 1;
-  }
 
-  /* Legacy: the old neo-brutal block is now the ledge edge. */
-  .brutal {
-    border-style: solid;
-    border-color: var(--bw-ledge);
-    border-width: 0 4px 4px 0;
-  }
-
-  /* Legacy: big numerals now use the KPI face. */
-  .pixel-num {
-    font-family: var(--font-heading);
-    font-weight: 700;
-    line-height: 1;
-  }
-
-  .retro-dots {
-    background-image: none;
-  }
-  .retro-scanlines {
-    background-image: repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 3px);
-  }
-  html[data-retro="off"] .retro-scanlines,
   html[data-retro="off"] .bw-panel::after {
     background-image: none;
   }
@@ -336,20 +296,6 @@
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--bw-faint);
-  }
-
-  /* Legacy name for .bw-label. */
-  .eyebrow {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--bw-faint);
-  }
-
-  /* Legacy: no glows in this theme. */
-  .glow-teal,
-  .glow-amber {
   }
 }
 

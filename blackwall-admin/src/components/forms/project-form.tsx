@@ -73,7 +73,7 @@ export function ProjectForm({ id, defaults, onDone }: { id?: string; defaults?: 
           : undefined
       }
     >
-      <div className="grid grid-cols-[1fr_6rem] gap-3">
+      <div className="grid grid-cols-[1fr_6rem] gap-x-4">
         <Field label="Name" htmlFor="project-name">
           <Input id="project-name" autoFocus value={draft.name} onChange={(e) => set({ name: e.target.value })} />
         </Field>
@@ -81,7 +81,7 @@ export function ProjectForm({ id, defaults, onDone }: { id?: string; defaults?: 
           <Input id="project-code" className="font-mono uppercase" maxLength={5} placeholder={autoCode || "KEY"} value={draft.code} onChange={(e) => set({ code: e.target.value })} />
         </Field>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid gap-x-4 gap-y-3.5 sm:grid-cols-2">
         <Field label="Status" htmlFor="project-status">
           <OptionSelect id="project-status" value={draft.status} onChange={(status) => set({ status })} options={PROJECT_STATUSES} />
         </Field>

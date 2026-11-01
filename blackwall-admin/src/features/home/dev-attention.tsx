@@ -2,7 +2,8 @@ import { CircleDot, ExternalLink, GitMerge, GitPullRequest, Rocket, Upload, XCir
 import type { ReactNode } from "react"
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { EmptyState, Panel } from "@/components/common/panel"
+import { EmptyState } from "@/components/common/empty-state"
+import { Panel } from "@/components/common/panel"
 import { FeedFallback, hasData } from "@/components/common/feed-fallback"
 import { SourceBadge } from "@/components/common/source-badge"
 import type { Tone } from "@/components/common/tags"
@@ -70,7 +71,7 @@ export function DevAttention({ className }: { className?: string }) {
     if (!hasData(feed)) return <FeedFallback feed={feed} provider="github" what="review requests and failed checks" />
     if (repos.length === 0 && feed.data.prs.length === 0) {
       return (
-        <EmptyState action={<Button size="sm" variant="outline" onClick={() => openForm({ kind: "repo" })}>Track a repository</Button>}>
+        <EmptyState title="No repositories tracked" action={<Button variant="outline" onClick={() => openForm({ kind: "repo" })}>Track a repository</Button>}>
           Track repositories to see their checks, issues and activity.
         </EmptyState>
       )
@@ -139,8 +140,7 @@ export function DevAttention({ className }: { className?: string }) {
   return (
     <Panel
       id="development"
-      title="Development"
-      icon={<GitPullRequest />}
+      tool="github" command="attention"
       badge={<SourceBadge status={feed.status} detail={feed.status === "live" ? feed.provider : undefined} />}
       className={className}
       actions={

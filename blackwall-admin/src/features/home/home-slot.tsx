@@ -34,7 +34,7 @@ function SlotMenu({ index, type }: { index: number; type: PanelType }) {
         <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56 font-mono text-xs">
-        <DropdownMenuLabel className="eyebrow">Show</DropdownMenuLabel>
+        <DropdownMenuLabel className="bw-label">Show</DropdownMenuLabel>
         {PANEL_TYPES.map((t) => {
           const at = slots.indexOf(t)
           return (
@@ -46,7 +46,7 @@ function SlotMenu({ index, type }: { index: number; type: PanelType }) {
           )
         })}
         <DropdownMenuSeparator />
-        <DropdownMenuLabel className="eyebrow">Move</DropdownMenuLabel>
+        <DropdownMenuLabel className="bw-label">Move</DropdownMenuLabel>
         {Array.from({ length: SLOT_COUNT }, (_, k) => (
           <DropdownMenuItem key={k} disabled={k === index} onSelect={() => swap(index, k)}>
             <span className="size-3.5" aria-hidden />
@@ -84,7 +84,7 @@ export function HomeSlot({
 
   return (
     <div
-      className={cn("relative flex min-h-[340px] min-w-0 flex-col", dragFrom === index && "opacity-50")}
+      className={cn("relative flex min-w-0 flex-col md:min-h-[340px]", type !== "empty" && "min-h-[340px]", dragFrom === index && "opacity-50")}
       data-testid={`slot-${index + 1}`}
       data-type={type}
       onDragOver={(e) => {

@@ -1,4 +1,3 @@
-import { Activity } from "lucide-react"
 import { useState } from "react"
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
@@ -16,9 +15,7 @@ export function TrafficPanel({ className }: { className?: string }) {
   return (
     <Panel
       id="traffic"
-      title="Website traffic"
-      icon={<Activity />}
-      accent="blue"
+      tool="site" command="traffic"
       badge={<SourceBadge status={feed.status} detail={feed.status === "live" ? feed.provider : undefined} />}
       className={className}
       actions={

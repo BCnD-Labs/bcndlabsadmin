@@ -22,7 +22,7 @@ const buttonVariants = cva(
         ghost: `${rim} bg-transparent text-ink-2 hover:bg-raised hover:text-ink aria-expanded:bg-selected aria-pressed:bg-selected`,
         outline: `${rim} bg-transparent text-ink-2 hover:bg-raised hover:text-ink aria-expanded:bg-selected aria-pressed:bg-selected`,
         secondary: `${ledge} border-ledge-hi bg-raised text-ink hover:bg-selected`,
-        /* Borderless, for dense toolbars on pages that haven't been rebuilt yet. */
+        /* Borderless: icon buttons in panel headers and rows, and Cancel next to a primary. */
         quiet: "text-ink-2 hover:bg-raised hover:text-ink aria-expanded:bg-raised",
         destructive: primary,
         link: "text-ink-2 underline-offset-4 hover:text-ink hover:underline",

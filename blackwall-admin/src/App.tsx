@@ -17,7 +17,7 @@ import { AppearanceSettings, ShortcutsSettings } from "@/features/settings/setti
 import { ProjectDetail } from "@/features/work/project-detail"
 import { ProjectsPage } from "@/features/work/projects-page"
 import { TasksPage } from "@/features/work/tasks-page"
-import { EmptyState } from "@/components/common/panel"
+import { NotFound } from "@/components/layout/not-found"
 import { RouteError } from "@/components/layout/route-error"
 
 const router = createBrowserRouter([
@@ -52,7 +52,7 @@ const router = createBrowserRouter([
       { path: "settings/connections", element: <ConnectionsPage /> },
       { path: "settings/server", element: <ServerSettings /> },
       { path: "settings/integrations", element: <Navigate to="/settings/connections" replace /> },
-      { path: "*", element: <EmptyState>That page doesn't exist.</EmptyState> },
+      { path: "*", element: <NotFound /> },
     ],
   },
 ])

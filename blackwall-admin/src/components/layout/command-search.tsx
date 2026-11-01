@@ -101,7 +101,7 @@ export function CommandSearch() {
                 keywords={[t.title, t.details ?? ""]}
                 onSelect={() => run(() => openForm({ kind: "task", id: t.id }))}
               >
-                {t.done ? <CheckCircle2 className="text-teal" /> : <Circle />}
+                {t.done ? <CheckCircle2 className="text-muted-foreground" /> : <Circle />}
                 <span className={t.done ? "text-muted-foreground line-through" : ""}>{t.title}</span>
                 {t.due && <span className="ml-auto font-mono text-xs text-muted-foreground">{t.due}</span>}
               </CommandItem>

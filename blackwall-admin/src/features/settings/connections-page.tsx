@@ -272,7 +272,7 @@ function ConnectionForm({
   if (!provider) {
     return (
       <div className="p-4">
-        <DialogTitle className="mb-1 text-base font-bold">Add a connection</DialogTitle>
+        <DialogTitle className="mb-1 font-heading text-base font-bold">Add a connection</DialogTitle>
         <DialogDescription className="mb-3">Pick the kind of service.</DialogDescription>
         <ul className="grid gap-2">
           {PROVIDERS.map((p) => {
@@ -391,9 +391,9 @@ function ProviderForm({
 
   return (
     <form onSubmit={submit} className="flex max-h-[85dvh] flex-col">
-      <div className="border-b px-4 py-3">
-        <DialogTitle className="text-base font-bold">{existing ? `Edit ${existing.label}` : `Connect ${def.name}`}</DialogTitle>
-        <DialogDescription className="mt-0.5 text-xs">
+      <div className="border-b border-line py-3 pr-12 pl-4">
+        <DialogTitle className="font-heading text-base font-bold">{existing ? `Edit ${existing.label}` : `Connect ${def.name}`}</DialogTitle>
+        <DialogDescription className="mt-1 text-[11px] leading-relaxed">
           {def.blurb}
           {def.help && (
             <>
@@ -405,7 +405,7 @@ function ProviderForm({
           )}
         </DialogDescription>
       </div>
-      <div className="grid gap-3 overflow-y-auto px-4 py-4">
+      <div className="grid gap-3.5 overflow-y-auto px-4 py-4">
         <Field label="Name" htmlFor="conn-label" hint="How it appears in Blackwall, e.g. “Work GitHub” or “School VPN”.">
           <Input id="conn-label" value={label} onChange={(e) => setLabel(e.target.value)} autoFocus />
         </Field>

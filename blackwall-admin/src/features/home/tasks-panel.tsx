@@ -1,11 +1,12 @@
-import { ListChecks, Plus } from "lucide-react"
+import { Plus } from "lucide-react"
 import { useMemo, useState, type FormEvent } from "react"
 import { Link } from "react-router-dom"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { EmptyState, Panel } from "@/components/common/panel"
+import { EmptyState } from "@/components/common/empty-state"
+import { Panel } from "@/components/common/panel"
 import { daysUntil, relativeDue, todayKey } from "@/lib/dates"
 import { parseQuickAdd } from "@/lib/quick-add"
 import type { Task } from "@/lib/types"
@@ -63,9 +64,7 @@ export function TasksPanel({ className }: { className?: string }) {
   return (
     <Panel
       id="tasks"
-      title="Tasks"
-      icon={<ListChecks />}
-      accent="amber"
+      tool="tasks" command="today"
       className={className}
       bodyClassName="flex flex-col"
       actions={
@@ -117,7 +116,7 @@ export function TasksPanel({ className }: { className?: string }) {
         {visible.length ? (
           sections(filter, visible).map((sec) => (
             <section key={sec.name} aria-label={sec.name ?? "Tasks"}>
-              {sec.name && <h3 className="eyebrow border-b bg-recessed/40 px-3 py-1">{sec.name} · {sec.items.length}</h3>}
+              {sec.name && <h3 className="bw-label border-b bg-well/60 px-3 py-1">{sec.name} · {sec.items.length}</h3>}
               <ul>
                 {sec.items.map((t) => (
                   <TaskRow
@@ -131,7 +130,7 @@ export function TasksPanel({ className }: { className?: string }) {
             </section>
           ))
         ) : (
-          <EmptyState className="py-6">{tasks.length === 0 ? "No tasks yet. Type one above and press Enter." : EMPTY[filter]}</EmptyState>
+          <EmptyState className="py-6" title={tasks.length === 0 ? "No tasks yet" : EMPTY[filter]} />
         )}
       </div>
     </Panel>

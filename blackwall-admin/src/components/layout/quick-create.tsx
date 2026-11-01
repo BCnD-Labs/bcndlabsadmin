@@ -34,7 +34,7 @@ export function QuickCreate() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuLabel className="eyebrow">Create</DropdownMenuLabel>
+        <DropdownMenuLabel className="bw-label">Create</DropdownMenuLabel>
         <DropdownMenuItem onSelect={() => openForm({ kind: "task" })}>
           <ListPlus /> Task
         </DropdownMenuItem>

@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { ColorPicker } from "@/features/notes/notes-page"
 import type { Note, NoteColor } from "@/lib/types"
 import { useWorkspace } from "@/stores/workspace"
+import { Field } from "./fields"
 import { FormFrame } from "./form-frame"
 
 /** Quick note dialog (header "New" menu, search). The Notes board edits inline. */
@@ -43,13 +44,14 @@ export function NoteForm({ id, defaults, onDone }: { id?: string; defaults?: Par
           : undefined
       }
     >
-      <label htmlFor="note-text" className="sr-only">Note</label>
-      <Textarea id="note-text" autoFocus rows={6} value={text} onChange={(e) => setText(e.target.value)} placeholder="Jot something down…" />
+      <Field label="Note" htmlFor="note-text">
+        <Textarea id="note-text" autoFocus rows={6} value={text} onChange={(e) => setText(e.target.value)} placeholder="Jot something down…" />
+      </Field>
       <div className="flex flex-wrap items-center gap-4">
         <ColorPicker value={color} onChange={setColor} />
         <div className="ml-auto flex items-center gap-2">
           <Switch id="note-pinned" checked={pinned} onCheckedChange={setPinned} />
-          <Label htmlFor="note-pinned">Pin to Home</Label>
+          <Label htmlFor="note-pinned" className="text-xs font-normal">Pin to Home</Label>
         </div>
       </div>
     </FormFrame>

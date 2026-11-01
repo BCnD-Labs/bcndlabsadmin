@@ -26,34 +26,34 @@ export function FormFrame({
   }
   return (
     <form onSubmit={submit} className="flex max-h-[85dvh] flex-col">
-      <div className="border-b px-4 py-3">
-        <DialogTitle className="text-base font-bold">{title}</DialogTitle>
+      <div className="border-b border-line py-3 pr-12 pl-4">
+        <DialogTitle className="font-heading text-base font-bold">{title}</DialogTitle>
       </div>
-      <div className="grid gap-3 overflow-y-auto px-4 py-4">{children}</div>
-      <div className="flex flex-wrap items-center gap-2 border-t bg-recessed/60 px-4 py-3">
+      <div className="grid gap-3.5 overflow-y-auto px-4 py-4">{children}</div>
+      <div className="flex flex-wrap items-center gap-2 border-t border-line bg-well/60 px-4 py-3">
         {onDelete &&
           (confirming ? (
             <div className="flex items-center gap-2" role="group" aria-label="Confirm delete">
-              <span className="text-xs text-red-text">Delete permanently?</span>
-              <Button type="button" variant="destructive" size="sm" onClick={onDelete}>
+              <span className="text-[11px] text-ink-2">Delete permanently?</span>
+              <Button type="button" variant="destructive" onClick={onDelete}>
                 Delete
               </Button>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setConfirming(false)}>
+              <Button type="button" variant="quiet" onClick={() => setConfirming(false)}>
                 Keep
               </Button>
             </div>
           ) : (
-            <Button type="button" variant="ghost" size="sm" onClick={() => setConfirming(true)} className="text-red-text">
+            <Button type="button" variant="quiet" onClick={() => setConfirming(true)}>
               <Trash2 /> Delete
             </Button>
           ))}
         <div className="ml-auto flex gap-2">
           <DialogClose asChild>
-            <Button type="button" variant="ghost">
+            <Button type="button" variant="quiet" size="lg">
               Cancel
             </Button>
           </DialogClose>
-          <Button type="submit" disabled={!canSubmit}>
+          <Button type="submit" size="lg" disabled={!canSubmit}>
             {submitLabel}
           </Button>
         </div>

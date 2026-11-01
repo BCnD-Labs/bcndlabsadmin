@@ -1,7 +1,8 @@
-import { Plus, StickyNote as StickyIcon } from "lucide-react"
+import { Plus } from "lucide-react"
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { EmptyState, Panel } from "@/components/common/panel"
+import { EmptyState } from "@/components/common/empty-state"
+import { Panel } from "@/components/common/panel"
 import { StickyNote } from "@/features/notes/notes-page"
 import { useWorkspace } from "@/stores/workspace"
 
@@ -15,9 +16,7 @@ export function PinnedNotes({ className }: { className?: string }) {
   return (
     <Panel
       id="pinned-notes"
-      title={pinned.length ? "Pinned notes" : "Notes"}
-      icon={<StickyIcon />}
-      accent="magenta"
+      tool="notes" command={pinned.length ? "pinned" : "recent"}
       className={className}
       bodyClassName="flex flex-col"
       actions={
@@ -46,7 +45,7 @@ export function PinnedNotes({ className }: { className?: string }) {
           ))}
         </ul>
       ) : (
-        <EmptyState>No notes yet. Pinned notes show up here.</EmptyState>
+        <EmptyState title="No notes yet">Pinned notes show up here.</EmptyState>
       )}
       {!pinned.length && recent.length > 0 && (
         <p className="border-t px-3 py-1.5 text-xs text-muted-foreground">Showing recent notes. Pin one to keep it here.</p>

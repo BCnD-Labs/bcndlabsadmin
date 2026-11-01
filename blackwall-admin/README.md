@@ -7,7 +7,7 @@ A personal workspace for keeping track: simple to-dos, a calendar that opens a d
 - **Tasks:** Google Tasks style. Title, optional details, optional due date, star, done. No priorities, tags, links or dependencies. "Today" shows overdue, due-today and starred tasks; the Tasks page groups everything by when it's due.
 - **Calendar & daily log:** internal only. The header's calendar button opens a month card; click a day to open that day's log in a dialog (tasks due that day, quick prompts, Save). Work → Calendar is the full-page version that saves as you type. Day dots: red = open tasks due, amber = overdue, grey = a saved log.
 - **Home:** a 2×2 grid of panels you choose from each panel's header menu (Productivity or Empty for now). Drag a panel by its header onto another square to swap them, or use "Move to slot N" in the menu.
-- **Settings:** General (version, Check for updates, and an Update button when one is found; export, import, clear cache, reset), Appearance, Connections, Server & backups, Shortcuts. One column of panels with a row per setting.
+- **Settings:** General (version, Check for updates, and an Update button when one is found; export, import, clear cache, reset), Appearance, Connections, Server & backups, Shortcuts. A section list on the left (a menu on phones), then one column of panels with a row per setting.
 - **Notifications:** the bell opens a card that slides in from the right. No notification sources exist yet, so it shows **[ NO SIGNAL ]**.
 - **Notes:** sticky notes. Type, pick a colour, pin the ones you want on Home. They save as you type; an emptied note is removed.
 - **Analytics → You:** charts computed from your tasks and logs (tasks completed per day, open tasks by due date, a log heatmap, streaks). **Analytics → Website** shows your analytics provider once connected.
@@ -80,10 +80,10 @@ Saving a connection runs a live test against the provider and shows the result (
 **Home C** (spec: [`docs/design/BLACKWALL_DESIGN.md`](../docs/design/BLACKWALL_DESIGN.md)). Dark only. The `--bw-*` tokens in `src/index.css` are the source of truth, and shadcn's variables point at them so `ui/` components follow.
 
 - **Panels:** charcoal `#161719`, 12px radius, a 4px ledge on the right and bottom instead of shadows, faint scanlines, and a 40px terminal-prompt header (`❯ tool $ command`). Floating cards (calendar, notifications, menus, dialogs) are the only things with a drop shadow.
-- **One accent:** red `#BC1515` for fills, markers, icons and the `❯` glyph, never for text. Amber means overdue or degraded; green is only for healthy deltas. Status markers are small squares.
+- **One accent:** red `#BC1515` for fills, markers, icons and the `❯` glyph, never for text. Red means brand and attention (failures, errors, unread); amber means overdue or degraded; healthy is a small green square, never green text. Status markers are small squares.
 - **Type:** JetBrains Mono for all UI text, Space Grotesk for titles and numbers, Silkscreen for the BW mark and initials.
 - **Text contrast:** nothing darker than `#7C818B`. The only red text is `#F08A8A`, for error copy. The focus ring is `#C9CDD3`, because red only reaches about 2.8:1 on panels.
-- **Legacy aliases:** pages not rebuilt yet still use the old token names (`recessed`, `edge`, `teal`, `.brutal`…); they're aliased to the new palette and get cleaned up as each page is rebuilt.
+- **Page patterns:** every page uses the shared pieces in `src/components/common/` (page header, sub-nav, field, list row, table, empty state). The app header shows a breadcrumb; the page's own header holds the title. See §7 of the spec.
 
 The background grid and scanlines can be turned off in Settings → Appearance (Retro details), and motion respects `prefers-reduced-motion`.
 
@@ -95,7 +95,7 @@ src/
     ui/          shadcn components (generated; lightly adjusted for the theme)
     layout/      app shell, header, nav rail, mobile nav, search, quick-create
     forms/       record dialogs (task, event, note, project, repo) + shared fields
-    common/      panel, segmented tabs, due chip, no signal, source badge, tags
+    common/      page header, sub-nav, panel, field, list rows and table, tabs, empty state, badges
   features/      home, work, development, content, analytics, knowledge, settings
   services/      connector client, data feeds (live / sample / not connected)
   stores/        workspace (versioned persistence), prefs, ui state

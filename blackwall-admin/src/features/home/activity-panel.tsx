@@ -1,4 +1,3 @@
-import { TrendingUp } from "lucide-react"
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Panel } from "@/components/common/panel"
@@ -11,9 +10,7 @@ export function ActivityPanel({ className }: { className?: string }) {
   return (
     <Panel
       id="activity"
-      title="Your activity"
-      icon={<TrendingUp />}
-      accent="teal"
+      tool="you" command="activity"
       className={className}
       bodyClassName="flex flex-col gap-3 p-3"
       actions={
@@ -28,7 +25,7 @@ export function ActivityPanel({ className }: { className?: string }) {
         <Stat label="Log streak" value={s.logStreak} sub={s.logStreak === 1 ? "day" : "days"} />
       </dl>
       <div>
-        <h3 className="eyebrow mb-1">Tasks completed · last 14 days</h3>
+        <h3 className="bw-label mb-1">Tasks completed · last 14 days</h3>
         <CompletedChart data={s.completed} className="h-40" />
       </div>
     </Panel>

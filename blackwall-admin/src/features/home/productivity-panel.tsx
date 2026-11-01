@@ -75,8 +75,8 @@ export function ProductivityPanel({ slot }: PanelBodyProps) {
   const idBase = `slot${slot}-tasks`
 
   return (
-    <div className="grid flex-1 grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-      <div className="flex min-w-0 flex-col gap-[9px] border-r border-line pt-3 pr-3 pb-3.5 pl-3.5">
+    <div className="grid flex-1 grid-cols-1 sm:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+      <div className="flex min-h-56 min-w-0 flex-col gap-[9px] border-b border-line pt-3 pr-3 pb-3.5 pl-3.5 sm:border-r sm:border-b-0">
         <SegmentedTabs
           label="Task views"
           idBase={idBase}
@@ -146,7 +146,7 @@ export function ProductivityPanel({ slot }: PanelBodyProps) {
 
       <div className="flex min-w-0 flex-col gap-[7px] pt-3 pr-3.5 pb-3.5 pl-3">
         <div className="flex items-center justify-between">
-          <h3 className="eyebrow">Pinned notes</h3>
+          <h3 className="bw-label">Pinned notes</h3>
           <Button
             variant="ghost"
             aria-label="New note"

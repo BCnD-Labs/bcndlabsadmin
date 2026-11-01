@@ -148,7 +148,7 @@ export function Notifications() {
               {groups.length === 0 && <p className="px-2 py-6 text-center text-[11px] text-muted-foreground">Nothing here.</p>}
               {groups.map((g) => (
                 <section key={g.label} aria-label={g.label} className="flex flex-col">
-                  <h3 className="eyebrow px-2 pt-2.5 pb-1.5">{g.label}</h3>
+                  <h3 className="bw-label px-2 pt-2.5 pb-1.5">{g.label}</h3>
                   {g.items.map((n) => (
                     <button
                       key={n.id}

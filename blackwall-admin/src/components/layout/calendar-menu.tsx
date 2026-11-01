@@ -194,7 +194,7 @@ export function CalendarMenu() {
             </DotsContext.Provider>
             <div className="flex flex-col gap-1.5 border-t border-dashed border-line pt-2.5">
               <div className="flex justify-between">
-                <span className="eyebrow">Today</span>
+                <span className="bw-label">Today</span>
                 <span className="text-[10px] text-faint">click a day → log</span>
               </div>
               {dueToday.length ? (
