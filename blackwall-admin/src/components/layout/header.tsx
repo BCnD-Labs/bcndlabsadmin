@@ -88,7 +88,8 @@ export function Header() {
         </div>
       </div>
 
-      <div className="relative flex items-center gap-2">
+      <div className="flex items-center gap-2">
+        <CalendarMenu />
         <button
           type="button"
           onClick={() => setSearchOpen(true)}
@@ -101,7 +102,6 @@ export function Header() {
           <kbd className="hidden rounded-[4px] border border-rim px-[5px] py-px font-mono text-[10px] text-faint sm:inline">⌘K</kbd>
         </button>
         <QuickCreate />
-        <CalendarMenu />
         <Notifications />
       </div>
     </header>

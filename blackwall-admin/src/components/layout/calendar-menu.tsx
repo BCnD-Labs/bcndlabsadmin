@@ -91,12 +91,15 @@ function DayButton({ day, modifiers, className: _c, ...props }: DayButtonProps) 
 }
 
 /**
- * Header calendar (spec §4): a ghost "Oct 30" button that opens a floating card
- * with the month and today's tasks. Clicking a day opens that day's log.
+ * Header calendar (spec §4): a ghost "Oct 30" button with a floating card for the
+ * month and today's tasks. Hovering the button opens the card and leaving closes
+ * it straight away; clicking pins it open, and then it auto-hides with the drain
+ * bar after the pointer leaves. Clicking a day opens that day's log.
  */
 export function CalendarMenu() {
   const now = useNow()
-  const [open, setOpen] = useState(false)
+  const [mode, setMode] = useState<null | "hover" | "pinned">(null)
+  const open = mode !== null
   const [logDate, setLogDate] = useState<DateKey | null>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const cardId = useId()
@@ -105,11 +108,11 @@ export function CalendarMenu() {
   const tasks = useWorkspace((s) => s.tasks)
   const dueToday = tasks.filter((t) => !t.done && t.due === todayK)
 
-  const hide = useAutoHide(open, () => setOpen(false))
+  const hide = useAutoHide(mode === "pinned", () => setMode(null))
   const { disarm } = hide
   const close = () => {
     disarm()
-    setOpen(false)
+    setMode(null)
   }
 
   useEffect(() => {
@@ -117,7 +120,7 @@ export function CalendarMenu() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || logDate) return
       disarm()
-      setOpen(false)
+      setMode(null)
       buttonRef.current?.focus()
     }
     document.addEventListener("keydown", onKey)
@@ -131,87 +134,106 @@ export function CalendarMenu() {
 
   return (
     <>
-      <Button
-        ref={buttonRef}
-        variant="ghost"
-        size="lg"
-        aria-label={`Calendar, ${format(now, "MMMM d")}${dueToday.length ? `, ${dueToday.length} due today` : ""}`}
-        aria-expanded={open}
-        aria-controls={cardId}
-        onClick={() => {
-          hide.disarm()
-          setOpen(!open)
+      {/* The button and the card share one hover area (the card's top padding bridges the gap). */}
+      <div
+        className="relative"
+        onPointerEnter={(e) => {
+          if (e.pointerType !== "mouse") return
+          if (mode === null) setMode("hover")
+          else hide.onPointerEnter(e)
+        }}
+        onPointerLeave={(e) => {
+          if (e.pointerType !== "mouse") return
+          if (mode === "hover") setMode(null)
+          else hide.onPointerLeave(e)
         }}
       >
-        <CalIcon className="text-ink-2" />
-        <span>{format(now, "MMM d")}</span>
-        {dueToday.length > 0 && <span aria-hidden className="size-1.5 rounded-[1.5px] bg-amber" data-testid="due-today-marker" />}
-      </Button>
+        <Button
+          ref={buttonRef}
+          variant="ghost"
+          size="lg"
+          aria-label={`Calendar, ${format(now, "MMMM d")}${dueToday.length ? `, ${dueToday.length} due today` : ""}`}
+          aria-expanded={open}
+          aria-controls={cardId}
+          aria-pressed={mode === "pinned"}
+          onClick={() => {
+            disarm()
+            setMode(mode === "pinned" ? null : "pinned")
+          }}
+        >
+          <CalIcon className="text-ink-2" />
+          <span>{format(now, "MMM d")}</span>
+          {dueToday.length > 0 && <span aria-hidden className="size-1.5 rounded-[1.5px] bg-amber" data-testid="due-today-marker" />}
+        </Button>
 
-      <div
-        id={cardId}
-        data-open={open}
-        aria-hidden={!open}
-        inert={!open}
-        onPointerEnter={hide.onPointerEnter}
-        onPointerLeave={hide.onPointerLeave}
-        className="bw-pop absolute top-[calc(100%+10px)] right-0 z-40 w-[300px] max-w-[calc(100vw-48px)]"
-      >
-        <section aria-label="Calendar" className="bw-panel bw-float overflow-hidden">
-          <div className="flex h-10 items-center justify-between gap-2 border-b border-line pr-2 pl-3.5">
-            <Prompt tool="cal" command={format(now, "MMM yyyy")} />
-            <Button variant="ghost" size="sm" aria-label="Collapse calendar" onClick={close}>
-              hide
-            </Button>
-          </div>
-          {hide.leaving && <DrainBar seconds={hide.seconds} />}
-          <div className="flex flex-col gap-1.5 px-3 pt-2.5 pb-3">
-            <DotsContext.Provider value={dots}>
-              <Calendar
-                month={now}
-                hideNavigation
-                showOutsideDays
-                onDayClick={(d, m) => !m.outside && pick(d)}
-                formatters={{ formatWeekdayName: (d) => format(d, "EEEEEE").toUpperCase() }}
-                labels={{ labelGrid: (d) => format(d, "MMMM yyyy") }}
-                className="w-full bg-transparent p-0"
-                classNames={{
-                  root: "w-full",
-                  months: "relative flex flex-col",
-                  month: "flex w-full flex-col gap-1.5",
-                  month_caption: "sr-only",
-                  month_grid: "w-full",
-                  weekdays: "grid grid-cols-7 gap-[2px]",
-                  weekday: "text-center font-mono text-[9px] font-normal tracking-[0.06em] text-faint",
-                  week: "mt-[2px] grid grid-cols-7 gap-[2px]",
-                  day: "p-0",
-                  today: "",
-                  outside: "",
-                  disabled: "",
-                }}
-                components={{ DayButton }}
-              />
-            </DotsContext.Provider>
-            <div className="flex flex-col gap-1.5 border-t border-dashed border-line pt-2.5">
-              <div className="flex justify-between">
-                <span className="bw-label">Today</span>
-                <span className="text-[10px] text-faint">click a day → log</span>
-              </div>
-              {dueToday.length ? (
-                <ul className="flex flex-col gap-1.5" aria-label="Tasks due today">
-                  {dueToday.map((t) => (
-                    <li key={t.id} className="grid grid-cols-[8px_minmax(0,1fr)] items-center gap-2 text-[11px]">
-                      <span aria-hidden className="size-1.5 rounded-[1.5px] bg-red" />
-                      <span className="truncate text-ink">{t.title}</span>
-                    </li>
-                  ))}
-                </ul>
+        <div
+          id={cardId}
+          data-open={open}
+          data-mode={mode ?? undefined}
+          aria-hidden={!open}
+          inert={!open}
+          className="bw-pop absolute top-full left-0 z-40 w-[300px] max-w-[calc(100vw-48px)] pt-2.5"
+        >
+          <section aria-label="Calendar" className="bw-panel bw-float overflow-hidden">
+            <div className="flex h-10 items-center justify-between gap-2 border-b border-line pr-2 pl-3.5">
+              <Prompt tool="cal" command={format(now, "MMM yyyy")} />
+              {mode === "pinned" ? (
+                <Button variant="quiet" size="sm" aria-label="Close calendar" onClick={close}>
+                  hide
+                </Button>
               ) : (
-                <p className="text-[11px] text-muted-foreground">Nothing due today.</p>
+                <span className="pr-1.5 text-[10px] text-faint">click to pin</span>
               )}
             </div>
-          </div>
-        </section>
+            {hide.leaving && <DrainBar seconds={hide.seconds} />}
+            <div className="flex flex-col gap-1.5 px-3 pt-2.5 pb-3">
+              <DotsContext.Provider value={dots}>
+                <Calendar
+                  month={now}
+                  hideNavigation
+                  showOutsideDays
+                  onDayClick={(d, m) => !m.outside && pick(d)}
+                  formatters={{ formatWeekdayName: (d) => format(d, "EEEEEE").toUpperCase() }}
+                  labels={{ labelGrid: (d) => format(d, "MMMM yyyy") }}
+                  className="w-full bg-transparent p-0"
+                  classNames={{
+                    root: "w-full",
+                    months: "relative flex flex-col",
+                    month: "flex w-full flex-col gap-1.5",
+                    month_caption: "sr-only",
+                    month_grid: "w-full",
+                    weekdays: "grid grid-cols-7 gap-[2px]",
+                    weekday: "text-center font-mono text-[9px] font-normal tracking-[0.06em] text-faint",
+                    week: "mt-[2px] grid grid-cols-7 gap-[2px]",
+                    day: "p-0",
+                    today: "",
+                    outside: "",
+                    disabled: "",
+                  }}
+                  components={{ DayButton }}
+                />
+              </DotsContext.Provider>
+              <div className="flex flex-col gap-1.5 border-t border-dashed border-line pt-2.5">
+                <div className="flex justify-between">
+                  <span className="bw-label">Today</span>
+                  <span className="text-[10px] text-faint">click a day → log</span>
+                </div>
+                {dueToday.length ? (
+                  <ul className="flex flex-col gap-1.5" aria-label="Tasks due today">
+                    {dueToday.map((t) => (
+                      <li key={t.id} className="grid grid-cols-[8px_minmax(0,1fr)] items-center gap-2 text-[11px]">
+                        <span aria-hidden className="size-1.5 rounded-[1.5px] bg-red" />
+                        <span className="truncate text-ink">{t.title}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">Nothing due today.</p>
+                )}
+              </div>
+            </div>
+          </section>
+        </div>
       </div>
 
       <LogDialog
