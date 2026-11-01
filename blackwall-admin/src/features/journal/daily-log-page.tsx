@@ -1,11 +1,14 @@
 import { addDays, format, isToday } from "date-fns"
-import { CalendarArrowUp, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react"
+import { CalendarArrowUp, CalendarDays, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { useEffect, useRef, useState, type FormEvent } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { ListRow } from "@/components/common/list"
+import { PageHeader } from "@/components/common/page-header"
+import { Panel } from "@/components/common/panel"
 import { parseKey, timeAgo, toDateKey, todayKey } from "@/lib/dates"
 import { useWorkspace } from "@/stores/workspace"
 import { TaskRow } from "@/features/work/task-row"
@@ -32,41 +35,47 @@ export function DailyLogPage() {
   const recent = [...journal].sort((a, b) => b.id.localeCompare(a.id)).slice(0, 8)
 
   return (
-    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[17.5rem_minmax(0,1fr)]">
-      <aside className="flex min-w-0 flex-col gap-3 self-start">
-        <section aria-label="Calendar" className="brutal rounded-xl bg-card py-1">
-          <div className="flex justify-center">
+    <>
+      <PageHeader
+        title="Calendar & daily log"
+        subtitle="Pick a day to read or write its log. It saves as you type."
+        actions={
+          <Button variant="outline" size="lg" onClick={() => go(todayKey())} disabled={isToday(day)}>
+            <CalendarDays /> Today
+          </Button>
+        }
+      />
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[17.5rem_minmax(0,1fr)]">
+        <aside className="flex min-w-0 flex-col gap-3 self-start">
+          <Panel tool="calendar" command="month" bodyClassName="flex flex-col items-center gap-2 pb-3">
             <JournalCalendar selected={date} onSelect={go} month={month} onMonthChange={setMonth} />
-          </div>
-          <CalendarLegend />
-          <div className="px-3 pt-2 pb-1">
-            <Button size="sm" variant="outline" className="w-full" onClick={() => go(todayKey())} disabled={isToday(day)}>
-              Today
-            </Button>
-          </div>
-        </section>
-        {recent.length > 0 && (
-          <section aria-labelledby="recent-logs" className="brutal rounded-xl bg-card">
-            <h2 id="recent-logs" className="eyebrow border-b-2 border-edge bg-recessed/70 px-3 py-2">Recent logs</h2>
-            <ul className="py-1">
-              {recent.map((j) => (
-                <li key={j.id}>
-                  <Link
-                    to={logHref(j.id)}
-                    aria-current={j.id === date ? "page" : undefined}
-                    className="block px-3 py-1.5 text-sm hover:bg-muted/40 aria-[current=page]:text-amber"
-                  >
-                    <span className="font-mono text-xs text-muted-foreground">{format(parseKey(j.id), "EEE MMM d")}</span>
-                    <span className="block truncate">{j.text.split("\n")[0]}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-      </aside>
-      <LogEditor key={date} date={date} onNavigate={go} />
-    </div>
+            <CalendarLegend />
+          </Panel>
+          {recent.length > 0 && (
+            <Panel tool="logs" command="recent">
+              <ul>
+                {recent.map((j) => (
+                  <ListRow key={j.id} className="p-0">
+                    <Link
+                      to={logHref(j.id)}
+                      aria-current={j.id === date ? "page" : undefined}
+                      className="group/log flex min-w-0 flex-1 items-start gap-2.5 px-3.5 py-2"
+                    >
+                      <span className="mt-1.5 size-1.5 shrink-0 rounded-[1.5px] bg-transparent group-aria-[current=page]/log:bg-red" aria-hidden />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[11px] text-muted-foreground">{format(parseKey(j.id), "EEE, MMM d")}</span>
+                        <span className="block truncate text-[13px] text-ink">{j.text.split("\n")[0]}</span>
+                      </span>
+                    </Link>
+                  </ListRow>
+                ))}
+              </ul>
+            </Panel>
+          )}
+        </aside>
+        <LogEditor key={date} date={date} onNavigate={go} />
+      </div>
+    </>
   )
 }
 
@@ -114,28 +123,32 @@ function LogEditor({ date, onNavigate }: { date: string; onNavigate: (d: string)
 
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      <section aria-label="Daily log" className="flex flex-col brutal rounded-xl bg-card">
-        <div className="flex flex-wrap items-center gap-2 border-b-2 border-edge bg-recessed/70 px-3 py-2">
-          <Button variant="ghost" size="icon-sm" aria-label="Previous day" onClick={() => onNavigate(toDateKey(addDays(day, -1)))}>
+      <section aria-labelledby="log-day" className="bw-panel flex flex-col overflow-hidden">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-line py-1.5 pr-2 pl-2">
+          <Button variant="quiet" size="icon-sm" aria-label="Previous day" onClick={() => onNavigate(toDateKey(addDays(day, -1)))}>
             <ChevronLeft />
           </Button>
-          <h1 className="font-heading text-xl font-bold tracking-tight">
+          <h2 id="log-day" className="font-heading text-base font-bold">
             {format(day, "EEEE, MMMM d")}
-            {!isToday(day) && <span className="ml-2 font-normal text-muted-foreground">{format(day, "yyyy")}</span>}
-          </h1>
-          <Button variant="ghost" size="icon-sm" aria-label="Next day" onClick={() => onNavigate(toDateKey(addDays(day, 1)))}>
+            {!isToday(day) && <span className="ml-1.5 font-medium text-muted-foreground">{format(day, "yyyy")}</span>}
+          </h2>
+          <Button variant="quiet" size="icon-sm" aria-label="Next day" onClick={() => onNavigate(toDateKey(addDays(day, 1)))}>
             <ChevronRight />
           </Button>
-          {isToday(day) && <span className="rounded-sm border border-amber/50 px-1.5 text-xs text-amber">Today</span>}
-          <span className="ml-auto text-xs text-muted-foreground" aria-live="polite" data-testid="log-state">
+          {isToday(day) && (
+            <span className="inline-flex h-5 items-center gap-1.5 rounded-[5px] border border-rim px-1.5 font-mono text-[10px] tracking-wide text-ink-2 uppercase">
+              <span className="size-1.5 rounded-[1.5px] bg-red" aria-hidden /> Today
+            </span>
+          )}
+          <span className="ml-auto pl-2 text-[11px] text-muted-foreground" aria-live="polite" data-testid="log-state">
             {dirty ? "Saving…" : entry ? `Saved ${timeAgo(entry.updatedAt)}` : "Nothing written yet"}
           </span>
           {(entry || text.trim()) && !mode && (
             <>
-              <Button variant="ghost" size="icon-sm" aria-label="Move this log to another day" title="Move to another day" onClick={() => setMode("move")}>
+              <Button variant="quiet" size="icon-sm" aria-label="Move this log to another day" title="Move to another day" onClick={() => setMode("move")}>
                 <CalendarArrowUp />
               </Button>
-              <Button variant="ghost" size="icon-sm" aria-label="Delete this log" title="Delete log" className="hover:text-red-text" onClick={() => setMode("delete")}>
+              <Button variant="quiet" size="icon-sm" aria-label="Delete this log" title="Delete log" onClick={() => setMode("delete")}>
                 <Trash2 />
               </Button>
             </>
@@ -143,7 +156,7 @@ function LogEditor({ date, onNavigate }: { date: string; onNavigate: (d: string)
         </div>
         {mode === "move" && (
           <form
-            className="flex flex-wrap items-center gap-2 border-b bg-recessed/50 px-3 py-2 text-sm"
+            className="flex flex-wrap items-center gap-2 border-b border-line bg-well/60 px-3.5 py-2 text-xs"
             onSubmit={(e) => {
               e.preventDefault()
               saveJournal(date, text)
@@ -155,20 +168,19 @@ function LogEditor({ date, onNavigate }: { date: string; onNavigate: (d: string)
             }}
           >
             <label htmlFor="move-to">Move this log to</label>
-            <Input id="move-to" type="date" value={target} onChange={(e) => setTarget(e.target.value)} className="h-7 w-40" />
-            <span className="text-xs text-muted-foreground">If that day has a log, this is added below it.</span>
-            <div className="ml-auto flex gap-1">
-              <Button type="submit" size="sm" disabled={!target || target === date}>Move</Button>
-              <Button type="button" size="sm" variant="ghost" onClick={() => setMode(null)}>Cancel</Button>
+            <Input id="move-to" type="date" value={target} onChange={(e) => setTarget(e.target.value)} className="h-8 w-40" />
+            <span className="text-[11px] text-muted-foreground">If that day has a log, this is added below it.</span>
+            <div className="ml-auto flex gap-2">
+              <Button type="submit" disabled={!target || target === date}>Move</Button>
+              <Button type="button" variant="quiet" onClick={() => setMode(null)}>Cancel</Button>
             </div>
           </form>
         )}
         {mode === "delete" && (
-          <div className="flex flex-wrap items-center gap-2 border-b bg-recessed/50 px-3 py-2 text-sm">
-            <span className="text-red-text">Delete the log for {format(day, "MMM d")}?</span>
-            <div className="ml-auto flex gap-1">
+          <div className="flex flex-wrap items-center gap-2 border-b border-line bg-well/60 px-3.5 py-2 text-xs">
+            <span className="text-ink-2">Delete the log for {format(day, "MMM d")}?</span>
+            <div className="ml-auto flex gap-2">
               <Button
-                size="sm"
                 variant="destructive"
                 onClick={() => {
                   const old = text
@@ -180,7 +192,7 @@ function LogEditor({ date, onNavigate }: { date: string; onNavigate: (d: string)
               >
                 Delete
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => setMode(null)}>Cancel</Button>
+              <Button variant="quiet" onClick={() => setMode(null)}>Cancel</Button>
             </div>
           </div>
         )}
@@ -191,33 +203,31 @@ function LogEditor({ date, onNavigate }: { date: string; onNavigate: (d: string)
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={"What happened today? What did you learn? What's next?\n\nIt saves automatically."}
-          className="min-h-[45vh] rounded-none border-0 bg-transparent px-4 py-3 leading-relaxed shadow-none focus-visible:ring-0 dark:bg-transparent"
+          className="min-h-[45vh] rounded-none border-0 bg-transparent px-3.5 py-3 leading-relaxed shadow-none focus-visible:ring-0 dark:bg-transparent"
         />
       </section>
 
       <div className="grid gap-3 md:grid-cols-2">
-        <section aria-labelledby="due-heading" className="brutal rounded-xl bg-card">
-          <h2 id="due-heading" className="eyebrow border-b-2 border-edge bg-recessed/70 px-3 py-2">Due this day · {due.length}</h2>
-          {due.length > 0 && <ul>{due.map((t) => <TaskRow key={t.id} task={t} />)}</ul>}
-          <form onSubmit={addTask} className="flex items-center gap-2 px-3 py-2">
-            <Plus className="size-4 text-muted-foreground" aria-hidden />
-            <Input
+        <Panel tool="tasks" command="due" meta={due.length}>
+          {due.length > 0 && <ul className="border-b border-line-soft">{due.map((t) => <TaskRow key={t.id} task={t} />)}</ul>}
+          <form onSubmit={addTask} className="flex items-center gap-2.5 px-3.5 py-1.5">
+            <Plus className="size-3.5 shrink-0 text-faint" aria-hidden />
+            <input
               value={quick}
               onChange={(e) => setQuick(e.target.value)}
               placeholder={`Add a task for ${isToday(day) ? "today" : format(day, "MMM d")}`}
               aria-label="Add a task for this day"
-              className="h-7 border-transparent bg-transparent px-1 dark:bg-transparent"
+              className="h-8 min-w-0 flex-1 bg-transparent text-base text-ink outline-none placeholder:text-faint md:text-[13px]"
             />
           </form>
-        </section>
-        <section aria-labelledby="done-heading" className="brutal rounded-xl bg-card">
-          <h2 id="done-heading" className="eyebrow border-b-2 border-edge bg-recessed/70 px-3 py-2">Completed this day · {doneThatDay.length}</h2>
+        </Panel>
+        <Panel tool="tasks" command="done" meta={doneThatDay.length}>
           {doneThatDay.length ? (
             <ul>{doneThatDay.map((t) => <TaskRow key={t.id} task={t} />)}</ul>
           ) : (
-            <p className="px-3 py-3 text-sm text-muted-foreground">Nothing checked off.</p>
+            <p className="px-3.5 py-3 text-[11px] text-muted-foreground">Nothing checked off this day.</p>
           )}
-        </section>
+        </Panel>
       </div>
     </div>
   )

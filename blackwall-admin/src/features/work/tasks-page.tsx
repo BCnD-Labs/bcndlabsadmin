@@ -1,8 +1,10 @@
-import { ChevronDown, Plus, Search, Star } from "lucide-react"
+import { ChevronDown, ListChecks, Plus, Star } from "lucide-react"
 import { useMemo, useState, type FormEvent } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { EmptyState, PageHeader } from "@/components/common/panel"
+import { EmptyState } from "@/components/common/empty-state"
+import { ListGroupLabel, SearchField, Toolbar } from "@/components/common/list"
+import { PageHeader } from "@/components/common/page-header"
+import { Panel } from "@/components/common/panel"
 import { parseQuickAdd } from "@/lib/quick-add"
 import { cn } from "@/lib/utils"
 import { useUi } from "@/stores/ui"
@@ -40,65 +42,70 @@ export function TasksPage() {
   }
 
   const openCount = tasks.filter((t) => !t.done).length
+  const filtered = !!q.trim() || starredOnly
 
   return (
     <>
       <PageHeader
         title="Tasks"
-        description={`${openCount} open · ${tasks.length - openCount} done`}
+        subtitle="Everything you've noted down, grouped by when it's due."
         actions={
-          <>
-            <div className="relative">
-              <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search tasks" aria-label="Search tasks" className="h-8 w-48 pl-7" />
-            </div>
-            <Button variant="outline" aria-pressed={starredOnly} onClick={() => setStarredOnly(!starredOnly)} className={cn(starredOnly && "text-amber")}>
-              <Star className={cn(starredOnly && "fill-current")} /> Starred
-            </Button>
-            <Button onClick={() => openForm({ kind: "task", defaults: { starred: starredOnly } })}>
-              <Plus /> New task
-            </Button>
-          </>
+          <Button size="lg" onClick={() => openForm({ kind: "task", defaults: { starred: starredOnly } })}>
+            <Plus /> New task
+          </Button>
         }
       />
-      <div className="max-w-4xl brutal rounded-xl bg-card">
-        <form onSubmit={add} className="flex items-center gap-2 border-b px-3 py-2">
-          <Plus className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-          <Input
+      <Panel tool="tasks" command={starredOnly ? "list --starred" : "list"} meta={`${openCount} open · ${tasks.length - openCount} done`} className="max-w-4xl">
+        <Toolbar>
+          <SearchField value={q} onChange={setQ} label="Search tasks" className="flex-1 sm:flex-none" />
+          <Button variant="outline" size="lg" aria-pressed={starredOnly} onClick={() => setStarredOnly(!starredOnly)}>
+            <Star className={cn(starredOnly && "fill-current text-amber")} /> Starred
+          </Button>
+        </Toolbar>
+        <form onSubmit={add} className="flex items-center gap-2.5 border-b border-line px-3.5 py-1.5">
+          <Plus className="size-3.5 shrink-0 text-faint" aria-hidden />
+          <input
             value={quick}
             onChange={(e) => setQuick(e.target.value)}
-            placeholder="Add a task (Enter). End with today / tomorrow / fri to set a date."
+            placeholder="Add a task · end with “fri” to set a date"
             aria-label="Add a task"
-            className="h-7 border-transparent bg-transparent px-1 dark:bg-transparent"
+            className="h-8 min-w-0 flex-1 bg-transparent text-base text-ink outline-none placeholder:text-faint md:text-[13px]"
           />
         </form>
         {groups.length ? (
           groups.map((g) => (
             <section key={g.name} aria-label={g.name}>
-              <h2 className={cn("eyebrow border-b bg-recessed/40 px-3 py-1.5", g.name === "Overdue" && "text-red-text")}>
-                {g.name} · {g.items.length}
-              </h2>
+              <ListGroupLabel tone={g.name === "Overdue" ? "warn" : undefined}>
+                {g.name} <span className="text-faint">· {g.items.length}</span>
+              </ListGroupLabel>
               <ul>{g.items.map((t) => <TaskRow key={t.id} task={t} showDetails />)}</ul>
             </section>
           ))
+        ) : filtered ? (
+          <EmptyState
+            title="No open tasks match"
+            action={<Button variant="outline" onClick={() => (setQ(""), setStarredOnly(false))}>Clear filters</Button>}
+          />
         ) : (
-          <EmptyState>{q || starredOnly ? "No open tasks match." : "No open tasks."}</EmptyState>
+          <EmptyState icon={ListChecks} title={tasks.length ? "All done" : "No tasks yet"}>
+            Type one in the line above and press Enter.
+          </EmptyState>
         )}
         {done.length > 0 && (
-          <section aria-label="Completed">
+          <section aria-label="Completed" className="border-t border-line">
             <button
               type="button"
               aria-expanded={showDone}
               onClick={() => setShowDone(!showDone)}
-              className="eyebrow flex w-full items-center gap-1.5 border-t bg-recessed/40 px-3 py-1.5 text-left hover:text-foreground"
+              className="bw-label flex h-9 w-full items-center gap-1.5 px-3.5 text-left hover:text-ink"
             >
               <ChevronDown className={cn("size-3.5 transition-transform", !showDone && "-rotate-90")} aria-hidden />
-              Completed · {done.length}
+              Completed <span className="text-faint">· {done.length}</span>
             </button>
-            {showDone && <ul>{done.map((t) => <TaskRow key={t.id} task={t} />)}</ul>}
+            {showDone && <ul className="border-t border-line-soft">{done.map((t) => <TaskRow key={t.id} task={t} />)}</ul>}
           </section>
         )}
-      </div>
+      </Panel>
     </>
   )
 }

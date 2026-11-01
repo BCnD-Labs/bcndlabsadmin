@@ -1,8 +1,28 @@
 import { cn } from "@/lib/utils"
-import type { DraftStatus, Project, ProjectColor } from "@/lib/types"
+import type { DraftStatus, Project, ProjectColor, ProjectStatus } from "@/lib/types"
 
+export type Tone = "ok" | "warn" | "error" | "off"
+
+/** Spec §7 status marker: a small square. Green healthy, amber degraded, red failed, faint off. */
+export function StatusMarker({ tone, className }: { tone: Tone; className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "inline-block size-1.5 shrink-0 rounded-[1.5px]",
+        tone === "ok" && "bg-green",
+        tone === "warn" && "bg-amber",
+        tone === "error" && "bg-red",
+        tone === "off" && "bg-faint",
+        className,
+      )}
+    />
+  )
+}
+
+/** A project's label colour. These are names you pick, not statuses, so none of them is the status green. */
 export const PROJECT_DOT: Record<ProjectColor, string> = {
-  teal: "bg-teal",
+  teal: "bg-[#6FB7C9]",
   amber: "bg-amber",
   red: "bg-red",
   slate: "bg-muted-foreground",
@@ -13,13 +33,25 @@ export function ProjectTag({ project, className }: { project?: Project; classNam
   return (
     <span
       className={cn(
-        "inline-flex max-w-full items-center gap-1.5 rounded-full border-2 border-edge bg-recessed px-2 py-px font-mono text-[0.68rem] text-muted-foreground",
+        "inline-flex h-5 max-w-full shrink-0 items-center gap-1.5 rounded-[5px] border border-rim bg-well px-1.5 font-mono text-[10px] tracking-wide text-ink-2",
         className,
       )}
       title={project.name}
     >
-      <span className={cn("size-1.5 shrink-0 rounded-full", PROJECT_DOT[project.color])} aria-hidden />
+      <span className={cn("size-1.5 shrink-0 rounded-[1.5px]", PROJECT_DOT[project.color])} aria-hidden />
       {project.code}
+    </span>
+  )
+}
+
+const PROJECT_TONE: Record<ProjectStatus, Tone> = { active: "ok", planned: "off", paused: "warn", done: "off" }
+
+/** "■ Active" in muted text; the square carries the state. */
+export function ProjectStatusLabel({ status, className }: { status: ProjectStatus; className?: string }) {
+  return (
+    <span className={cn("inline-flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground capitalize", className)}>
+      <StatusMarker tone={PROJECT_TONE[status]} />
+      {status}
     </span>
   )
 }
@@ -31,15 +63,12 @@ export const DRAFT_STATUS_LABEL: Record<DraftStatus, string> = {
   ready: "Ready",
 }
 
+const DRAFT_TONE: Record<DraftStatus, Tone> = { idea: "off", drafting: "off", review: "warn", ready: "ok" }
+
 export function DraftStatusTag({ status }: { status: DraftStatus }) {
-  const cls =
-    status === "ready"
-      ? "border-teal/50 text-teal"
-      : status === "review"
-        ? "border-amber/50 text-amber"
-        : "border-border text-muted-foreground"
   return (
-    <span className={cn("inline-flex h-5 items-center rounded-full border-2 px-2 font-mono text-[0.68rem] uppercase", cls)}>
+    <span className="inline-flex h-5 shrink-0 items-center gap-1.5 rounded-[5px] border border-rim px-1.5 font-mono text-[10px] tracking-wide text-ink-2 uppercase">
+      <StatusMarker tone={DRAFT_TONE[status]} />
       {DRAFT_STATUS_LABEL[status]}
     </span>
   )

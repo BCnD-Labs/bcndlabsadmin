@@ -1,15 +1,16 @@
-import { ArrowLeft, ExternalLink, FileText, GitBranch, Pencil, Plus } from "lucide-react"
+import { ExternalLink, FileText, FolderX, GitBranch, Pencil, Plus } from "lucide-react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { EmptyState, Panel } from "@/components/common/panel"
-import { DraftStatusTag, ProjectTag } from "@/components/common/tags"
+import { EmptyState } from "@/components/common/empty-state"
+import { ListRow } from "@/components/common/list"
+import { PageHeader } from "@/components/common/page-header"
+import { Panel } from "@/components/common/panel"
+import { DraftStatusTag, ProjectStatusLabel, ProjectTag } from "@/components/common/tags"
 import { useCreateDraft } from "@/features/content/use-create-draft"
 import { timeAgo } from "@/lib/dates"
 import { draftHref } from "@/lib/routes"
-import { cn } from "@/lib/utils"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
-import { STATUS_STYLE } from "./projects-page"
 
 export function ProjectDetail() {
   const { id = "" } = useParams()
@@ -21,81 +22,80 @@ export function ProjectDetail() {
 
   if (!project) {
     return (
-      <EmptyState action={<Button asChild variant="outline"><Link to="/work/projects">Back to projects</Link></Button>}>
-        This project doesn't exist (it may have been deleted).
-      </EmptyState>
+      <>
+        <PageHeader title="Project not found" back={{ to: "/work/projects", label: "Projects" }} />
+        <Panel tool="projects" command={`open ${id}`}>
+          <EmptyState icon={FolderX} title="This project doesn't exist" action={<Button variant="outline" asChild><Link to="/work/projects">Back to projects</Link></Button>}>
+            It may have been deleted.
+          </EmptyState>
+        </Panel>
+      </>
     )
   }
 
   const pDrafts = drafts.filter((d) => d.projectId === id)
   const pRepos = repos.filter((r) => r.projectId === id)
+  const newDraft = () => navigate(draftHref(createDraft({ projectId: id }).id))
+  const newRepo = () => openForm({ kind: "repo", defaults: { projectId: id } })
 
   return (
     <>
-      <Button variant="ghost" size="sm" asChild className="mb-2 -ml-2 text-muted-foreground">
-        <Link to="/work/projects"><ArrowLeft /> Projects</Link>
-      </Button>
-      <div className="mb-4 flex flex-wrap items-start gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <ProjectTag project={project} />
-            <h1 className="text-xl font-bold">{project.name}</h1>
-            <span className={cn("text-sm capitalize", STATUS_STYLE[project.status])}>{project.status}</span>
-          </div>
-          <p className="mt-1 max-w-prose text-sm text-muted-foreground">{project.description}</p>
-        </div>
-        <Button variant="outline" className="ml-auto" onClick={() => openForm({ kind: "project", id })}>
-          <Pencil /> Edit
-        </Button>
-      </div>
+      <PageHeader
+        back={{ to: "/work/projects", label: "Projects" }}
+        title={project.name}
+        badge={<><ProjectTag project={project} /><ProjectStatusLabel status={project.status} /></>}
+        subtitle={<>{project.description || "No description."} <span className="text-faint">· Updated {timeAgo(project.updatedAt)}</span></>}
+        actions={<Button variant="outline" size="lg" onClick={() => openForm({ kind: "project", id })}><Pencil /> Edit</Button>}
+      />
 
-      <div className="grid gap-3 lg:grid-cols-12">
+      <div className="grid gap-3 lg:grid-cols-2">
         <Panel
-          title="Drafts"
-          icon={<FileText />}
-          className="lg:col-span-6"
-          actions={<Button size="sm" variant="outline" onClick={() => navigate(draftHref(createDraft({ projectId: id }).id))}><Plus /> Draft</Button>}
-        >
-          {pDrafts.length ? (
-            <ul className="py-1">
-              {pDrafts.map((d) => (
-                <li key={d.id}>
-                  <Link to={draftHref(d.id)} className="flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-muted/40">
-                    <span className="min-w-0 flex-1 truncate">{d.title}</span>
-                    <DraftStatusTag status={d.status} />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyState>No drafts linked.</EmptyState>
-          )}
-        </Panel>
-        <Panel
-          title="Repositories"
-          icon={<GitBranch />}
-          className="lg:col-span-6"
-          actions={<Button size="sm" variant="outline" onClick={() => openForm({ kind: "repo", defaults: { projectId: id } })}><Plus /> Repo</Button>}
+          tool="repos"
+          command="ls"
+          meta={pRepos.length || undefined}
+          actions={<Button size="icon-sm" variant="quiet" aria-label="Link a repository" title="Link a repository" onClick={newRepo}><Plus /></Button>}
         >
           {pRepos.length ? (
-            <ul className="py-1">
+            <ul>
               {pRepos.map((r) => (
-                <li key={r.id} className="flex items-center gap-2 px-3 py-1.5 text-sm">
-                  <button type="button" className="min-w-0 flex-1 truncate text-left font-mono text-xs hover:underline" onClick={() => openForm({ kind: "repo", id: r.id })}>
+                <ListRow key={r.id}>
+                  <GitBranch className="size-3.5 shrink-0 text-faint" aria-hidden />
+                  <button type="button" className="min-w-0 flex-1 truncate text-left font-mono text-xs text-ink hover:underline" onClick={() => openForm({ kind: "repo", id: r.id })}>
                     {r.fullName}
                   </button>
-                  <a href={r.url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-teal" aria-label={`Open ${r.fullName} on GitHub`}>
-                    <ExternalLink className="size-3.5" />
-                  </a>
-                </li>
+                  <Button size="icon-sm" variant="quiet" asChild>
+                    <a href={r.url} target="_blank" rel="noreferrer" aria-label={`Open ${r.fullName} on GitHub`}><ExternalLink /></a>
+                  </Button>
+                </ListRow>
               ))}
             </ul>
           ) : (
-            <EmptyState>No repositories linked.</EmptyState>
+            <EmptyState icon={GitBranch} title="No repositories linked" action={<Button variant="outline" onClick={newRepo}><Plus /> Link a repository</Button>} />
+          )}
+        </Panel>
+        <Panel
+          tool="drafts"
+          command="ls"
+          meta={pDrafts.length || undefined}
+          actions={<Button size="icon-sm" variant="quiet" aria-label="New draft" title="New draft" onClick={newDraft}><Plus /></Button>}
+        >
+          {pDrafts.length ? (
+            <ul>
+              {pDrafts.map((d) => (
+                <ListRow key={d.id} className="p-0">
+                  <Link to={draftHref(d.id)} className="flex min-h-10 min-w-0 flex-1 items-center gap-2.5 px-3.5 py-1.5">
+                    <FileText className="size-3.5 shrink-0 text-faint" aria-hidden />
+                    <span className="min-w-0 flex-1 truncate text-[13px]">{d.title}</span>
+                    <DraftStatusTag status={d.status} />
+                  </Link>
+                </ListRow>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState icon={FileText} title="No drafts linked" action={<Button variant="outline" onClick={newDraft}><Plus /> New draft</Button>} />
           )}
         </Panel>
       </div>
-      <p className="mt-3 text-xs text-muted-foreground">Last updated {timeAgo(project.updatedAt)}.</p>
     </>
   )
 }

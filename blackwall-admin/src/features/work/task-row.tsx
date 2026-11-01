@@ -15,7 +15,7 @@ export function TaskRow({ task, onToggle, showDetails }: { task: Task; onToggle?
   const overdue = isOverdue(task)
 
   return (
-    <li className="group flex min-h-10 items-center gap-2.5 border-b border-border/60 px-3 py-1.5 last:border-b-0 hover:bg-muted/40" data-testid="task-row">
+    <li className="group flex min-h-10 items-center gap-2.5 border-b border-line-soft px-3.5 py-1.5 last:border-b-0 hover:bg-raised" data-testid="task-row">
       <Checkbox
         checked={task.done}
         onCheckedChange={() => {
@@ -23,26 +23,25 @@ export function TaskRow({ task, onToggle, showDetails }: { task: Task; onToggle?
           onToggle?.(task)
         }}
         aria-label={task.done ? `Mark "${task.title}" as not done` : `Complete "${task.title}"`}
-        className="size-5 rounded-full"
       />
       <button
         type="button"
         onClick={() => openForm({ kind: "task", id: task.id })}
-        className="min-w-0 flex-1 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="min-w-0 flex-1 rounded-[4px] py-0.5 text-left"
         title="Edit task"
       >
-        <span className={cn("block truncate text-sm hover:underline", task.done && "text-muted-foreground line-through")}>{task.title}</span>
-        {showDetails && task.details && <span className="block truncate text-xs text-muted-foreground">{task.details}</span>}
+        <span className={cn("block truncate text-[13px] text-ink", task.done && "text-faint line-through")}>{task.title}</span>
+        {showDetails && task.details && <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{task.details}</span>}
       </button>
       {task.done && task.completedAt ? (
-        <span className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums" title={task.due ? `Was due ${task.due}` : undefined}>
+        <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums" title={task.due ? `Was due ${task.due}` : undefined}>
           Done {format(new Date(task.completedAt), "EEE MMM d")}
         </span>
       ) : task.due && (
         <span
           className={cn(
-            "inline-flex shrink-0 items-center justify-end gap-1 font-mono text-xs tabular-nums",
-            overdue ? "text-red-text" : "text-muted-foreground",
+            "inline-flex shrink-0 items-center justify-end gap-1 text-[11px] tabular-nums",
+            overdue ? "text-amber" : "text-muted-foreground",
           )}
         >
           {overdue && <CalendarClock className="size-3" aria-hidden />}
@@ -55,11 +54,11 @@ export function TaskRow({ task, onToggle, showDetails }: { task: Task; onToggle?
         aria-pressed={task.starred}
         aria-label={task.starred ? `Unstar "${task.title}"` : `Star "${task.title}"`}
         className={cn(
-          "shrink-0 rounded-sm p-0.5 outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          task.starred ? "text-amber" : "text-muted-foreground/60 opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+          "flex size-7 shrink-0 items-center justify-center rounded-[6px] hover:bg-selected",
+          task.starred ? "text-amber" : "text-faint opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100",
         )}
       >
-        <Star className={cn("size-4", task.starred && "fill-current")} />
+        <Star className={cn("size-3.5", task.starred && "fill-current")} />
       </button>
     </li>
   )
