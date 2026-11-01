@@ -5,6 +5,7 @@ import { Sessions } from "./auth.ts"
 import { loadKey } from "./crypto.ts"
 import { serveStatic } from "./static.ts"
 import { PostgresConnectionStore } from "./store-postgres.ts"
+import { System } from "./system.ts"
 
 /**
  * Home-server entry point: serves the built panel and the API, with
@@ -29,6 +30,8 @@ const allowedHosts = (process.env.BLACKWALL_ALLOWED_HOSTS ?? "")
   .map((h) => h.trim())
   .filter(Boolean)
 
+const system = System.fromEnv(path.join(import.meta.dirname, ".."))
+
 const api = createApi({
   store,
   allowedHosts,
@@ -38,6 +41,7 @@ const api = createApi({
     await store.ping()
     return { database: "ok" }
   },
+  system,
 })
 const files = serveStatic(process.env.DIST_DIR ?? path.join(import.meta.dirname, "..", "dist"))
 

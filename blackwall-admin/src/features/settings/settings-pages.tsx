@@ -1,8 +1,4 @@
-import { Database, Download, Upload } from "lucide-react"
-import { useRef, useState } from "react"
 import { NavLink } from "react-router-dom"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Kbd } from "@/components/ui/kbd"
 import { Label } from "@/components/ui/label"
@@ -10,10 +6,10 @@ import { Switch } from "@/components/ui/switch"
 import { PageHeader, Panel } from "@/components/common/panel"
 import { cn } from "@/lib/utils"
 import { usePrefs } from "@/stores/prefs"
-import { WORKSPACE_STORAGE_KEY, WORKSPACE_VERSION, useWorkspace } from "@/stores/workspace"
 
 export function SettingsTabs() {
   const tabs = [
+    ["General", "/settings/general"],
     ["Appearance", "/settings/appearance"],
     ["Navigation", "/settings/navigation"],
     ["Connections", "/settings/connections"],
@@ -69,42 +65,6 @@ export function AppearanceSettings() {
   const workspaceName = usePrefs((s) => s.workspaceName)
   const autoHide = usePrefs((s) => s.autoHideSeconds)
   const set = usePrefs((s) => s.set)
-  const clearAll = useWorkspace((s) => s.clearAll)
-  const [confirm, setConfirm] = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
-
-  const exportData = () => {
-    const raw = localStorage.getItem(WORKSPACE_STORAGE_KEY) ?? "{}"
-    const url = URL.createObjectURL(new Blob([raw], { type: "application/json" }))
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `blackwall-${new Date().toISOString().slice(0, 10)}.json`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  const [pending, setPending] = useState<{ raw: unknown; summary: string } | null>(null)
-  const describe = (s: Record<string, unknown[] | undefined>) =>
-    `${s.tasks?.length ?? 0} tasks, ${s.journal?.length ?? 0} logs, ${s.notes?.length ?? 0} notes`
-
-  const readImport = async (file: File) => {
-    try {
-      const parsed = JSON.parse(await file.text())
-      if (!parsed?.state || typeof parsed.version !== "number") throw new Error("Not a Blackwall export")
-      setPending({ raw: parsed, summary: describe(parsed.state) })
-    } catch (e) {
-      toast.error(`Import failed: ${(e as Error).message}`)
-    }
-  }
-
-  const applyImport = async () => {
-    if (!pending) return
-    localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(pending.raw))
-    await useWorkspace.persist.rehydrate()
-    setPending(null)
-    toast.success("Workspace imported")
-  }
-
   return (
     <>
       <PageHeader title="Settings" />
@@ -162,52 +122,6 @@ export function AppearanceSettings() {
                 </li>
               ))}
             </ul>
-          </div>
-        </Panel>
-        <Panel title="Your data" icon={<Database />}>
-          <div className="space-y-2 px-3 py-3 text-sm">
-            <p>
-              Tasks, notes, daily logs, projects, repositories and drafts are saved in this browser (
-              <code className="font-mono text-xs">{WORKSPACE_STORAGE_KEY}</code>, v{WORKSPACE_VERSION}). They don't sync between
-              browsers or devices, so export a copy now and then.
-            </p>
-            <p className="text-muted-foreground">There's no sign-in. Anyone using this browser profile can see your workspace.</p>
-          </div>
-          {pending && (
-            <div className="space-y-2 border-t bg-recessed/50 px-3 py-3 text-sm" role="alert">
-              <p>
-                Replace what's here now ({describe(useWorkspace.getState() as unknown as Record<string, unknown[]>)}) with the file ({pending.summary})?
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant="outline" onClick={exportData}><Download /> Export current first</Button>
-                <Button size="sm" variant="destructive" onClick={applyImport}>Replace</Button>
-                <Button size="sm" variant="ghost" onClick={() => setPending(null)}>Cancel</Button>
-              </div>
-            </div>
-          )}
-          <div className="flex flex-wrap items-center gap-2 border-t px-3 py-3">
-            <Button size="sm" variant="outline" onClick={exportData}><Download /> Export</Button>
-            <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}><Upload /> Import</Button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="application/json,.json"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0]
-                if (f) readImport(f)
-                e.target.value = ""
-              }}
-            />
-            {confirm ? (
-              <span className="ml-auto flex items-center gap-2">
-                <span className="text-sm text-red-text">Delete everything?</span>
-                <Button size="sm" variant="destructive" onClick={() => { clearAll(); setConfirm(false); toast.success("Workspace cleared") }}>Delete</Button>
-                <Button size="sm" variant="ghost" onClick={() => setConfirm(false)}>Cancel</Button>
-              </span>
-            ) : (
-              <Button size="sm" variant="ghost" className="ml-auto text-red-text" onClick={() => setConfirm(true)}>Clear workspace</Button>
-            )}
           </div>
         </Panel>
       </div>

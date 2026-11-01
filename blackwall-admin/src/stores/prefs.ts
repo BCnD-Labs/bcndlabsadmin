@@ -14,25 +14,32 @@ interface PrefsState {
   autoHideSeconds: number
   /** What each of the four Home squares shows. */
   homeSlots: PanelType[]
-  set: (patch: Partial<Omit<PrefsState, "set" | "setSlot" | "swapSlots">>) => void
+  set: (patch: Partial<Omit<PrefsState, "set" | "setSlot" | "swapSlots" | "reset">>) => void
   /** Show `type` in slot `i`; if it's already in another slot, the two swap. */
   setSlot: (i: number, type: PanelType) => void
   swapSlots: (i: number, j: number) => void
+  /** Back to the defaults below (workspace data isn't touched). */
+  reset: () => void
 }
 
 type Persisted = Pick<PrefsState, "retroDetails" | "showSamples" | "workspaceName" | "autoHideSeconds" | "homeSlots">
 
 export const PREFS_VERSION = 2
 
+const DEFAULT_PREFS = (): Persisted => ({
+  retroDetails: true,
+  showSamples: false,
+  workspaceName: "",
+  autoHideSeconds: 5,
+  homeSlots: [...DEFAULT_SLOTS],
+})
+
 export const usePrefs = create<PrefsState>()(
   persist(
     (set, get) => ({
-      retroDetails: true,
-      showSamples: false,
-      workspaceName: "",
-      autoHideSeconds: 5,
-      homeSlots: [...DEFAULT_SLOTS],
+      ...DEFAULT_PREFS(),
       set: (patch) => set(patch),
+      reset: () => set(DEFAULT_PREFS()),
       setSlot: (i, type) => set({ homeSlots: assignSlot(get().homeSlots, i, type) }),
       swapSlots: (i, j) => set({ homeSlots: swapSlots(get().homeSlots, i, j) }),
     }),

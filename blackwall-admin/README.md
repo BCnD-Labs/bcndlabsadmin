@@ -7,6 +7,7 @@ A personal workspace for keeping track: simple to-dos, a calendar that opens a d
 - **Tasks:** Google Tasks style. Title, optional details, optional due date, star, done. No priorities, tags, links or dependencies. "Today" shows overdue, due-today and starred tasks; the Tasks page groups everything by when it's due.
 - **Calendar & daily log:** internal only. The header's calendar button opens a month card; click a day to open that day's log in a dialog (tasks due that day, quick prompts, Save). Work → Calendar is the full-page version that saves as you type. Day dots: red = open tasks due, amber = overdue, grey = a saved log.
 - **Home:** a 2×2 grid of panels you choose from each panel's header menu (Productivity or Empty for now). Drag a panel by its header onto another square to swap them, or use "Move to slot N" in the menu.
+- **Settings → General:** the running version, check for updates and an **Update** button (home server; it asks Portainer to pull, rebuild and restart the stack), export/import/clear your workspace, clear the cache, and reset preferences.
 - **Notifications:** the bell opens a card that slides in from the right. No notification sources exist yet, so it shows **[ NO SIGNAL ]**.
 - **Notes:** sticky notes. Type, pick a colour, pin the ones you want on Home. They save as you type; an emptied note is removed.
 - **Analytics → You:** charts computed from your tasks and logs (tasks completed per day, open tasks by due date, a log heatmap, streaks). **Analytics → Website** shows your analytics provider once connected.
@@ -65,7 +66,7 @@ Saving a connection runs a live test against the provider and shows the result (
 
 - `blackwall.workspace`: workspace records. A versioned Zustand `persist` store (`src/stores/workspace.ts`, `WORKSPACE_VERSION = 3`). The workspace starts empty. Migrations: v1→v2 removed the example records v1 seeded. v2→v3 converted tasks (high/urgent priority became starred; projects dropped), turned notes into sticky notes, and moved calendar events into the matching day's log as lines.
 - `blackwall.prefs`: interface preferences (workspace name, retro details, sample data, auto-hide seconds for the calendar and notification cards, and the Home slot layout). Versioned (`PREFS_VERSION = 2`); v1 → v2 added auto-hide and the slot layout, and stored values are sanitised on load.
-- Settings → Appearance can **export** and **import** the workspace as JSON, or clear it.
+- Settings → General can **export** and **import** the workspace as JSON, or clear it, and reset preferences to their defaults.
 - If storage is unavailable (private mode, quota), the store falls back to memory for the session.
 
 ## Navigation

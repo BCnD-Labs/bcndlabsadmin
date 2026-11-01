@@ -35,6 +35,15 @@ services:
       BLACKWALL_PASSWORD_HASH: ${BLACKWALL_PASSWORD_HASH:?set BLACKWALL_PASSWORD_HASH}
       BLACKWALL_ALLOWED_HOSTS: ${BLACKWALL_ALLOWED_HOSTS:-}
       BACKUP_DIR: /backups
+      # Settings → General: check for updates and update from the panel (optional; see deploy/README.md).
+      BLACKWALL_UPDATE_WEBHOOK: ${BLACKWALL_UPDATE_WEBHOOK:-}
+      BLACKWALL_UPDATE_INSECURE_TLS: ${BLACKWALL_UPDATE_INSECURE_TLS:-}
+      BLACKWALL_UPDATE_GITHUB_TOKEN: ${BLACKWALL_UPDATE_GITHUB_TOKEN:-}
+      BLACKWALL_UPDATE_REPO: ${BLACKWALL_UPDATE_REPO:-BCnD-Labs/bcndlabsadmin}
+      BLACKWALL_UPDATE_REF: ${BLACKWALL_UPDATE_REF:-main}
+    # Lets the app reach Portainer on the server itself for the update webhook.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     # Only reachable from the server itself; `tailscale serve` publishes it to your tailnet over HTTPS.
     ports:
       - "127.0.0.1:${BLACKWALL_PORT:-8780}:8780"

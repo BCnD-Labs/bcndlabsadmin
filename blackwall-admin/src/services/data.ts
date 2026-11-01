@@ -22,6 +22,11 @@ export interface Feed<T> {
 
 const cache = new Map<string, { at: number; promise: Promise<unknown> }>()
 
+/** Forget everything fetched from connections (Settings → General → Clear cache). */
+export function clearFeedCache() {
+  cache.clear()
+}
+
 function cachedApi<T>(path: string, ttlMs: number, force = false): Promise<T> {
   const hit = cache.get(path)
   if (!force && hit && Date.now() - hit.at < ttlMs) return hit.promise as Promise<T>

@@ -8,6 +8,7 @@ import { analyticsReport } from "./providers/analytics.ts"
 import { githubOverview } from "./providers/github.ts"
 import { testConnection } from "./providers/index.ts"
 import { toPublic, type ConnectionStore } from "./store.ts"
+import type { System } from "./system.ts"
 
 /**
  * Blackwall's JSON API (/api/*). The same handler runs inside Vite on a dev
@@ -27,6 +28,8 @@ export interface ApiOptions {
   backupDir?: string
   /** Extra health info, e.g. a database ping. */
   health?: () => Promise<Record<string, unknown>>
+  /** Version, update check and self-update (home server only). */
+  system?: System
 }
 
 const LOOPBACK = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/
@@ -158,6 +161,17 @@ export function createApi(opts: ApiOptions) {
     }
     if (parts[0] === "backups" && method === "GET") {
       return send(res, 200, opts.backupDir ? readBackups(opts.backupDir) : { configured: false })
+    }
+
+    // --- version & updates -----------------------------------------------------
+    if (parts[0] === "system") {
+      const sys = opts.system
+      if (!parts[1] && method === "GET") {
+        return send(res, 200, sys ? sys.info() : { mode: "development", build: null, node: process.version })
+      }
+      if (!sys) return send(res, 409, { error: "Updates are only available on the home server." })
+      if (parts[1] === "check" && method === "GET") return send(res, 200, await sys.check(url.searchParams.has("force")))
+      if (parts[1] === "update" && method === "POST") return send(res, 202, { bootId: sys.bootId, update: sys.startUpdate() })
     }
 
     // --- connections -----------------------------------------------------------

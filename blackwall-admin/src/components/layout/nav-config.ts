@@ -79,9 +79,10 @@ export const NAV: NavDestination[] = [
     id: "settings",
     label: "Settings",
     icon: Settings,
-    to: "/settings/appearance",
+    to: "/settings/general",
     match: "/settings",
     children: [
+      { label: "General", to: "/settings/general" },
       { label: "Appearance", to: "/settings/appearance" },
       { label: "Navigation", to: "/settings/navigation" },
       { label: "Connections", to: "/settings/connections" },

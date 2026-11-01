@@ -11,6 +11,7 @@ import { HomePage } from "@/features/home/home-page"
 import { DailyLogPage } from "@/features/journal/daily-log-page"
 import { NotesPage } from "@/features/notes/notes-page"
 import { ConnectionsPage } from "@/features/settings/connections-page"
+import { GeneralSettings } from "@/features/settings/general-page"
 import { ServerSettings } from "@/features/settings/server-page"
 import { AppearanceSettings, NavigationSettings } from "@/features/settings/settings-pages"
 import { ProjectDetail } from "@/features/work/project-detail"
@@ -43,7 +44,8 @@ const router = createBrowserRouter([
       { path: "analytics", element: <AnalyticsPage /> },
       { path: "notes", element: <NotesPage /> },
       { path: "knowledge/*", element: <Navigate to="/notes" replace /> },
-      { path: "settings", element: <Navigate to="/settings/appearance" replace /> },
+      { path: "settings", element: <Navigate to="/settings/general" replace /> },
+      { path: "settings/general", element: <GeneralSettings /> },
       { path: "settings/appearance", element: <AppearanceSettings /> },
       { path: "settings/navigation", element: <NavigationSettings /> },
       { path: "settings/connections", element: <ConnectionsPage /> },

@@ -71,7 +71,26 @@ Then restart the `app` container. To restore on a fresh server, deploy the stack
 
 ## Updating
 
-Push to `main`, then in Portainer open the stack and choose **Pull and redeploy** (enable rebuilding images). The data in the `db-data` volume and the backups folder is kept.
+**From the panel (once set up):** Settings → General shows the running version, checks GitHub for a newer one, and has an **Update** button. Behind the button, the app calls the stack's Portainer webhook; Portainer pulls `main`, rebuilds the images and recreates the containers. The page follows along and asks you to refresh when the new version is up. Data in the `db-data` volume and the backups folder is kept.
+
+**By hand:** in Portainer open the stack and choose **Pull and redeploy**. Every redeploy rebuilds the images.
+
+### Setting up updates from the panel
+
+1. **Turn on the webhook.** Portainer → Stacks → blackwall → in the Git section turn on **GitOps updates**, choose **Webhook** as the mechanism, and save. Copy the webhook URL it shows (`…/api/stacks/webhooks/<id>`). Anyone with this URL can make Portainer redeploy this stack (nothing else), so keep it with your other secrets.
+2. **Point it at Portainer from inside the stack.** The app reaches the server itself as `host.docker.internal`. Replace the host in the URL with it and keep Portainer's port, e.g. `https://host.docker.internal:9443/api/stacks/webhooks/<id>`. Portainer's HTTPS port uses a self-signed certificate, so also set `BLACKWALL_UPDATE_INSECURE_TLS=1` (it only applies to this one request). If Portainer's plain HTTP port 9000 is published, `http://host.docker.internal:9000/…` works without that.
+   Test from the server: `docker exec blackwall-app-1 wget -qO- --no-check-certificate https://host.docker.internal:9443/api/system/status` should print Portainer's version.
+3. **Let it check GitHub.** `BLACKWALL_UPDATE_GITHUB_TOKEN` is a fine-grained token with **Contents: Read-only** on this repo (the same kind Portainer uses to clone; reusing that token is fine).
+4. Add the variables to the stack and **Update the stack**:
+
+| Variable | Value |
+| --- | --- |
+| `BLACKWALL_UPDATE_WEBHOOK` | The webhook URL from step 2 |
+| `BLACKWALL_UPDATE_INSECURE_TLS` | `1` when the URL is `https://…:9443` |
+| `BLACKWALL_UPDATE_GITHUB_TOKEN` | The read-only token |
+| `BLACKWALL_UPDATE_REPO`, `BLACKWALL_UPDATE_REF` | Only if you deploy from another repo or branch (defaults: `BCnD-Labs/bcndlabsadmin`, `main`) |
+
+**How the version check works.** Portainer deletes `.git` when it clones, so there's no commit number inside the image. Instead the Docker build computes the Git *tree hash* of `blackwall-admin/` from the files themselves (`build-info.json`). GitHub reports the same hash for that folder when the code is identical, so the panel compares the two. Changes outside `blackwall-admin/` (docs, design references) don't count as updates.
 
 ## Moving existing connections
 

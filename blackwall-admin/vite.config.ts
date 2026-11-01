@@ -7,6 +7,8 @@ import { blackwallConnector } from './server/plugin.ts'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss(), blackwallConnector(import.meta.dirname)],
+  // The Dockerfile sets this so the page knows which version it is and can tell when the server has a newer one.
+  define: { __BLACKWALL_BUILD__: JSON.stringify(process.env.BLACKWALL_BUILD_TREE ?? "") },
   build: {
     rolldownOptions: {
       output: {
