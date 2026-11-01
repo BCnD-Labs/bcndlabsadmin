@@ -6,12 +6,12 @@ import {
   ChartTooltip,
   type ChartConfig,
 } from "@/components/ui/chart"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { SegmentedTabs } from "@/components/common/segmented-tabs"
 import { parseKey } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import type { TrafficPoint, TrafficRange } from "@/services/types"
 
-/** Series colours: saturated teal/amber steps validated for CVD separation on the panel surface. */
+/** Series colours: red (visitors) and light grey (pageviews), the two chart tokens. */
 export const trafficConfig = {
   pageviews: { label: "Pageviews", color: "var(--chart-2)" },
   visitors: { label: "Visitors", color: "var(--chart-1)" },
@@ -25,25 +25,20 @@ const full = new Intl.NumberFormat("en")
 export function RangeToggle({
   value,
   onChange,
+  className,
 }: {
   value: TrafficRange
   onChange: (r: TrafficRange) => void
+  className?: string
 }) {
   return (
-    <ToggleGroup
-      type="single"
-      size="sm"
-      variant="outline"
-      value={String(value)}
-      onValueChange={(v) => v && onChange(Number(v) as TrafficRange)}
-      aria-label="Date range"
-    >
-      {RANGES.map((r) => (
-        <ToggleGroupItem key={r} value={String(r)} className="px-2 font-mono text-xs" aria-label={`Last ${r} days`}>
-          {r}d
-        </ToggleGroupItem>
-      ))}
-    </ToggleGroup>
+    <SegmentedTabs
+      label="Date range"
+      value={String(value) as `${TrafficRange}`}
+      onChange={(v) => onChange(Number(v) as TrafficRange)}
+      tabs={RANGES.map((r) => ({ value: String(r) as `${TrafficRange}`, label: `${r}d` }))}
+      className={cn("w-40", className)}
+    />
   )
 }
 
@@ -56,20 +51,20 @@ export function TrafficSummary({ data, className }: { data: TrafficPoint[]; clas
   return (
     <dl className={cn("flex flex-wrap gap-x-6 gap-y-1", className)}>
       <div className="flex items-baseline gap-2">
-        <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <dt className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
           <span className="size-2 rounded-[2px] bg-chart-1" aria-hidden /> Visitors
         </dt>
-        <dd className="pixel-num text-2xl">{full.format(totals.visitors)}</dd>
+        <dd className="font-heading text-2xl leading-none font-bold">{full.format(totals.visitors)}</dd>
       </div>
       <div className="flex items-baseline gap-2">
-        <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <dt className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
           <span className="size-2 rounded-[2px] bg-chart-2" aria-hidden /> Pageviews
         </dt>
-        <dd className="pixel-num text-2xl">{full.format(totals.pageviews)}</dd>
+        <dd className="font-heading text-2xl leading-none font-bold">{full.format(totals.pageviews)}</dd>
       </div>
       <div className="flex items-baseline gap-2">
-        <dt className="text-xs text-muted-foreground">Pages / visitor</dt>
-        <dd className="pixel-num text-2xl">{totals.depth.toFixed(2)}</dd>
+        <dt className="text-[11px] text-muted-foreground">Pages / visitor</dt>
+        <dd className="font-heading text-2xl leading-none font-bold">{totals.depth.toFixed(2)}</dd>
       </div>
     </dl>
   )
@@ -81,7 +76,7 @@ function TrafficTooltip({ active, payload }: TipProps) {
   const p = payload?.[0]?.payload
   if (!active || !p) return null
   return (
-    <div className="brutal min-w-40 rounded-lg bg-popover px-2.5 py-2 text-xs">
+    <div className="bw-float min-w-40 rounded-[8px] border-solid bg-raised px-2.5 py-2 text-[11px]">
       <div className="mb-1.5 font-bold">{format(parseKey(p.date), "EEE, MMM d, yyyy")}</div>
       <div className="flex items-center gap-2">
         <span className="size-2 rounded-[2px] bg-chart-1" aria-hidden />
@@ -93,7 +88,7 @@ function TrafficTooltip({ active, payload }: TipProps) {
         <span className="text-muted-foreground">Pageviews</span>
         <span className="ml-auto font-mono tabular-nums">{full.format(p.pageviews)}</span>
       </div>
-      <div className="mt-1 border-t pt-1 text-muted-foreground">
+      <div className="mt-1 border-t border-line pt-1 text-muted-foreground">
         {(p.pageviews / Math.max(p.visitors, 1)).toFixed(2)} pages per visitor
       </div>
     </div>
@@ -130,7 +125,7 @@ export function TrafficChart({
               <stop offset="100%" stopColor="var(--color-visitors)" stopOpacity={0.04} />
             </linearGradient>
           </defs>
-          <CartesianGrid vertical={false} stroke="var(--edge)" strokeDasharray="2 4" />
+          <CartesianGrid vertical={false} stroke="var(--bw-line)" strokeDasharray="2 4" />
           <XAxis
             dataKey="date"
             ticks={ticks}

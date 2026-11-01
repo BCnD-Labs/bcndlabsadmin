@@ -14,7 +14,7 @@ function CompletedTip({ active, payload }: { active?: boolean; payload?: Array<{
   const p = payload?.[0]?.payload
   if (!active || !p) return null
   return (
-    <div className="brutal rounded-lg bg-popover px-2.5 py-1.5 text-xs">
+    <div className="bw-float rounded-[8px] border-solid bg-raised px-2.5 py-1.5 text-[11px]">
       <div className="font-bold">{format(parseKey(p.date), "EEE, MMM d")}</div>
       <div className="text-muted-foreground">
         <span className="font-mono text-foreground">{p.count}</span> {p.count === 1 ? "task" : "tasks"} completed
@@ -33,7 +33,7 @@ export function CompletedChart({ data, className }: { data: DayCount[]; classNam
       <figcaption className="sr-only">Tasks completed per day over the last {data.length} days.</figcaption>
       <ChartContainer config={config} className="aspect-auto h-full w-full">
         <BarChart data={data} margin={{ top: 6, right: 4, bottom: 0, left: -12 }} accessibilityLayer>
-          <CartesianGrid vertical={false} stroke="var(--edge)" strokeDasharray="2 4" />
+          <CartesianGrid vertical={false} stroke="var(--bw-line)" strokeDasharray="2 4" />
           <XAxis
             dataKey="date"
             ticks={ticks}
@@ -44,14 +44,14 @@ export function CompletedChart({ data, className }: { data: DayCount[]; classNam
           />
           <YAxis allowDecimals={false} domain={[0, max]} width={36} tickLine={false} axisLine={false} tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} />
           <ChartTooltip cursor={{ fill: "var(--muted)", opacity: 0.5 }} content={<CompletedTip />} />
-          <Bar dataKey="count" fill="var(--color-count)" stroke="#000" strokeWidth={1.5} radius={[4, 4, 0, 0]} maxBarSize={22} isAnimationActive={false} />
+          <Bar dataKey="count" fill="var(--color-count)" radius={[3, 3, 0, 0]} maxBarSize={22} isAnimationActive={false} />
         </BarChart>
       </ChartContainer>
     </figure>
   )
 }
 
-const LEVELS = ["bg-recessed", "bg-[color-mix(in_oklab,var(--chart-1)_35%,var(--recessed))]", "bg-[color-mix(in_oklab,var(--chart-1)_65%,var(--recessed))]", "bg-chart-1"]
+const LEVELS = ["bg-off", "bg-[color-mix(in_oklab,var(--chart-1)_35%,var(--bw-off))]", "bg-[color-mix(in_oklab,var(--chart-1)_65%,var(--bw-off))]", "bg-chart-1"]
 const level = (w: number) => (w === 0 ? 0 : w < 50 ? 1 : w < 200 ? 2 : 3)
 
 /** Daily log heatmap, one cell per day, darker = more words. Click a day to open its log. */
@@ -75,13 +75,13 @@ export function JournalHeatmap({ logWords, weeks = 16, cell = "size-3" }: { logW
           {/* weekday labels */}
           <span />
           {["Mon", "", "Wed", "", "Fri", "", ""].map((d, i) => (
-            <span key={i} className="pr-1 text-[0.65rem] leading-none text-muted-foreground">{d}</span>
+            <span key={i} className="pr-1 text-[10px] leading-none text-muted-foreground">{d}</span>
           ))}
           {cols.map((col, i) => {
             const first = parseKey(col[0])
             const showMonth = i === 0 || first.getDate() <= 7
             return [
-              <span key={`m${i}`} className="h-3 text-[0.65rem] leading-none whitespace-nowrap text-muted-foreground">
+              <span key={`m${i}`} className="h-3 text-[10px] leading-none whitespace-nowrap text-muted-foreground">
                 {showMonth ? format(first, "MMM") : ""}
               </span>,
               ...col.map((d) => {
@@ -98,9 +98,9 @@ export function JournalHeatmap({ logWords, weeks = 16, cell = "size-3" }: { logW
                     aria-label={`${format(parseKey(d), "MMMM d")}: ${w ? `${w} words` : "no log"}`}
                     className={cn(
                       cell,
-                      "rounded-[2px] outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      "rounded-[2px]",
                       future ? "bg-transparent" : LEVELS[level(w)],
-                      d === today && "ring-1 ring-amber",
+                      d === today && "ring-1 ring-ink-2",
                     )}
                   />
                 )
@@ -109,7 +109,7 @@ export function JournalHeatmap({ logWords, weeks = 16, cell = "size-3" }: { logW
           })}
         </div>
       </div>
-      <div className="mt-1.5 flex items-center gap-1 text-[0.7rem] text-muted-foreground">
+      <div className="mt-2 flex items-center gap-1 text-[10px] text-muted-foreground">
         Less
         {LEVELS.map((c) => <span key={c} className={cn("size-2.5 rounded-[2px]", c)} aria-hidden />)}
         More words
@@ -118,13 +118,13 @@ export function JournalHeatmap({ logWords, weeks = 16, cell = "size-3" }: { logW
   )
 }
 
-export function Stat({ label, value, sub, tone }: { label: string; value: string | number; sub?: string; tone?: "red" }) {
+export function Stat({ label, value, sub, tone }: { label: string; value: string | number; sub?: string; tone?: "warn" }) {
   return (
     <div className="min-w-0">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className={cn("pixel-num text-4xl text-foreground", tone === "red" && "text-red-text")}>
+      <dt className="bw-label">{label}</dt>
+      <dd className={cn("mt-1.5 font-heading text-3xl leading-none font-bold text-ink tabular-nums", tone === "warn" && "text-amber")}>
         {value}
-        {sub && <span className="ml-1.5 font-sans text-xs tracking-normal text-muted-foreground">{sub}</span>}
+        {sub && <span className="ml-1.5 font-sans text-[11px] font-normal tracking-normal text-muted-foreground">{sub}</span>}
       </dd>
     </div>
   )

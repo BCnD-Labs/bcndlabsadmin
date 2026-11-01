@@ -1,10 +1,13 @@
-import { Pin, PinOff, Plus, Search, Trash2 } from "lucide-react"
+import { Pin, PinOff, Plus, StickyNote as StickyNoteIcon, Trash2 } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { EmptyState, PageHeader } from "@/components/common/panel"
+import { Textarea } from "@/components/ui/textarea"
+import { EmptyState } from "@/components/common/empty-state"
+import { SearchField } from "@/components/common/list"
+import { PageHeader } from "@/components/common/page-header"
+import { Panel } from "@/components/common/panel"
 import { timeAgo } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import type { Note, NoteColor } from "@/lib/types"
@@ -24,9 +27,9 @@ export function ColorPicker({ value, onChange }: { value: NoteColor; onChange: (
           title={c.label}
           onClick={() => onChange(c.value)}
           className={cn(
-            "size-6 rounded-full border-2 border-black outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "size-6 rounded-[6px] border-r-2 border-b-2 border-black/30 transition-transform duration-150",
             c.swatch,
-            value === c.value && "shadow-brutal-sm ring-2 ring-black ring-offset-2 ring-offset-transparent scale-110",
+            value === c.value && "ring-2 ring-ink-2 ring-offset-2 ring-offset-panel",
           )}
         />
       ))}
@@ -70,7 +73,7 @@ export function StickyNote({ note, autoFocus, compact }: { note: Note; autoFocus
   }, [text, compact])
 
   return (
-    <li className={cn("group relative flex flex-col rounded-lg border-2 border-black p-2.5 shadow-brutal", color.card)} data-testid="sticky-note">
+    <li className={cn("group relative flex flex-col rounded-[10px] border-r-4 border-b-4 border-black/30 px-3 pt-2.5 pb-2", color.card)} data-testid="sticky-note">
       <label htmlFor={`note-${note.id}`} className="sr-only">Note</label>
       <textarea
         id={`note-${note.id}`}
@@ -100,14 +103,14 @@ export function StickyNote({ note, autoFocus, compact }: { note: Note; autoFocus
                 type="button"
                 aria-label={`Make ${c.label.toLowerCase()}`}
                 onClick={() => update("notes", note.id, { color: c.value })}
-                className={cn("size-3.5 rounded-full border-2 border-black/70", c.swatch)}
+                className={cn("size-3.5 rounded-[3px] border border-black/40", c.swatch)}
               />
             ))}
           </span>
         )}
         <Button
-          variant="ghost"
-          size="icon-xs"
+          variant="quiet"
+          size="icon-sm"
           aria-label={note.pinned ? "Unpin from Home" : "Pin to Home"}
           title={note.pinned ? "Unpin from Home" : "Pin to Home"}
           className={note.pinned ? "text-black" : "text-black/60"}
@@ -117,8 +120,8 @@ export function StickyNote({ note, autoFocus, compact }: { note: Note; autoFocus
         </Button>
         {!compact && (
           <Button
-            variant="ghost"
-            size="icon-xs"
+            variant="quiet"
+            size="icon-sm"
             aria-label="Delete note"
             className="text-black/60"
             onClick={() => {
@@ -167,51 +170,52 @@ export function NotesPage() {
     <>
       <PageHeader
         title="Notes"
-        description="Quick notes. They save as you type; pinned ones also show on Home."
-        actions={
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search notes" aria-label="Search notes" className="h-8 w-52 pl-7" />
-          </div>
-        }
+        subtitle="Quick notes. They save as you type; pinned ones also show on Home."
+        actions={<SearchField value={q} onChange={setQ} label="Search notes" />}
       />
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          add()
-        }}
-        className={cn("mb-5 flex max-w-2xl flex-col gap-2 rounded-xl border-2 border-black p-3 shadow-brutal", noteColor(color).card)}
-      >
-        <label htmlFor="quick-note" className="sr-only">New note</label>
-        <textarea
-          id="quick-note"
-          rows={2}
-          value={quick}
-          onChange={(e) => setQuick(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-              e.preventDefault()
-              add()
-            }
+      <Panel tool="notes" command="new" className="mb-4 max-w-2xl">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            add()
           }}
-          placeholder="Take a note…  (⌘/Ctrl + Enter to add)"
-          className="w-full resize-none bg-transparent text-sm font-medium outline-none placeholder:text-black/50"
-        />
-        <div className="flex items-center gap-2">
-          <ColorPicker value={color} onChange={setColor} />
-          <Button type="submit" size="sm" className="ml-auto" disabled={!quick.trim()}>
-            <Plus /> Add note
-          </Button>
-        </div>
-      </form>
+          className="flex flex-col gap-3 px-3.5 py-3"
+        >
+          <label htmlFor="quick-note" className="sr-only">New note</label>
+          <Textarea
+            id="quick-note"
+            rows={2}
+            value={quick}
+            onChange={(e) => setQuick(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault()
+                add()
+              }
+            }}
+            placeholder="Take a note…"
+          />
+          <div className="flex flex-wrap items-center gap-3">
+            <ColorPicker value={color} onChange={setColor} />
+            <span className="ml-auto hidden text-[11px] text-faint sm:inline">⌘/Ctrl + Enter</span>
+            <Button type="submit" disabled={!quick.trim()} className="ml-auto sm:ml-0">
+              <Plus /> Add note
+            </Button>
+          </div>
+        </form>
+      </Panel>
       {list.length ? (
-        <ul className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4" aria-label="Notes">
+        <ul className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4" aria-label="Notes">
           {list.map((n) => (
             <StickyNote key={n.id} note={n} autoFocus={n.id === fresh} />
           ))}
         </ul>
       ) : (
-        <EmptyState>{q ? "No notes match." : "No notes yet."}</EmptyState>
+        <Panel tool="notes" command="ls" className="max-w-2xl">
+          <EmptyState icon={StickyNoteIcon} title={q ? "No notes match" : "No notes yet"}>
+            {q ? "Try a different search." : "Write one above. Pin it to see it on Home."}
+          </EmptyState>
+        </Panel>
       )}
     </>
   )
