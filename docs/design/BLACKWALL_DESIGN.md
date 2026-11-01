@@ -128,5 +128,78 @@ Easing everywhere: `cubic-bezier(.2,.8,.2,1)`. Quick (150–280ms) but fluid.
 - Respect `prefers-reduced-motion` (drop slide/clip transitions to instant).
 - Text contrast ≥ 4.5:1: never use `#BC1515` or anything darker than `#7C818B` for text.
 
-## 6. Open decision
-Red means "brand / healthy service" in status meters but also "failed" in GitHub checks and alerts. Pick one meaning before the build hardens. Suggestion: red = brand + attention (alerts, failures); healthy = neutral light grey or green.
+## 6. Red and green (decided)
+Red means **brand and attention**: the accent fill (primary buttons, the active rail item, the `❯`), chart bars,
+and anything that needs you (failed checks, failed backups, errors, unread counts). Healthy is shown with a small
+**green `#5EF0B5` square** next to neutral text, never as green text or green links. Amber is overdue / degraded.
+Links are `--bw-text-2` with an underline on hover.
+
+---
+
+## 7. Page patterns
+
+Components live in `src/components/common/`. Use these instead of one-off markup.
+
+### Spacing scale
+4px base. Use only these steps:
+
+| Step | px | Use |
+|---|---|---|
+| `1` | 4 | icon-to-text inside chips |
+| `2` | 8 | between buttons in a group, inside toolbars |
+| `3` | 12 | **between panels**, page gutter |
+| `3.5` | 14 | **panel padding** (x), row padding (x) |
+| `4` | 16 | page header → content, between form fields in a grid (x) |
+| `6` | 24 | empty-state padding, between page sections |
+
+Control heights: **32px** in page headers and toolbars (`Button size="lg"`, `Input className="h-8"`),
+**28px** inside panels and rows (`Button` default), **36px** for form inputs. Nothing interactive is under 28px.
+
+### Page header — `PageHeader`
+```
+Title (Space Grotesk 24/700)                 [secondary] [Primary]
+One-line subtitle (12px muted)
+```
+- Every page has one, and only one `<h1>`. The app header shows a breadcrumb (`❯ work / tasks`), not the title.
+- At most **one primary** action; the rest are `outline`. Actions sit under the title on phones.
+- `back` adds a small "← Projects" link above the title for detail pages. `badge` holds a `SourceBadge`.
+
+### Section sub-nav — `SubNav`
+For pages with several sections (Settings). Desktop (≥ `lg`): a 208px panel on the left, one row per section with a
+muted 16px icon and label; the active row is filled (`--bw-selected`, 2px ledge, red icon). Phones: a select above
+the content. The content column is capped at `max-w-3xl`.
+
+### Panel
+The §2 panel. Header is always the prompt `❯ tool $ command`, with meta and at most one small action group on the
+right. Body padding `px-3.5 py-3`, or `divide-y` rows that carry their own padding. No `brutal` divs, no ad-hoc
+`rounded-xl bg-card` boxes.
+
+### Form field — `Field`
+Label above the control (11px muted, sentence case), optional help under it (11px muted), error under that
+(`#F08A8A`, linked with `aria-describedby`, input gets `aria-invalid`). Two-column grid on ≥ `sm` (`gap-x-4 gap-y-3.5`),
+one column on phones. One primary button per form, bottom-left in a page form, bottom-right in dialogs; "Reset" or
+"Cancel" is a quiet ghost next to it.
+
+### Settings row — `SettingRow`
+Title + one-line description on the left, the control on the right (stacked on phones). Rows are separated by
+`divide-y divide-line` inside a panel.
+
+### List row and table — `ListRow`, `DataTable`
+- **ListRow:** 40px min height, `px-3.5`, 1px `--bw-line-soft` separator, `hover:bg-raised`. Leading marker or
+  checkbox, title (truncates), trailing meta in mono 11px muted, trailing actions.
+- **DataTable:** header cells are labels (10px caps faint); body 12px; rows 40px. Columns marked `optional` hide
+  under `sm`, so tables never scroll sideways on a phone.
+
+### Tabs
+- `Tabs` (underline): switching between **views** of a page (Analytics: You / Website). Accent is a 2px red underline.
+- `SegmentedTabs` (§2): **filters** inside a panel (Today / Next / Done, All / Posts / Pages).
+
+### Toolbar
+The first row inside a list panel: search well, filters, count on the right. `px-3.5 py-2`, `border-b`.
+
+### Empty state — `EmptyState`
+Inside the panel it belongs to: a muted 20px icon, one-line title, one-line hint and at most one action. A
+"not connected" source uses `NoSignal` instead, so you can tell "nothing yet" from "no source".
+
+### Status markers
+6–8px squares: green healthy, amber degraded / overdue, red failed / attention, `--bw-faint` off or unknown.
