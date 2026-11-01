@@ -1,11 +1,15 @@
-import { ExternalLink, Pencil, Plus } from "lucide-react"
+import { ExternalLink, GitBranch, Pencil, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { EmptyState, PageHeader, Panel } from "@/components/common/panel"
+import { EmptyState } from "@/components/common/empty-state"
+import { FeedFallback, hasData } from "@/components/common/feed-fallback"
+import { DataTable, ListRow } from "@/components/common/list"
+import { PageHeader } from "@/components/common/page-header"
+import { Panel } from "@/components/common/panel"
+import { SourceBadge } from "@/components/common/source-badge"
 import { ProjectTag } from "@/components/common/tags"
 import { ACTIVITY_ICON } from "@/features/home/dev-attention"
-import { FeedFallback, hasData } from "@/components/common/feed-fallback"
-import { SourceBadge } from "@/components/common/source-badge"
 import { timeAgo } from "@/lib/dates"
+import type { RepoLink } from "@/lib/types"
 import { useDevelopment } from "@/services/data"
 import { useUi } from "@/stores/ui"
 import { useProjectMap, useWorkspace } from "@/stores/workspace"
@@ -15,66 +19,76 @@ export function ReposPage() {
   const feed = useDevelopment()
   const projects = useProjectMap()
   const openForm = useUi((s) => s.openForm)
+  const track = () => openForm({ kind: "repo" })
 
   return (
     <>
       <PageHeader
         title="Repositories"
-        description="Repositories you track. Checks, issues and activity load through your GitHub connection."
-        actions={<Button onClick={() => openForm({ kind: "repo" })}><Plus /> Track repository</Button>}
+        subtitle="Repositories you track. Checks, issues and activity load through your GitHub connection."
+        actions={<Button size="lg" onClick={track}><Plus /> Track repository</Button>}
       />
       <div className="grid gap-3 lg:grid-cols-12">
-        <Panel title="Tracked" className="lg:col-span-7">
+        <Panel tool="repos" command="tracked" meta={repos.length || undefined} className="lg:col-span-7">
           {repos.length ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="eyebrow border-b text-left">
-                    <th className="px-3 py-2 font-normal">Repository</th>
-                    <th className="px-3 py-2 font-normal">Project</th>
-                    <th className="px-3 py-2 font-normal">Links</th>
-                    <th className="px-3 py-2"><span className="sr-only">Actions</span></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {repos.map((r) => (
-                    <tr key={r.id} className="border-b border-border/60 last:border-0">
-                      <td className="px-3 py-2 font-mono text-xs">{r.fullName}</td>
-                      <td className="px-3 py-2"><ProjectTag project={r.projectId ? projects.get(r.projectId) : undefined} /></td>
-                      <td className="px-3 py-2">
-                        <a href={r.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-teal hover:underline">
-                          GitHub <ExternalLink className="size-3" />
-                        </a>
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        <Button variant="ghost" size="icon-sm" aria-label={`Edit ${r.fullName}`} onClick={() => openForm({ kind: "repo", id: r.id })}><Pencil /></Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable<RepoLink>
+              label="Tracked repositories"
+              rows={repos}
+              rowKey={(r) => r.id}
+              columns={[
+                {
+                  key: "name",
+                  header: "Repository",
+                  cell: (r) => (
+                    <a href={r.url} target="_blank" rel="noreferrer" className="group/a inline-flex min-w-0 items-center gap-1.5 font-mono text-ink hover:underline">
+                      <span className="break-all">{r.fullName}</span>
+                      <ExternalLink className="size-3 shrink-0 text-faint group-hover/a:text-ink-2" aria-label="opens GitHub" />
+                    </a>
+                  ),
+                },
+                { key: "project", header: "Project", optional: true, cell: (r) => <ProjectTag project={r.projectId ? projects.get(r.projectId) : undefined} /> },
+                {
+                  key: "edit",
+                  header: <span className="sr-only">Edit</span>,
+                  align: "right",
+                  className: "w-12",
+                  cell: (r) => (
+                    <Button variant="quiet" size="icon-sm" aria-label={`Edit ${r.fullName}`} onClick={() => openForm({ kind: "repo", id: r.id })}><Pencil /></Button>
+                  ),
+                },
+              ]}
+            />
           ) : (
-            <EmptyState>No repositories tracked.</EmptyState>
+            <EmptyState icon={GitBranch} title="No repositories tracked" action={<Button variant="outline" onClick={track}><Plus /> Track repository</Button>}>
+              Add the ones you work on; their links and activity show up here.
+            </EmptyState>
           )}
         </Panel>
-        <Panel title="Activity" badge={<SourceBadge status={feed.status} detail={feed.status === "live" ? feed.provider : undefined} />} className="lg:col-span-5">
+        <Panel
+          tool="github"
+          command="activity"
+          badge={<SourceBadge status={feed.status} detail={feed.status === "live" ? feed.provider : undefined} />}
+          className="lg:col-span-5"
+        >
           {hasData(feed) ? (
-            <ul className="py-1">
-              {feed.data.activity.map((a) => {
-                const Icon = ACTIVITY_ICON[a.kind]
-                return (
-                  <li key={a.id} className="flex items-start gap-2.5 px-3 py-1.5 text-sm">
-                    <Icon className="mt-0.5 size-4 text-muted-foreground" aria-hidden />
-                    <span className="min-w-0 flex-1">
-                      <span className="block">{a.summary}</span>
-                      <span className="font-mono text-xs text-muted-foreground">{a.repo} · {a.actor} · {timeAgo(a.at)}</span>
-                    </span>
-                  </li>
-                )
-              })}
-              {feed.data.activity.length === 0 && <EmptyState>No recent activity.</EmptyState>}
-            </ul>
+            feed.data.activity.length ? (
+              <ul>
+                {feed.data.activity.map((a) => {
+                  const Icon = ACTIVITY_ICON[a.kind]
+                  return (
+                    <ListRow key={a.id} className="items-start py-2">
+                      <Icon className="mt-0.5 size-3.5 shrink-0 text-faint" aria-hidden />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[13px]">{a.summary}</span>
+                        <span className="mt-0.5 block font-mono text-[11px] text-muted-foreground">{a.repo} · {a.actor} · {timeAgo(a.at)}</span>
+                      </span>
+                    </ListRow>
+                  )
+                })}
+              </ul>
+            ) : (
+              <EmptyState title="No recent activity" />
+            )
           ) : (
             <FeedFallback feed={feed} provider="github" what="repository activity" />
           )}

@@ -1,15 +1,20 @@
-import { ExternalLink, Pencil } from "lucide-react"
+import { ExternalLink, Pencil, Plus, Rocket } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { EmptyState, PageHeader } from "@/components/common/panel"
+import { EmptyState } from "@/components/common/empty-state"
+import { DataTable } from "@/components/common/list"
+import { PageHeader } from "@/components/common/page-header"
+import { Panel } from "@/components/common/panel"
 import { ProjectTag } from "@/components/common/tags"
+import type { RepoLink } from "@/lib/types"
 import { useUi } from "@/stores/ui"
 import { useProjectMap, useWorkspace } from "@/stores/workspace"
 
 function UrlCell({ url }: { url?: string }) {
-  if (!url) return <span className="text-xs text-muted-foreground">—</span>
+  if (!url) return <span className="text-faint">—</span>
   return (
-    <a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-mono text-xs text-teal hover:underline">
-      {url.replace(/^https?:\/\//, "")} <ExternalLink className="size-3" />
+    <a href={url} target="_blank" rel="noreferrer" className="group/a inline-flex min-w-0 items-center gap-1.5 font-mono text-ink-2 hover:text-ink hover:underline">
+      <span className="break-all">{url.replace(/^https?:\/\//, "")}</span>
+      <ExternalLink className="size-3 shrink-0 text-faint group-hover/a:text-ink-2" aria-hidden />
     </a>
   )
 }
@@ -20,40 +25,44 @@ export function DeploymentsPage() {
   const openForm = useUi((s) => s.openForm)
   return (
     <>
-      <PageHeader
-        title="Deployment links"
-        description="Production and preview links for your tracked repositories."
-      />
-      <div className="overflow-x-auto brutal rounded-xl bg-card">
+      <PageHeader title="Deployment links" subtitle="Production and preview links for your tracked repositories. Edit a repository to change them." />
+      <Panel tool="deploy" command="links" meta={repos.length || undefined}>
         {repos.length ? (
-          <table className="w-full min-w-[560px] text-sm">
-            <thead>
-              <tr className="eyebrow border-b text-left">
-                <th className="px-3 py-2 font-normal">Repository</th>
-                <th className="px-3 py-2 font-normal">Project</th>
-                <th className="px-3 py-2 font-normal">Production</th>
-                <th className="px-3 py-2 font-normal">Preview</th>
-                <th className="px-3 py-2"><span className="sr-only">Edit</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              {repos.map((r) => (
-                <tr key={r.id} className="border-b border-border/60 last:border-0">
-                  <td className="px-3 py-2 font-mono text-xs">{r.fullName}</td>
-                  <td className="px-3 py-2"><ProjectTag project={r.projectId ? projects.get(r.projectId) : undefined} /></td>
-                  <td className="px-3 py-2"><UrlCell url={r.productionUrl} /></td>
-                  <td className="px-3 py-2"><UrlCell url={r.previewUrl} /></td>
-                  <td className="px-3 py-2 text-right">
-                    <Button variant="ghost" size="icon-sm" aria-label={`Edit links for ${r.fullName}`} onClick={() => openForm({ kind: "repo", id: r.id })}><Pencil /></Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DataTable<RepoLink>
+            label="Deployment links"
+            rows={repos}
+            rowKey={(r) => r.id}
+            columns={[
+              {
+                key: "repo",
+                header: "Repository",
+                cell: (r) => (
+                  <>
+                    <span className="block font-mono break-all text-ink">{r.fullName}</span>
+                    <span className="mt-1 block sm:hidden"><UrlCell url={r.productionUrl} /></span>
+                  </>
+                ),
+              },
+              { key: "project", header: "Project", optional: true, cell: (r) => <ProjectTag project={r.projectId ? projects.get(r.projectId) : undefined} /> },
+              { key: "prod", header: "Production", optional: true, cell: (r) => <UrlCell url={r.productionUrl} /> },
+              { key: "preview", header: "Preview", optional: true, cell: (r) => <UrlCell url={r.previewUrl} /> },
+              {
+                key: "edit",
+                header: <span className="sr-only">Edit</span>,
+                align: "right",
+                className: "w-12",
+                cell: (r) => (
+                  <Button variant="quiet" size="icon-sm" aria-label={`Edit links for ${r.fullName}`} onClick={() => openForm({ kind: "repo", id: r.id })}><Pencil /></Button>
+                ),
+              },
+            ]}
+          />
         ) : (
-          <EmptyState>Track a repository to add deployment links.</EmptyState>
+          <EmptyState icon={Rocket} title="No deployment links yet" action={<Button variant="outline" onClick={() => openForm({ kind: "repo" })}><Plus /> Track repository</Button>}>
+            Track a repository, then add its production and preview URLs.
+          </EmptyState>
         )}
-      </div>
+      </Panel>
     </>
   )
 }

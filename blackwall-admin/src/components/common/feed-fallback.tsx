@@ -11,7 +11,7 @@ export function FeedFallback({ feed, provider, what }: { feed: Feed<unknown>; pr
   const name = providerDef(provider).name
   if (feed.status === "loading" || ((feed.status === "live" || feed.status === "sample") && !feed.data)) {
     return (
-      <div className="space-y-2 p-3" aria-busy="true">
+      <div className="space-y-2 px-3.5 py-3" aria-busy="true">
         <Skeleton className="h-4 w-2/3" />
         <Skeleton className="h-4 w-1/2" />
         <Skeleton className="h-4 w-3/5" />
@@ -20,17 +20,17 @@ export function FeedFallback({ feed, provider, what }: { feed: Feed<unknown>; pr
   }
   if (feed.status === "error") {
     return (
-      <div className="flex flex-col items-start gap-2 p-3 text-sm">
-        <p className="text-red-text">Couldn't load {what}.</p>
-        {feed.error && <p className="font-mono text-xs break-all text-muted-foreground">{feed.error}</p>}
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={feed.refresh}><RotateCw /> Retry</Button>
-          <Button size="sm" variant="ghost" asChild><Link to="/settings/connections">Connection settings</Link></Button>
+      <div className="flex flex-col items-start gap-2 px-3.5 py-3">
+        <p className="text-[13px] text-red-text">Couldn't load {what}.</p>
+        {feed.error && <p className="font-mono text-[11px] break-all text-muted-foreground">{feed.error}</p>}
+        <div className="mt-1 flex gap-2">
+          <Button variant="outline" onClick={feed.refresh}><RotateCw /> Retry</Button>
+          <Button variant="quiet" asChild><Link to="/settings/connections">Connection settings</Link></Button>
         </div>
       </div>
     )
   }
-  return <NoSignal message={`Connect ${name} to see ${what} here.`} to={`/settings/connections?add=${provider}`} action={`Connect ${name}`} />
+  return <NoSignal badge={false} message={`Connect ${name} to see ${what} here.`} to={`/settings/connections?add=${provider}`} action={`Connect ${name}`} />
 }
 
 export const hasData = <T,>(feed: Feed<T>): feed is Feed<T> & { data: T } =>

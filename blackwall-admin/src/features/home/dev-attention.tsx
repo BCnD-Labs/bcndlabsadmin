@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { EmptyState, Panel } from "@/components/common/panel"
 import { FeedFallback, hasData } from "@/components/common/feed-fallback"
 import { SourceBadge } from "@/components/common/source-badge"
+import type { Tone } from "@/components/common/tags"
 import { timeAgo } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import { useDevelopment } from "@/services/data"
@@ -12,11 +13,20 @@ import type { PullRequestSummary, RepoActivity } from "@/services/types"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
 
+/** Check state as text colour, for the icon only: green would read as a link, so passing stays neutral. */
 export const CHECK_STYLE: Record<PullRequestSummary["checks"], string> = {
-  passing: "text-teal",
+  passing: "text-ink-2",
   failing: "text-red-text",
   pending: "text-amber",
-  unknown: "text-muted-foreground",
+  unknown: "text-faint",
+}
+
+/** Check state as a status marker (spec §6). */
+export const CHECK_TONE: Record<PullRequestSummary["checks"], Tone> = {
+  passing: "ok",
+  failing: "error",
+  pending: "warn",
+  unknown: "off",
 }
 
 export const ACTIVITY_ICON: Record<RepoActivity["kind"], typeof Upload> = {
@@ -42,7 +52,7 @@ const short = (iso: string) => timeAgo(iso).replace(" ago", "")
 function Section({ title, count, children }: { title: string; count: number; children: ReactNode }) {
   return (
     <div className="py-1.5">
-      <h3 className="eyebrow flex items-center gap-2 px-3 pb-1">
+      <h3 className="bw-label flex items-center gap-2 px-3 pb-1">
         {title}
         <span className="font-mono text-[0.68rem] text-foreground tabular-nums">{count}</span>
       </h3>
@@ -131,7 +141,6 @@ export function DevAttention({ className }: { className?: string }) {
       id="development"
       title="Development"
       icon={<GitPullRequest />}
-      accent="lime"
       badge={<SourceBadge status={feed.status} detail={feed.status === "live" ? feed.provider : undefined} />}
       className={className}
       actions={

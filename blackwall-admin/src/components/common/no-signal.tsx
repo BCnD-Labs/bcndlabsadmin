@@ -13,6 +13,7 @@ export function NoSignal({
   to = "/settings/connections",
   action = "Connections",
   onNavigate,
+  badge = true,
   className,
 }: {
   message?: string
@@ -20,14 +21,16 @@ export function NoSignal({
   to?: string
   action?: string
   onNavigate?: () => void
+  /** Off when the panel header already shows the SourceBadge. */
+  badge?: boolean
   className?: string
 }) {
   return (
     <div className={cn("flex flex-col items-center justify-center gap-2.5 px-4 py-8 text-center", className)} data-testid="no-signal">
-      <SourceBadge status="not-connected" />
+      {badge && <SourceBadge status="not-connected" />}
       <p className="font-mono text-[11px] font-semibold tracking-[0.3em] text-ink-2">[ NO SIGNAL ]</p>
       <p className="max-w-64 text-[11px] leading-relaxed text-muted-foreground">{message}</p>
-      <Button variant="ghost" asChild>
+      <Button variant="outline" asChild className="mt-1">
         <Link to={to} onClick={onNavigate}>
           {action} →
         </Link>
