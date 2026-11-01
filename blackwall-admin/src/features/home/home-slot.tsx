@@ -25,7 +25,7 @@ function SlotMenu({ index, type }: { index: number; type: PanelType }) {
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label={`Slot ${index + 1}: choose what to show`}
-        className="bw-well flex h-[26px] min-w-[118px] items-center justify-between gap-2 rounded-[6px] px-1.5 font-mono text-[11px] text-ink-2 hover:border-ledge-hi aria-expanded:border-ledge-hi"
+        className="bw-well flex h-[26px] min-w-[118px] items-center justify-between gap-2 rounded-[6px] px-2 text-xs text-ink-2 hover:border-ledge-hi aria-expanded:border-ledge-hi"
         // Don't start a header drag from the menu button.
         draggable={false}
         onDragStart={(e) => e.preventDefault()}
@@ -33,7 +33,7 @@ function SlotMenu({ index, type }: { index: number; type: PanelType }) {
         {PANELS[type].label}
         <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56 font-mono text-xs">
+      <DropdownMenuContent align="end" className="w-56 text-[13px]">
         <DropdownMenuLabel className="bw-label">Show</DropdownMenuLabel>
         {PANEL_TYPES.map((t) => {
           const at = slots.indexOf(t)
@@ -132,12 +132,12 @@ export function HomeSlot({
           aria-hidden
           className={cn(
             "pointer-events-none absolute inset-0 flex items-center justify-center rounded-[12px] outline-2 -outline-offset-2 outline-dashed transition-colors duration-150",
-            over ? "bg-[rgba(201,205,211,0.06)] outline-ink-2" : "outline-[#3A3D43]",
+            over ? "bg-ink-2/5 outline-ink-2" : "outline-ledge-hi",
           )}
           data-testid={over ? "drop-target" : undefined}
         >
           {over && (
-            <span className="rounded-[6px] border-r-2 border-b-2 border-ledge-hi bg-raised px-2.5 py-1 font-mono text-[11px] text-ink">
+            <span className="rounded-[6px] border border-border bg-raised px-2.5 py-1 text-xs text-ink shadow-sm">
               ⇅ swap with slot {dragFrom! + 1}
             </span>
           )}

@@ -2,7 +2,7 @@ import * as React from "react"
 import { cn } from "cn"
 import { Checkbox as CheckboxPrimitive } from "radix-ui"
 
-/** Spec §2 checkbox: 15px square, 1.5px #4A4E56 border; checked = red fill + white check. */
+/** Checkbox (Mantine-style): 16px, 4px radius, 1px border on the input fill; checked = red fill + white check. */
 function Checkbox({
   className,
   ...props
@@ -11,7 +11,7 @@ function Checkbox({
     <CheckboxPrimitive.Root
       data-slot="checkbox"
       className={cn(
-        "peer relative flex size-[15px] shrink-0 items-center justify-center rounded-[4px] border-[1.5px] border-check bg-transparent transition-colors duration-150",
+        "peer relative flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-check bg-well transition-colors duration-150",
         "after:absolute after:-inset-x-2 after:-inset-y-2 disabled:cursor-not-allowed disabled:opacity-50",
         "hover:border-ink-2 data-checked:border-red data-checked:bg-red aria-invalid:border-red-text",
         className

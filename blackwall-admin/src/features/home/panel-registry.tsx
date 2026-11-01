@@ -31,7 +31,7 @@ function EmptySlot({ slot }: PanelBodyProps) {
   const options = PANEL_TYPES.filter((t) => t !== "empty")
   return (
     <div className="flex h-full p-3">
-      <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-[10px] border border-dashed border-[#3A3D43] px-4 py-6 text-center" data-testid="empty-slot">
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-[10px] border border-dashed border-ledge-hi px-4 py-6 text-center" data-testid="empty-slot">
         <p className="font-mono text-[11px] font-semibold tracking-[0.3em] text-faint">[ EMPTY ]</p>
         <p className="text-[11px] text-muted-foreground">Choose what this square shows.</p>
         <div className="flex flex-wrap justify-center gap-1.5">

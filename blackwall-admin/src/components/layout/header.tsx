@@ -95,11 +95,11 @@ export function Header() {
           onClick={() => setSearchOpen(true)}
           aria-label="Search workspace"
           aria-keyshortcuts="Meta+K"
-          className="bw-well flex h-8 min-w-0 flex-1 items-center gap-2 px-2.5 text-left font-mono text-xs text-faint transition-colors hover:border-ledge-hi md:w-[220px] md:flex-none"
+          className="bw-well flex h-8 min-w-0 flex-1 items-center gap-2 px-2.5 text-left text-[13px] text-faint transition-colors hover:border-ledge-hi md:w-[220px] md:flex-none"
         >
           <Search className="size-[13px] shrink-0" strokeWidth={2} aria-hidden />
           <span className="flex-1">search</span>
-          <kbd className="hidden rounded-[4px] border border-rim px-[5px] py-px font-mono text-[10px] text-faint sm:inline">⌘K</kbd>
+          <kbd className="hidden rounded-[4px] border border-b-2 border-rim bg-raised px-[5px] py-px font-mono text-[10px] text-muted-foreground sm:inline">⌘K</kbd>
         </button>
         <QuickCreate />
         <Notifications />

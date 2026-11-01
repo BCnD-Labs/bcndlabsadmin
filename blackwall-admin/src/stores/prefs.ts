@@ -3,6 +3,9 @@ import { createJSONStorage, persist } from "zustand/middleware"
 import { DEFAULT_SLOTS, assignSlot, sanitizeSlots, swapSlots, type PanelType } from "@/lib/home-slots"
 import { safeLocalStorage } from "./storage"
 
+export type Theme = "dim" | "dark"
+export type UiFont = "sans" | "mono"
+
 /** Per-browser interface preferences (not workspace data). */
 interface PrefsState {
   retroDetails: boolean
@@ -16,6 +19,10 @@ interface PrefsState {
   homeSlots: PanelType[]
   /** Desktop sidebar: the full tree (true) or the icon strip with hover flyouts (false). */
   navExpanded: boolean
+  /** Colour theme: Dim (mid-tone slate, default) or Dark (the original near-black). */
+  theme: Theme
+  /** Interface text: the system sans (default) or JetBrains Mono everywhere. */
+  uiFont: UiFont
   set: (patch: Partial<Omit<PrefsState, "set" | "setSlot" | "swapSlots" | "reset">>) => void
   /** Show `type` in slot `i`; if it's already in another slot, the two swap. */
   setSlot: (i: number, type: PanelType) => void
@@ -24,7 +31,7 @@ interface PrefsState {
   reset: () => void
 }
 
-type Persisted = Pick<PrefsState, "retroDetails" | "showSamples" | "workspaceName" | "autoHideSeconds" | "homeSlots" | "navExpanded">
+type Persisted = Pick<PrefsState, "retroDetails" | "showSamples" | "workspaceName" | "autoHideSeconds" | "homeSlots" | "navExpanded" | "theme" | "uiFont">
 
 export const PREFS_VERSION = 2
 
@@ -35,6 +42,8 @@ const DEFAULT_PREFS = (): Persisted => ({
   autoHideSeconds: 5,
   homeSlots: [...DEFAULT_SLOTS],
   navExpanded: false,
+  theme: "dim",
+  uiFont: "sans",
 })
 
 export const usePrefs = create<PrefsState>()(
@@ -50,13 +59,15 @@ export const usePrefs = create<PrefsState>()(
       name: "blackwall.prefs",
       version: PREFS_VERSION,
       storage: createJSONStorage(() => safeLocalStorage),
-      partialize: ({ retroDetails, showSamples, workspaceName, autoHideSeconds, homeSlots, navExpanded }): Persisted => ({
+      partialize: ({ retroDetails, showSamples, workspaceName, autoHideSeconds, homeSlots, navExpanded, theme, uiFont }): Persisted => ({
         retroDetails,
         showSamples,
         workspaceName,
         autoHideSeconds,
         homeSlots,
         navExpanded,
+        theme,
+        uiFont,
       }),
       // v1 → v2: adds autoHideSeconds and the Home slot layout.
       migrate: (persisted, version) => {
@@ -75,8 +86,19 @@ export const usePrefs = create<PrefsState>()(
           autoHideSeconds: Number.isFinite(secs) ? Math.min(15, Math.max(2, Math.round(secs))) : current.autoHideSeconds,
           homeSlots: sanitizeSlots(p.homeSlots),
           navExpanded: p.navExpanded === true,
+          theme: p.theme === "dark" ? "dark" : "dim",
+          uiFont: p.uiFont === "mono" ? "mono" : "sans",
         }
       },
     },
   ),
 )
+
+/** Theme and font live on <html> so every screen (sign-in included) follows them. */
+function applyLook({ theme, uiFont }: Pick<PrefsState, "theme" | "uiFont">) {
+  if (typeof document === "undefined") return
+  document.documentElement.dataset.theme = theme
+  document.documentElement.dataset.font = uiFont
+}
+applyLook(usePrefs.getState())
+usePrefs.subscribe(applyLook)

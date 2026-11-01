@@ -1,7 +1,7 @@
 import { isToday, isYesterday, parseISO } from "date-fns"
 import { useEffect, useId, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { DrainBar } from "@/components/common/drain-bar"
+import { CountdownBorder } from "@/components/common/countdown-border"
 import { NoSignal } from "@/components/common/no-signal"
 import { Prompt } from "@/components/common/panel"
 import { SegmentedTabs } from "@/components/common/segmented-tabs"
@@ -84,8 +84,13 @@ export function Notifications() {
           disarm()
           setOpen(!open)
         }}
+        // Leaving the bell (not just the card) starts the countdown; entering either stops it.
+        onPointerEnter={hide.onPointerEnter}
+        onPointerLeave={hide.onPointerLeave}
         className="relative"
       >
+        {/* Open: a red outline on the bell that retracts as the auto-hide countdown. */}
+        <CountdownBorder active={open} draining={hide.leaving} seconds={hide.seconds} radius={8} className="-inset-px size-[calc(100%+2px)]" />
         <svg aria-hidden width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M6 16v-5a6 6 0 0112 0v5l2 2H4zM10 21h4" />
         </svg>
@@ -116,7 +121,7 @@ export function Notifications() {
             <span
               className={cn(
                 "min-w-[18px] rounded-[4px] px-[5px] text-center text-[10px] text-white tabular-nums",
-                unread ? "bg-red" : "bg-[#3A3D43]",
+                unread ? "bg-red" : "bg-ledge-hi",
               )}
             >
               {unread}
@@ -133,7 +138,6 @@ export function Notifications() {
             </Button>
           </div>
         </div>
-        {hide.leaving && <DrainBar seconds={hide.seconds} />}
 
         {items.length === 0 ? (
           <div className="flex flex-1 items-center justify-center">
@@ -155,7 +159,7 @@ export function Notifications() {
                       type="button"
                       onClick={() => markRead(n.id)}
                       aria-label={`${n.title}${n.read ? "" : ", unread"}`}
-                      className="grid w-full grid-cols-[30px_minmax(0,1fr)_8px] items-start gap-2.5 rounded-[8px] px-2 py-[9px] text-left hover:bg-[#1A1B1E]"
+                      className="grid w-full grid-cols-[30px_minmax(0,1fr)_8px] items-start gap-2.5 rounded-[8px] px-2 py-[9px] text-left hover:bg-raised"
                     >
                       <span className="flex size-[30px] items-center justify-center rounded-[7px] border-r-2 border-b-2 border-ledge bg-raised">
                         <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ICON[n.kind].color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -1,0 +1,27 @@
+/* Red outline that traces away around a floating card while it counts down. */
+.bw-countdown-line {
+  fill: none;
+  stroke: var(--bw-red);
+  stroke-width: 2px;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 0;
+  vector-effect: non-scaling-stroke;
+}
+.bw-countdown-line[data-state="armed"] {
+  animation: bw-countdown-in 150ms ease-out;
+}
+.bw-countdown-line[data-state="draining"] {
+  animation: bw-countdown-drain var(--bw-countdown, 5s) linear forwards;
+}
+@keyframes bw-countdown-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes bw-countdown-drain {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -100; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bw-countdown-line[data-state] { animation: none; }
+  .bw-countdown-line[data-state="draining"] { opacity: 0.5; }
+}

@@ -136,7 +136,7 @@ function LogEditor({ date, onNavigate }: { date: string; onNavigate: (d: string)
             <ChevronRight />
           </Button>
           {isToday(day) && (
-            <span className="inline-flex h-5 items-center gap-1.5 rounded-[5px] border border-rim px-1.5 font-mono text-[10px] tracking-wide text-ink-2 uppercase">
+            <span className="inline-flex h-5 shrink-0 items-center gap-1.5 rounded-full px-2 text-[10px] font-bold tracking-[0.03em] uppercase bg-ink-2/8 text-ink-2">
               <span className="size-1.5 rounded-[1.5px] bg-red" aria-hidden /> Today
             </span>
           )}

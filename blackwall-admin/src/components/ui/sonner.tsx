@@ -33,7 +33,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }
       toastOptions={{
         classNames: {
-          toast: "cn-toast font-mono text-xs shadow-[0_20px_44px_rgba(0,0,0,0.55)]",
+          toast: "cn-toast text-[13px] shadow-[var(--bw-shadow-float)]",
           description: "text-muted-foreground",
         },
       }}

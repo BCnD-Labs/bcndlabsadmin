@@ -122,7 +122,7 @@ function LogBody({ date, close }: { date: DateKey; close: () => void }) {
             }
           }}
           placeholder="What did you ship, learn, or get stuck on?"
-          className="bw-well h-[130px] resize-none p-2.5 font-mono text-xs leading-[1.6] text-ink outline-none focus-visible:border-ledge-hi"
+          className="bw-well h-[130px] resize-none p-2.5 text-[13px] leading-[1.6] text-ink outline-none focus-visible:border-ledge-hi"
         />
         <div className="flex items-center justify-between gap-2">
           <span className="text-[10px] text-faint" aria-live="polite">

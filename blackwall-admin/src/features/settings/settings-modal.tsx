@@ -10,6 +10,8 @@ import { GeneralSettings } from "./general-page"
 import { ServerSettings } from "./server-page"
 import { AppearanceSettings, SETTINGS_SECTIONS, SectionContext, SettingsQuery, ShortcutsSettings } from "./settings-pages"
 
+const BUILD = __BLACKWALL_BUILD__
+
 const BODY: Record<SettingsSection, ComponentType> = {
   general: GeneralSettings,
   appearance: AppearanceSettings,
@@ -63,15 +65,15 @@ export function SettingsModal() {
       }}
     >
       <DialogContent
-        className="flex h-[min(760px,calc(100dvh-2rem))] w-[calc(100%-1.5rem)] max-w-[1040px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[1040px] md:flex-row"
+        className="bw-settings flex h-[min(760px,calc(100dvh-2rem))] w-[calc(100%-1.5rem)] max-w-[1040px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[1040px] md:flex-row"
         onOpenAutoFocus={(e) => {
           // Land on the search box on desktop; on phones, don't pop the keyboard.
           if (!window.matchMedia("(min-width: 768px)").matches) e.preventDefault()
         }}
       >
-        <aside className="flex shrink-0 flex-col gap-3 border-b border-line bg-panel p-3 pr-12 md:w-[232px] md:border-r md:border-b-0 md:pr-3">
+        <aside className="bw-settings-side flex shrink-0 flex-col gap-3 border-b border-line p-3 pr-12 md:w-[240px] md:border-r md:border-b-0 md:p-4 md:pr-4">
           <div className="px-1 pt-0.5">
-            <DialogTitle className="font-heading text-base font-bold">Settings</DialogTitle>
+            <DialogTitle className="font-heading text-[17px] font-bold tracking-tight">Settings</DialogTitle>
             <DialogDescription className="sr-only">Preferences for this browser, your connections and the home server.</DialogDescription>
           </div>
           {search}
@@ -91,7 +93,7 @@ export function SettingsModal() {
             </Select>
           </div>
           <nav aria-label="Settings sections" className="hidden md:block">
-            <p className="bw-label mb-1.5 px-1">Options</p>
+            <p className="bw-label mt-1 mb-2 px-1">Options</p>
             <ul className="flex flex-col gap-0.5">
               {SETTINGS_SECTIONS.map(({ id, label, icon: Icon }) => {
                 const on = id === current && !q
@@ -102,11 +104,12 @@ export function SettingsModal() {
                       onClick={() => go(id)}
                       aria-current={on ? "page" : undefined}
                       className={cn(
-                        "flex h-9 w-full items-center gap-2.5 rounded-[7px] border-r-2 border-b-2 border-transparent px-2.5 text-left font-mono text-xs text-muted-foreground transition-colors duration-150 hover:bg-raised hover:text-ink",
-                        on && "border-ledge-hi bg-selected text-ink hover:bg-selected",
+                        "relative flex h-9 w-full items-center gap-2.5 rounded-[8px] px-2.5 text-left text-[13px] text-ink-2 transition-colors duration-150 hover:bg-raised hover:text-ink",
+                        on &&
+                          "bg-red-soft font-medium text-ink before:absolute before:top-2 before:bottom-2 before:-left-px before:w-[3px] before:rounded-full before:bg-red hover:bg-red-soft",
                       )}
                     >
-                      <Icon className={cn("size-4 shrink-0", on ? "text-red" : "text-faint")} strokeWidth={1.8} aria-hidden />
+                      <Icon className={cn("size-4 shrink-0", on ? "text-red-light" : "text-muted-foreground")} strokeWidth={1.8} aria-hidden />
                       <span className="truncate">{label}</span>
                     </button>
                   </li>
@@ -114,9 +117,12 @@ export function SettingsModal() {
               })}
             </ul>
           </nav>
+          <p className="mt-auto hidden px-1 font-mono text-[10px] leading-relaxed text-faint md:block">
+            Blackwall · {BUILD ? `build ${BUILD.slice(0, 7)}` : "dev build"}
+          </p>
         </aside>
 
-        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-5" data-searching={q ? "" : undefined}>
+        <div className="bw-settings-body min-h-0 min-w-0 flex-1 overflow-y-auto px-4 py-5 md:px-8 md:py-7" data-searching={q ? "" : undefined}>
           <SettingsQuery.Provider value={q}>
             {q ? (
               <div className="grid gap-8">

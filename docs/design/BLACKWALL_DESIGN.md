@@ -8,33 +8,57 @@ markup format, and treat everything in it as sample data.
 
 ## 1. Design tokens
 
-### Color
+### Themes
+Two themes share every component (Settings → Appearance → Theme, saved per browser, applied on `<html data-theme>`
+before first paint):
+- **Dim (default):** a mid-tone slate between dark and light mode, modelled on Mantine's dark scheme
+  (https://mantine.dev, #242424 body / #2E2E2E cards / #424242 borders) with a cool tint. Cards are flat with a 1px
+  border and Mantine's `shadow-sm`; no ledge, no scanlines. Key values: ground `#1F2228`, panel `#2A2F37`, raised
+  `#323842`, selected `#3A414C`, well `#1C1F25`, border `#444B57`, red `#C92A2A` (Mantine red.9), red-light
+  `#FF8F8F`, text `#E7EAEE` / `#C8CDD4` / muted `#AAB1BC` / faint `#99A1AD`.
+- **Dark:** the original near-black theme below, with the 4px panel ledge and scanlines.
+
+Components follow Mantine's conventions in both themes: 8px radius; buttons as filled / default / outline / subtle /
+light variants with no ledge; 36px inputs whose focus border is red-light; a Mantine-style segmented control and
+38×20 switch; pill "light" badges (10px bold caps on a 15% tint) for status, due dates and tags; and the light variant
+(15% red tint, red-light icon) for the active nav item. The BW mark stays solid red.
+
+**Interface font** (Settings → Appearance): Sans (Mantine's system stack, default) for UI text, with JetBrains Mono kept
+for the `❯` prompt, breadcrumbs, code, repo names, numbers and keys; or Mono everywhere.
+
+### Color (Dark theme)
 | Token | Value | Use |
 |---|---|---|
-| `--bw-ground` | `#0A0D13` | App background |
-| `--bw-grid` | `rgba(120,160,190,.06)` | 24px background grid lines |
-| `--bw-panel` | `#161719` | Panel surface |
-| `--bw-raised` | `#1C1D20` | Cards inside panels, hover rows, flyouts |
-| `--bw-selected` | `#202125` | Selected tab / active row fill |
-| `--bw-well` | `#0F1012` | Inputs, chart wells, meters |
-| `--bw-ledge` | `#2A2C30` | Panel ledge (right + bottom edge) |
-| `--bw-ledge-hi` | `#2E3035` | Floating card / selected item ledge |
-| `--bw-line` | `#26282C` | Dividers inside panels |
-| `--bw-line-soft` | `#1E1F22` | Row separators |
-| `--bw-border` | `#2A2C31` | 1px borders on wells, chips, ghost buttons |
+| `--bw-ground` | `#0B0E14` | App background |
+| `--bw-grid` | `rgba(130,160,200,.045)` | 24px background grid lines |
+| `--bw-panel` | `#161A22` | Panel surface |
+| `--bw-raised` | `#1C212B` | Cards inside panels, hover rows, flyouts |
+| `--bw-selected` | `#232935` | Selected tab / active row fill |
+| `--bw-well` | `#0F1218` | Inputs, chart wells, meters |
+| `--bw-edge` | `#232A35` | 1px hairline on a panel's top + left edge |
+| `--bw-ledge` | `#252B36` | Panel ledge (right + bottom edge) |
+| `--bw-ledge-hi` | `#2D3441` | Floating card / selected item ledge |
+| `--bw-line` | `#232934` | Dividers inside panels |
+| `--bw-line-soft` | `#1C2129` | Row separators |
+| `--bw-border` | `#2A303C` | 1px borders on wells, chips, ghost buttons |
 | `--bw-red` | `#BC1515` | **The only accent.** Fills, markers, icons, primary buttons |
+| `--bw-red-hover` | `#CB2020` | Primary button hover |
 | `--bw-red-ledge` | `#6E0C0C` | Ledge under red fills |
-| `--bw-amber` | `#E0A526` | Degraded / overdue / deadline |
-| `--bw-green` | `#5EF0B5` | Healthy deltas and passing checks only |
-| `--bw-text` | `#EDEFF2` | Primary text |
-| `--bw-text-2` | `#C9CDD3` | Secondary text |
-| `--bw-muted` | `#9499A3` | Labels, meta |
-| `--bw-faint` | `#7C818B` | Smallest labels (lowest allowed for text) |
-| `--bw-off` | `#2C2E33` | Unlit meter segments |
+| `--bw-amber` | `#DCAA52` | Degraded / overdue / deadline (desaturated for dark) |
+| `--bw-green` | `#62D3A2` | Healthy deltas and passing checks only (desaturated) |
+| `--bw-blue` | `#7FA3D6` | Reserved for informational states |
+| `--bw-text` | `#E9ECF1` | Primary text |
+| `--bw-text-2` | `#C7CDD6` | Secondary text |
+| `--bw-muted` | `#A3ABB8` | Labels, meta, descriptions (≥ 7:1 on panel) |
+| `--bw-faint` | `#838C9A` | Smallest labels (lowest allowed for text, ≥ 4.5:1 on raised) |
+| `--bw-off` | `#2A303B` | Unlit meter segments |
+| `--bw-check` | `#4A5261` | Checkbox border, log dots, far-future due marker |
+
+Neutrals are a cool slate ramp with a visible step between each surface (ground → well → panel → raised → selected). Panels get a soft drop shadow (`--bw-shadow`) on top of the ledge so they lift off the ground.
 
 Rules:
 - `#BC1515` is **never** used for small text (fails contrast on charcoal). Use it for fills, squares, bars, icons, and the `❯` prompt glyph. Text on red is white.
-- No glows, gradients or colored panel outlines. Depth comes from the ledge, not shadow (floating cards are the one exception, below).
+- No glows, gradients or colored panel outlines. Depth comes from the ledge plus a soft, low-contrast drop shadow; floating cards get a deeper one.
 - Status markers are small **squares** (6–8px, radius 1.5–2px), not circles.
 
 ### Typography (Google Fonts)
@@ -124,7 +148,7 @@ Easing everywhere: `cubic-bezier(.2,.8,.2,1)`. Quick (150–280ms) but fluid.
 - Filters: All / Alerts / Dev / Site. Grouped Today / Yesterday. Unread = bold title + red square; click marks read; "read all".
 
 ### Auto-hide (calendar + notifications)
-- When the pointer leaves the open card, start a 5s timer (configurable). Show a 2px red bar across the top of the card that drains over that time. Re-entering cancels. When the timer ends, close.
+- When the pointer leaves the open card, start a 5s timer (configurable). While pinned/open, the header button (calendar or bell), not the card, gets a 2px red outline; when the pointer leaves the card or its button, that outline retracts clockwise from top-centre over that time. Re-entering restores it. When the timer ends, close. Reduced motion: the outline dims to 50% instead of moving.
 
 ---
 
@@ -174,9 +198,15 @@ One-line subtitle (12px muted)
 ### Settings modal
 Settings is a modal (`features/settings/settings-modal.tsx`), opened from the gear at the bottom of the rail or
 ⌘,. Left: title, a search box and the sections (muted 16px icon and label; the active one is filled with
-`--bw-selected`, a 2px ledge and a red icon). Right: the section's heading, one-line description and its panels,
-capped at a readable width. Searching shows the matching `SettingRow`s from every section. Phones get the search
-and a section select above the content.
+`--bw-selected`, a 2px ledge, a red icon and a 3px red marker on the left edge), with the build line pinned to the
+bottom. Right: the section's heading and description over a divider, then its panels. Three surface layers keep it
+legible: sidebar `--bw-well`, content pane `#12151C`, setting cards `#1A1F28` with 1px `--bw-border` hairlines and a
+2px bottom ledge (no heavy page ledge, no scanlines). Searching shows the matching `SettingRow`s from every section.
+Phones get the search and a section select above the content.
+
+### Notes
+Sticky notes use muted paper colours (low chroma, mid-light: plain `#BCC2CC`, yellow `#CFBB7C`, mint `#8EBDAF`,
+pink `#C9A2B3`, blue `#9EAECB`) with `#14171C` ink, ≥ 8:1 on each.
 
 ### Panel
 The §2 panel. Header is always the prompt `❯ tool $ command`, with meta and at most one small action group on the

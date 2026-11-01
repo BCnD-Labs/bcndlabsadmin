@@ -20,7 +20,7 @@ export function MobileNav() {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetContent id="mobile-nav" side="left" className="w-72 gap-0 border-r-4 border-ledge bg-panel p-0">
+      <SheetContent id="mobile-nav" side="left" className="w-72 gap-0 border-r border-border bg-panel p-0">
         <SheetHeader className="border-b border-line px-4 py-3">
           <SheetTitle className="flex items-center gap-2.5 font-heading text-base font-bold">
             <span aria-hidden className="flex size-[30px] items-center justify-center rounded-[7px] border-r-[3px] border-b-[3px] border-red-ledge bg-red font-pixel text-[11px] font-normal text-white">BW</span>
@@ -40,8 +40,8 @@ export function MobileNav() {
                     end={d.to === "/"}
                     onClick={() => setOpen(false)}
                     className={cn(
-                      "flex h-11 items-center gap-3 rounded-[8px] px-3 font-heading text-[13px] font-bold text-ink-2 hover:bg-raised",
-                      current && "bg-red text-white hover:bg-red",
+                      "flex h-11 items-center gap-3 rounded-[8px] px-3 text-sm font-medium text-ink-2 hover:bg-raised",
+                      current && "bg-red-soft text-ink hover:bg-red-soft",
                     )}
                     aria-current={current && !d.children ? "page" : undefined}
                   >
@@ -56,7 +56,7 @@ export function MobileNav() {
                             to={c.to}
                             onClick={() => setOpen(false)}
                             className={cn(
-                              "flex h-10 items-center gap-2 rounded-[6px] px-3 font-mono text-xs text-[#A3A8B1] hover:bg-raised hover:text-white",
+                              "flex h-10 items-center gap-2 rounded-[6px] px-3 text-[13px] text-muted-foreground hover:bg-raised hover:text-white",
                               (pathname + search === c.to || pathname.startsWith(c.to + "/")) &&
                                 "text-white before:size-1.5 before:rounded-[1.5px] before:bg-red before:content-['']",
                             )}
@@ -77,7 +77,7 @@ export function MobileNav() {
             type="button"
             aria-haspopup="dialog"
             onClick={() => openSettings()}
-            className="flex h-11 w-full items-center gap-3 rounded-[8px] px-3 font-heading text-[13px] font-bold text-ink-2 hover:bg-raised"
+            className="flex h-11 w-full items-center gap-3 rounded-[8px] px-3 text-sm font-medium text-ink-2 hover:bg-raised"
           >
             <Settings className="size-4" aria-hidden />
             Settings

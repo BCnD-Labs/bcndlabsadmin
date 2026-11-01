@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useId, useMemo, useRef, useState 
 import type { DayButtonProps } from "react-day-picker"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
-import { DrainBar } from "@/components/common/drain-bar"
+import { CountdownBorder } from "@/components/common/countdown-border"
 import { Prompt } from "@/components/common/panel"
 import { useAutoHide } from "@/hooks/use-auto-hide"
 import { useNow } from "@/hooks/use-now"
@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils"
 import { useWorkspace } from "@/stores/workspace"
 import { LogDialog } from "@/features/journal/log-dialog"
 
-const LOG_DOT = "#4A4E56"
+const LOG_DOT = "var(--bw-check)"
 
 const DotsContext = createContext(new Map<DateKey, Set<string>>())
 
@@ -75,8 +75,8 @@ function DayButton({ day, modifiers, className: _c, ...props }: DayButtonProps) 
       disabled={outside}
       aria-label={outside ? undefined : `${format(date, "MMMM d")}${parts.length ? `, ${parts.join(", ")}` : ""}, open log`}
       className={cn(
-        "flex h-[30px] w-full flex-col items-center justify-center gap-[2px] rounded-[6px] border-r-2 border-b-2 border-transparent p-0 font-mono text-[11px]",
-        today ? "border-red-ledge bg-red font-bold text-white" : outside ? "text-faint" : "text-ink-2 hover:bg-raised",
+        "flex h-[30px] w-full flex-col items-center justify-center gap-[2px] rounded-[6px] p-0 text-xs tabular-nums",
+        today ? "bg-red font-semibold text-white" : outside ? "text-faint" : "text-ink-2 hover:bg-raised",
         outside && "cursor-default",
       )}
     >
@@ -93,8 +93,8 @@ function DayButton({ day, modifiers, className: _c, ...props }: DayButtonProps) 
 /**
  * Header calendar (spec §4): a ghost "Oct 30" button with a floating card for the
  * month and today's tasks. Hovering the button opens the card and leaving closes
- * it straight away; clicking pins it open, and then it auto-hides with the drain
- * bar after the pointer leaves. Clicking a day opens that day's log.
+ * it straight away; clicking pins it open (the button gets a red outline), and
+ * after the pointer leaves that outline retracts as the auto-hide countdown. Clicking a day opens that day's log.
  */
 export function CalendarMenu() {
   const now = useNow()
@@ -156,11 +156,14 @@ export function CalendarMenu() {
           aria-expanded={open}
           aria-controls={cardId}
           aria-pressed={mode === "pinned"}
+          className="relative"
           onClick={() => {
             disarm()
             setMode(mode === "pinned" ? null : "pinned")
           }}
         >
+          {/* Pinned: a red outline on the button that retracts as the auto-hide countdown. */}
+          <CountdownBorder active={mode === "pinned"} draining={hide.leaving} seconds={hide.seconds} radius={8} className="-inset-px size-[calc(100%+2px)]" />
           <CalIcon className="text-ink-2" />
           <span>{format(now, "MMM d")}</span>
           {dueToday.length > 0 && <span aria-hidden className="size-1.5 rounded-[1.5px] bg-amber" data-testid="due-today-marker" />}
@@ -185,7 +188,6 @@ export function CalendarMenu() {
                 <span className="pr-1.5 text-[10px] text-faint">click to pin</span>
               )}
             </div>
-            {hide.leaving && <DrainBar seconds={hide.seconds} />}
             <div className="flex flex-col gap-1.5 px-3 pt-2.5 pb-3">
               <DotsContext.Provider value={dots}>
                 <Calendar
@@ -203,7 +205,7 @@ export function CalendarMenu() {
                     month_caption: "sr-only",
                     month_grid: "w-full",
                     weekdays: "grid grid-cols-7 gap-[2px]",
-                    weekday: "text-center font-mono text-[9px] font-normal tracking-[0.06em] text-faint",
+                    weekday: "text-center text-[10px] font-semibold tracking-[0.04em] text-faint",
                     week: "mt-[2px] grid grid-cols-7 gap-[2px]",
                     day: "p-0",
                     today: "",

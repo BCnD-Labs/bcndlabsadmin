@@ -8,8 +8,8 @@ export interface SegmentedTab<V extends string> {
 }
 
 /**
- * Spec §2 segmented tabs: a well track; the selected tab gets the selected fill,
- * a 2px ledge and a red count badge. Arrow keys / Home / End move and select.
+ * Segmented control (Mantine-style): a recessed track; the selected tab is a raised
+ * chip with a soft shadow, and its count turns red. Arrow keys / Home / End move and select.
  */
 export function SegmentedTabs<V extends string>({
   tabs,
@@ -42,7 +42,7 @@ export function SegmentedTabs<V extends string>({
   }
 
   return (
-    <div ref={ref} role="tablist" aria-label={label} onKeyDown={onKey} className={cn("bw-well flex gap-[3px] p-[3px]", className)}>
+    <div ref={ref} role="tablist" aria-label={label} onKeyDown={onKey} className={cn("flex gap-1 rounded-[8px] border border-line-soft bg-well p-1", className)}>
       {tabs.map((t) => {
         const on = t.value === value
         return (
@@ -57,14 +57,14 @@ export function SegmentedTabs<V extends string>({
             tabIndex={on ? 0 : -1}
             onClick={() => onChange(t.value)}
             className={cn(
-              "flex h-6 flex-1 items-center justify-center gap-1.5 rounded-[5px] border-r-2 border-b-2 border-transparent font-mono text-[11px] transition-colors duration-150",
-              on ? "border-ledge-hi bg-selected text-white" : "text-muted-foreground hover:text-ink",
+              "flex h-[26px] flex-1 items-center justify-center gap-1.5 rounded-[6px] text-xs font-medium transition-[background-color,color,box-shadow] duration-150",
+              on ? "bg-selected text-ink shadow-[0_1px_3px_rgba(0,0,0,0.25)]" : "text-muted-foreground hover:text-ink",
               tabClassName,
             )}
           >
             {t.label}
             {t.count !== undefined && (
-              <span className={cn("rounded-[3px] px-1 text-[9px] tabular-nums", on ? "bg-red text-white" : "bg-line text-muted-foreground")}>
+              <span className={cn("min-w-4 rounded-full px-1.5 text-center text-[10px] leading-4 font-semibold tabular-nums", on ? "bg-red text-white" : "bg-ink-2/10 text-muted-foreground")}>
                 {t.count}
               </span>
             )}

@@ -4,8 +4,16 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#303339" />
+    <meta name="theme-color" content="#1f2228" />
     <title>Blackwall · bcndlabs</title>
+    <script>
+      // Apply the saved theme and font before first paint (no flash of the wrong theme).
+      try {
+        var p = JSON.parse(localStorage.getItem("blackwall.prefs") || "{}").state || {}
+        document.documentElement.dataset.theme = p.theme === "dark" ? "dark" : "dim"
+        document.documentElement.dataset.font = p.uiFont === "mono" ? "mono" : "sans"
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

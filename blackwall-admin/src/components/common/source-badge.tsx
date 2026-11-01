@@ -5,11 +5,11 @@ import type { SourceStatus } from "@/services/types"
 
 /** Status markers are small squares (spec §1); red only marks failures. */
 const META: Record<SourceStatus, { label: string; square: string; className: string; hint: string }> = {
-  live: { label: "Live", square: "bg-green", className: "text-ink-2", hint: "Fetched through your connection." },
-  sample: { label: "Sample data", square: "bg-amber", className: "text-amber", hint: "Made-up data for previewing the layout. Turn it off in Settings → Appearance." },
-  "not-connected": { label: "Not connected", square: "bg-faint", className: "text-muted-foreground", hint: "Add a connection in Settings → Connections." },
-  error: { label: "Error", square: "bg-red", className: "text-red-text", hint: "The connection failed. See Settings → Connections." },
-  loading: { label: "Loading", square: "", className: "text-muted-foreground", hint: "Fetching…" },
+  live: { label: "Live", square: "bg-green", className: "bg-green/12 text-green", hint: "Fetched through your connection." },
+  sample: { label: "Sample data", square: "bg-amber", className: "bg-amber/12 text-amber", hint: "Made-up data for previewing the layout. Turn it off in Settings → Appearance." },
+  "not-connected": { label: "Not connected", square: "bg-faint", className: "bg-ink-2/8 text-muted-foreground", hint: "Add a connection in Settings → Connections." },
+  error: { label: "Error", square: "bg-red-light", className: "bg-red-soft text-red-light", hint: "The connection failed. See Settings → Connections." },
+  loading: { label: "Loading", square: "", className: "bg-ink-2/8 text-muted-foreground", hint: "Fetching…" },
 }
 
 /** Shown on panels whose data comes from outside Blackwall. Local records don't get one. */
@@ -32,7 +32,7 @@ export function SourceBadge({
         <span
           tabIndex={0}
           className={cn(
-            "inline-flex h-5 max-w-56 shrink-0 items-center gap-1.5 rounded-[5px] border border-rim px-1.5 font-mono text-[10px] tracking-wide",
+            "inline-flex h-5 max-w-56 shrink-0 items-center gap-1.5 rounded-full px-2 text-[10px] font-bold tracking-[0.03em]",
             m.className,
             className,
           )}

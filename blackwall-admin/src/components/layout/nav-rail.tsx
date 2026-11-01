@@ -170,8 +170,8 @@ export function NavRail({ focusMain }: { focusMain: () => void }) {
           className={cn(
             "absolute top-0 left-0 flex h-[43px] w-10 items-start overflow-hidden rounded-[10px] border-r-[3px] border-b-[3px] border-transparent whitespace-nowrap",
             "transition-none data-[open=true]:transition-[width,background-color,border-color,box-shadow] data-[open=true]:duration-200 data-[open=true]:ease-bw motion-reduce:transition-none",
-            current ? "bg-red text-white" : "text-faint hover:bg-raised",
-            open && "w-[220px] border-ledge-hi shadow-[0_14px_30px_rgba(0,0,0,0.45)]",
+            current ? "bg-red-soft text-red-light" : "text-faint hover:bg-raised hover:text-ink-2",
+            open && "w-[220px] border-ledge-hi shadow-[0_18px_40px_-10px_rgba(0,0,0,0.65)]",
             open && !current && "bg-line text-ink-2",
             open && hasSubs && "rounded-br-none",
           )}
@@ -185,8 +185,8 @@ export function NavRail({ focusMain }: { focusMain: () => void }) {
               open ? "translate-x-0 opacity-100 delay-[40ms] duration-200 ease-bw" : "-translate-x-1.5 opacity-0 duration-0",
             )}
           >
-            <span className="font-heading text-[13px] font-bold text-white">{d.label}</span>
-            {h?.hint && <span className={cn("text-[10px]", current ? "text-[#F3C9C9]" : "text-faint")}>{h.hint}</span>}
+            <span className="text-[13px] font-semibold text-ink">{d.label}</span>
+            {h?.hint && <span className={cn("text-[10px]", current ? "text-red-light" : "text-faint")}>{h.hint}</span>}
           </span>
         </Link>
 
@@ -200,7 +200,7 @@ export function NavRail({ focusMain }: { focusMain: () => void }) {
             data-testid={open ? "nav-expanded" : undefined}
             data-open={open}
             className={cn(
-              "absolute top-10 left-11 grid w-[176px] rounded-b-[10px] border-r-[3px] border-b-[3px] border-ledge-hi bg-raised shadow-[0_14px_30px_rgba(0,0,0,0.45)]",
+              "absolute top-10 left-11 grid w-[176px] rounded-b-[10px] border-r-[3px] border-b-[3px] border-ledge-hi bg-raised shadow-[0_18px_40px_-10px_rgba(0,0,0,0.65)]",
               "transition-none data-[open=true]:transition-[grid-template-rows] data-[open=true]:duration-[220ms] data-[open=true]:ease-bw motion-reduce:transition-none",
               open ? "visible grid-rows-[1fr]" : "invisible grid-rows-[0fr]",
             )}
@@ -220,7 +220,7 @@ export function NavRail({ focusMain }: { focusMain: () => void }) {
                       onClick={select(c.to)}
                       onKeyDown={(e) => onSubKey(e, d.id)}
                       className={cn(
-                        "mx-1.5 flex h-[30px] items-center justify-between gap-2 rounded-[6px] px-2 font-mono text-xs whitespace-nowrap text-[#A3A8B1] outline-none",
+                        "mx-1.5 flex h-[30px] items-center justify-between gap-2 rounded-[6px] px-2 text-[13px] whitespace-nowrap text-muted-foreground outline-none",
                         "hover:bg-line hover:text-white focus-visible:bg-line focus-visible:text-white focus-visible:outline-2 focus-visible:outline-ring",
                         here && "text-white before:mr-1 before:size-1.5 before:shrink-0 before:rounded-[1.5px] before:bg-red before:content-['']",
                       )}
@@ -308,7 +308,7 @@ function SettingsButton({ expanded }: { expanded: boolean }) {
             onClick={() => openSettings()}
             className={cn(
               "flex size-10 shrink-0 items-center justify-center rounded-[10px] border-r-[3px] border-b-[3px] border-transparent",
-              open ? "border-red-ledge bg-red text-white" : "text-faint hover:bg-raised hover:text-ink-2",
+              open ? "bg-red-soft text-red-light" : "text-faint hover:bg-raised hover:text-ink-2",
             )}
           >
             <Settings className="size-[18px]" strokeWidth={1.8} aria-hidden />
@@ -326,16 +326,16 @@ function SettingsButton({ expanded }: { expanded: boolean }) {
       onClick={() => openSettings()}
       className={cn(TREE_ROW, open ? TREE_FILL : "text-ink-2 hover:bg-raised")}
     >
-      <Settings className={cn("size-[18px] shrink-0", open ? "text-white" : "text-faint")} strokeWidth={1.8} aria-hidden />
+      <Settings className={cn("size-[18px] shrink-0", open ? "text-red-light" : "text-faint")} strokeWidth={1.8} aria-hidden />
       <span className="flex-1 text-left">Settings</span>
-      <kbd aria-hidden className={cn("font-mono text-[10px] font-normal", open ? "text-[#F3C9C9]" : "text-faint")}>⌘,</kbd>
+      <kbd aria-hidden className={cn("font-mono text-[10px] font-normal", open ? "text-red-light" : "text-faint")}>⌘,</kbd>
     </button>
   )
 }
 
 const TREE_ROW =
-  "flex h-10 w-full shrink-0 items-center gap-3 rounded-[10px] border-r-[3px] border-b-[3px] border-transparent px-2.5 font-heading text-[13px] font-bold transition-colors duration-150"
-const TREE_FILL = "border-red-ledge bg-red text-white hover:bg-red"
+  "flex h-10 w-full shrink-0 items-center gap-3 rounded-[10px] border-r-[3px] border-b-[3px] border-transparent px-2.5 text-[13px] font-medium transition-colors duration-150"
+const TREE_FILL = "bg-red-soft font-semibold text-ink hover:bg-red-soft"
 
 /**
  * The full sidebar: every destination as a row. Sections with pages open and close
@@ -369,9 +369,9 @@ function NavTree() {
           return (
             <li key={d.id}>
               <Link to={d.to} aria-current={current ? "page" : undefined} className={cn(TREE_ROW, current ? TREE_FILL : "text-ink-2 hover:bg-raised")}>
-                <Icon className={cn("size-[18px] shrink-0", current ? "text-white" : "text-faint")} strokeWidth={1.8} aria-hidden />
+                <Icon className={cn("size-[18px] shrink-0", current ? "text-red-light" : "text-faint")} strokeWidth={1.8} aria-hidden />
                 <span className="min-w-0 flex-1 truncate">{d.label}</span>
-                {h?.hint && <span className={cn("font-mono text-[10px] font-normal", current ? "text-[#F3C9C9]" : "text-faint")}>{h.hint}</span>}
+                {h?.hint && <span className={cn("font-mono text-[10px] font-normal", current ? "text-red-light" : "text-faint")}>{h.hint}</span>}
               </Link>
             </li>
           )
@@ -393,11 +393,11 @@ function NavTree() {
               }}
               className={cn(TREE_ROW, fill ? TREE_FILL : current ? "text-ink hover:bg-raised" : "text-ink-2 hover:bg-raised")}
             >
-              <Icon className={cn("size-[18px] shrink-0", fill ? "text-white" : current ? "text-red" : "text-faint")} strokeWidth={1.8} aria-hidden />
+              <Icon className={cn("size-[18px] shrink-0", fill ? "text-red-light" : current ? "text-red-light" : "text-faint")} strokeWidth={1.8} aria-hidden />
               {/* Counts sit on the pages below, so the label gets the room. */}
               <span className="min-w-0 flex-1 truncate text-left">{d.label}</span>
               <ChevronRight
-                className={cn("size-3.5 shrink-0 transition-transform duration-200 motion-reduce:transition-none", isOpen && "rotate-90", fill ? "text-white" : "text-faint")}
+                className={cn("size-3.5 shrink-0 transition-transform duration-200 motion-reduce:transition-none", isOpen && "rotate-90", fill ? "text-red-light" : "text-faint")}
                 aria-hidden
               />
             </button>
@@ -418,7 +418,7 @@ function NavTree() {
                         to={c.to}
                         aria-current={here ? "page" : undefined}
                         className={cn(
-                          "flex h-8 items-center gap-2 rounded-[6px] px-2 font-mono text-xs whitespace-nowrap text-[#A3A8B1] hover:bg-raised hover:text-white",
+                          "flex h-8 items-center gap-2 rounded-[6px] px-2 text-[13px] whitespace-nowrap text-muted-foreground hover:bg-raised hover:text-white",
                           here && "bg-line text-white before:size-1.5 before:shrink-0 before:rounded-[1.5px] before:bg-red before:content-['']",
                         )}
                       >

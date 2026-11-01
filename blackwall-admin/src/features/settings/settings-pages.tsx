@@ -6,6 +6,7 @@ import { Kbd } from "@/components/ui/kbd"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Panel } from "@/components/common/panel"
+import { SegmentedTabs } from "@/components/common/segmented-tabs"
 import { cn } from "@/lib/utils"
 import { usePrefs } from "@/stores/prefs"
 import type { SettingsSection } from "@/stores/ui"
@@ -37,11 +38,11 @@ export function SettingsPage({ actions, children }: { actions?: ReactNode; child
   const id = useContext(SectionContext)
   const section = SETTINGS_SECTIONS.find((s) => s.id === id) ?? SETTINGS_SECTIONS[0]
   return (
-    <div data-settings-section={id} className="grid min-w-0 content-start gap-3">
-      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+    <div data-settings-section={id} className="grid min-w-0 content-start gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 border-b border-line pb-4">
         <div className="min-w-0">
-          <h2 className="font-heading text-lg font-bold">{section.label}</h2>
-          <p className="mt-0.5 max-w-2xl text-xs leading-relaxed text-muted-foreground">{section.blurb}</p>
+          <h2 className="font-heading text-xl font-bold tracking-tight">{section.label}</h2>
+          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-ink-2/85">{section.blurb}</p>
         </div>
         {actions && <div className="flex items-center gap-2">{actions}</div>}
       </div>
@@ -76,15 +77,15 @@ export function SettingRow({
     <div
       data-setting-row
       data-match={match}
-      className={cn("flex gap-2 px-3.5 py-3 sm:items-center sm:gap-4", inline ? "items-center gap-4" : "flex-col sm:flex-row", className)}
+      className={cn("flex gap-2 px-4 py-3.5 sm:items-center sm:gap-6", inline ? "items-center gap-4" : "flex-col sm:flex-row", className)}
     >
       <div className="min-w-0 flex-1">
         {htmlFor ? (
-          <Label htmlFor={htmlFor} className="text-[13px]">{title}</Label>
+          <Label htmlFor={htmlFor} className="text-[13px] font-medium text-ink">{title}</Label>
         ) : (
-          <div className="text-[13px] font-medium">{title}</div>
+          <div className="text-[13px] font-medium text-ink">{title}</div>
         )}
-        {description && <div className="mt-1 text-xs leading-relaxed text-muted-foreground">{description}</div>}
+        {description && <div className="mt-1 max-w-[62ch] text-xs leading-relaxed text-muted-foreground">{description}</div>}
       </div>
       {children && <div className="flex shrink-0 flex-wrap items-center gap-2">{children}</div>}
     </div>
@@ -114,11 +115,37 @@ export function AppearanceSettings() {
   const samples = usePrefs((s) => s.showSamples)
   const workspaceName = usePrefs((s) => s.workspaceName)
   const autoHide = usePrefs((s) => s.autoHideSeconds)
+  const theme = usePrefs((s) => s.theme)
+  const uiFont = usePrefs((s) => s.uiFont)
   const set = usePrefs((s) => s.set)
 
   return (
     <SettingsPage>
       <Panel tool="appearance" command="edit" meta="this browser" bodyClassName="divide-y divide-line">
+        <SettingRow title="Theme" description="Dim is a softer slate between dark and light. Dark is the original near-black look." keywords="dark mode dim colour color contrast">
+          <SegmentedTabs
+            label="Theme"
+            className="w-full sm:w-52"
+            tabs={[
+              { value: "dim", label: "Dim" },
+              { value: "dark", label: "Dark" },
+            ]}
+            value={theme}
+            onChange={(v) => set({ theme: v })}
+          />
+        </SettingRow>
+        <SettingRow title="Interface font" description="Sans for everyday text with mono kept for prompts and numbers, or mono everywhere." keywords="typeface font monospace">
+          <SegmentedTabs
+            label="Interface font"
+            className="w-full sm:w-52"
+            tabs={[
+              { value: "sans", label: "Sans" },
+              { value: "mono", label: "Mono" },
+            ]}
+            value={uiFont}
+            onChange={(v) => set({ uiFont: v })}
+          />
+        </SettingRow>
         <SettingRow title="Workspace name" description="Shown in the Home greeting and as initials at the bottom of the sidebar." htmlFor="ws-name">
           <Input id="ws-name" className="h-8 w-full sm:w-52" maxLength={32} placeholder="e.g. your org" value={workspaceName} onChange={(e) => set({ workspaceName: e.target.value })} />
         </SettingRow>

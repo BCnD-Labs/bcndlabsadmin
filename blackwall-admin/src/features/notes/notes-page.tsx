@@ -93,7 +93,7 @@ export function StickyNote({ note, autoFocus, compact }: { note: Note; autoFocus
         rows={compact ? 2 : 3}
         className="w-full resize-none bg-transparent text-sm leading-relaxed font-medium outline-none placeholder:text-black/45"
       />
-      <div className={cn("mt-1 flex items-center gap-1 text-xs text-black/65 [&_button:hover]:bg-black/10 [&_button:hover]:text-black", !focused && "opacity-80 group-hover:opacity-100")}>
+      <div className={cn("mt-1 flex items-center gap-1 text-xs text-black/75 [&_button:hover]:bg-black/10 [&_button:hover]:text-black", !focused && "opacity-80 group-hover:opacity-100")}>
         <span className="mr-auto">{timeAgo(note.updatedAt)}</span>
         {!compact && (
           <span className="hidden gap-1 group-focus-within:flex group-hover:flex">

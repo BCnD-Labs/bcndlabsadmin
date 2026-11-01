@@ -88,7 +88,7 @@ export function ProductivityPanel({ slot }: PanelBodyProps) {
             { value: "done", label: "Done", count: count("done") },
           ]}
         />
-        <label className="flex h-8 shrink-0 items-center gap-2 rounded-[7px] border border-dashed border-[#3A3D43] bg-well px-2.5 focus-within:border-ledge-hi">
+        <label className="flex h-8 shrink-0 items-center gap-2 rounded-[7px] border border-dashed border-ledge-hi bg-well px-2.5 focus-within:border-ledge-hi">
           <Plus className="size-3 shrink-0 text-faint" strokeWidth={2} aria-hidden />
           <input
             aria-label="New task, due today"
@@ -96,7 +96,7 @@ export function ProductivityPanel({ slot }: PanelBodyProps) {
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={onKey}
             placeholder="Add a task… Enter"
-            className="min-w-0 flex-1 bg-transparent font-mono text-[11px] text-ink outline-none"
+            className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none"
           />
         </label>
         <div
@@ -126,7 +126,7 @@ export function ProductivityPanel({ slot }: PanelBodyProps) {
                     onClick={() => openForm({ kind: "task", id: t.id })}
                     title="Edit task"
                     className={cn(
-                      "min-w-0 flex-1 truncate text-left font-mono text-[11px]",
+                      "min-w-0 flex-1 truncate text-left text-[13px]",
                       t.done ? "text-faint line-through" : "text-ink",
                     )}
                   >
@@ -173,7 +173,7 @@ export function ProductivityPanel({ slot }: PanelBodyProps) {
                       <span className="shrink-0 text-[9px] text-faint">{shortAgo(n.updatedAt)}</span>
                     </span>
                     {rest.join(" ").trim() && (
-                      <span className="line-clamp-2 text-[10px] leading-[1.5] text-[#A3A8B1]">{rest.join(" ").trim()}</span>
+                      <span className="line-clamp-2 text-[10px] leading-[1.5] text-muted-foreground">{rest.join(" ").trim()}</span>
                     )}
                   </button>
                 </li>

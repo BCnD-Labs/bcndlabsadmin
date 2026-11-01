@@ -17,7 +17,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* UI text follows the Interface font setting; Mantine's system stack by default. */
+  --font-sans: var(--bw-ui-font);
+  --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --font-heading: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   /* Logo mark and avatar initials only. */
@@ -44,7 +46,11 @@
   --color-ink-2: var(--bw-text-2);
   --color-faint: var(--bw-faint);
   --color-off: var(--bw-off);
-  --color-check: #4a4e56;
+  --color-check: var(--bw-check);
+  --color-blue: var(--bw-blue);
+  --color-red-hover: var(--bw-red-hover);
+  --color-red-soft: var(--bw-red-soft);
+  --color-red-light: var(--bw-red-light);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -78,8 +84,8 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Error copy: the only red text (#BC1515 fails contrast as text). */
-  --color-red-text: #f08a8a;
+  /* Error copy: the only red text (the fill red fails contrast as text). */
+  --color-red-text: var(--bw-red-text);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -93,29 +99,57 @@
 :root,
 .dark {
   color-scheme: dark;
-  --radius: 0.5rem;
+  --radius: 0.5rem; /* Mantine radius md */
 
-  /* §1 colour tokens */
-  --bw-ground: #0a0d13;
-  --bw-grid: rgba(120, 160, 190, 0.06);
-  --bw-panel: #161719;
-  --bw-raised: #1c1d20;
-  --bw-selected: #202125;
-  --bw-well: #0f1012;
-  --bw-ledge: #2a2c30;
-  --bw-ledge-hi: #2e3035;
-  --bw-line: #26282c;
-  --bw-line-soft: #1e1f22;
-  --bw-border: #2a2c31;
-  --bw-red: #bc1515; /* the only accent: fills, markers, icons, ❯. Never text. */
-  --bw-red-ledge: #6e0c0c;
-  --bw-amber: #e0a526;
-  --bw-green: #5ef0b5;
-  --bw-text: #edeff2;
-  --bw-text-2: #c9cdd3;
-  --bw-muted: #9499a3;
-  --bw-faint: #7c818b; /* lowest allowed for text */
-  --bw-off: #2c2e33;
+  /*
+   * §1 colour tokens. Two themes share every component:
+   *  - Dim (default, below): a mid-tone slate between dark and light mode, modelled
+   *    on Mantine's dark scheme (#242424 body / #2e2e2e cards / #424242 borders)
+   *    with a cool tint. Flat 1px-bordered cards with soft shadows.
+   *  - Dark (html[data-theme="dark"]): the original near-black terminal look with
+   *    the 4px panel ledge.
+   * Surfaces step up: ground → well → panel → raised → selected.
+   */
+  --bw-ground: #1f2228;
+  --bw-grid: rgba(170, 190, 215, 0.035);
+  --bw-panel: #2a2f37;
+  --bw-raised: #323842;
+  --bw-selected: #3a414c;
+  --bw-well: #1c1f25;
+  --bw-ledge: #3b424d;
+  --bw-ledge-hi: #444b57;
+  --bw-line: #373d47;
+  --bw-line-soft: #30353e;
+  --bw-border: #444b57;
+  --bw-edge: #3a414c;
+  --bw-red: #c92a2a; /* brand accent (Mantine red.9): fills, markers, icons, ❯. Never small text. */
+  --bw-red-hover: #b52424;
+  --bw-red-ledge: #8f1d1d;
+  /* Mantine "light" variant: a 15% tint of the accent with a light-red label. */
+  --bw-red-soft: rgba(250, 82, 82, 0.15);
+  --bw-red-light: #ff8f8f;
+  --bw-red-text: #ffa8a8;
+  --bw-amber: #e8b85a;
+  --bw-green: #6fd0a0;
+  --bw-blue: #82b1ea;
+  --bw-text: #e7eaee;
+  --bw-text-2: #c8cdd4;
+  --bw-muted: #aab1bc;
+  --bw-faint: #99a1ad; /* lowest allowed for text */
+  --bw-off: #3a404a;
+  --bw-check: #6a7280;
+  --bw-on-paper: #14171c;
+  /* Mantine shadow sm / md. */
+  --bw-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.14) 0 10px 15px -5px, rgba(0, 0, 0, 0.1) 0 7px 7px -5px;
+  --bw-shadow-float: 0 1px 3px rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.28) 0 20px 25px -5px, rgba(0, 0, 0, 0.2) 0 10px 10px -5px;
+  --bw-panel-borders: 1px;
+  --bw-panel-colors: var(--bw-edge);
+  --bw-scanlines: none;
+  /* Settings modal layers. */
+  --bw-settings-bg: #262a31;
+  --bw-settings-side: #22252b;
+  --bw-settings-card: #2e333c;
+  --bw-ui-font: var(--font-system);
   --bw-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 
   /* shadcn variables → tokens */
@@ -155,6 +189,49 @@
   --sidebar-ring: var(--bw-text-2);
 }
 
+/* The original near-black theme (Settings → Appearance → Theme → Dark). */
+html[data-theme="dark"] {
+  --bw-ground: #0b0e14;
+  --bw-grid: rgba(130, 160, 200, 0.045);
+  --bw-panel: #161a22;
+  --bw-raised: #1c212b;
+  --bw-selected: #232935;
+  --bw-well: #0f1218;
+  --bw-ledge: #252b36;
+  --bw-ledge-hi: #2d3441;
+  --bw-line: #232934;
+  --bw-line-soft: #1c2129;
+  --bw-border: #2a303c;
+  --bw-edge: #232a35;
+  --bw-red: #bc1515;
+  --bw-red-hover: #cb2020;
+  --bw-red-ledge: #6e0c0c;
+  --bw-red-soft: rgba(224, 49, 49, 0.16);
+  --bw-red-light: #f08a8a;
+  --bw-red-text: #f08a8a;
+  --bw-amber: #dcaa52;
+  --bw-green: #62d3a2;
+  --bw-blue: #7fa3d6;
+  --bw-text: #e9ecf1;
+  --bw-text-2: #c7cdd6;
+  --bw-muted: #a3abb8;
+  --bw-faint: #838c9a;
+  --bw-off: #2a303b;
+  --bw-check: #4a5261;
+  --bw-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px -14px rgba(0, 0, 0, 0.7);
+  --bw-shadow-float: 0 2px 6px rgba(0, 0, 0, 0.3), 0 24px 56px -12px rgba(0, 0, 0, 0.7);
+  --bw-panel-borders: 1px 4px 4px 1px;
+  --bw-panel-colors: var(--bw-edge) var(--bw-ledge) var(--bw-ledge) var(--bw-edge);
+  --bw-scanlines: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 3px);
+  --bw-settings-bg: #12151c;
+  --bw-settings-side: #0f1218;
+  --bw-settings-card: #1a1f28;
+}
+/* Interface font: Settings → Appearance (Sans by default, Mono for the all-terminal look). */
+html[data-font="mono"] {
+  --bw-ui-font: var(--font-mono);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -167,7 +244,8 @@
   body {
     @apply bg-background text-foreground;
     min-height: 100dvh;
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
     /* 24px grid behind everything; panels sit on top with solid fills. */
     background-image:
       linear-gradient(var(--bw-grid) 1px, transparent 1px),
@@ -220,10 +298,11 @@
   .bw-panel {
     position: relative;
     background: var(--bw-panel);
-    border-radius: 12px;
+    border-radius: 10px;
     border-style: solid;
-    border-color: var(--bw-ledge);
-    border-width: 0 4px 4px 0;
+    border-color: var(--bw-panel-colors);
+    border-width: var(--bw-panel-borders);
+    box-shadow: var(--bw-shadow);
     min-width: 0;
   }
   .bw-panel::after {
@@ -232,13 +311,15 @@
     inset: 0;
     border-radius: inherit;
     pointer-events: none;
-    background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 3px);
+    background-image: var(--bw-scanlines);
   }
   /* Floating cards (calendar, notifications, dialogs): the one place with a shadow. */
   .bw-float {
-    border-width: 1px 4px 4px 1px;
-    border-color: var(--bw-ledge-hi);
-    box-shadow: 0 20px 44px rgba(0, 0, 0, 0.55);
+    border-width: var(--bw-panel-borders);
+    border-color: var(--bw-border);
+    border-right-color: var(--bw-ledge-hi);
+    border-bottom-color: var(--bw-ledge-hi);
+    box-shadow: var(--bw-shadow-float);
   }
   .bw-well {
     background: var(--bw-well);
@@ -276,24 +357,43 @@
     pointer-events: auto;
     transition: transform 0.28s var(--bw-ease), opacity 0.2s ease, visibility 0s;
   }
-  /* Auto-hide countdown: a 2px red bar that drains over --bw-drain seconds. */
-  .bw-drain {
-    height: 2px;
-    background: var(--bw-red);
-    transform-origin: left center;
-    animation: bw-drain var(--bw-drain, 5s) linear forwards;
-  }
-
-
   html[data-retro="off"] .bw-panel::after {
     background-image: none;
   }
 
-  /* §1 label: 10px mono caps, faint. */
+  /*
+   * Settings modal: three clear layers. The sidebar is the darkest, the content
+   * pane sits a step above it, and the setting cards a step above that, with
+   * hairline borders instead of the heavy page ledge.
+   */
+  .bw-settings {
+    background: var(--bw-settings-bg);
+  }
+  .bw-settings-side {
+    background: var(--bw-settings-side);
+  }
+  .bw-settings-body {
+    --bw-panel: var(--bw-settings-card);
+  }
+  .bw-settings-body .bw-panel {
+    border-width: 1px 1px 2px;
+    border-color: var(--bw-border) var(--bw-border) var(--bw-ledge-hi);
+    border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  }
+  .bw-settings-body .bw-panel::after {
+    background-image: none;
+  }
+  .bw-settings-body .bw-panel > header {
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  /* §1 label: small caps, faint (Mantine section-label style). */
   .bw-label {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    letter-spacing: 0.12em;
+    font-family: var(--font-sans);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
     text-transform: uppercase;
     color: var(--bw-faint);
   }
@@ -317,15 +417,6 @@
   display: block;
 }
 
-@keyframes bw-drain {
-  from {
-    transform: scaleX(1);
-  }
-  to {
-    transform: scaleX(0);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -337,9 +428,3 @@
   }
 }
 
-/* Reduced motion: keep the countdown bar visible (static) instead of an instant drain. */
-@media (prefers-reduced-motion: reduce) {
-  .bw-drain {
-    animation: none !important;
-  }
-}

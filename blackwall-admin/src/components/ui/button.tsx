@@ -4,34 +4,35 @@ import { cn } from "cn"
 import { Slot } from "radix-ui"
 
 /*
- * Spec §2 buttons. Primary: red fill, white 11px/600 mono, 2px red ledge on the
- * right + bottom. Ghost: transparent, 1px border top/left + 2px right/bottom.
- * Heights are 28px (default) and 32px (lg, the header).
+ * Buttons, after Mantine's variants. Primary = "filled" (solid red, white label).
+ * Ghost = "default" (raised fill + 1px border). Outline = transparent + border.
+ * Quiet = "subtle" (no border, tint on hover). Light = a 15% red tint with a
+ * light-red label. Labels use the interface font, 600 weight.
+ * Heights: 30px default, 32px lg (the header), 26px sm, 22px xs.
  */
-const ledge = "border-solid border-t-0 border-l-0 border-r-2 border-b-2"
-const rim = "border-solid border-t border-l border-r-2 border-b-2 border-rim"
-const primary = `${ledge} border-red-ledge bg-red font-semibold text-white hover:bg-[#c81c1c] active:translate-y-px`
+const primary = "border border-transparent bg-red font-semibold text-white shadow-xs hover:bg-red-hover active:translate-y-px"
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-[7px] font-mono text-[11px] whitespace-nowrap transition-[background-color,color,transform] duration-150 ease-bw select-none disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-[8px] text-[13px] font-medium whitespace-nowrap transition-[background-color,border-color,color,transform] duration-150 ease-bw select-none active:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
   {
     variants: {
       variant: {
         default: primary,
         primary,
-        ghost: `${rim} bg-transparent text-ink-2 hover:bg-raised hover:text-ink aria-expanded:bg-selected aria-pressed:bg-selected`,
-        outline: `${rim} bg-transparent text-ink-2 hover:bg-raised hover:text-ink aria-expanded:bg-selected aria-pressed:bg-selected`,
-        secondary: `${ledge} border-ledge-hi bg-raised text-ink hover:bg-selected`,
+        ghost: "border border-rim bg-raised text-ink hover:bg-selected aria-expanded:bg-selected aria-pressed:bg-selected",
+        outline: "border border-rim bg-transparent text-ink-2 hover:bg-raised hover:text-ink aria-expanded:bg-raised aria-pressed:bg-raised",
+        secondary: "border border-transparent bg-selected text-ink hover:bg-ledge-hi",
+        light: "border border-transparent bg-red-soft font-semibold text-red-light hover:bg-red/25",
         /* Borderless: icon buttons in panel headers and rows, and Cancel next to a primary. */
-        quiet: "text-ink-2 hover:bg-raised hover:text-ink aria-expanded:bg-raised",
+        quiet: "border border-transparent text-ink-2 hover:bg-raised hover:text-ink aria-expanded:bg-raised",
         destructive: primary,
-        link: "text-ink-2 underline-offset-4 hover:text-ink hover:underline",
+        link: "text-ink-2 underline-offset-4 hover:text-ink hover:underline active:translate-y-0",
       },
       size: {
-        default: "h-7 gap-1.5 px-2.5",
-        xs: "h-[22px] gap-1 rounded-[5px] px-1.5 text-[10px] [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-6 gap-1 rounded-[6px] px-2 [&_svg:not([class*='size-'])]:size-3",
-        lg: "h-8 gap-1.5 px-2.5",
+        default: "h-[30px] gap-1.5 px-3",
+        xs: "h-[22px] gap-1 rounded-[6px] px-2 text-[11px] [&_svg:not([class*='size-'])]:size-3",
+        sm: "h-[26px] gap-1 rounded-[6px] px-2.5 text-xs [&_svg:not([class*='size-'])]:size-3",
+        lg: "h-8 gap-1.5 px-3.5",
         icon: "size-8",
         "icon-xs": "size-6 rounded-[6px] [&_svg:not([class*='size-'])]:size-3",
         "icon-sm": "size-7",

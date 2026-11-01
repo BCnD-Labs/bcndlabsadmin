@@ -55,7 +55,7 @@ const STATUS: Record<ConnectionStatus, { label: string; square: string; text: st
 function StatusPill({ status }: { status: ConnectionStatus }) {
   const s = STATUS[status]
   return (
-    <span className={cn("inline-flex h-5 shrink-0 items-center gap-1.5 rounded-[5px] border border-rim px-1.5 font-mono text-[10px] tracking-wide uppercase", s.text)}>
+    <span className={cn("inline-flex h-5 shrink-0 items-center gap-1.5 rounded-full px-2 text-[10px] font-bold tracking-[0.03em] uppercase bg-ink-2/8", s.text)}>
       <span className={cn("size-1.5 rounded-[1.5px]", s.square)} aria-hidden />
       {s.label}
     </span>

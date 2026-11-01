@@ -22,7 +22,7 @@ export function StatusMarker({ tone, className }: { tone: Tone; className?: stri
 
 /** A project's label colour. These are names you pick, not statuses, so none of them is the status green. */
 export const PROJECT_DOT: Record<ProjectColor, string> = {
-  teal: "bg-[#6FB7C9]",
+  teal: "bg-[#74aab9]",
   amber: "bg-amber",
   red: "bg-red",
   slate: "bg-muted-foreground",
@@ -33,7 +33,7 @@ export function ProjectTag({ project, className }: { project?: Project; classNam
   return (
     <span
       className={cn(
-        "inline-flex h-5 max-w-full shrink-0 items-center gap-1.5 rounded-[5px] border border-rim bg-well px-1.5 font-mono text-[10px] tracking-wide text-ink-2",
+        "inline-flex h-5 max-w-full shrink-0 items-center gap-1.5 rounded-full bg-ink-2/8 px-2 text-[11px] font-medium text-ink-2",
         className,
       )}
       title={project.name}
@@ -67,7 +67,7 @@ const DRAFT_TONE: Record<DraftStatus, Tone> = { idea: "off", drafting: "off", re
 
 export function DraftStatusTag({ status }: { status: DraftStatus }) {
   return (
-    <span className="inline-flex h-5 shrink-0 items-center gap-1.5 rounded-[5px] border border-rim px-1.5 font-mono text-[10px] tracking-wide text-ink-2 uppercase">
+    <span className="inline-flex h-5 shrink-0 items-center gap-1.5 rounded-full px-2 text-[10px] font-bold tracking-[0.03em] uppercase bg-ink-2/8 text-ink-2">
       <StatusMarker tone={DRAFT_TONE[status]} />
       {DRAFT_STATUS_LABEL[status]}
     </span>
