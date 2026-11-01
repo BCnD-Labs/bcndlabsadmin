@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { ColorPicker } from "@/features/notes/notes-page"
 import type { Note, NoteColor } from "@/lib/types"
 import { useWorkspace } from "@/stores/workspace"
-import { Field } from "./fields"
+import { CourseSelect, Field } from "./fields"
 import { FormFrame } from "./form-frame"
 
 /** Quick note dialog (header "New" menu, search). The Notes board edits inline. */
@@ -17,13 +17,15 @@ export function NoteForm({ id, defaults, onDone }: { id?: string; defaults?: Par
   const [text, setText] = useState(base?.text ?? "")
   const [color, setColor] = useState<NoteColor>(base?.color ?? "amber")
   const [pinned, setPinned] = useState(base?.pinned ?? false)
+  const [courseId, setCourseId] = useState(base?.courseId)
+  const hasCourses = useWorkspace((s) => s.courses.length > 0)
 
   const save = () => {
     if (existing) {
-      update("notes", existing.id, { text, color, pinned })
+      update("notes", existing.id, { text, color, pinned, courseId })
       toast.success("Note saved")
     } else {
-      create("notes", { text, color, pinned })
+      create("notes", { text, color, pinned, courseId })
       toast.success("Note added")
     }
     onDone()
@@ -47,6 +49,11 @@ export function NoteForm({ id, defaults, onDone }: { id?: string; defaults?: Par
       <Field label="Note" htmlFor="note-text">
         <Textarea id="note-text" autoFocus rows={6} value={text} onChange={(e) => setText(e.target.value)} placeholder="Jot something down…" />
       </Field>
+      {(hasCourses || courseId) && (
+        <Field label="Course" htmlFor="note-course">
+          <CourseSelect id="note-course" value={courseId} onChange={setCourseId} />
+        </Field>
+      )}
       <div className="flex flex-wrap items-center gap-4">
         <ColorPicker value={color} onChange={setColor} />
         <div className="ml-auto flex items-center gap-2">

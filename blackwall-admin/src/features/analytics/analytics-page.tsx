@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { useSearchParams } from "react-router-dom"
 import { useWorkspace } from "@/stores/workspace"
 import { GROUP_ORDER, groupOf } from "@/features/work/task-utils"
 import { CompletedChart, JournalHeatmap, Stat } from "./personal-charts"
@@ -9,7 +8,6 @@ import { DataTable } from "@/components/common/list"
 import { PageHeader } from "@/components/common/page-header"
 import { Panel } from "@/components/common/panel"
 import { SourceBadge } from "@/components/common/source-badge"
-import { ViewTabs } from "@/components/common/view-tabs"
 import { cn } from "@/lib/utils"
 import { useAnalytics } from "@/services/data"
 import type { TrafficRange } from "@/services/types"
@@ -124,23 +122,22 @@ function PersonalAnalytics() {
   )
 }
 
-export function AnalyticsPage() {
-  const [params] = useSearchParams()
-  const view = params.get("view") === "website" ? "website" : "you"
+/** Productivity → Insights: worked out from your own tasks and logs. */
+export function InsightsPage() {
   return (
     <>
-      <PageHeader
-        title="Analytics"
-        subtitle={view === "you" ? "Worked out from your own tasks and daily logs, in this browser." : "Your website's traffic, through your analytics connection."}
-      />
-      <ViewTabs
-        label="Analytics view"
-        items={[
-          { label: "You", to: "/analytics", active: view === "you" },
-          { label: "Website", to: "/analytics?view=website", active: view === "website" },
-        ]}
-      />
-      {view === "website" ? <WebsiteAnalytics /> : <PersonalAnalytics />}
+      <PageHeader title="Insights" subtitle="Worked out from your own tasks and daily logs, in this browser." />
+      <PersonalAnalytics />
+    </>
+  )
+}
+
+/** CMS → Site analytics: your website's traffic through the analytics connection. */
+export function SiteAnalyticsPage() {
+  return (
+    <>
+      <PageHeader title="Site analytics" subtitle="Your website's visitors, pages and referrers, through your analytics connection." />
+      <WebsiteAnalytics />
     </>
   )
 }

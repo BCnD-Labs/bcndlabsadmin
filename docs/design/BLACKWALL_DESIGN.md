@@ -191,7 +191,7 @@ Control heights: **32px** in page headers and toolbars (`Button size="lg"`, `Inp
 Title (Space Grotesk 24/700)                 [secondary] [Primary]
 One-line subtitle (12px muted)
 ```
-- Every page has one, and only one `<h1>`. The app header shows a breadcrumb (`❯ work / tasks`), not the title.
+- Every page has one, and only one `<h1>`. The app header shows a breadcrumb (`❯ productivity / tasks`), not the title.
 - At most **one primary** action; the rest are `outline`. Actions sit under the title on phones.
 - `back` adds a small "← Projects" link above the title for detail pages. `badge` holds a `SourceBadge`.
 
@@ -207,6 +207,20 @@ Phones get the search and a section select above the content.
 ### Notes
 Sticky notes use muted paper colours (low chroma, mid-light: plain `#BCC2CC`, yellow `#CFBB7C`, mint `#8EBDAF`,
 pink `#C9A2B3`, blue `#9EAECB`) with `#14171C` ink, ≥ 8:1 on each.
+
+### Learning (Productivity → Learning)
+Navigation: Home · Productivity (Tasks, Projects, Learning, Calendar & daily log, Notes, Insights) · Development · CMS
+(Pages & posts, Drafts, Media, Site analytics).
+
+- **Overview:** a summary panel (in progress, due this week, overdue, % complete across active courses), course cards
+  (3px colour bar on top, code chip, status, instructor and schedule, progress bar, next item) filtered by
+  Active / Upcoming / Done / All, and a sticky **coursework $ upcoming** panel (overdue, next 7 days, the week after).
+  "Add learning" is a menu so other kinds of learning can join Course later.
+- **Course page:** coursework panel (To do / Done / All, quick-add that understands "fri"), course info with a
+  progress block, and course notes (blue sticky notes, also on the Notes page).
+- Coursework rows: checkbox, a type icon in a tinted square (assignment, exam, milestone, event), title, notes or
+  course chip underneath, and the date/time on the right (amber when overdue).
+- Course colours are label colours (blue, teal, green, amber, red, violet, slate), desaturated; never status colours.
 
 ### Panel
 The §2 panel. Header is always the prompt `❯ tool $ command`, with meta and at most one small action group on the
@@ -230,7 +244,7 @@ Title + one-line description on the left, the control on the right (stacked on p
   under `sm`, so tables never scroll sideways on a phone.
 
 ### Tabs
-- `Tabs` (underline): switching between **views** of a page (Analytics: You / Website). Accent is a 2px red underline.
+- `Tabs` (underline): switching between **views** of a page. Accent is a 2px red underline.
 - `SegmentedTabs` (§2): **filters** inside a panel (Today / Next / Done, All / Posts / Pages).
 
 ### Toolbar

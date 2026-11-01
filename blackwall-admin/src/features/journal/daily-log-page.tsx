@@ -15,7 +15,8 @@ import { TaskRow } from "@/features/work/task-row"
 import { compareTasks } from "@/features/work/task-utils"
 import { CalendarLegend, JournalCalendar } from "./journal-calendar"
 
-export const logHref = (date: string) => `/work/calendar/${date}`
+import { logHref } from "@/lib/routes"
+export { logHref }
 const VALID = /^\d{4}-\d{2}-\d{2}$/
 
 export function DailyLogPage() {

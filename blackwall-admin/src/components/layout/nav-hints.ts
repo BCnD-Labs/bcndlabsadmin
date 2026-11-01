@@ -1,4 +1,5 @@
-import { todayKey } from "@/lib/dates"
+import { daysUntil, todayKey } from "@/lib/dates"
+import { calendarHref, draftsHref, learningHref, notesHref, projectsHref, tasksHref } from "@/lib/routes"
 import { useWorkspace } from "@/stores/workspace"
 
 export interface NavHints {
@@ -19,20 +20,24 @@ export function useNavHints(): Record<string, NavHints> {
   const repos = useWorkspace((s) => s.repos.length)
   const drafts = useWorkspace((s) => s.drafts.length)
   const logged = useWorkspace((s) => s.journal.some((j) => j.id === todayKey()))
+  const courses = useWorkspace((s) => s.courses.length)
+  // Coursework due in the next 7 days (or overdue).
+  const dueSoon = useWorkspace((s) => s.tasks.filter((t) => t.courseId && !t.done && t.due && daysUntil(t.due) <= 7).length)
 
   const n = (count: number) => (count ? String(count) : "")
   return {
-    work: {
+    productivity: {
       hint: `${open} open`,
       subs: {
-        "/work/tasks": n(open),
-        "/work/projects": n(projects),
-        "/work/calendar": logged ? "logged" : "",
+        [tasksHref]: n(open),
+        [projectsHref]: n(projects),
+        [learningHref]: dueSoon ? `${dueSoon} due` : n(courses),
+        [calendarHref]: logged ? "logged" : "",
+        [notesHref]: n(notes),
       },
     },
     development: { hint: repos ? `${repos} repos` : undefined, subs: { "/development/repositories": n(repos) } },
-    content: { hint: drafts ? `${drafts} drafts` : undefined, subs: { "/content/drafts": n(drafts) } },
-    notes: { hint: `${notes} notes` },
+    cms: { hint: drafts ? `${drafts} drafts` : undefined, subs: { [draftsHref]: n(drafts) } },
   }
 }
 

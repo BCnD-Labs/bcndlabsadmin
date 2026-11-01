@@ -300,7 +300,7 @@ function DataPanel() {
   }
 
   const describe = (s: Record<string, unknown[] | undefined>) =>
-    `${s.tasks?.length ?? 0} tasks, ${s.journal?.length ?? 0} logs, ${s.notes?.length ?? 0} notes`
+    `${s.tasks?.length ?? 0} tasks, ${s.journal?.length ?? 0} logs, ${s.notes?.length ?? 0} notes, ${s.courses?.length ?? 0} courses`
 
   const readImport = async (file: File) => {
     try {
@@ -322,7 +322,7 @@ function DataPanel() {
 
   return (
     <Panel tool="workspace" command="data" meta="this browser" bodyClassName="divide-y divide-line">
-      <SettingRow title="Export" description="Download your tasks, notes and daily logs as a file. They're saved in this browser only, so keep a copy.">
+      <SettingRow title="Export" description="Download your tasks, notes, daily logs and courses as a file. They're saved in this browser only, so keep a copy.">
         <Button variant="outline" onClick={exportData}>
           <Download /> Export
         </Button>

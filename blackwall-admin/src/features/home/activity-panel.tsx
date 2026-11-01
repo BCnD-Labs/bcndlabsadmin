@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Panel } from "@/components/common/panel"
 import { CompletedChart, Stat } from "@/features/analytics/personal-charts"
 import { usePersonalStats } from "@/features/analytics/personal-stats"
+import { insightsHref } from "@/lib/routes"
 
 export function ActivityPanel({ className }: { className?: string }) {
   const s = usePersonalStats(14)
@@ -15,7 +16,7 @@ export function ActivityPanel({ className }: { className?: string }) {
       bodyClassName="flex flex-col gap-3 p-3"
       actions={
         <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
-          <Link to="/analytics">More charts</Link>
+          <Link to={insightsHref}>More charts</Link>
         </Button>
       }
     >

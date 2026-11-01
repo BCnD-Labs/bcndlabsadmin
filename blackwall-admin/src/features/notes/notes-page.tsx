@@ -13,6 +13,9 @@ import { cn } from "@/lib/utils"
 import type { Note, NoteColor } from "@/lib/types"
 import { useWorkspace } from "@/stores/workspace"
 import { NOTE_COLORS, noteColor } from "./note-colors"
+import { courseHref } from "@/lib/routes"
+import { courseLabel } from "@/features/learning/learning-utils"
+import { Link } from "react-router-dom"
 
 export function ColorPicker({ value, onChange }: { value: NoteColor; onChange: (c: NoteColor) => void }) {
   return (
@@ -42,6 +45,7 @@ export function StickyNote({ note, autoFocus, compact }: { note: Note; autoFocus
   const update = useWorkspace((s) => s.update)
   const remove = useWorkspace((s) => s.remove)
   const togglePin = useWorkspace((s) => s.togglePin)
+  const course = useWorkspace((s) => (note.courseId ? s.courses.find((c) => c.id === note.courseId) : undefined))
   const [text, setText] = useState(note.text)
   const [focused, setFocused] = useState(false)
   const ref = useRef<HTMLTextAreaElement>(null)
@@ -94,7 +98,14 @@ export function StickyNote({ note, autoFocus, compact }: { note: Note; autoFocus
         className="w-full resize-none bg-transparent text-sm leading-relaxed font-medium outline-none placeholder:text-black/45"
       />
       <div className={cn("mt-1 flex items-center gap-1 text-xs text-black/75 [&_button:hover]:bg-black/10 [&_button:hover]:text-black", !focused && "opacity-80 group-hover:opacity-100")}>
-        <span className="mr-auto">{timeAgo(note.updatedAt)}</span>
+        <span className="mr-auto flex min-w-0 items-center gap-1.5">
+          {course && !compact && (
+            <Link to={courseHref(course.id)} title={course.title} className="truncate rounded-full bg-black/10 px-1.5 font-semibold text-black/80 hover:bg-black/15">
+              {courseLabel(course)}
+            </Link>
+          )}
+          <span className="shrink-0">{timeAgo(note.updatedAt)}</span>
+        </span>
         {!compact && (
           <span className="hidden gap-1 group-focus-within:flex group-hover:flex">
             {NOTE_COLORS.map((c) => (

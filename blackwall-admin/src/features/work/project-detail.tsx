@@ -8,7 +8,7 @@ import { Panel } from "@/components/common/panel"
 import { DraftStatusTag, ProjectStatusLabel, ProjectTag } from "@/components/common/tags"
 import { useCreateDraft } from "@/features/content/use-create-draft"
 import { timeAgo } from "@/lib/dates"
-import { draftHref } from "@/lib/routes"
+import { draftHref, projectsHref } from "@/lib/routes"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
 
@@ -23,9 +23,9 @@ export function ProjectDetail() {
   if (!project) {
     return (
       <>
-        <PageHeader title="Project not found" back={{ to: "/work/projects", label: "Projects" }} />
+        <PageHeader title="Project not found" back={{ to: projectsHref, label: "Projects" }} />
         <Panel tool="projects" command={`open ${id}`}>
-          <EmptyState icon={FolderX} title="This project doesn't exist" action={<Button variant="outline" asChild><Link to="/work/projects">Back to projects</Link></Button>}>
+          <EmptyState icon={FolderX} title="This project doesn't exist" action={<Button variant="outline" asChild><Link to={projectsHref}>Back to projects</Link></Button>}>
             It may have been deleted.
           </EmptyState>
         </Panel>
@@ -41,7 +41,7 @@ export function ProjectDetail() {
   return (
     <>
       <PageHeader
-        back={{ to: "/work/projects", label: "Projects" }}
+        back={{ to: projectsHref, label: "Projects" }}
         title={project.name}
         badge={<><ProjectTag project={project} /><ProjectStatusLabel status={project.status} /></>}
         subtitle={<>{project.description || "No description."} <span className="text-faint">· Updated {timeAgo(project.updatedAt)}</span></>}

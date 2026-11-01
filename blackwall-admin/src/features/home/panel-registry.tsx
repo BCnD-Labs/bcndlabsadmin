@@ -2,6 +2,7 @@ import type { ComponentType } from "react"
 import { Button } from "@/components/ui/button"
 import { PANEL_TYPES, type PanelType } from "@/lib/home-slots"
 import { usePrefs } from "@/stores/prefs"
+import { CourseworkMeta, CourseworkPanel } from "./coursework-panel"
 import { ProductivityMeta, ProductivityPanel } from "./productivity-panel"
 
 export interface PanelBodyProps {
@@ -52,5 +53,6 @@ function EmptySlot({ slot }: PanelBodyProps) {
 
 export const PANELS: Record<PanelType, PanelDef> = {
   productivity: { label: "Productivity", tool: "productivity", command: "today", Meta: ProductivityMeta, Body: ProductivityPanel },
+  coursework: { label: "Coursework", tool: "learning", command: "upcoming", Meta: CourseworkMeta, Body: CourseworkPanel },
   empty: { label: "Empty", tool: "slot", command: "empty", Body: EmptySlot },
 }

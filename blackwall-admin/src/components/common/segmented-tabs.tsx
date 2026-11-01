@@ -57,7 +57,7 @@ export function SegmentedTabs<V extends string>({
             tabIndex={on ? 0 : -1}
             onClick={() => onChange(t.value)}
             className={cn(
-              "flex h-[26px] flex-1 items-center justify-center gap-1.5 rounded-[6px] text-xs font-medium transition-[background-color,color,box-shadow] duration-150",
+              "flex h-[26px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[6px] text-xs font-medium whitespace-nowrap transition-[background-color,color,box-shadow] duration-150",
               on ? "bg-selected text-ink shadow-[0_1px_3px_rgba(0,0,0,0.25)]" : "text-muted-foreground hover:text-ink",
               tabClassName,
             )}

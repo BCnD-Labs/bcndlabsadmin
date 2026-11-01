@@ -12,6 +12,7 @@ import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
 import { compareTasks } from "@/features/work/task-utils"
 import type { PanelBodyProps } from "./panel-registry"
+import { notesHref } from "@/lib/routes"
 
 type Tab = "today" | "next" | "done"
 
@@ -183,7 +184,7 @@ export function ProductivityPanel({ slot }: PanelBodyProps) {
         ) : (
           <p className="text-[11px] leading-relaxed text-muted-foreground">
             No pinned notes. Pin one in{" "}
-            <Link to="/notes" className="text-ink-2 underline-offset-2 hover:underline">
+            <Link to={notesHref} className="text-ink-2 underline-offset-2 hover:underline">
               Notes
             </Link>{" "}
             and it shows here.

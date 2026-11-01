@@ -1,6 +1,6 @@
 /** Home grid slots: which panel type each of the four squares shows. */
 
-export const PANEL_TYPES = ["productivity", "empty"] as const
+export const PANEL_TYPES = ["productivity", "coursework", "empty"] as const
 export type PanelType = (typeof PANEL_TYPES)[number]
 
 export const SLOT_COUNT = 4

@@ -1,7 +1,9 @@
 import { CalendarClock, Star } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { format } from "date-fns"
-import { relativeDue } from "@/lib/dates"
+import { formatTime, relativeDue } from "@/lib/dates"
+import { CourseTag } from "@/features/learning/coursework"
+import { learningType } from "@/features/learning/learning-utils"
 import { cn } from "@/lib/utils"
 import type { Task } from "@/lib/types"
 import { useUi } from "@/stores/ui"
@@ -12,7 +14,9 @@ export function TaskRow({ task, onToggle, showDetails }: { task: Task; onToggle?
   const toggleTask = useWorkspace((s) => s.toggleTask)
   const toggleStar = useWorkspace((s) => s.toggleStar)
   const openForm = useUi((s) => s.openForm)
+  const course = useWorkspace((s) => (task.courseId ? s.courses.find((c) => c.id === task.courseId) : undefined))
   const overdue = isOverdue(task)
+  const TypeIcon = course ? learningType(task.learningType).icon : null
 
   return (
     <li className="group flex min-h-10 items-center gap-2.5 border-b border-line-soft px-3.5 py-1.5 last:border-b-0 hover:bg-raised" data-testid="task-row">
@@ -28,11 +32,15 @@ export function TaskRow({ task, onToggle, showDetails }: { task: Task; onToggle?
         type="button"
         onClick={() => openForm({ kind: "task", id: task.id })}
         className="min-w-0 flex-1 rounded-[4px] py-0.5 text-left"
-        title="Edit task"
+        title={course ? `Edit ${learningType(task.learningType).label.toLowerCase()}` : "Edit task"}
       >
-        <span className={cn("block truncate text-[13px] text-ink", task.done && "text-faint line-through")}>{task.title}</span>
+        <span className={cn("flex min-w-0 items-center gap-1.5 text-[13px] text-ink", task.done && "text-faint line-through")}>
+          {TypeIcon && <TypeIcon className="size-3.5 shrink-0 text-muted-foreground" aria-label={learningType(task.learningType).label} />}
+          <span className="truncate">{task.title}</span>
+        </span>
         {showDetails && task.details && <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{task.details}</span>}
       </button>
+      {course && <CourseTag course={course} className="hidden sm:inline-flex" />}
       {task.done && task.completedAt ? (
         <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums" title={task.due ? `Was due ${task.due}` : undefined}>
           Done {format(new Date(task.completedAt), "EEE MMM d")}
@@ -46,6 +54,7 @@ export function TaskRow({ task, onToggle, showDetails }: { task: Task; onToggle?
         >
           {overdue && <CalendarClock className="size-3" aria-hidden />}
           {relativeDue(task.due)}
+          {task.time && <span className="text-faint">· {formatTime(task.time)}</span>}
         </span>
       )}
       <button

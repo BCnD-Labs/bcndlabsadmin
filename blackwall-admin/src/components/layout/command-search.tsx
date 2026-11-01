@@ -3,6 +3,7 @@ import {
   Circle,
   FileText,
   FolderKanban,
+  GraduationCap,
   PenLine,
   NotebookText,
   Plus,
@@ -19,7 +20,8 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command"
-import { draftHref, noteHref, projectHref } from "@/lib/routes"
+import { courseHref, draftHref, noteHref, projectHref } from "@/lib/routes"
+import { courseLabel } from "@/features/learning/learning-utils"
 import { DRAFT_STATUS_LABEL } from "@/components/common/tags"
 import { useCreateDraft } from "@/features/content/use-create-draft"
 import { logHref } from "@/features/journal/daily-log-page"
@@ -54,7 +56,7 @@ export function CommandSearch() {
   const openForm = useUi((s) => s.openForm)
   const navigate = useNavigate()
   const createDraft = useCreateDraft()
-  const { tasks, projects, notes, drafts, journal } = useWorkspace()
+  const { tasks, projects, notes, drafts, journal, courses } = useWorkspace()
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -74,6 +76,8 @@ export function CommandSearch() {
     return () => document.removeEventListener("keydown", onKey)
   }, [setOpen])
 
+  const courseCodes = new Map(courses.map((c) => [c.id, `${courseLabel(c)} ${c.title}`]))
+
   const run = (fn: () => void) => {
     setOpen(false)
     fn()
@@ -84,11 +88,11 @@ export function CommandSearch() {
       open={open}
       onOpenChange={setOpen}
       title="Search workspace"
-      description="Search tasks, notes, daily logs, projects and drafts"
+      description="Search tasks, coursework, courses, notes, daily logs, projects and drafts"
       className="sm:max-w-xl"
     >
       <Command filter={rank}>
-      <CommandInput placeholder="Search tasks, notes, logs, projects, drafts…" />
+      <CommandInput placeholder="Search tasks, courses, notes, logs, projects, drafts…" />
       <CommandList className="max-h-[min(60vh,420px)]">
         <CommandEmpty>No local records match.</CommandEmpty>
 
@@ -98,12 +102,29 @@ export function CommandSearch() {
               <CommandItem
                 key={t.id}
                 value={`task-${t.id}`}
-                keywords={[t.title, t.details ?? ""]}
+                keywords={[t.title, t.details ?? "", ...(t.courseId ? [courseCodes.get(t.courseId) ?? ""] : [])]}
                 onSelect={() => run(() => openForm({ kind: "task", id: t.id }))}
               >
                 {t.done ? <CheckCircle2 className="text-muted-foreground" /> : <Circle />}
                 <span className={t.done ? "text-muted-foreground line-through" : ""}>{t.title}</span>
                 {t.due && <span className="ml-auto font-mono text-xs text-muted-foreground">{t.due}</span>}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {courses.length > 0 && (
+          <CommandGroup heading="Courses">
+            {courses.map((c) => (
+              <CommandItem
+                key={c.id}
+                value={`course-${c.id}`}
+                keywords={[c.title, c.code, c.instructor, c.term, ...c.tags]}
+                onSelect={() => run(() => navigate(courseHref(c.id)))}
+              >
+                <GraduationCap />
+                {c.title}
+                <span className="ml-auto font-mono text-xs text-muted-foreground">{courseLabel(c)}</span>
               </CommandItem>
             ))}
           </CommandGroup>
@@ -187,7 +208,7 @@ export function CommandSearch() {
           )}
         </CommandGroup>
         <CommandGroup heading="Create">
-          {(["task", "note", "project", "repo"] as const).map((kind) => (
+          {(["task", "note", "course", "project", "repo"] as const).map((kind) => (
             <CommandItem
               key={kind}
               value={`create-${kind}`}

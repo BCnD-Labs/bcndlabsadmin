@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/common/empty-state"
 import { Panel } from "@/components/common/panel"
 import { StickyNote } from "@/features/notes/notes-page"
 import { useWorkspace } from "@/stores/workspace"
+import { notesHref } from "@/lib/routes"
 
 export function PinnedNotes({ className }: { className?: string }) {
   const notes = useWorkspace((s) => s.notes)
@@ -22,7 +23,7 @@ export function PinnedNotes({ className }: { className?: string }) {
       actions={
         <>
           <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
-            <Link to="/notes">All notes</Link>
+            <Link to={notesHref}>All notes</Link>
           </Button>
           <Button
             size="sm"

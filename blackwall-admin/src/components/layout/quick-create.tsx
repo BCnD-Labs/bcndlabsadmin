@@ -1,7 +1,9 @@
 import {
   FilePlus2,
+  ClipboardList,
   FolderPlus,
   GitBranchPlus,
+  GraduationCap,
   ListPlus,
   NotebookPen,
   PenLine,
@@ -20,11 +22,15 @@ import { useCreateDraft } from "@/features/content/use-create-draft"
 import { logHref } from "@/features/journal/daily-log-page"
 import { todayKey } from "@/lib/dates"
 import { useUi } from "@/stores/ui"
+import { useWorkspace } from "@/stores/workspace"
+import { draftHref } from "@/lib/routes"
 
 export function QuickCreate() {
   const openForm = useUi((s) => s.openForm)
   const createDraft = useCreateDraft()
   const navigate = useNavigate()
+  // New assignments default to the most recently added course.
+  const firstCourse = useWorkspace((s) => s.courses[0]?.id)
 
   return (
     <DropdownMenu>
@@ -45,7 +51,14 @@ export function QuickCreate() {
           <NotebookPen /> Note
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => navigate(`/content/drafts/${createDraft().id}`)}>
+        <DropdownMenuItem onSelect={() => openForm({ kind: "task", defaults: { courseId: firstCourse, learningType: "assignment" } })} disabled={!firstCourse}>
+          <ClipboardList /> Assignment
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => openForm({ kind: "course" })}>
+          <GraduationCap /> Course
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => navigate(draftHref(createDraft().id))}>
           <FilePlus2 /> Content draft
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => openForm({ kind: "project" })}>

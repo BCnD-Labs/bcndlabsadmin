@@ -1,17 +1,20 @@
 # Blackwall
 
-A personal workspace for keeping track: simple to-dos, a calendar that opens a daily log, sticky notes, charts of your own activity, plus connections to the services you use (GitHub, Azure, Cloudflare, website analytics, or anything else).
+A personal workspace for keeping track: simple to-dos, a course planner, a calendar that opens a daily log, sticky notes, charts of your own activity, plus connections to the services you use (GitHub, Azure, Cloudflare, website analytics, or anything else).
 
 ## The pieces
 
 - **Tasks:** Google Tasks style. Title, optional details, optional due date, star, done. No priorities, tags, links or dependencies. "Today" shows overdue, due-today and starred tasks; the Tasks page groups everything by when it's due.
-- **Calendar & daily log:** internal only. The header's calendar button (left of search) opens a month card while you hover it and closes when you move away; click it to pin the card open, and then it auto-hides a few seconds after you leave. Click a day to open that day's log in a dialog (tasks due that day, quick prompts, Save). Work → Calendar is the full-page version that saves as you type. Day dots: red = open tasks due, amber = overdue, grey = a saved log.
+- **Calendar & daily log:** internal only. The header's calendar button (left of search) opens a month card while you hover it and closes when you move away; click it to pin the card open, and then it auto-hides a few seconds after you leave. Click a day to open that day's log in a dialog (tasks due that day, quick prompts, Save). Productivity → Calendar is the full-page version that saves as you type. Day dots: red = open tasks due, amber = overdue, grey = a saved log.
 - **Home:** a 2×2 grid of panels you choose from each panel's header menu (Productivity or Empty for now). Drag a panel by its header onto another square to swap them, or use "Move to slot N" in the menu.
 - **Settings:** a modal with General (version, Check for updates, and an Update button when one is found; export, import, clear cache, reset), Appearance, Connections, Server & backups, Shortcuts. Sections and a search box on the left (a menu on phones), then one column of panels with a row per setting.
 - **Notifications:** the bell opens a card that slides in from the right, below the header. No notification sources exist yet, so it shows **[ NO SIGNAL ]**.
 - **Notes:** sticky notes. Type, pick a colour, pin the ones you want on Home. They save as you type; an emptied note is removed.
-- **Analytics → You:** charts computed from your tasks and logs (tasks completed per day, open tasks by due date, a log heatmap, streaks). **Analytics → Website** shows your analytics provider once connected.
-- **Projects, Development, Content:** a lighter layer for what you're building: repository links, deployment links, content drafts.
+- **Learning (Productivity → Learning):** a simple course planner. **Add learning → Course** stores a course's code, instructor, term, start and end dates, schedule, location, link, credits, tags and colour. Each course holds **assignments, exams, milestones and events**. These are ordinary tasks with a course link, so they also show in Tasks (with the course chip), on the calendar, in search and in Home's optional **Coursework** square. Notes can be linked to a course and show on its page. Local only: no LMS connection. Deleting a course deletes its coursework and unlinks its notes.
+- **Insights (Productivity → Insights):** charts computed from your tasks and logs (tasks completed per day, open tasks by due date, a log heatmap, streaks).
+- **Development, CMS:** repository and deployment links; content drafts, media, and **Site analytics** (your analytics provider once connected).
+
+Sidebar: **Home · Productivity** (Tasks, Projects, Learning, Calendar & daily log, Notes, Insights) **· Development · CMS** (Pages & posts, Drafts, Media, Site analytics). Old `/work`, `/content`, `/notes` and `/analytics` links redirect to the new places.
 
 > **Two ways to run it.** `npm run dev` runs everything on your computer (no sign-in; credentials in a gitignored `.blackwall/` file). The **home-server deployment** (Portainer stack: Postgres + app + backups, behind Tailscale and a password) is the source of truth for connections and credentials. See [deploy/README.md](./deploy/README.md). Tasks, notes and logs are still saved per browser for now.
 
@@ -45,7 +48,7 @@ Settings → Connections is where you add, edit, test and remove accounts. Nothi
 | GitHub | Fine-grained personal access token | Development panel, Reviews & issues, repository activity (for repos you track) |
 | Azure | Tenant ID, client ID, client secret (service principal), optional subscription | Subscription, resource group and resource counts on the connection card |
 | Cloudflare | API token, optional account ID | Zones and their status on the connection card |
-| Website analytics | Plausible, Umami or Cloudflare Web Analytics, plus site ID and API key | Home traffic chart, Analytics page |
+| Website analytics | Plausible, Umami or Cloudflare Web Analytics, plus site ID and API key | Home traffic chart, CMS → Site analytics |
 | Any service | URL, username, password/key, your own extra fields, optional check URL (with Bearer, Basic or custom-header auth) | A reachability check on the connection card |
 
 Saving a connection runs a live test against the provider and shows the result (account name, counts, or the provider's error message). You can add several of each type.
@@ -58,13 +61,13 @@ Saving a connection runs a live test against the provider and shows the result (
 
 | Area | Source |
 | --- | --- |
-| Tasks, daily logs, notes, projects, repository links, drafts, search, your activity charts | Saved in this browser |
+| Tasks, coursework, courses, daily logs, notes, projects, repository links, drafts, search, your activity charts | Saved in this browser |
 | Website traffic, development data | Your connections, labelled **Live**, **Error** or **Not connected** |
 | Sample data | Off by default. Settings → Appearance → *Sample data* fills unconnected panels with made-up data labelled **Sample data**, for previewing layouts |
 
 ## Your data
 
-- `blackwall.workspace`: workspace records. A versioned Zustand `persist` store (`src/stores/workspace.ts`, `WORKSPACE_VERSION = 3`). The workspace starts empty. Migrations: v1→v2 removed the example records v1 seeded. v2→v3 converted tasks (high/urgent priority became starred; projects dropped), turned notes into sticky notes, and moved calendar events into the matching day's log as lines.
+- `blackwall.workspace`: workspace records. A versioned Zustand `persist` store (`src/stores/workspace.ts`, `WORKSPACE_VERSION = 4`). The workspace starts empty. Migrations: v1→v2 removed the example records v1 seeded. v2→v3 converted tasks (high/urgent priority became starred; projects dropped), turned notes into sticky notes, and moved calendar events into the matching day's log as lines. v3→v4 added courses; tasks gained optional `courseId`, `learningType` and `time`, and notes an optional `courseId` (nothing to convert).
 - `blackwall.prefs`: interface preferences (workspace name, retro details, sample data, auto-hide seconds for the calendar and notification cards, and the Home slot layout). Versioned (`PREFS_VERSION = 2`); v1 → v2 added auto-hide and the slot layout, and stored values are sanitised on load.
 - Settings → General can **export** and **import** the workspace as JSON, or clear it, and reset preferences to their defaults.
 - If storage is unavailable (private mode, quota), the store falls back to memory for the session.
@@ -98,7 +101,7 @@ src/
     layout/      app shell, header, nav rail, mobile nav, search, quick-create
     forms/       record dialogs (task, event, note, project, repo) + shared fields
     common/      page header, panel, field, list rows and table, tabs, empty state, badges
-  features/      home, work, development, content, analytics, knowledge, settings
+  features/      home, work (tasks, projects), learning, journal, notes, development, content (CMS), analytics, settings
   services/      connector client, data feeds (live / sample / not connected)
   stores/        workspace (versioned persistence), prefs, ui state
 shared/          connection types and provider field definitions (UI + connector)

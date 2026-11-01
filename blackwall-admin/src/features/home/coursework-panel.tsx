@@ -1,0 +1,60 @@
+import { GraduationCap } from "lucide-react"
+import { Link } from "react-router-dom"
+import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/common/empty-state"
+import { CourseworkRow } from "@/features/learning/coursework"
+import { compareCoursework } from "@/features/learning/learning-utils"
+import { daysUntil } from "@/lib/dates"
+import { learningHref } from "@/lib/routes"
+import { useCourseMap, useWorkspace } from "@/stores/workspace"
+
+/** Header meta: "N due this week". */
+export function CourseworkMeta() {
+  const n = useWorkspace((s) => s.tasks.filter((t) => t.courseId && !t.done && t.due && daysUntil(t.due) <= 7).length)
+  return <>{n} due this week</>
+}
+
+/** Home square: open coursework that's overdue or due in the next 14 days, across courses. */
+export function CourseworkPanel() {
+  const tasks = useWorkspace((s) => s.tasks)
+  const courses = useCourseMap()
+  const items = tasks
+    .filter((t) => t.courseId && courses.has(t.courseId) && !t.done && t.due && daysUntil(t.due) <= 14)
+    .sort(compareCoursework)
+    .slice(0, 8)
+
+  if (!courses.size) {
+    return (
+      <EmptyState
+        icon={GraduationCap}
+        title="No courses yet"
+        className="h-full"
+        action={
+          <Button variant="outline" asChild>
+            <Link to={learningHref}>Go to Learning</Link>
+          </Button>
+        }
+      >
+        Add a course to see its assignments, exams and events here.
+      </EmptyState>
+    )
+  }
+  return (
+    <div className="flex h-full flex-col">
+      {items.length ? (
+        <ul className="min-h-0 flex-1 overflow-y-auto">
+          {items.map((t) => (
+            <CourseworkRow key={t.id} task={t} course={courses.get(t.courseId!)} showCourse />
+          ))}
+        </ul>
+      ) : (
+        <EmptyState icon={GraduationCap} title="Nothing due in the next two weeks" className="flex-1" />
+      )}
+      <div className="border-t border-line-soft px-3.5 py-2 text-right">
+        <Link to={learningHref} className="text-[11px] text-ink-2 underline-offset-2 hover:underline">
+          All courses →
+        </Link>
+      </div>
+    </div>
+  )
+}

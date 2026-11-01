@@ -6,12 +6,17 @@ export type DateKey = string
 /** ISO timestamp. */
 export type Timestamp = string
 
-/** A to-do, Google Tasks style: no priorities, tags, links or dependencies. */
+/** A to-do, Google Tasks style: no priorities or dependencies. */
 export interface Task {
   id: ID
   title: string
   details?: string
   due?: DateKey
+  /** Optional time on the due date, `HH:mm` (exams, events). */
+  time?: string
+  /** Coursework: the course it belongs to and what kind of item it is. */
+  courseId?: ID
+  learningType?: LearningItemType
   starred: boolean
   done: boolean
   completedAt?: Timestamp
@@ -28,6 +33,8 @@ export interface Note {
   color: NoteColor
   /** Pinned notes show on Home. */
   pinned: boolean
+  /** Linked course (Productivity → Learning). */
+  courseId?: ID
   createdAt: Timestamp
   updatedAt: Timestamp
 }
@@ -81,6 +88,36 @@ export interface Draft {
   excerpt: string
   body: string
   projectId?: ID
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+
+/** What a piece of coursework is. All of them are tasks, so they share the calendar and Tasks. */
+export type LearningItemType = "assignment" | "exam" | "milestone" | "event"
+
+export type CourseColor = "red" | "amber" | "teal" | "blue" | "violet" | "green" | "slate"
+
+/** A college course (Productivity → Learning). Local only; no LMS connection. */
+export interface Course {
+  id: ID
+  title: string
+  /** e.g. `CS 2110` */
+  code: string
+  instructor: string
+  instructorEmail: string
+  /** e.g. `Fall 2026` */
+  term: string
+  startDate?: DateKey
+  endDate?: DateKey
+  /** Free text, e.g. `Mon/Wed 10:00–11:15` */
+  schedule: string
+  location: string
+  /** Course site or LMS page. */
+  url: string
+  credits?: number
+  description: string
+  tags: string[]
+  color: CourseColor
   createdAt: Timestamp
   updatedAt: Timestamp
 }

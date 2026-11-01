@@ -14,6 +14,7 @@ import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
 import { TaskRow } from "@/features/work/task-row"
 import { TASK_FILTERS, compareTasks, matchesFilter, type TaskFilter } from "@/features/work/task-utils"
+import { tasksHref } from "@/lib/routes"
 
 const EMPTY: Record<TaskFilter, string> = {
   today: "Nothing due today. Starred tasks also show here.",
@@ -70,7 +71,7 @@ export function TasksPanel({ className }: { className?: string }) {
       actions={
         <>
           <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
-            <Link to="/work/tasks">All tasks</Link>
+            <Link to={tasksHref}>All tasks</Link>
           </Button>
           <Button size="sm" variant="outline" onClick={() => openForm({ kind: "task", defaults: filter === "today" ? { due: todayKey() } : {} })}>
             <Plus /> Task

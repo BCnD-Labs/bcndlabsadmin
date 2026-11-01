@@ -1,7 +1,7 @@
 import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
 import { newId } from "@/lib/ids"
-import type { Draft, JournalEntry, Note, Project, RepoLink, Task } from "@/lib/types"
+import type { Course, Draft, JournalEntry, Note, Project, RepoLink, Task } from "@/lib/types"
 import { V1_EXAMPLE_IDS } from "./seed"
 import { safeLocalStorage } from "./storage"
 
@@ -14,7 +14,7 @@ import { safeLocalStorage } from "./storage"
  * backend can replace this store without touching the UI.
  */
 export const WORKSPACE_STORAGE_KEY = "blackwall.workspace"
-export const WORKSPACE_VERSION = 3
+export const WORKSPACE_VERSION = 4
 
 export interface Collections {
   tasks: Task[]
@@ -23,6 +23,7 @@ export interface Collections {
   projects: Project[]
   repos: RepoLink[]
   drafts: Draft[]
+  courses: Course[]
 }
 
 type GenericKey = Exclude<keyof Collections, "journal">
@@ -35,6 +36,7 @@ const ID_PREFIX: Record<GenericKey, string> = {
   projects: "prj",
   repos: "rep",
   drafts: "drf",
+  courses: "crs",
 }
 
 interface WorkspaceState extends Collections {
@@ -51,7 +53,7 @@ interface WorkspaceState extends Collections {
   clearAll: () => void
 }
 
-const empty: Collections = { tasks: [], notes: [], journal: [], projects: [], repos: [], drafts: [] }
+const empty: Collections = { tasks: [], notes: [], journal: [], projects: [], repos: [], drafts: [], courses: [] }
 const now = () => new Date().toISOString()
 
 export const useWorkspace = create<WorkspaceState>()(
@@ -82,6 +84,12 @@ export const useWorkspace = create<WorkspaceState>()(
         if (key === "projects") {
           next.repos = state.repos.map((r) => (r.projectId === id ? { ...r, projectId: undefined } : r))
           next.drafts = state.drafts.map((d) => (d.projectId === id ? { ...d, projectId: undefined } : d))
+        }
+        // Deleting a course deletes its coursework (it only means something with the course)
+        // and unlinks, rather than deletes, its notes.
+        if (key === "courses") {
+          next.tasks = state.tasks.filter((t) => t.courseId !== id)
+          next.notes = state.notes.map((n) => (n.courseId === id ? { ...n, courseId: undefined } : n))
         }
         set(next)
       },
@@ -137,6 +145,7 @@ export const useWorkspace = create<WorkspaceState>()(
         projects: s.projects,
         repos: s.repos,
         drafts: s.drafts,
+        courses: s.courses,
       }),
       migrate: (persisted, version) => migrate(persisted as Record<string, unknown[]>, version),
     },
@@ -189,10 +198,17 @@ function migrate(raw: Record<string, any[]>, version: number): Collections {
     delete d.events
   }
 
+  // v3 → v4: adds courses (Learning); tasks and notes gain optional course links. Nothing to convert.
+
   return { ...empty, ...(d as Partial<Collections>) }
 }
 
 export function useProjectMap() {
   const projects = useWorkspace((s) => s.projects)
   return new Map(projects.map((p) => [p.id, p]))
+}
+
+export function useCourseMap() {
+  const courses = useWorkspace((s) => s.courses)
+  return new Map(courses.map((c) => [c.id, c]))
 }

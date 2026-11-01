@@ -1,12 +1,5 @@
-import {
-  BarChart3,
-  Briefcase,
-  Code2,
-  FileText,
-  Home,
-  StickyNote,
-  type LucideIcon,
-} from "lucide-react"
+import { Code2, FileText, Home, ListChecks, type LucideIcon } from "lucide-react"
+import { CMS, PRODUCTIVITY, calendarHref, draftsHref, insightsHref, learningHref, notesHref, projectsHref, siteAnalyticsHref, tasksHref } from "@/lib/routes"
 
 export interface NavChild {
   label: string
@@ -27,15 +20,18 @@ export interface NavDestination {
 export const NAV: NavDestination[] = [
   { id: "home", label: "Home", icon: Home, to: "/", match: "/" },
   {
-    id: "work",
-    label: "Work",
-    icon: Briefcase,
-    to: "/work/tasks",
-    match: "/work",
+    id: "productivity",
+    label: "Productivity",
+    icon: ListChecks,
+    to: tasksHref,
+    match: PRODUCTIVITY,
     children: [
-      { label: "Tasks", to: "/work/tasks" },
-      { label: "Projects", to: "/work/projects" },
-      { label: "Calendar & daily log", to: "/work/calendar" },
+      { label: "Tasks", to: tasksHref },
+      { label: "Projects", to: projectsHref },
+      { label: "Learning", to: learningHref },
+      { label: "Calendar & daily log", to: calendarHref },
+      { label: "Notes", to: notesHref },
+      { label: "Insights", to: insightsHref },
     ],
   },
   {
@@ -51,29 +47,18 @@ export const NAV: NavDestination[] = [
     ],
   },
   {
-    id: "content",
-    label: "Content",
+    id: "cms",
+    label: "CMS",
     icon: FileText,
-    to: "/content/posts",
-    match: "/content",
+    to: `${CMS}/posts`,
+    match: CMS,
     children: [
-      { label: "Pages & posts", to: "/content/posts" },
-      { label: "Drafts", to: "/content/drafts" },
-      { label: "Media", to: "/content/media" },
+      { label: "Pages & posts", to: `${CMS}/posts` },
+      { label: "Drafts", to: draftsHref },
+      { label: "Media", to: `${CMS}/media` },
+      { label: "Site analytics", to: siteAnalyticsHref },
     ],
   },
-  {
-    id: "analytics",
-    label: "Analytics",
-    icon: BarChart3,
-    to: "/analytics",
-    match: "/analytics",
-    children: [
-      { label: "You", to: "/analytics" },
-      { label: "Website traffic", to: "/analytics?view=website" },
-    ],
-  },
-  { id: "notes", label: "Notes", icon: StickyNote, to: "/notes", match: "/notes" },
 ]
 
 export function isActive(dest: NavDestination, pathname: string) {

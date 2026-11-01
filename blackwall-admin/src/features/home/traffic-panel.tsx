@@ -7,6 +7,7 @@ import { SourceBadge } from "@/components/common/source-badge"
 import { RangeToggle, TrafficChart, TrafficSummary } from "@/features/analytics/traffic-chart"
 import { useAnalytics } from "@/services/data"
 import type { TrafficRange } from "@/services/types"
+import { siteAnalyticsHref } from "@/lib/routes"
 
 export function TrafficPanel({ className }: { className?: string }) {
   const [range, setRange] = useState<TrafficRange>(30)
@@ -22,7 +23,7 @@ export function TrafficPanel({ className }: { className?: string }) {
         <>
           <RangeToggle value={range} onChange={setRange} />
           <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
-            <Link to="/analytics?view=website">Details</Link>
+            <Link to={siteAnalyticsHref}>Details</Link>
           </Button>
         </>
       }

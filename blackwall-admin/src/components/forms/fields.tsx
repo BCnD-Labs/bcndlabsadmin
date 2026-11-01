@@ -8,6 +8,7 @@ import {
 import { cn } from "@/lib/utils"
 import { useWorkspace } from "@/stores/workspace"
 import { PROJECT_DOT } from "@/components/common/tags"
+import { courseColor, courseLabel } from "@/features/learning/learning-utils"
 
 export { Field } from "@/components/common/field"
 
@@ -70,6 +71,28 @@ export function OptionSelect<T extends string>({
         {options.map((o) => (
           <SelectItem key={o.value} value={o.value}>
             {o.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
+
+/** Pick a course (or none). Used by the task and note forms to link coursework. */
+export function CourseSelect({ id, value, onChange, className }: { id?: string; value?: string; onChange: (id: string | undefined) => void; className?: string }) {
+  const courses = useWorkspace((s) => s.courses)
+  return (
+    <Select value={value ?? NONE} onValueChange={(v) => onChange(v === NONE ? undefined : v)}>
+      <SelectTrigger id={id} className={cn("w-full", className)}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent position="popper">
+        <SelectItem value={NONE}>No course</SelectItem>
+        {courses.map((c) => (
+          <SelectItem key={c.id} value={c.id}>
+            <span className={cn("size-2 rounded-[2px]", courseColor(c.color).dot)} aria-hidden />
+            <span className="font-mono text-xs text-muted-foreground">{courseLabel(c)}</span>
+            {c.title}
           </SelectItem>
         ))}
       </SelectContent>

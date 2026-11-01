@@ -14,6 +14,7 @@ import { slugify } from "@/lib/ids"
 import { timeAgo } from "@/lib/dates"
 import type { Draft, DraftKind, DraftStatus } from "@/lib/types"
 import { useWorkspace } from "@/stores/workspace"
+import { draftsHref } from "@/lib/routes"
 
 const STATUSES = (Object.keys(DRAFT_STATUS_LABEL) as DraftStatus[]).map((value) => ({ value, label: DRAFT_STATUS_LABEL[value] }))
 const KINDS: { value: DraftKind; label: string }[] = [
@@ -39,9 +40,9 @@ export function DraftEditor() {
     <Editor key={id} draft={saved} />
   ) : (
     <>
-      <PageHeader title="Draft not found" back={{ to: "/content/drafts", label: "Drafts" }} />
+      <PageHeader title="Draft not found" back={{ to: draftsHref, label: "Drafts" }} />
       <Panel tool="draft" command={`open ${id}`}>
-        <EmptyState icon={FileX} title="This draft doesn't exist" action={<Button asChild variant="outline"><Link to="/content/drafts">Back to drafts</Link></Button>}>
+        <EmptyState icon={FileX} title="This draft doesn't exist" action={<Button asChild variant="outline"><Link to={draftsHref}>Back to drafts</Link></Button>}>
           It may have been deleted.
         </EmptyState>
       </Panel>
@@ -97,7 +98,7 @@ function Editor({ draft }: { draft: Draft }) {
   return (
     <>
       <PageHeader
-        back={{ to: "/content/drafts", label: "Drafts" }}
+        back={{ to: draftsHref, label: "Drafts" }}
         title={value.title.trim() || "Untitled"}
         badge={<DraftStatusTag status={value.status} />}
         subtitle={
@@ -109,7 +110,7 @@ function Editor({ draft }: { draft: Draft }) {
           confirmDelete ? (
             <>
               <span className="text-[11px] text-ink-2">Delete this draft?</span>
-              <Button size="lg" variant="destructive" onClick={() => { remove("drafts", draft.id); toast("Draft deleted"); navigate("/content/drafts") }}>Delete</Button>
+              <Button size="lg" variant="destructive" onClick={() => { remove("drafts", draft.id); toast("Draft deleted"); navigate(draftsHref) }}>Delete</Button>
               <Button size="lg" variant="quiet" onClick={() => setConfirmDelete(false)}>Keep</Button>
             </>
           ) : (

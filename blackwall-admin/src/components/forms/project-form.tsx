@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { projectHref } from "@/lib/routes"
+import { projectHref, projectsHref } from "@/lib/routes"
 import type { Project, ProjectColor, ProjectStatus } from "@/lib/types"
 import { useWorkspace } from "@/stores/workspace"
 import { Field, OptionSelect } from "./fields"
@@ -68,7 +68,7 @@ export function ProjectForm({ id, defaults, onDone }: { id?: string; defaults?: 
               remove("projects", existing.id)
               toast("Project deleted; linked records were kept and unlinked")
               onDone()
-              navigate("/work/projects")
+              navigate(projectsHref)
             }
           : undefined
       }
