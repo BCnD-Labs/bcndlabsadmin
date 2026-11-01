@@ -34,7 +34,7 @@ import {
   type PublicConnection,
 } from "@shared/connections"
 import { Panel } from "@/components/common/panel"
-import { SettingRow, SettingsHeader } from "./settings-pages"
+import { SettingRow, SettingsPage } from "./settings-pages"
 
 export const PROVIDER_ICON: Record<ProviderId, LucideIcon> = {
   github: GitBranch,
@@ -44,17 +44,19 @@ export const PROVIDER_ICON: Record<ProviderId, LucideIcon> = {
   other: Plug,
 }
 
-const STATUS: Record<ConnectionStatus, { label: string; className: string }> = {
-  ok: { label: "Connected", className: "border-teal/50 text-teal" },
-  error: { label: "Error", className: "border-red/60 text-red-text" },
-  untested: { label: "Not tested", className: "border-border text-muted-foreground" },
-  saved: { label: "Saved", className: "border-border text-muted-foreground" },
+/** Same shape as SourceBadge: a small square marker and a caps label (spec §6: green = healthy, red = failed). */
+const STATUS: Record<ConnectionStatus, { label: string; square: string; text: string }> = {
+  ok: { label: "Connected", square: "bg-green", text: "text-ink-2" },
+  error: { label: "Error", square: "bg-red", text: "text-red-text" },
+  untested: { label: "Not tested", square: "bg-faint", text: "text-muted-foreground" },
+  saved: { label: "Saved", square: "bg-faint", text: "text-muted-foreground" },
 }
 
 function StatusPill({ status }: { status: ConnectionStatus }) {
   const s = STATUS[status]
   return (
-    <span className={cn("inline-flex h-5 items-center rounded-full border-2 px-2 font-mono text-[0.65rem] tracking-wide uppercase", s.className)}>
+    <span className={cn("inline-flex h-5 shrink-0 items-center gap-1.5 rounded-[5px] border border-rim px-1.5 font-mono text-[10px] tracking-wide uppercase", s.text)}>
+      <span className={cn("size-1.5 rounded-[1.5px]", s.square)} aria-hidden />
       {s.label}
     </span>
   )
@@ -90,21 +92,14 @@ export function ConnectionsPage() {
   }
 
   return (
-    <>
-      <SettingsHeader />
-
-      <div className="grid max-w-3xl gap-3">
-      <p className="px-1 text-xs leading-relaxed text-muted-foreground">
-        Tokens and passwords are sent once to Blackwall's server and stored encrypted
-        (in Postgres on the home server, or <code className="font-mono">.blackwall/connections.json</code> in local development). They're never sent back to the browser.
-      </p>
+    <SettingsPage>
 
       {available === false && (
         <Alert className="border-amber/50">
           <AlertDescription className="text-foreground">
             The local connector isn't responding. It runs inside <code className="font-mono text-xs">npm run dev</code> and{" "}
             <code className="font-mono text-xs">npm run preview</code>; a static build has no connector.
-            <Button size="sm" variant="outline" className="ml-2" onClick={refresh}>
+            <Button variant="outline" className="ml-2" onClick={refresh}>
               <RotateCw /> Retry
             </Button>
           </AlertDescription>
@@ -123,13 +118,13 @@ export function ConnectionsPage() {
                   badge={<StatusPill status={c.status} />}
                   actions={
                     <>
-                      <Button size="sm" variant="ghost" onClick={() => runTest(c)} disabled={working}>
+                      <Button variant="quiet" onClick={() => runTest(c)} disabled={working}>
                         {working ? <Loader2 className="animate-spin" /> : <RotateCw />} Test
                       </Button>
-                      <Button size="icon-sm" variant="ghost" aria-label={`Edit ${c.label}`} onClick={() => setDialog({ existing: c })}>
+                      <Button size="icon-sm" variant="quiet" aria-label={`Edit ${c.label}`} onClick={() => setDialog({ existing: c })}>
                         <Pencil />
                       </Button>
-                      <Button size="icon-sm" variant="ghost" aria-label={`Remove ${c.label}`} className="text-red-text" onClick={() => setConfirmRemove(c.id)}>
+                      <Button size="icon-sm" variant="quiet" aria-label={`Remove ${c.label}`} onClick={() => setConfirmRemove(c.id)}>
                         <Trash2 />
                       </Button>
                     </>
@@ -163,7 +158,6 @@ export function ConnectionsPage() {
                       <span className="ml-auto flex flex-wrap items-center gap-2">
                         <span className="text-red-text">Remove this connection and its saved secrets?</span>
                         <Button
-                          size="xs"
                           variant="destructive"
                           onClick={async () => {
                             await remove(c.id)
@@ -173,7 +167,7 @@ export function ConnectionsPage() {
                         >
                           Remove
                         </Button>
-                        <Button size="xs" variant="ghost" onClick={() => setConfirmRemove(null)}>
+                        <Button variant="quiet" onClick={() => setConfirmRemove(null)}>
                           Keep
                         </Button>
                       </span>
@@ -201,7 +195,7 @@ export function ConnectionsPage() {
                 }
                 description={p.blurb}
               >
-                <Button size="sm" variant="outline" onClick={() => setDialog({ provider: p.id })} aria-label={`Connect ${p.name}`}>
+                <Button variant="outline" onClick={() => setDialog({ provider: p.id })} aria-label={`Connect ${p.name}`}>
                   <Plus /> Connect
                 </Button>
               </SettingRow>
@@ -209,7 +203,6 @@ export function ConnectionsPage() {
           })}
         </Panel>
       )}
-      </div>
 
       <Dialog open={!!dialog} onOpenChange={(o) => !o && setDialog(null)}>
         <DialogContent className="gap-0 p-0 sm:max-w-lg">
@@ -224,7 +217,7 @@ export function ConnectionsPage() {
           )}
         </DialogContent>
       </Dialog>
-    </>
+    </SettingsPage>
   )
 }
 
@@ -234,7 +227,7 @@ function OtherDetails({ c }: { c: PublicConnection }) {
   if (c.config.url)
     rows.push([
       "URL",
-      <a key="url" href={c.config.url} target="_blank" rel="noreferrer" className="break-all text-teal hover:underline">
+      <a key="url" href={c.config.url} target="_blank" rel="noreferrer" className="break-all text-ink-2 underline-offset-2 hover:text-ink hover:underline">
         {c.config.url}
       </a>,
     ])
@@ -289,12 +282,12 @@ function ConnectionForm({
                 <button
                   type="button"
                   onClick={() => onPick(p.id)}
-                  className="flex w-full items-start gap-3 rounded-md border p-2.5 text-left outline-none hover:border-teal/60 hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex w-full items-start gap-3 rounded-[8px] border border-rim p-3 text-left hover:border-ledge-hi hover:bg-raised"
                 >
-                  <Icon className="mt-0.5 size-4 shrink-0 text-teal" aria-hidden />
+                  <Icon className="mt-0.5 size-4 shrink-0 text-faint" strokeWidth={1.8} aria-hidden />
                   <span>
-                    <span className="block text-sm font-bold">{p.name}</span>
-                    <span className="block text-xs text-muted-foreground">{p.blurb}</span>
+                    <span className="block text-[13px] font-semibold">{p.name}</span>
+                    <span className="mt-0.5 block text-[11px] leading-relaxed text-muted-foreground">{p.blurb}</span>
                   </span>
                 </button>
               </li>
@@ -405,7 +398,7 @@ function ProviderForm({
           {def.help && (
             <>
               {" "}
-              <a href={def.help.url} target="_blank" rel="noreferrer" className="text-teal hover:underline">
+              <a href={def.help.url} target="_blank" rel="noreferrer" className="text-ink-2 underline underline-offset-2 hover:text-ink">
                 {def.help.label} ↗
               </a>
             </>
@@ -436,7 +429,7 @@ function ProviderForm({
                 hint={
                   <>
                     {saved && (
-                      <span className="mr-1 text-teal">
+                      <span className="mr-1 text-ink-2">
                         Saved{hint ? ` (${hint})` : ""}.
                         {!f.required && (
                           <button type="button" className="ml-1 text-red-text hover:underline" onClick={() => setCleared(new Set(cleared).add(f.key))}>
@@ -479,8 +472,8 @@ function ProviderForm({
         {provider === "other" && (
           <div className="grid gap-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Extra fields</span>
-              <Button type="button" size="xs" variant="outline" onClick={() => setCustom([...custom, { name: "", value: "", secret: false }])}>
+              <span className="text-[11px] text-muted-foreground">Extra fields</span>
+              <Button type="button" variant="outline" onClick={() => setCustom([...custom, { name: "", value: "", secret: false }])}>
                 <Plus /> Add field
               </Button>
             </div>
@@ -508,7 +501,7 @@ function ProviderForm({
                   />
                   Secret
                 </label>
-                <Button type="button" size="icon-sm" variant="ghost" aria-label="Remove field" onClick={() => setCustom(custom.filter((_, j) => j !== i))}>
+                <Button type="button" size="icon-sm" variant="quiet" aria-label="Remove field" onClick={() => setCustom(custom.filter((_, j) => j !== i))}>
                   <X />
                 </Button>
               </div>
@@ -517,18 +510,19 @@ function ProviderForm({
         )}
 
         {error && (
-          <p role="alert" className="rounded-md border border-red/50 bg-red/10 px-2.5 py-2 text-sm break-words text-red-text">
+          <p role="alert" className="flex gap-2 rounded-[8px] border border-rim bg-well px-3 py-2.5 text-xs leading-relaxed break-words text-red-text">
+            <span className="mt-1 size-1.5 shrink-0 rounded-[1.5px] bg-red" aria-hidden />
             {error}
           </p>
         )}
       </div>
-      <div className="flex items-center gap-2 border-t bg-recessed/60 px-4 py-3">
-        <span className="text-xs text-muted-foreground">Saving runs a connection test.</span>
+      <div className="flex flex-wrap items-center gap-2 border-t border-line bg-well/60 px-4 py-3">
+        <span className="text-[11px] text-muted-foreground">Saving runs a connection test.</span>
         <div className="ml-auto flex gap-2">
-          <Button type="button" variant="ghost" onClick={onDone}>
+          <Button type="button" variant="quiet" size="lg" onClick={onDone}>
             {error && existing ? "Close" : "Cancel"}
           </Button>
-          <Button type="submit" disabled={saving}>
+          <Button type="submit" size="lg" disabled={saving}>
             {saving && <Loader2 className="animate-spin" />}
             {existing ? "Save" : "Connect"}
           </Button>

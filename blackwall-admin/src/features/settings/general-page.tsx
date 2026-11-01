@@ -180,17 +180,17 @@ function UpdateRow({ info, onRestarted }: { info: SystemInfo; onRestarted: () =>
   }
 
   const refresh = (
-    <Button size="sm" onClick={() => location.reload()}>
+    <Button onClick={() => location.reload()}>
       <RefreshCw /> Refresh
     </Button>
   )
   const checkButton = (
-    <Button size="sm" variant="outline" disabled={checking} onClick={runCheck}>
+    <Button variant="outline" disabled={checking} onClick={runCheck}>
       <RefreshCw className={cn(checking && "animate-spin motion-reduce:animate-none")} /> {checking ? "Checking…" : "Check for updates"}
     </Button>
   )
   const updateButton = cfg?.canUpdate && (
-    <Button size="sm" onClick={startUpdate}>
+    <Button onClick={startUpdate}>
       <Download /> Update now
     </Button>
   )
@@ -322,7 +322,7 @@ function DataPanel() {
   return (
     <Panel tool="workspace" command="data" meta="this browser" bodyClassName="divide-y divide-line">
       <SettingRow title="Export" description="Download your tasks, notes and daily logs as a file. They're saved in this browser only, so keep a copy.">
-        <Button size="sm" variant="outline" onClick={exportData}>
+        <Button variant="outline" onClick={exportData}>
           <Download /> Export
         </Button>
       </SettingRow>
@@ -336,11 +336,11 @@ function DataPanel() {
       >
         {pending ? (
           <>
-            <Button size="sm" variant="destructive" onClick={() => void applyImport()}>Replace</Button>
-            <Button size="sm" variant="ghost" onClick={() => setPending(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => void applyImport()}>Replace</Button>
+            <Button variant="quiet" onClick={() => setPending(null)}>Cancel</Button>
           </>
         ) : (
-          <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}>
+          <Button variant="outline" onClick={() => fileRef.current?.click()}>
             <Upload /> Import
           </Button>
         )}
@@ -377,7 +377,7 @@ function ResetPanel() {
   return (
     <Panel tool="blackwall" command="reset" bodyClassName="divide-y divide-line">
       <SettingRow title="Clear cache" description="Reload the page and fetch fresh data from your connections. Nothing you've saved is affected.">
-        <Button size="sm" variant="outline" onClick={clearCache}>Clear cache</Button>
+        <Button variant="outline" onClick={clearCache}>Clear cache</Button>
       </SettingRow>
       <SettingRow title="Reset preferences" description="Put appearance, card timing and the Home layout back to their defaults in this browser.">
         <ConfirmButton confirmLabel="Reset" onConfirm={() => (resetPrefs(), toast.success("Preferences reset"))}>Reset</ConfirmButton>

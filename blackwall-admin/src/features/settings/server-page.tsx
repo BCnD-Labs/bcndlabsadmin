@@ -25,7 +25,7 @@ const size = (b: number) => (b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).t
 function Marker({ tone }: { tone: "ok" | "warn" | "error" | "off" }) {
   return (
     <span
-      className={cn("inline-block size-2 shrink-0", tone === "ok" && "bg-green", tone === "warn" && "bg-amber", tone === "error" && "bg-[var(--bw-red)]", tone === "off" && "bg-ledge")}
+      className={cn("inline-block size-2 shrink-0", tone === "ok" && "bg-green", tone === "warn" && "bg-amber", tone === "error" && "bg-[var(--bw-red)]", tone === "off" && "bg-faint")}
       aria-hidden
     />
   )
@@ -58,7 +58,7 @@ export function ServerSettings() {
   return (
     <SettingsPage
       actions={
-        <Button variant="outline" size="sm" onClick={() => setNonce((n) => n + 1)}>
+        <Button variant="outline" onClick={() => setNonce((n) => n + 1)}>
           <RotateCw /> Refresh
         </Button>
       }
@@ -86,7 +86,7 @@ export function ServerSettings() {
             />
             {onServer && (
               <SettingRow title="Sign out" description="End your session in this browser.">
-                <Button variant="outline" size="sm" onClick={() => void logout()}>
+                <Button variant="outline" onClick={() => void logout()}>
                   <LogOut /> Sign out
                 </Button>
               </SettingRow>
@@ -113,7 +113,7 @@ export function ServerSettings() {
                     </span>
                   }
                   description={
-                    <span className={cn((backupTone === "error" || backupTone === "warn") && "text-red-text")}>
+                    <span className={cn(backupTone === "error" && "text-red-text", backupTone === "warn" && "text-amber")}>
                       {last ? `${last.ok ? "Succeeded" : "Failed"} ${ago(last.at)}${stale ? ". Overdue: backups run every day." : "."}` : "None yet. The first one runs shortly after the stack starts."}
                       {last?.error && <span className="block">{last.error}</span>}
                     </span>
