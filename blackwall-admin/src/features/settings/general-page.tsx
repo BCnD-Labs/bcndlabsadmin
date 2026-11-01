@@ -13,8 +13,8 @@ import { ConfirmButton, SettingRow, SettingsPage } from "./settings-pages"
 
 type UpdateState =
   | { state: "idle" }
-  | { state: "running"; at: string }
-  | { state: "unchanged" | "failed"; at: string; message: string }
+  | { state: "running" | "accepted"; at: string }
+  | { state: "failed"; at: string; message: string }
 
 interface SystemInfo {
   mode: "server" | "development"
@@ -46,7 +46,10 @@ const PAGE_BUILD = __BLACKWALL_BUILD__
 const short = (tree?: string) => (tree ? tree.slice(0, 7) : "—")
 const ago = (iso: string) => formatDistanceToNowStrict(new Date(iso), { addSuffix: true })
 const POLL_MS = 3000
-const GIVE_UP_MS = 15 * 60_000
+/** After this long without a restart, start asking GitHub whether there was anything to install. */
+const FIRST_CHECK_MS = 45_000
+const CHECK_EVERY_MS = 30_000
+const GIVE_UP_MS = 10 * 60_000
 
 export function GeneralSettings() {
   return (
@@ -123,17 +126,24 @@ function UpdateRow({ info, onRestarted }: { info: SystemInfo; onRestarted: () =>
   }
 
   // Pick up an update that's already running (e.g. started from another device).
-  if (info.update?.state === "running" && info.bootId && progress.phase === "idle") {
+  if ((info.update?.state === "running" || info.update?.state === "accepted") && info.bootId && progress.phase === "idle") {
     setProgress({ phase: "building", bootId: info.bootId, since: new Date(info.update.at).getTime() })
   }
 
-  // While an update runs, poll until a new server process answers or the old one reports how it went.
+  // While an update runs: Portainer accepts the webhook at once and builds in the background, so wait
+  // for a new server process (bootId). If none comes, ask GitHub whether the running code is already
+  // the latest (e.g. the change was outside the app); otherwise give up after GIVE_UP_MS.
+  const lastCheckAt = useRef(0)
   useEffect(() => {
     if (progress.phase !== "building" && progress.phase !== "restarting") return
     const { bootId, since } = progress
     const timer = setInterval(async () => {
-      if (Date.now() - since > GIVE_UP_MS) {
-        setProgress({ phase: "failed", message: "This is taking longer than expected. Check the blackwall stack in Portainer." })
+      const waited = Date.now() - since
+      if (waited > GIVE_UP_MS) {
+        setProgress({
+          phase: "failed",
+          message: "Portainer accepted the update but Blackwall hasn't restarted after 10 minutes. Open the blackwall stack in Portainer to see whether the deploy failed.",
+        })
         return
       }
       try {
@@ -141,10 +151,19 @@ function UpdateRow({ info, onRestarted }: { info: SystemInfo; onRestarted: () =>
         if (now.bootId && now.bootId !== bootId) {
           setProgress({ phase: "done", tree: now.build?.tree })
           onRestarted()
-        } else if (now.update?.state === "unchanged") {
-          setProgress({ phase: "unchanged" })
-        } else if (now.update?.state === "failed") {
+          return
+        }
+        if (now.update?.state === "failed") {
           setProgress({ phase: "failed", message: now.update.message })
+          return
+        }
+        if (cfg?.canCheck && waited > FIRST_CHECK_MS && Date.now() - lastCheckAt.current > CHECK_EVERY_MS) {
+          lastCheckAt.current = Date.now()
+          const c = await api<UpdateCheck>("system/check?force").catch(() => null)
+          if (c?.upToDate) {
+            setCheck(c)
+            setProgress({ phase: "unchanged" })
+          }
         }
       } catch {
         // Unreachable while Portainer swaps the container.
@@ -152,7 +171,7 @@ function UpdateRow({ info, onRestarted }: { info: SystemInfo; onRestarted: () =>
       }
     }, POLL_MS)
     return () => clearInterval(timer)
-  }, [progress, onRestarted])
+  }, [progress, onRestarted, cfg?.canCheck])
 
   const startUpdate = () => {
     api<{ bootId: string }>("system/update", { method: "POST" })
@@ -190,7 +209,10 @@ function UpdateRow({ info, onRestarted }: { info: SystemInfo; onRestarted: () =>
         {progress.phase === "building" ? "Installing the update…" : "Restarting…"}
       </span>
     )
-    description = progress.phase === "building" ? "Portainer is downloading and building the new version. This takes a minute or two." : "Blackwall will be back in a few seconds."
+    description =
+      progress.phase === "building"
+        ? "Portainer is downloading and building the new version. This usually takes one to three minutes; you can keep using the panel."
+        : "Blackwall will be back in a few seconds."
   } else if (progress.phase === "done") {
     tone = "ok"
     title = <>Updated to <code className="font-mono">{short(progress.tree)}</code></>
@@ -233,7 +255,7 @@ function UpdateRow({ info, onRestarted }: { info: SystemInfo; onRestarted: () =>
   } else if (check || progress.phase === "unchanged") {
     tone = "ok"
     title = "You're up to date"
-    description = check ? `Checked ${ago(check.checkedAt)}.` : "Nothing new to install."
+    description = progress.phase === "unchanged" ? "Portainer found nothing in the app to rebuild." : check ? `Checked ${ago(check.checkedAt)}.` : "Nothing new to install."
     actions = checkButton
   } else {
     description = "See whether a newer version is on GitHub."

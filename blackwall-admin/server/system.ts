@@ -16,9 +16,11 @@ import { ProviderError, getJson } from "./http.ts"
  * Check: asks GitHub (with a read-only token) for the newest commit on the
  * branch that touched blackwall-admin/, and that commit's tree hash for it.
  *
- * Update: POSTs to the Portainer stack webhook. Portainer pulls the branch,
- * rebuilds the images and recreates the containers, including this one. The
- * webhook URL only redeploys this one stack; it can't do anything else.
+ * Update: POSTs to the Portainer stack webhook. Portainer answers at once and
+ * then, in the background, pulls the branch, rebuilds the images and recreates
+ * the containers whose image changed, including this one. The panel watches
+ * for a new process (bootId) to know it's done. The webhook URL only redeploys
+ * this one stack; it can't do anything else.
  */
 
 export interface BuildInfo {
@@ -37,8 +39,10 @@ export interface UpdateConfig {
 
 export type UpdateState =
   | { state: "idle" }
+  /** Calling the webhook. */
   | { state: "running"; at: string }
-  | { state: "unchanged"; at: string; message: string }
+  /** Portainer accepted it. In webhook mode it pulls, builds and redeploys in the background. */
+  | { state: "accepted"; at: string }
   | { state: "failed"; at: string; message: string }
 
 export interface UpdateCheck {
@@ -90,6 +94,8 @@ export class System {
 
   info() {
     const c = this.config
+    // Don't report an accepted update forever if this process was never replaced.
+    if (this.update.state === "accepted" && Date.now() - new Date(this.update.at).getTime() > 10 * 60_000) this.update = { state: "idle" }
     return {
       mode: "server" as const,
       build: this.build,
@@ -156,38 +162,45 @@ export class System {
       checkedAt: new Date().toISOString(),
     }
     this.lastCheck = { at: Date.now(), result }
+    // An accepted update that ends with the latest code already running means Portainer had nothing to rebuild.
+    if (result.upToDate && this.update.state === "accepted") this.update = { state: "idle" }
     return result
   }
 
   /**
-   * Ask Portainer to redeploy. Returns at once; the webhook call runs in the
-   * background because Portainer replaces this container before it answers.
-   * If the call returns while we're still running, Portainer found nothing
-   * that needed this container restarted (or it failed), and we record that.
+   * Ask Portainer to redeploy. Returns at once. Portainer's webhook also answers
+   * at once (204) and does the work in the background, so a 2xx only means
+   * "accepted"; the panel then waits for this process to be replaced.
    */
   startUpdate(): UpdateState {
     if (!this.config.webhook) throw new ProviderError("Set BLACKWALL_UPDATE_WEBHOOK in the stack to update from here.", 409)
-    if (this.update.state === "running") throw new ProviderError("An update is already running.", 409)
+    if (this.update.state === "running") throw new ProviderError("An update is already being requested.", 409)
     this.update = { state: "running", at: new Date().toISOString() }
     this.lastCheck = undefined
+    console.log("[blackwall] update requested; calling the Portainer webhook")
     void postWebhook(this.config.webhook, !!this.config.insecureTls).then(
       ({ status, body }) => {
         const at = new Date().toISOString()
         if (status >= 200 && status < 300) {
-          this.update = { state: "unchanged", at, message: "Portainer finished without restarting Blackwall, so there was nothing new to install." }
-        } else {
-          const detail = portainerMessage(body)
-          const hint =
-            status === 404
-              ? "Portainer doesn't recognise this webhook. Copy the URL again from the stack's GitOps settings."
-              : /autoupdate/i.test(detail)
-                ? "Turn on GitOps updates (mechanism: Webhook) for the stack in Portainer."
-                : ""
-          this.update = { state: "failed", at, message: [`Portainer answered HTTP ${status}${detail ? `: ${detail}` : ""}.`, hint].filter(Boolean).join(" ") }
+          this.update = { state: "accepted", at }
+          console.log(`[blackwall] Portainer accepted the update (HTTP ${status}); it pulls and rebuilds in the background`)
+          return
         }
+        const detail = portainerMessage(body)
+        const hint =
+          status === 404
+            ? "Portainer doesn't recognise this webhook. Copy the URL again from the stack's GitOps settings."
+            : /autoupdate/i.test(detail)
+              ? "Turn on GitOps updates (mechanism: Webhook) for the stack in Portainer."
+              : /in progress/i.test(detail)
+                ? "Portainer is already deploying this stack. Wait for it to finish."
+                : ""
+        this.update = { state: "failed", at, message: [`Portainer answered HTTP ${status}${detail ? `: ${detail}` : ""}.`, hint].filter(Boolean).join(" ") }
+        console.log(`[blackwall] update failed: ${this.update.message}`)
       },
       (e: Error) => {
         this.update = { state: "failed", at: new Date().toISOString(), message: `Couldn't reach Portainer: ${e.message}` }
+        console.log(`[blackwall] update failed: ${this.update.message}`)
       },
     )
     return this.update
