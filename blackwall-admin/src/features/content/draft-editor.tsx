@@ -1,13 +1,14 @@
-import { ArrowLeft, Save, Trash2 } from "lucide-react"
+import { FileX, Save, Trash2 } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { Link, useBlocker, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { EmptyState } from "@/components/common/panel"
-import { DRAFT_STATUS_LABEL } from "@/components/common/tags"
+import { EmptyState } from "@/components/common/empty-state"
+import { PageHeader } from "@/components/common/page-header"
+import { Panel } from "@/components/common/panel"
+import { DRAFT_STATUS_LABEL, DraftStatusTag } from "@/components/common/tags"
 import { Field, OptionSelect, ProjectSelect } from "@/components/forms/fields"
 import { slugify } from "@/lib/ids"
 import { timeAgo } from "@/lib/dates"
@@ -37,9 +38,14 @@ export function DraftEditor() {
   return saved ? (
     <Editor key={id} draft={saved} />
   ) : (
-    <EmptyState action={<Button asChild variant="outline"><Link to="/content/drafts">Back to drafts</Link></Button>}>
-      This draft doesn't exist (it may have been deleted).
-    </EmptyState>
+    <>
+      <PageHeader title="Draft not found" back={{ to: "/content/drafts", label: "Drafts" }} />
+      <Panel tool="draft" command={`open ${id}`}>
+        <EmptyState icon={FileX} title="This draft doesn't exist" action={<Button asChild variant="outline"><Link to="/content/drafts">Back to drafts</Link></Button>}>
+          It may have been deleted.
+        </EmptyState>
+      </Panel>
+    </>
   )
 }
 
@@ -90,64 +96,68 @@ function Editor({ draft }: { draft: Draft }) {
 
   return (
     <>
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <Button variant="ghost" size="sm" asChild className="-ml-2 text-muted-foreground">
-          <Link to="/content/drafts"><ArrowLeft /> Drafts</Link>
-        </Button>
-        <span className="text-xs text-muted-foreground" aria-live="polite" data-testid="save-state">
-          {dirty ? "Unsaved changes" : `Saved ${timeAgo(draft.updatedAt)}`}
-        </span>
-        <div className="ml-auto flex items-center gap-2">
-          {confirmDelete ? (
+      <PageHeader
+        back={{ to: "/content/drafts", label: "Drafts" }}
+        title={value.title.trim() || "Untitled"}
+        badge={<DraftStatusTag status={value.status} />}
+        subtitle={
+          <span aria-live="polite" data-testid="save-state">
+            {dirty ? "Unsaved changes" : `Saved in this browser ${timeAgo(draft.updatedAt)}`}
+          </span>
+        }
+        actions={
+          confirmDelete ? (
             <>
-              <span className="text-xs text-red-text">Delete this draft?</span>
-              <Button size="sm" variant="destructive" onClick={() => { remove("drafts", draft.id); toast("Draft deleted"); navigate("/content/drafts") }}>Delete</Button>
-              <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(false)}>Keep</Button>
+              <span className="text-[11px] text-ink-2">Delete this draft?</span>
+              <Button size="lg" variant="destructive" onClick={() => { remove("drafts", draft.id); toast("Draft deleted"); navigate("/content/drafts") }}>Delete</Button>
+              <Button size="lg" variant="quiet" onClick={() => setConfirmDelete(false)}>Keep</Button>
             </>
           ) : (
-            <Button size="sm" variant="ghost" className="text-red-text" onClick={() => setConfirmDelete(true)}><Trash2 /> Delete</Button>
-          )}
-          <Button onClick={save} disabled={!dirty}>
-            <Save /> Save <kbd className="ml-1 hidden font-mono text-[0.68rem] sm:inline">⌘S</kbd>
-          </Button>
-        </div>
-      </div>
+            <>
+              <Button size="lg" variant="quiet" onClick={() => setConfirmDelete(true)}><Trash2 /> Delete</Button>
+              <Button size="lg" onClick={save} disabled={!dirty}>
+                <Save /> Save <kbd className="ml-1 hidden font-mono text-[10px] opacity-80 sm:inline">⌘S</kbd>
+              </Button>
+            </>
+          )
+        }
+      />
 
       {blocker.state === "blocked" && (
-        <Alert className="mb-3 border-amber/50">
-          <AlertDescription className="flex flex-wrap items-center gap-2 text-foreground">
-            You have unsaved changes.
-            <Button size="sm" onClick={() => { save(); blocker.proceed() }}>Save and leave</Button>
-            <Button size="sm" variant="ghost" className="text-red-text" onClick={() => blocker.proceed()}>Discard</Button>
-            <Button size="sm" variant="ghost" onClick={() => blocker.reset()}>Stay</Button>
-          </AlertDescription>
-        </Alert>
+        <div role="alert" className="bw-panel mb-3 flex flex-wrap items-center gap-2 px-3.5 py-2.5 text-xs">
+          <span className="size-1.5 rounded-[1.5px] bg-amber" aria-hidden />
+          <span className="mr-auto text-ink">You have unsaved changes.</span>
+          <Button onClick={() => { save(); blocker.proceed() }}>Save and leave</Button>
+          <Button variant="outline" onClick={() => blocker.proceed()}>Discard</Button>
+          <Button variant="quiet" onClick={() => blocker.reset()}>Stay</Button>
+        </div>
       )}
 
-      <div className="grid gap-3 lg:grid-cols-[1fr_18rem]">
-        <div className="flex min-w-0 flex-col gap-3 brutal rounded-xl bg-card p-3">
-          <label className="sr-only" htmlFor="draft-title">Title</label>
-          <Input
-            id="draft-title"
-            value={value.title}
-            onChange={(e) => set({ title: e.target.value })}
-            className="h-11 border-transparent bg-transparent px-1 text-xl font-bold md:text-xl dark:bg-transparent"
-            placeholder="Title"
-          />
-          <Field label="Excerpt" htmlFor="draft-excerpt">
-            <Textarea id="draft-excerpt" rows={2} value={value.excerpt} onChange={(e) => set({ excerpt: e.target.value })} placeholder="One or two sentences for listings and previews" />
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <Panel tool="draft" command="edit" bodyClassName="flex flex-col gap-3.5 px-3.5 py-3.5">
+          <Field label="Title" htmlFor="draft-title">
+            <Input
+              id="draft-title"
+              value={value.title}
+              onChange={(e) => set({ title: e.target.value })}
+              className="h-10 font-heading text-lg font-bold md:text-lg"
+              placeholder="Title"
+            />
           </Field>
-          <Field label="Body (Markdown)" htmlFor="draft-body" hint={`${words} words`}>
+          <Field label="Excerpt" htmlFor="draft-excerpt" hint="One or two sentences for listings and previews.">
+            <Textarea id="draft-excerpt" rows={2} value={value.excerpt} onChange={(e) => set({ excerpt: e.target.value })} />
+          </Field>
+          <Field label="Body (Markdown)" htmlFor="draft-body" hint={`${words} ${words === 1 ? "word" : "words"}`}>
             <Textarea
               id="draft-body"
               value={value.body}
               onChange={(e) => set({ body: e.target.value })}
-              className="min-h-[50vh] font-mono text-sm leading-relaxed"
+              className="min-h-[50vh] font-mono leading-relaxed"
               placeholder="Write…"
             />
           </Field>
-        </div>
-        <aside className="flex flex-col gap-3 self-start brutal rounded-xl bg-card p-3">
+        </Panel>
+        <Panel tool="draft" command="meta" className="self-start" bodyClassName="flex flex-col gap-3.5 px-3.5 py-3.5">
           <Field label="Type" htmlFor="draft-kind">
             <OptionSelect id="draft-kind" value={value.kind} onChange={(kind) => set({ kind })} options={KINDS} />
           </Field>
@@ -155,13 +165,13 @@ function Editor({ draft }: { draft: Draft }) {
             <OptionSelect id="draft-status" value={value.status} onChange={(status) => set({ status })} options={STATUSES} />
           </Field>
           <Field label="Slug" htmlFor="draft-slug">
-            <Input id="draft-slug" className="font-mono text-xs" value={value.slug} onChange={(e) => { setSlugTouched(true); set({ slug: e.target.value }) }} />
+            <Input id="draft-slug" className="font-mono" value={value.slug} onChange={(e) => { setSlugTouched(true); set({ slug: e.target.value }) }} />
           </Field>
           <Field label="Project" htmlFor="draft-project">
             <ProjectSelect id="draft-project" value={value.projectId} onChange={(projectId) => set({ projectId })} />
           </Field>
-          <p className="text-xs text-muted-foreground">Saved in this browser. Publishing to your site isn't set up yet.</p>
-        </aside>
+          <p className="border-t border-line-soft pt-3 text-[11px] leading-relaxed text-muted-foreground">Publishing to your site isn't set up yet.</p>
+        </Panel>
       </div>
     </>
   )

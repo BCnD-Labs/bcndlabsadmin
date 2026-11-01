@@ -24,7 +24,7 @@ export function EmptyState({
     <div className={cn("flex flex-col items-center justify-center gap-2 px-6 py-10 text-center", className)} data-testid="empty-state">
       {Icon && <Icon className="mb-1 size-5 text-faint" strokeWidth={1.6} aria-hidden />}
       <p className="text-sm text-ink-2">{title}</p>
-      {children && <p className="max-w-72 text-[11px] leading-relaxed text-muted-foreground">{children}</p>}
+      {children && <p className="max-w-sm text-[11px] leading-relaxed text-muted-foreground">{children}</p>}
       {action && <div className="mt-2">{action}</div>}
     </div>
   )

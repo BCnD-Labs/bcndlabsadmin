@@ -1,13 +1,16 @@
-import { Plus } from "lucide-react"
+import { FileText, Plus } from "lucide-react"
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { EmptyState, PageHeader } from "@/components/common/panel"
+import { EmptyState } from "@/components/common/empty-state"
+import { DataTable, Toolbar } from "@/components/common/list"
+import { PageHeader } from "@/components/common/page-header"
+import { Panel } from "@/components/common/panel"
+import { SegmentedTabs } from "@/components/common/segmented-tabs"
 import { DraftStatusTag, ProjectTag } from "@/components/common/tags"
 import { timeAgo } from "@/lib/dates"
 import { draftHref } from "@/lib/routes"
-import type { DraftKind } from "@/lib/types"
+import type { Draft, DraftKind } from "@/lib/types"
 import { useProjectMap, useWorkspace } from "@/stores/workspace"
 import { useCreateDraft } from "./use-create-draft"
 
@@ -19,63 +22,64 @@ export function ContentList({ mode }: { mode: "all" | "drafts" }) {
   const navigate = useNavigate()
   const [kind, setKind] = useState<DraftKind | "any">("any")
 
-  const rows = drafts
-    .filter((d) => (mode === "drafts" ? d.status !== "ready" : true))
-    .filter((d) => (kind === "any" ? true : d.kind === kind))
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+  const inMode = drafts.filter((d) => (mode === "drafts" ? d.status !== "ready" : true))
+  const rows = inMode.filter((d) => (kind === "any" ? true : d.kind === kind)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+  const count = (k: DraftKind) => inMode.filter((d) => d.kind === k).length
+  const newDraft = () => navigate(draftHref(createDraft(kind === "page" ? { kind: "page" } : undefined).id))
 
   return (
     <>
       <PageHeader
         title={mode === "all" ? "Pages & posts" : "Drafts"}
-        description="Saved in this browser. Publishing isn't set up yet."
-        actions={
-          <Button onClick={() => navigate(draftHref(createDraft(kind === "page" ? { kind: "page" } : undefined).id))}>
-            <Plus /> New draft
-          </Button>
+        subtitle={
+          mode === "all"
+            ? "Everything you've written for your site. Saved in this browser; publishing isn't set up yet."
+            : "Work in progress: anything not marked Ready. Saved in this browser."
         }
+        actions={<Button size="lg" onClick={newDraft}><Plus /> New draft</Button>}
       />
-      <div className="brutal rounded-xl bg-card">
-        <div className="flex items-center gap-2 border-b px-3 py-2">
-          <ToggleGroup type="single" size="sm" variant="outline" value={kind} onValueChange={(v) => v && setKind(v as DraftKind | "any")} aria-label="Content type">
-            <ToggleGroupItem value="any" className="px-2 text-xs">All</ToggleGroupItem>
-            <ToggleGroupItem value="post" className="px-2 text-xs">Posts</ToggleGroupItem>
-            <ToggleGroupItem value="page" className="px-2 text-xs">Pages</ToggleGroupItem>
-          </ToggleGroup>
-          <span className="ml-auto text-xs text-muted-foreground">{rows.length} items</span>
-        </div>
+      <Panel tool="content" command={mode === "all" ? "ls" : "ls --drafts"} meta={`${rows.length} ${rows.length === 1 ? "item" : "items"}`}>
+        <Toolbar>
+          <SegmentedTabs
+            label="Content type"
+            value={kind}
+            onChange={setKind}
+            className="w-full sm:w-72"
+            tabs={[
+              { value: "any", label: "All", count: inMode.length },
+              { value: "post", label: "Posts", count: count("post") },
+              { value: "page", label: "Pages", count: count("page") },
+            ]}
+          />
+        </Toolbar>
         {rows.length ? (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] text-sm">
-              <thead>
-                <tr className="eyebrow border-b text-left">
-                  <th className="px-3 py-2 font-normal">Title</th>
-                  <th className="px-3 py-2 font-normal">Type</th>
-                  <th className="px-3 py-2 font-normal">Status</th>
-                  <th className="px-3 py-2 font-normal">Project</th>
-                  <th className="px-3 py-2 text-right font-normal">Updated</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((d) => (
-                  <tr key={d.id} className="border-b border-border/60 last:border-0 hover:bg-muted/40">
-                    <td className="px-3 py-2">
-                      <Link to={draftHref(d.id)} className="font-bold hover:underline">{d.title}</Link>
-                      <div className="font-mono text-xs text-muted-foreground">/{d.kind === "post" ? "writing/" : ""}{d.slug}</div>
-                    </td>
-                    <td className="px-3 py-2 text-xs capitalize text-muted-foreground">{d.kind}</td>
-                    <td className="px-3 py-2"><DraftStatusTag status={d.status} /></td>
-                    <td className="px-3 py-2"><ProjectTag project={d.projectId ? projects.get(d.projectId) : undefined} /></td>
-                    <td className="px-3 py-2 text-right text-xs text-muted-foreground">{timeAgo(d.updatedAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable<Draft>
+            label={mode === "all" ? "Pages and posts" : "Drafts"}
+            rows={rows}
+            rowKey={(d) => d.id}
+            columns={[
+              {
+                key: "title",
+                header: "Title",
+                cell: (d) => (
+                  <>
+                    <Link to={draftHref(d.id)} className="text-[13px] text-ink hover:underline">{d.title}</Link>
+                    <div className="mt-0.5 font-mono text-[11px] break-all text-muted-foreground">/{d.kind === "post" ? "writing/" : ""}{d.slug}</div>
+                  </>
+                ),
+              },
+              { key: "type", header: "Type", optional: true, cell: (d) => <span className="text-muted-foreground capitalize">{d.kind}</span> },
+              { key: "status", header: "Status", cell: (d) => <DraftStatusTag status={d.status} /> },
+              { key: "project", header: "Project", optional: true, cell: (d) => <ProjectTag project={d.projectId ? projects.get(d.projectId) : undefined} /> },
+              { key: "updated", header: "Updated", optional: true, align: "right", cell: (d) => <span className="whitespace-nowrap text-muted-foreground">{timeAgo(d.updatedAt)}</span> },
+            ]}
+          />
         ) : (
-          <EmptyState>No content here yet.</EmptyState>
+          <EmptyState icon={FileText} title={kind === "any" ? "Nothing written yet" : `No ${kind}s here`} action={<Button variant="outline" onClick={newDraft}><Plus /> New draft</Button>}>
+            Drafts hold a title, excerpt and Markdown body.
+          </EmptyState>
         )}
-      </div>
+      </Panel>
     </>
   )
 }
