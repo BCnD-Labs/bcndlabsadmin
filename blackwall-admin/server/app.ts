@@ -31,6 +31,23 @@ export interface ApiOptions {
 
 const LOOPBACK = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/
 
+/**
+ * Who is signing in, for the login limiter. On the home server the app is only
+ * published on 127.0.0.1, so requests arrive through `tailscale serve` (or
+ * Docker's port proxy), and the socket address is the same for every device.
+ * Serve puts the real tailnet address in X-Forwarded-For; the rightmost entry
+ * is the one the proxy added, so a client can't pick its own bucket.
+ */
+export function clientAddress(req: IncomingMessage): string {
+  const xff = req.headers["x-forwarded-for"]
+  const last = (Array.isArray(xff) ? xff.join(",") : (xff ?? ""))
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .at(-1)
+  return last ?? req.socket.remoteAddress ?? "?"
+}
+
 function send(res: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}) {
   res.statusCode = status
   res.setHeader("Content-Type", "application/json")
@@ -88,7 +105,9 @@ function readBackups(dir: string) {
 
 export function createApi(opts: ApiOptions) {
   const allowed = new Set(opts.allowedHosts ?? [])
-  const limiter = new LoginLimiter()
+  // 10 failed logins per device per 15 minutes, and 30 in total across all devices.
+  const limiter = new LoginLimiter(10)
+  const everyone = new LoginLimiter(30)
 
   return async function handle(req: IncomingMessage, res: ServerResponse) {
     try {
@@ -116,11 +135,14 @@ export function createApi(opts: ApiOptions) {
     }
     if (parts[0] === "login" && method === "POST") {
       if (!auth) return send(res, 200, { authenticated: true })
-      const client = req.socket.remoteAddress ?? "?"
-      if (limiter.blocked(client)) return send(res, 429, { error: "Too many attempts. Try again in a few minutes." })
+      const client = clientAddress(req)
+      if (limiter.blocked(client) || everyone.blocked("*")) {
+        return send(res, 429, { error: "Too many attempts. Try again in a few minutes." })
+      }
       const { password } = await readJson<{ password?: string }>(req)
       if (typeof password !== "string" || !verifyPassword(password, auth.passwordHash)) {
         limiter.fail(client)
+        everyone.fail("*")
         return send(res, 401, { error: "Wrong password" })
       }
       return send(res, 200, { authenticated: true }, { "Set-Cookie": auth.sessions.issue(secure) })

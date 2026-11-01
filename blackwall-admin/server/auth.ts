@@ -64,8 +64,12 @@ export class Sessions {
 /** At most `limit` failed logins per client per window. */
 export class LoginLimiter {
   private hits = new Map<string, number[]>()
-  private readonly limit = 10
+  private readonly limit: number
   private readonly windowMs = 15 * 60_000
+
+  constructor(limit = 10) {
+    this.limit = limit
+  }
 
   blocked(client: string): boolean {
     const now = Date.now()
