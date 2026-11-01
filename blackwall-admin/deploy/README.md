@@ -73,7 +73,7 @@ Then restart the `app` container. To restore on a fresh server, deploy the stack
 
 **From the panel (once set up):** Settings → General shows the running version, checks GitHub for a newer one, and shows **Update now** when a newer version is found. Behind the button, the app calls the stack's Portainer webhook; Portainer pulls `main`, rebuilds the images and recreates the containers. The page follows along and asks you to refresh when the new version is up. Data in the `db-data` volume and the backups folder is kept.
 
-**By hand:** in Portainer open the stack and choose **Pull and redeploy**. Every redeploy rebuilds the images.
+**By hand:** in Portainer open the stack and choose **Pull and redeploy**. Every redeploy rebuilds the images: the `app` and `backup` services set `pull_policy: build`, because otherwise Compose would reuse the existing `blackwall-app:latest` image and a redeploy would pull the new code but keep running the old build.
 
 ### Setting up updates from the panel
 

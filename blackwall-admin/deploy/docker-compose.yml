@@ -25,6 +25,9 @@ services:
       context: ..
       dockerfile: Dockerfile
     image: blackwall-app:latest
+    # Rebuild on every deploy. Without this, Compose reuses the existing blackwall-app:latest
+    # image, so a webhook/GitOps redeploy pulls the new code but keeps running the old build.
+    pull_policy: build
     restart: unless-stopped
     depends_on:
       db:
@@ -54,6 +57,7 @@ services:
   backup:
     build: ./backup
     image: blackwall-backup:latest
+    pull_policy: build
     restart: unless-stopped
     depends_on:
       db:
