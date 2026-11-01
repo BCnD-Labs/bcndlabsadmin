@@ -329,7 +329,16 @@
     background-image: none;
   }
 
-  /* Label: 10px mono caps, faint */
+  /* §1 label: 10px mono caps, faint. */
+  .bw-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--bw-faint);
+  }
+
+  /* Legacy name for .bw-label. */
   .eyebrow {
     font-family: var(--font-mono);
     font-size: 10px;

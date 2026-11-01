@@ -1,5 +1,3 @@
-import type { ReactNode } from "react"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -11,29 +9,7 @@ import { cn } from "@/lib/utils"
 import { useWorkspace } from "@/stores/workspace"
 import { PROJECT_DOT } from "@/components/common/tags"
 
-export function Field({
-  label,
-  htmlFor,
-  children,
-  className,
-  hint,
-}: {
-  label: string
-  htmlFor?: string
-  children: ReactNode
-  className?: string
-  hint?: ReactNode
-}) {
-  return (
-    <div className={cn("grid gap-1.5", className)}>
-      <Label htmlFor={htmlFor} className="text-xs text-muted-foreground">
-        {label}
-      </Label>
-      {children}
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-    </div>
-  )
-}
+export { Field } from "@/components/common/field"
 
 const NONE = "__none"
 
