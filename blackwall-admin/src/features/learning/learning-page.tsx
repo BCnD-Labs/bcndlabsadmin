@@ -204,6 +204,7 @@ export function LearningPage() {
       {courses.length === 0 ? (
         <Panel tool="learning" command="ls" className="max-w-2xl">
           <EmptyState
+            roomy
             icon={GraduationCap}
             title="No courses yet"
             action={

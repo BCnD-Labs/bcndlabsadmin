@@ -48,13 +48,9 @@ export function ProjectDetail() {
         actions={<Button variant="ghost" onClick={() => openForm({ kind: "project", id })}><Pencil /> Edit</Button>}
       />
 
-      <div className="grid gap-3 lg:grid-cols-2">
-        <Panel
-          tool="repos"
-          command="ls"
-          meta={pRepos.length || undefined}
-          actions={<Button size="icon-sm" variant="quiet" aria-label="Link a repository" title="Link a repository" onClick={newRepo}><Plus /></Button>}
-        >
+      <Panel tool="project" command="links" bodyClassName="grid gap-4 px-3.5 py-3 lg:grid-cols-2">
+        <section aria-label="Repositories" className="min-w-0">
+          <div className="mb-1 flex items-center justify-between gap-2"><h3 className="bw-label">Repositories · {pRepos.length}</h3><Button size="icon-sm" variant="quiet" aria-label="Link a repository" onClick={newRepo}><Plus /></Button></div>
           {pRepos.length ? (
             <ul>
               {pRepos.map((r) => (
@@ -72,13 +68,9 @@ export function ProjectDetail() {
           ) : (
             <EmptyState icon={GitBranch} title="No repositories linked" action={<Button variant="outline" onClick={newRepo}><Plus /> Link a repository</Button>} />
           )}
-        </Panel>
-        <Panel
-          tool="drafts"
-          command="ls"
-          meta={pDrafts.length || undefined}
-          actions={<Button size="icon-sm" variant="quiet" aria-label="New draft" title="New draft" onClick={newDraft}><Plus /></Button>}
-        >
+        </section>
+        <section aria-label="Drafts" className="min-w-0">
+          <div className="mb-1 flex items-center justify-between gap-2"><h3 className="bw-label">Drafts · {pDrafts.length}</h3><Button size="icon-sm" variant="quiet" aria-label="New draft" onClick={newDraft}><Plus /></Button></div>
           {pDrafts.length ? (
             <ul>
               {pDrafts.map((d) => (
@@ -94,8 +86,8 @@ export function ProjectDetail() {
           ) : (
             <EmptyState icon={FileText} title="No drafts linked" action={<Button variant="outline" onClick={newDraft}><Plus /> New draft</Button>} />
           )}
-        </Panel>
-      </div>
+        </section>
+      </Panel>
     </>
   )
 }

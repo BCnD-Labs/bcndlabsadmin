@@ -175,7 +175,7 @@ export function CalendarMenu() {
           data-mode={mode ?? undefined}
           aria-hidden={!open}
           inert={!open}
-          className="bw-pop absolute top-full left-0 z-40 w-[300px] max-w-[calc(100vw-48px)] pt-2.5"
+          className="bw-pop fixed top-[var(--bw-header-h,88px)] left-3 z-40 w-[300px] max-w-[calc(100vw-24px)] pt-2.5 md:absolute md:top-full md:right-0 md:left-auto"
         >
           <section aria-label="Calendar" className="bw-panel bw-float overflow-hidden">
             <div className="flex h-10 items-center justify-between gap-2 border-b border-line pr-2 pl-3.5">

@@ -94,7 +94,7 @@ export function ContentPage() {
         />
         <SiteNotice site={site} />
 
-        <section className="bw-panel flex flex-col overflow-hidden" aria-label="Content">
+        <section className="flex min-w-0 flex-col" aria-label="Content">
           <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-2">
             <SegmentedTabs
               label="Posts or pages"
@@ -115,9 +115,9 @@ export function ContentPage() {
                       type="button"
                       aria-pressed={show === s}
                       onClick={() => set({ show: s === "all" ? null : s === "draft" ? "drafts" : s })}
-                      className="inline-flex h-7 items-center gap-1.5 rounded-full border border-line px-2.5 text-xs text-muted-foreground hover:text-ink aria-pressed:border-rim aria-pressed:bg-selected aria-pressed:text-ink"
+                      className="inline-flex h-8 items-center gap-1.5 rounded-full border border-line px-2.5 text-xs text-muted-foreground hover:text-ink aria-pressed:border-rim aria-pressed:bg-selected aria-pressed:text-ink"
                     >
-                      {SHOW_LABEL[s]} <span className="text-[10px] text-faint tabular-nums">{count(s)}</span>
+                      {SHOW_LABEL[s]} <span className="text-[10px] text-muted-foreground tabular-nums">{count(s)}</span>
                     </button>
                   ))}
                 </div>
@@ -149,7 +149,7 @@ export function ContentPage() {
                 ))}
               </ul>
             ) : (
-              <EmptyState icon={FileText} title={items.length ? "No posts match" : "No posts yet"} action={!items.length && <Button variant="outline" onClick={newPost}><Plus /> New post</Button>}>
+              <EmptyState roomy={!items.length} icon={FileText} title={items.length ? "No posts match" : "No posts yet"} action={!items.length && <Button variant="outline" onClick={newPost}><Plus /> New post</Button>}>
                 {items.length ? "Try another filter." : "Write a post, add a cover image, then publish it or schedule it for later."}
               </EmptyState>
             )
@@ -255,9 +255,9 @@ function PostCard({ item, siteUrl, postsBase }: { item: PostItem; siteUrl?: stri
     <li className={cn("group relative flex flex-col overflow-hidden rounded-[10px] border border-line bg-raised transition-colors hover:border-rim", busy && "opacity-60")} data-testid="post-card">
       <button type="button" onClick={edit} className="flex flex-1 flex-col text-left" aria-label={`Edit ${item.title}`}>
         {item.cover ? (
-          <SiteImage path={item.cover} siteUrl={siteUrl} className="aspect-[16/10] w-full border-b border-line" />
+          <SiteImage path={item.cover} siteUrl={siteUrl} className="aspect-[2/1] w-full border-b border-line" />
         ) : (
-          <CoverPlaceholder title={item.title} className="aspect-[16/10] w-full border-b border-line" />
+          <CoverPlaceholder title={item.title} className="aspect-[2/1] w-full border-b border-line" />
         )}
         <span className="flex flex-1 flex-col gap-1 px-3 pt-2.5 pb-3">
           <span className="line-clamp-2 text-[13px] leading-snug font-semibold text-ink">{item.title || "Untitled"}</span>
@@ -333,7 +333,7 @@ export const postUrl = (postsUrl: string, slug: string) => joinUrl(postsUrl, `${
 function PagesGrid({ pages, drafts, status }: { pages: { path: string; title: string; url: string }[]; drafts: { id: string; title: string; slug: string; updatedAt: string }[]; status: string }) {
   if (!pages.length && !drafts.length)
     return (
-      <EmptyState icon={Globe} title={status === "live" ? "No pages found" : "Pages come from your site"} action={status !== "live" && <Button variant="outline" onClick={() => useUi.getState().openSettings("connections", "website")}>Connect your website</Button>}>
+      <EmptyState roomy={status !== "live"} icon={Globe} title={status === "live" ? "No pages found" : "Pages come from your site"} action={status !== "live" && <Button variant="outline" onClick={() => useUi.getState().openSettings("connections", "website")}>Connect your website</Button>}>
         {status === "live" ? "Blackwall looks for .html pages in the top folders of the repository." : "Once your website is connected, its pages show here with a live preview."}
       </EmptyState>
     )
@@ -342,7 +342,7 @@ function PagesGrid({ pages, drafts, status }: { pages: { path: string; title: st
       <ul className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5" aria-label="Pages">
         {pages.map((p) => (
           <li key={p.path} className="group flex flex-col overflow-hidden rounded-[10px] border border-line bg-raised hover:border-rim" data-testid="page-card">
-            {p.url ? <LiveThumb url={p.url} title={p.title} className="aspect-[16/10] w-full border-b border-line" /> : <CoverPlaceholder title={p.title} className="aspect-[16/10] w-full border-b border-line" />}
+            {p.url ? <LiveThumb url={p.url} title={p.title} className="aspect-[2/1] w-full border-b border-line" /> : <CoverPlaceholder title={p.title} className="aspect-[2/1] w-full border-b border-line" />}
             <div className="flex items-center gap-2 px-3 py-2.5">
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[13px] font-semibold text-ink">{p.title}</span>
@@ -361,7 +361,7 @@ function PagesGrid({ pages, drafts, status }: { pages: { path: string; title: st
         {drafts.map((d) => (
           <li key={d.id} className="flex flex-col overflow-hidden rounded-[10px] border border-dashed border-line bg-raised/60">
             <Link to={draftHref(d.id)} className="flex flex-1 flex-col">
-              <CoverPlaceholder title={d.title} className="aspect-[16/10] w-full border-b border-line" />
+              <CoverPlaceholder title={d.title} className="aspect-[2/1] w-full border-b border-line" />
               <span className="flex flex-col gap-0.5 px-3 py-2.5">
                 <span className="truncate text-[13px] font-semibold text-ink">{d.title}</span>
                 <span className="text-[11px] text-faint">Page draft · edited {timeAgo(d.updatedAt)}</span>

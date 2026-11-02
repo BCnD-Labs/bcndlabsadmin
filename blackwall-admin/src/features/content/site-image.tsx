@@ -78,8 +78,7 @@ export function CoverPlaceholder({ title, className }: { title: string; classNam
     .join("")
   return (
     <span
-      className={cn("flex items-center justify-center bg-well font-heading text-2xl font-bold text-ledge-hi", className)}
-      style={{ backgroundImage: "radial-gradient(circle at 1px 1px, var(--bw-line) 1px, transparent 0)", backgroundSize: "14px 14px" }}
+      className={cn("flex items-center justify-center bg-panel font-heading text-lg font-medium text-muted-foreground", className)}
       aria-hidden
     >
       {letters || "—"}

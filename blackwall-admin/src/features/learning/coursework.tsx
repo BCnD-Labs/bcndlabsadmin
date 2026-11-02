@@ -61,7 +61,7 @@ export function CourseworkRow({ task, course, showCourse }: { task: Task; course
         aria-label={task.done ? `Mark "${task.title}" as not done` : `Complete "${task.title}"`}
       />
       <span
-        className={cn("flex size-7 shrink-0 items-center justify-center rounded-[7px] bg-ink-2/8", task.done ? "text-faint" : "text-ink-2")}
+        className={cn("flex size-7 shrink-0 items-center justify-center rounded-[7px]", task.done ? "text-faint" : "text-ink-2")}
         title={type.label}
       >
         <Icon className="size-3.5" aria-hidden />

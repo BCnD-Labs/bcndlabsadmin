@@ -113,7 +113,7 @@ export function Notifications() {
         inert={!open}
         onPointerEnter={hide.onPointerEnter}
         onPointerLeave={hide.onPointerLeave}
-        className="bw-panel bw-float bw-slide fixed top-[var(--bw-header-h,88px)] right-3 bottom-3 z-50 flex w-[340px] max-w-[calc(100vw-24px)] flex-col overflow-hidden"
+        className={cn("bw-panel bw-float bw-slide fixed top-[var(--bw-header-h,88px)] right-3 z-50 flex w-[340px] max-w-[calc(100vw-24px)] flex-col overflow-hidden", items.length ? "bottom-3" : "h-[260px] max-h-[calc(100dvh-var(--bw-header-h,88px)-12px)]")}
       >
         <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-line pr-2 pl-3.5">
           <span className="flex items-center gap-2">

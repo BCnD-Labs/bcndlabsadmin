@@ -384,16 +384,20 @@ html[data-font="mono"] {
     --bw-panel: var(--bw-settings-card);
   }
   .bw-settings-body .bw-panel {
-    border-width: 1px 1px 2px;
-    border-color: var(--bw-border) var(--bw-border) var(--bw-ledge-hi);
+    border-width: 1px;
+    border-color: var(--bw-border);
     border-radius: 10px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    box-shadow: none;
   }
   .bw-settings-body .bw-panel::after {
     background-image: none;
   }
   .bw-settings-body .bw-panel > header {
-    background: rgba(255, 255, 255, 0.02);
+    background: transparent;
+    border-bottom: 0;
+  }
+  .bw-settings-body .bw-panel > header h2 > span > span:first-child {
+    display: none;
   }
 
   /* §1 label: small caps, faint (Mantine section-label style). */
@@ -436,3 +440,12 @@ html[data-font="mono"] {
   }
 }
 
+
+/* Shared touch floors include bespoke row actions. Checkboxes already extend
+   their hit area by 8px on every side without enlarging the 16px mark. */
+@media (max-width: 767px) {
+  button:not([data-slot="checkbox"]):not([role="switch"]) {
+    min-height: 32px;
+    min-width: 32px;
+  }
+}

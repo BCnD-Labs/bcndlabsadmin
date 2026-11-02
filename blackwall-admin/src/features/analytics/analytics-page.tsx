@@ -62,16 +62,22 @@ function WebsiteAnalytics() {
         items={[
           { label: "Visitors", value: fmt.format(visitors), sub: `${(visitors / range).toFixed(1)} a day on average` },
           { label: "Pageviews", value: fmt.format(pageviews), sub: visitors ? `${(pageviews / visitors).toFixed(1)} pages per visit` : undefined },
-          { label: "Days with visits", value: `${activeDays} / ${range}` },
-          { label: "Busiest day", value: busiest.visitors ? format(parseKey(busiest.date), "MMM d") : "—", sub: busiest.visitors ? `${busiest.visitors} ${busiest.visitors === 1 ? "visitor" : "visitors"}` : undefined },
         ]}
       />
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-        <Panel tool="site" command={`visitors --${range}d`} bodyClassName="flex px-2 pt-2 pb-1.5">
-          <DailyBars data={traffic} range={range} className="h-44 w-full lg:h-full lg:min-h-44" />
+      <details className="bw-panel px-3.5 py-1">
+        <summary className="min-h-8 cursor-pointer content-center text-xs text-ink-2">Details</summary>
+        <dl className="grid grid-cols-2 gap-4 py-2 text-xs text-muted-foreground">
+          <div><dt>Days with visits</dt><dd className="mt-1 text-ink">{activeDays} / {range}</dd></div>
+          <div><dt>Busiest day</dt><dd className="mt-1 text-ink">{busiest.visitors ? `${format(parseKey(busiest.date), "MMM d")} · ${busiest.visitors} visitors` : "—"}</dd></div>
+        </dl>
+      </details>
+      <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+        <Panel tool="site" command={`visitors --${range}d`} bodyClassName="px-2 pt-2 pb-1.5">
+          <DailyBars data={traffic} range={range} className="h-36 w-full" />
         </Panel>
-        <div className="flex min-w-0 flex-col gap-3">
-          <Panel tool="site" command="top-pages" meta="views" bodyClassName="px-3.5 py-2.5">
+        <Panel tool="site" command="breakdown" bodyClassName="space-y-4 px-3.5 py-3">
+          <section aria-label="Top pages">
+            <h3 className="bw-label mb-2">Top pages · views</h3>
             {pages.length ? (
               <ul className="space-y-2">
                 {pages.slice(0, 6).map((p) => <BarRow key={p.path} label={p.path} value={p.pageviews} max={maxPage} mono />)}
@@ -79,8 +85,9 @@ function WebsiteAnalytics() {
             ) : (
               <p className="text-[11px] text-muted-foreground">No page views in this range.</p>
             )}
-          </Panel>
-          <Panel tool="site" command="referrers" meta="visitors" bodyClassName="px-3.5 py-2.5">
+          </section>
+          <section aria-label="Referrers">
+            <h3 className="bw-label mb-2">Referrers · visitors</h3>
             {referrers.length ? (
               <ul className="space-y-2">
                 {referrers.slice(0, 5).map((r) => <BarRow key={r.source} label={r.source} value={r.visitors} max={maxRef} />)}
@@ -88,8 +95,8 @@ function WebsiteAnalytics() {
             ) : (
               <p className="text-[11px] text-muted-foreground">No referrers in this range.</p>
             )}
-          </Panel>
-        </div>
+          </section>
+        </Panel>
       </div>
     </div>
   )

@@ -77,7 +77,7 @@ export function Header() {
         <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
           {home ? (
             <>
-              <time className="bw-label truncate" dateTime={now.toISOString()} data-testid="header-clock">
+              <time className="bw-label truncate leading-4" dateTime={now.toISOString()} data-testid="header-clock">
                 <span className="sm:hidden">{format(now, "EEE · MMM d · h:mm a")}</span>
                 <span className="hidden sm:inline">{format(now, "EEEE · MMM d · h:mm a")}</span>
               </time>

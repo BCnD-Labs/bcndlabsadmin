@@ -107,7 +107,7 @@ export function DevelopmentPage() {
             </ul>
           ) : (
             <Panel tool="repos" command="ls">
-              <EmptyState icon={GitBranch} title="No repositories tracked" action={<Button variant="outline" onClick={track}><Plus /> Track repository</Button>}>
+              <EmptyState roomy icon={GitBranch} title="No repositories tracked" action={<Button variant="outline" onClick={track}><Plus /> Track repository</Button>}>
                 Add the ones you work on; their commits, status and links show up here.
               </EmptyState>
             </Panel>
@@ -446,7 +446,7 @@ function Avatar({ a }: { a: RepoActivity }) {
   if (a.avatar && !broken) return <img src={a.avatar} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setBroken(true)} className="size-6 shrink-0 rounded-full border border-line bg-well" />
   const Icon = ACTIVITY_ICON[a.kind]
   return (
-    <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-line bg-raised">
+    <span className="flex size-6 shrink-0 items-center justify-center">
       <Icon className="size-3 text-muted-foreground" aria-hidden />
     </span>
   )
