@@ -87,7 +87,7 @@ export function PlannerPage() {
 
 /** A column header inside the shared card, the same height as a panel header. */
 function ColumnHeader({ children, className }: { children: ReactNode; className?: string }) {
-  return <header className={cn("flex h-[38px] shrink-0 items-center gap-1.5 border-b border-line pr-2 pl-3.5 text-xs", className)}>{children}</header>
+  return <header className={cn("flex h-[38px] md:h-8 shrink-0 items-center gap-1.5 border-b border-line-soft pr-2 pl-3.5 text-xs", className)}>{children}</header>
 }
 
 function SearchBox({ value, onChange, label, onClose }: { value: string; onChange: (v: string) => void; label: string; onClose: () => void }) {

@@ -13,7 +13,7 @@ import { Slot } from "radix-ui"
 const primary = "border border-transparent bg-red font-semibold text-white shadow-xs hover:bg-red-hover active:translate-y-px"
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-[8px] text-[13px] font-medium whitespace-nowrap transition-[background-color,border-color,color,transform] duration-150 ease-bw select-none active:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+  "group/button max-md:min-h-8 max-md:min-w-8 inline-flex shrink-0 items-center justify-center rounded-[8px] text-[13px] font-medium whitespace-nowrap transition-[background-color,border-color,color,transform] duration-150 ease-bw select-none active:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
   {
     variants: {
       variant: {

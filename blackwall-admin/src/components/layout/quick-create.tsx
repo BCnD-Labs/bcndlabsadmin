@@ -25,7 +25,7 @@ import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
 import { draftHref } from "@/lib/routes"
 
-export function QuickCreate() {
+export function QuickCreate({ quiet = false }: { quiet?: boolean }) {
   const openForm = useUi((s) => s.openForm)
   const createDraft = useCreateDraft()
   const navigate = useNavigate()
@@ -35,7 +35,7 @@ export function QuickCreate() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button size="lg" aria-label="Create new">
+        <Button size="lg" variant={quiet ? "ghost" : "default"} aria-label="Create new">
           + <span className="hidden sm:inline">New</span>
         </Button>
       </DropdownMenuTrigger>

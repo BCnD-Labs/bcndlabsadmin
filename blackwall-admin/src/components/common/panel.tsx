@@ -19,8 +19,8 @@ export function Prompt({ tool, command, children }: { tool?: ReactNode; command?
 }
 
 /**
- * Spec §2 panel: charcoal surface, 12px radius, 4px ledge on the right and
- * bottom, scanlines, and a 40px terminal-prompt header
+ * Major panel: theme surface, 10px radius and a 32px desktop prompt header.
+ * Dark retains a subtle hardware ledge and optional scanlines.
  * (`❯ tool $ command      meta  actions`).
  *
  * `badge` sits after the prompt (e.g. a SourceBadge); `meta` and `actions` sit on the right.
@@ -66,7 +66,7 @@ export function Panel({
       <header
         {...headerProps}
         className={cn(
-          "flex min-h-[38px] shrink-0 flex-wrap items-center gap-2 border-b border-line-soft py-1 pr-2 pl-3.5 text-xs whitespace-nowrap text-muted-foreground",
+          "flex min-h-[38px] md:min-h-8 shrink-0 flex-wrap items-center gap-2 border-b border-line-soft py-1 md:py-0 pr-2 pl-3.5 text-xs whitespace-nowrap text-muted-foreground",
           headerClassName,
           headerProps?.className,
         )}

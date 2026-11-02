@@ -26,7 +26,7 @@ function crumbs(pathname: string, search: string): { label: string; to?: string 
   return [{ label: dest.label, to: dest.to }, { label: child.label, to: pathname + search === child.to ? undefined : child.to }]
 }
 
-/** The page title lives on the page (PageHeader); the header shows where you are. */
+/** PageHeader supplies the title; the breadcrumb keeps navigation context. */
 function Breadcrumb({ items }: { items: { label: string; to?: string }[] }) {
   return (
     <nav aria-label="Breadcrumb" className="min-w-0">
@@ -61,7 +61,7 @@ export function Header() {
 
   return (
     <header className="bw-panel z-20 flex flex-col gap-2.5 py-2.5 pr-2.5 pl-3 md:flex-row md:items-center md:justify-between md:gap-3 md:pl-4">
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2 md:flex-1">
         {/* Small screens only; desktop has the rail. */}
         <Button
           variant="ghost"
@@ -74,7 +74,7 @@ export function Header() {
         >
           <Menu />
         </Button>
-        <div className="flex min-w-0 flex-col gap-[3px]">
+        <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
           {home ? (
             <>
               <time className="bw-label truncate" dateTime={now.toISOString()} data-testid="header-clock">
@@ -91,29 +91,29 @@ export function Header() {
               <Breadcrumb items={items} />
               <div className="flex min-w-0 items-center gap-2.5">
                 <h1 className="min-w-0 truncate font-heading text-xl leading-[26px] font-bold sm:text-2xl">{head.title ?? items.at(-1)?.label}</h1>
-                {head.badge}
-                {head.subtitle && <span className="hidden min-w-0 truncate text-xs text-muted-foreground lg:inline">{head.subtitle}</span>}
+                <span className="flex shrink-0 items-center gap-2">{head.badge}</span>
+                {head.subtitle && <span className="hidden min-w-0 truncate text-xs text-muted-foreground 2xl:inline">{head.subtitle}</span>}
               </div>
             </>
           )}
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        {!home && head.actions && <div className="mr-1 hidden items-center gap-2 border-r border-line pr-3 md:flex">{head.actions}</div>}
+      <div className="flex shrink-0 items-center gap-2">
+        {!home && head.actions && <div className="mr-1 hidden items-center gap-2 border-r border-line-soft pr-3 md:flex">{head.actions}</div>}
         <CalendarMenu />
         <button
           type="button"
           onClick={() => setSearchOpen(true)}
           aria-label="Search workspace"
           aria-keyshortcuts="Meta+K"
-          className="bw-well flex h-8 min-w-0 flex-1 items-center gap-2 px-2.5 text-left text-[13px] text-faint transition-colors hover:border-ledge-hi md:w-[220px] md:flex-none"
+          className={`bw-well flex h-8 min-w-0 flex-1 items-center gap-2 px-2.5 text-left text-[13px] text-faint transition-colors hover:border-ledge-hi md:size-8 md:flex-none md:justify-center md:px-0 ${!home && head.actions ? "xl:w-[160px] xl:justify-start xl:px-2.5 2xl:w-[220px]" : "lg:w-[160px] lg:justify-start lg:px-2.5 xl:w-[220px]"}`}
         >
           <Search className="size-[13px] shrink-0" strokeWidth={2} aria-hidden />
-          <span className="flex-1">search</span>
-          <kbd className="hidden rounded-[4px] border border-b-2 border-rim bg-raised px-[5px] py-px font-mono text-[10px] text-muted-foreground sm:inline">⌘K</kbd>
+          <span className={`flex-1 md:hidden ${!home && head.actions ? "xl:inline" : "lg:inline"}`}>search</span>
+          <kbd className={`hidden rounded-[4px] border border-b-2 border-rim bg-raised px-[5px] py-px font-mono text-[10px] text-muted-foreground sm:inline md:hidden ${!home && head.actions ? "xl:inline" : "lg:inline"}`}>⌘K</kbd>
         </button>
-        <QuickCreate />
+        <QuickCreate quiet={!home && !!head.actions} />
         <Notifications />
       </div>
     </header>

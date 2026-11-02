@@ -315,7 +315,7 @@ export function CourseDetail() {
         badge={
           <>
             <CourseTag course={course} asLink={false} />
-            <span className="text-xs text-muted-foreground">{COURSE_STATUS_LABEL[status]}</span>
+            <span className="hidden text-xs text-muted-foreground xl:inline">{COURSE_STATUS_LABEL[status]}</span>
           </>
         }
         subtitle={sub || undefined}

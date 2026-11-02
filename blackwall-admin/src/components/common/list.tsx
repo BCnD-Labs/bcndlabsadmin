@@ -43,7 +43,7 @@ export function ListRow({ children, className, ...props }: React.ComponentProps<
 /** A small caps label for groups inside a list, e.g. "Overdue · 2". */
 export function ListGroupLabel({ children, className, tone }: { children: ReactNode; className?: string; tone?: "warn" }) {
   return (
-    <h2 className={cn("bw-label flex items-center gap-2 border-b border-line-soft bg-well/60 px-3.5 py-1.5", tone === "warn" && "text-amber", className)}>
+    <h2 className={cn("bw-label flex items-center gap-2 px-3.5 py-1.5", tone === "warn" && "text-amber", className)}>
       {children}
     </h2>
   )
