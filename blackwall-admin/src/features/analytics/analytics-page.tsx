@@ -42,9 +42,9 @@ function WebsiteAnalytics() {
 
   if (!hasData(feed)) {
     return (
-      <Panel title="Website traffic" tool="site" command="traffic" badge={badge} className="bw-surface-width">
+      <WorkspaceGrid><GridItem span={2}><Panel title="Website traffic" tool="site" command="traffic" badge={badge}>
         <FeedFallback feed={feed} provider="analytics" what="visitors, pageviews, top pages and referrers" />
-      </Panel>
+      </Panel></GridItem></WorkspaceGrid>
     )
   }
 
@@ -116,11 +116,11 @@ function PersonalAnalytics() {
   const total30 = s.completed.reduce((a, d) => a + d.count, 0)
 
   if (!tasks.length && ![...s.logWords.values()].some(Boolean)) {
-    return <Panel title="Activity insights" tool="activity" command="overview" className="bw-surface-width">
+    return <WorkspaceGrid><GridItem span={2}><Panel title="Activity insights" tool="activity" command="overview">
       <EmptyState roomy title="Your activity will take shape here" action={<Button variant="outline" asChild><Link to={plannerHref}>Open Planner</Link></Button>}>
         Add tasks or write a daily log to see your progress and patterns over time.
       </EmptyState>
-    </Panel>
+    </Panel></GridItem></WorkspaceGrid>
   }
 
   return (

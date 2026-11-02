@@ -264,7 +264,6 @@ html[data-font="mono"] {
   .bw-row-dense { min-height: var(--bw-row-dense); }
   .bw-row-two-line { min-height: var(--bw-row-two-line); }
   .bw-card-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--bw-grid-gap); }
-  .bw-surface-width { width: 100%; max-width: calc((var(--bw-page-max) - 3 * var(--bw-grid-gap)) / 2); }
 
   @container (min-width: 35rem) {
     .bw-grid, .bw-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
