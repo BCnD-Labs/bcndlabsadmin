@@ -96,6 +96,13 @@ Ordinary dates are unfilled, day buttons stay 32px, and week gaps are 4px. A six
 - Settings is a normal settings menu: General · Appearance · Home · Sidebar · Notifications · Connections · Data & storage · Server & backups · Keyboard shortcuts · About. Groups are a small caption over compact rows (label + one-line description + control).
 - Kept on purpose despite the review: the Planner calendar's 25px inset and Comfortable as the default density.
 
+## Mikoshi launcher
+
+- Mikoshi is its own sidebar section in the homelab's phosphor green (#28b845), with tabs Launcher, Status (Uptime Kuma, next) and Storage (Nextcloud).
+- Layout chosen by Blake: a row of big pinned tiles (Homarr-style) above compact grouped tiles (logo, name, what it is, port), Ant card-grid reference.
+- Tiles are workspace records (`services`), synced across devices. Logos come from dashboard-icons (homarr-labs, Apache-2.0); the server fetches each once and keeps a copy (`/api/icons/<slug>`), so tiles keep logos offline. No logo → a Material icon in Mikoshi green.
+- Status dots stay off until Uptime Kuma is connected; nothing pretends to know a service's state.
+
 ## Learning
 
 - Learning is general learning, not only school. Five kinds share one record type (`Course` with `kind`): Course, Certification, Self-paced, Skill, Reading. Older records with no kind are courses.
