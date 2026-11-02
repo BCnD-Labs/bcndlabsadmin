@@ -15,7 +15,7 @@ export function StatStrip({ items, className }: { items: StatItem[]; className?:
   return (
     <dl
       className={cn(
-        "bw-panel grid grid-cols-2 sm:flex sm:divide-x sm:divide-line [&>div]:border-line max-sm:[&>div]:border-b max-sm:[&>div:last-child]:border-b-0 max-sm:[&>div:nth-last-child(2):nth-child(odd)]:border-b-0 max-sm:[&>div:nth-child(odd)]:border-r max-sm:[&>div:last-child:nth-child(odd)]:col-span-2 max-sm:[&>div:last-child:nth-child(odd)]:border-r-0",
+        "bw-panel grid grid-cols-2 sm:flex sm:divide-x sm:divide-line-soft [&>div]:border-line-soft max-sm:[&>div]:border-b max-sm:[&>div:last-child]:border-b-0 max-sm:[&>div:nth-last-child(2):nth-child(odd)]:border-b-0 max-sm:[&>div:nth-child(odd)]:border-r max-sm:[&>div:last-child:nth-child(odd)]:col-span-2 max-sm:[&>div:last-child:nth-child(odd)]:border-r-0",
         className,
       )}
     >

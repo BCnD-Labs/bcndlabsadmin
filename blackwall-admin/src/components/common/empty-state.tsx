@@ -12,6 +12,7 @@ export function EmptyState({
   children,
   action,
   className,
+  roomy = false,
 }: {
   icon?: LucideIcon
   title: ReactNode
@@ -19,9 +20,11 @@ export function EmptyState({
   children?: ReactNode
   action?: ReactNode
   className?: string
+  /** Extra space for first-use guidance rather than empty subsections. */
+  roomy?: boolean
 }) {
   return (
-    <div className={cn("flex flex-col items-center justify-center gap-2 px-6 py-10 text-center", className)} data-testid="empty-state">
+    <div className={cn("flex flex-col items-center justify-center gap-2 px-6 text-center", roomy ? "py-6" : "py-4", className)} data-testid="empty-state">
       {Icon && <Icon className="mb-1 size-5 text-faint" strokeWidth={1.6} aria-hidden />}
       <p className="text-sm text-ink-2">{title}</p>
       {children && <p className="max-w-sm text-[11px] leading-relaxed text-muted-foreground">{children}</p>}

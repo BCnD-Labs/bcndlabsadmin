@@ -8,8 +8,8 @@ export interface SegmentedTab<V extends string> {
 }
 
 /**
- * Segmented control (Mantine-style): a recessed track; the selected tab is a raised
- * chip with a soft shadow, and its count turns red. Arrow keys / Home / End move and select.
+ * Segmented control (Mantine-style): a recessed track; the selected tab is a quiet
+ * selected fill and neutral counts. Arrow keys / Home / End move and select.
  */
 export function SegmentedTabs<V extends string>({
   tabs,
@@ -58,13 +58,13 @@ export function SegmentedTabs<V extends string>({
             onClick={() => onChange(t.value)}
             className={cn(
               "flex h-[26px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[6px] text-xs font-medium whitespace-nowrap transition-[background-color,color,box-shadow] duration-150",
-              on ? "bg-selected text-ink shadow-[0_1px_3px_rgba(0,0,0,0.25)]" : "text-muted-foreground hover:text-ink",
+              on ? "bg-selected text-ink" : "text-muted-foreground hover:text-ink",
               tabClassName,
             )}
           >
             {t.label}
             {t.count !== undefined && (
-              <span className={cn("min-w-4 rounded-full px-1.5 text-center text-[10px] leading-4 font-semibold tabular-nums", on ? "bg-red text-white" : "bg-ink-2/10 text-muted-foreground")}>
+              <span className={cn("min-w-4 rounded-full px-1.5 text-center text-[10px] leading-4 font-semibold tabular-nums", on ? "bg-ink-2/10 text-ink-2" : "bg-ink-2/10 text-muted-foreground")}>
                 {t.count}
               </span>
             )}

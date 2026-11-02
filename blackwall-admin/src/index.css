@@ -111,7 +111,7 @@
    * Surfaces step up: ground → well → panel → raised → selected.
    */
   --bw-ground: #1f2228;
-  --bw-grid: rgba(170, 190, 215, 0.035);
+  --bw-grid: rgba(170, 190, 215, 0.015);
   --bw-panel: #2a2f37;
   --bw-raised: #323842;
   --bw-selected: #3a414c;
@@ -121,7 +121,7 @@
   --bw-line: #373d47;
   --bw-line-soft: #30353e;
   --bw-border: #444b57;
-  --bw-edge: #3a414c;
+  --bw-edge: #343a44;
   --bw-red: #c92a2a; /* brand accent (Mantine red.9): fills, markers, icons, ❯. Never small text. */
   --bw-red-hover: #b52424;
   --bw-red-ledge: #8f1d1d;
@@ -140,7 +140,7 @@
   --bw-check: #6a7280;
   --bw-on-paper: #14171c;
   /* Mantine shadow sm / md. */
-  --bw-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.14) 0 10px 15px -5px, rgba(0, 0, 0, 0.1) 0 7px 7px -5px;
+  --bw-shadow: none;
   --bw-shadow-float: 0 1px 3px rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.28) 0 20px 25px -5px, rgba(0, 0, 0, 0.2) 0 10px 10px -5px;
   --bw-panel-borders: 1px;
   --bw-panel-colors: var(--bw-edge);
@@ -218,11 +218,11 @@ html[data-theme="dark"] {
   --bw-faint: #838c9a;
   --bw-off: #2a303b;
   --bw-check: #4a5261;
-  --bw-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 28px -14px rgba(0, 0, 0, 0.7);
+  --bw-shadow: 0 1px 2px rgba(0, 0, 0, 0.18), 0 6px 16px -12px rgba(0, 0, 0, 0.35);
   --bw-shadow-float: 0 2px 6px rgba(0, 0, 0, 0.3), 0 24px 56px -12px rgba(0, 0, 0, 0.7);
-  --bw-panel-borders: 1px 4px 4px 1px;
+  --bw-panel-borders: 1px 2px 2px 1px;
   --bw-panel-colors: var(--bw-edge) var(--bw-ledge) var(--bw-ledge) var(--bw-edge);
-  --bw-scanlines: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 3px);
+  --bw-scanlines: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.006) 0 1px, transparent 1px 3px);
   --bw-settings-bg: #12151c;
   --bw-settings-side: #0f1218;
   --bw-settings-card: #1a1f28;

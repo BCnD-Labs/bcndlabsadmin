@@ -32,7 +32,7 @@ export function SourceBadge({
         <span
           tabIndex={0}
           className={cn(
-            "inline-flex h-5 max-w-56 shrink-0 items-center gap-1.5 rounded-full px-2 text-[10px] font-bold tracking-[0.03em]",
+            "inline-flex h-5 max-w-56 shrink-0 items-center gap-1.5 rounded-full px-2 text-[10px] font-medium",
             m.className,
             className,
           )}
@@ -42,7 +42,7 @@ export function SourceBadge({
           ) : (
             <span className={cn("size-1.5 shrink-0 rounded-[1.5px]", m.square)} aria-hidden />
           )}
-          <span className="uppercase">{m.label}</span>
+          <span>{m.label}</span>
           {detail && <span className="truncate normal-case">· {detail}</span>}
         </span>
       </TooltipTrigger>

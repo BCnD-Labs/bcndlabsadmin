@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 
 /** Spec §7 toolbar: the first row inside a list panel (search, filters, count). */
 export function Toolbar({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("flex flex-wrap items-center gap-2 border-b border-line px-3.5 py-2", className)}>{children}</div>
+  return <div className={cn("flex flex-wrap items-center gap-2 border-b border-line-soft px-3.5 py-2", className)}>{children}</div>
 }
 
 /** A search well for page headers and toolbars (32px). */
@@ -75,7 +75,7 @@ export function DataTable<T>({
   return (
     <table className="w-full text-xs" aria-label={label}>
       <thead>
-        <tr className="border-b border-line text-left">
+        <tr className="border-b border-line-soft text-left">
           {columns.map((c) => (
             <th key={c.key} scope="col" className={cn("bw-label h-9 px-3.5 font-normal", c.align === "right" && "text-right", hide(c), c.className)}>
               {c.header}

@@ -66,7 +66,7 @@ export function Panel({
       <header
         {...headerProps}
         className={cn(
-          "flex min-h-[38px] shrink-0 flex-wrap items-center gap-2 border-b border-line py-1 pr-2 pl-3.5 text-xs whitespace-nowrap text-muted-foreground",
+          "flex min-h-[38px] shrink-0 flex-wrap items-center gap-2 border-b border-line-soft py-1 pr-2 pl-3.5 text-xs whitespace-nowrap text-muted-foreground",
           headerClassName,
           headerProps?.className,
         )}
