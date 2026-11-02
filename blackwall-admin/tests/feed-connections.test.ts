@@ -56,3 +56,35 @@ test("explicit feed selection reads the chosen account and never falls back on m
     rmSync(root, { recursive: true, force: true })
   }
 })
+
+test("multi-account GitHub overview assigns repos per connection, skips unusable ones and isolates failures", async () => {
+  const root = mkdtempSync(path.join(tmpdir(), "bw-gh-accounts-"))
+  const store = new FileConnectionStore(root)
+  // No tokens: each account fails locally before any network call, which is enough to check routing.
+  const first = await store.create({ provider: "github", label: "Org", config: {} })
+  const second = await store.create({ provider: "github", label: "Personal", config: {} })
+  const broken = await store.create({ provider: "github", label: "Old", config: {} })
+  await store.setResult(first.id, { status: "ok", account: "org-bot" })
+  await store.setResult(second.id, { status: "ok" })
+  await store.setResult(broken.id, { status: "error", message: "Token expired" })
+  const api = createApi({ store, workspace: new FileWorkspaceStore(root) })
+  const server = createServer((req, res) => { void api(req, res) })
+  const base = await listen(server)
+  try {
+    const repos = ["org/site", `me/tool~${second.id}`, `me/old~${broken.id}`, "not a repo"].map(encodeURIComponent).join(",")
+    const res = await fetch(`${base}/api/github/accounts?repos=${repos}`, { headers: { "X-Blackwall": "1" } })
+    assert.equal(res.status, 200)
+    const { accounts } = await res.json()
+    assert.deepEqual(accounts.map((a: { label: string }) => a.label), ["Org", "Personal"], "only working connections are read")
+    assert.deepEqual(accounts[0].repos, ["org/site", "me/old"], "unassigned and unusable assignments fall back to the first working account")
+    assert.deepEqual(accounts[1].repos, ["me/tool"])
+    assert.equal(accounts[0].account, "org-bot")
+    assert.ok(accounts.every((a: { error?: string }) => a.error), "a failing account reports its own error instead of failing the request")
+    await store.setResult(first.id, { status: "error" })
+    await store.setResult(second.id, { status: "error" })
+    assert.equal((await fetch(`${base}/api/github/accounts`, { headers: { "X-Blackwall": "1" } })).status, 409)
+  } finally {
+    await close(server)
+    rmSync(root, { recursive: true, force: true })
+  }
+})

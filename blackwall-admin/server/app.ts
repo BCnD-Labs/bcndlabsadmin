@@ -257,6 +257,32 @@ export function createApi(opts: ApiOptions) {
       return send(res, 200, await githubOverview(c, repos))
     }
 
+    // GET /api/github/accounts?repos=owner/a~connectionId,owner/b
+    // Every working GitHub connection, each with the repos assigned to it. Repos without an
+    // assignment (or assigned to a connection that isn't usable) go to the first working one.
+    if (parts[0] === "github" && parts[1] === "accounts") {
+      const all = (await store.list()).filter((c) => c.provider === "github")
+      const ok = all.filter((c) => c.status === "ok")
+      if (!ok.length) return send(res, 409, { error: all.length ? "No GitHub connection is working. Test it in Settings → Connections." : "GitHub is not connected" })
+      const wanted = (url.searchParams.get("repos") ?? "").split(",").filter(Boolean).slice(0, 40)
+      const assigned = new Map<string, string[]>(ok.map((c) => [c.id, []]))
+      for (const item of wanted) {
+        const [repo, id] = item.split("~")
+        if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) continue
+        assigned.get(id && assigned.has(id) ? id : ok[0].id)!.push(repo)
+      }
+      const accounts = await Promise.all(ok.map(async (c) => {
+        const repos = assigned.get(c.id)!
+        const base = { connectionId: c.id, label: c.label, account: c.account, repos }
+        try {
+          return { ...base, overview: await githubOverview(c, repos) }
+        } catch (e) {
+          return { ...base, error: (e as Error).message }
+        }
+      }))
+      return send(res, 200, { accounts })
+    }
+
     // GET /api/analytics/report?days=30
     if (parts[0] === "analytics" && parts[1] === "report") {
       const c = await feedConnection(store, "analytics", url.searchParams.get("connection"))

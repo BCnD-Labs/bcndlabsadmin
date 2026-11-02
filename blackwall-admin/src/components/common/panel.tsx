@@ -41,7 +41,10 @@ export function Panel({
   id,
   label,
   category,
+  subtitle,
 }: {
+  /** One muted line of scope after the title, e.g. "Across 3 accounts · 4 open". */
+  subtitle?: ReactNode
   tool?: ReactNode
   command?: ReactNode
   /** Readable section heading; the command remains available as a tooltip. */
@@ -80,7 +83,7 @@ export function Panel({
         )}
       >
         <h2 id={headingId} title={title ? [tool, command].filter((v) => typeof v === "string").join(" $ ") : undefined} className="min-w-0">
-          {title ? <span className="flex min-w-0 items-center gap-2 text-[13px] font-semibold text-ink">{category ? <CategoryIcon category={category} /> : <span className="font-mono text-red" aria-hidden>❯</span>}<span className="truncate">{title}</span></span> : <Prompt tool={tool} command={command} />}
+          {title ? <span className="flex min-w-0 items-center gap-2.5 text-sm font-semibold text-ink">{category ? <CategoryIcon category={category} /> : <span className="font-mono text-red" aria-hidden>❯</span>}<span className="truncate">{title}</span>{subtitle != null && <span className="hidden truncate text-xs font-normal text-muted-foreground sm:inline">{subtitle}</span>}</span> : <Prompt tool={tool} command={command} />}
         </h2>
         {badge}
         <div className="ml-auto flex items-center gap-1.5">

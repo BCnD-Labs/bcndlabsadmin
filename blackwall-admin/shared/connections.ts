@@ -275,6 +275,24 @@ export interface RepoSummary {
   /** Commits on the default branch per day (`yyyy-MM-dd`), last 26 weeks. */
   commitsByDay: Record<string, number>
 }
+/** One GitHub connection's slice of the multi-account overview. */
+export interface GitHubAccountOverview {
+  connectionId: string
+  label: string
+  /** The GitHub login the token belongs to, when known. */
+  account?: string
+  /** Repositories this account was asked for. */
+  repos: string[]
+  overview?: DevelopmentOverview
+  /** Set when this account's fetch failed; other accounts still return. */
+  error?: string
+}
+export interface GitHubAccountsOverview {
+  accounts: GitHubAccountOverview[]
+}
+/** Optional per-connection appearance, stored in connection config. */
+export const APPEARANCE_KEYS = { color: "appearanceColor", icon: "appearanceIcon" } as const
+
 export interface DevelopmentOverview {
   prs: PullRequestSummary[]
   failures: CheckFailure[]

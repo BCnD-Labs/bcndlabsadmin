@@ -105,8 +105,8 @@
   --bw-panel: #2a2f37;
   --bw-raised: #323842;
   --bw-selected: #3a414c;
-  /* Panel title bar (the bcndlabs.dev "preview.png" window bar): one clear step above the panel. */
-  --bw-titlebar: #363c46;
+  /* Panel title bar: a darker tab strip than the panel body (tabbed-window feel). */
+  --bw-titlebar: #23272e;
   --bw-well: #1c1f25;
   --bw-ledge: #3b424d;
   --bw-ledge-hi: #444b57;
@@ -188,7 +188,7 @@ html[data-theme="dark"] {
   --bw-panel: #161a22;
   --bw-raised: #1c212b;
   --bw-selected: #232935;
-  --bw-titlebar: #1f242e;
+  --bw-titlebar: #0f1218;
   --bw-well: #0f1218;
   --bw-ledge: #252b36;
   --bw-ledge-hi: #2d3441;
@@ -233,8 +233,8 @@ html[data-font="mono"] {
   --bw-control-xs: 1.75rem;
   --bw-control-lg: 2.5rem;
   --bw-control-radius: 0.375rem;
-  --bw-panel-radius: 0.5rem;
-  --bw-panel-header-h: 2.25rem;
+  --bw-panel-radius: 1rem;
+  --bw-panel-header-h: 2.5rem;
   --bw-row-dense: 2rem;
   --bw-row-regular: 2.5rem;
   --bw-row-two-line: 3rem;
@@ -245,8 +245,8 @@ html[data-font="mono"] {
   --bw-page-max: 90rem;
   --bw-settings-width: 60rem;
   --bw-settings-nav: 13rem;
-  --bw-grid-gap: 0.75rem;
-  --bw-panel-pad: 0.75rem;
+  --bw-grid-gap: 1.5rem;
+  --bw-panel-pad: 1rem;
   --bw-tile-h: 20rem;
 }
 @media (max-width: 767px) {
@@ -260,7 +260,9 @@ html[data-font="mono"] {
   .bw-grid-item { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
   .bw-grid-item > .bw-panel { flex: 1; min-height: 0; }
   .bw-grid-item[data-span="full"] { grid-column: 1 / -1; }
-  .bw-panel-heading { min-height: var(--bw-panel-header-h); padding-block: 0.125rem; padding-inline: var(--bw-panel-pad); background: var(--bw-titlebar); border-bottom-color: var(--bw-line); }
+  .bw-panel-heading { min-height: var(--bw-panel-header-h); padding-block: 0.25rem; padding-inline: 0.5rem 0.875rem; background: var(--bw-titlebar); border-bottom-color: transparent; }
+  /* The icon tile sits flush in the title bar's far-left corner. */
+  .bw-panel-heading .bw-category-icon { width: 1.75rem; height: 1.75rem; border-radius: 0.5rem; }
   /* Decorative window buttons (outlined + filled square), as on bcndlabs.dev. */
   .bw-window-buttons { display: inline-flex; gap: 4px; margin-left: 2px; flex-shrink: 0; }
   .bw-window-buttons > span { width: 8px; height: 8px; border-radius: 1.5px; border: 1.5px solid var(--bw-faint); opacity: .7; }

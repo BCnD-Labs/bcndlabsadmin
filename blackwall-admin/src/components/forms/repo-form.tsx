@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import type { RepoLink } from "@/lib/types"
 import { useWorkspace } from "@/stores/workspace"
-import { Field, ProjectSelect } from "./fields"
+import { Field, OptionSelect, ProjectSelect } from "./fields"
+import { useConnections } from "@/services/connector"
 import { FormFrame } from "./form-frame"
 
 /** Accepts `owner/name` or a GitHub URL. */
@@ -26,7 +27,9 @@ export function RepoForm({ id, defaults, onDone }: { id?: string; defaults?: Par
     previewUrl: base?.previewUrl ?? "",
     notes: base?.notes ?? "",
     projectId: base?.projectId,
+    connectionId: base?.connectionId ?? "auto",
   })
+  const githubAccounts = useConnections((st) => st.list.filter((c) => c.provider === "github"))
   const set = (patch: Partial<typeof draft>) => setDraft((d) => ({ ...d, ...patch }))
   const parsed = parseRepo(draft.repo)
 
@@ -38,6 +41,7 @@ export function RepoForm({ id, defaults, onDone }: { id?: string; defaults?: Par
       previewUrl: draft.previewUrl.trim() || undefined,
       notes: draft.notes.trim() || undefined,
       projectId: draft.projectId,
+      connectionId: draft.connectionId === "auto" ? undefined : draft.connectionId,
     }
     if (existing) {
       update("repos", existing.id, values)
@@ -80,6 +84,16 @@ export function RepoForm({ id, defaults, onDone }: { id?: string; defaults?: Par
           <Input id="repo-preview" type="url" placeholder="https://" value={draft.previewUrl} onChange={(e) => set({ previewUrl: e.target.value })} />
         </Field>
       </div>
+      {githubAccounts.length > 1 && (
+        <Field label="GitHub account" htmlFor="repo-account" hint="Which connection reads this repository. Automatic uses the first working one.">
+          <OptionSelect
+            id="repo-account"
+            value={draft.connectionId}
+            onChange={(connectionId) => set({ connectionId })}
+            options={[{ value: "auto", label: "Automatic" }, ...githubAccounts.map((c) => ({ value: c.id, label: `${c.label}${c.account ? ` · ${c.account}` : ""}${c.status === "ok" ? "" : " (needs attention)"}` }))]}
+          />
+        </Field>
+      )}
       <Field label="Project" htmlFor="repo-project">
         <ProjectSelect id="repo-project" value={draft.projectId} onChange={(projectId) => set({ projectId })} />
       </Field>

@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom"
 import { CategoryIcon } from "@/components/common/category-icon"
+import { ACCOUNT_COLORS, ACCOUNT_ICONS, AccountAvatar, MaterialIcon, accountLook, type AccountIconName } from "@/components/accounts/account-appearance"
 import { DEVELOPMENT, postsHref, siteAnalyticsHref } from "@/lib/routes"
 import { CONNECTION_GUIDANCE } from "./connection-guidance"
 import { ChevronRight, Loader2, Pencil, Plus, RotateCw, Trash2, X } from "lucide-react"
@@ -16,6 +17,7 @@ import { timeAgo } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import { useConnections } from "@/services/connector"
 import {
+  APPEARANCE_KEYS,
   CUSTOM_PREFIX,
   PROVIDERS,
   providerDef,
@@ -93,6 +95,7 @@ export function ConnectionsPage() {
     return (
       <li key={c.id} data-testid="connection-card" className={cn("rounded-[8px] border bg-well/50", c.status === "error" ? "border-red/40" : "border-line")}>
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 py-2 pr-1.5 pl-3">
+          {c.provider === "github" && <AccountAvatar look={accountLook(c, list.filter((x) => x.provider === "github").findIndex((x) => x.id === c.id))} size={24} />}
           <ConnectionStatusPill status={c.status} />
           <span className="min-w-0 truncate text-[13px] font-medium text-ink">{c.label}</span>
           {c.account && <span className="min-w-0 truncate font-mono text-[11px] text-muted-foreground">{c.account}</span>}
@@ -331,6 +334,9 @@ function ProviderForm({
 }) {
   const def = providerDef(provider)
   const guide = CONNECTION_GUIDANCE[provider]
+  const allGithub = useConnections((st) => st.list.filter((c) => c.provider === "github"))
+  const githubCount = allGithub.length
+  const githubIndex = (id: string) => Math.max(0, allGithub.findIndex((c) => c.id === id))
   const navigate = useNavigate()
   const [preparing, setPreparing] = useState(!initial)
   const [complete, setComplete] = useState<PublicConnection | null>(null)
@@ -372,6 +378,8 @@ function ProviderForm({
     const visibleKeys = new Set(fields.map((f) => f.key))
     const outConfig: Record<string, string> = {}
     for (const f of fields) if (!f.secret && config[f.key]) outConfig[f.key] = config[f.key]
+    // Account appearance (GitHub): not a provider field, so it is carried explicitly.
+    for (const key of Object.values(APPEARANCE_KEYS)) if (config[key]) outConfig[key] = config[key]
     const outSecrets: Record<string, string | null> = {}
     for (const f of def.fields) {
       if (!f.secret) continue
@@ -541,6 +549,7 @@ function ProviderForm({
         <Field label="Display name" htmlFor="conn-label" hint="How it appears in Blackwall, e.g. “Work GitHub” or “School VPN”.">
           <Input id="conn-label" value={label} onChange={(e) => setLabel(e.target.value)} autoFocus />
         </Field>
+        {provider === "github" && <AppearancePicker config={config} index={existing ? githubIndex(existing.id) : githubCount} onChange={(patch) => setConfig({ ...config, ...patch })} />}
         {fields.filter((f) => !f.advanced).map(renderField)}
         {fields.some((f) => f.advanced) && <details className="rounded-lg border border-line p-3">
           <summary className="cursor-pointer text-sm font-medium">Advanced settings · branch & folders</summary>
@@ -609,5 +618,33 @@ function ProviderForm({
         </div>
       </div>
     </form>
+  )
+}
+
+/** Color + Material Symbol for a GitHub account, used by its avatar and chips across Home. */
+function AppearancePicker({ config, index, onChange }: { config: Record<string, string>; index: number; onChange: (patch: Record<string, string>) => void }) {
+  const look = accountLook({ config }, index)
+  return (
+    <fieldset className="grid gap-2.5 rounded-lg border border-line p-3">
+      <legend className="px-1 text-[13px] font-medium">Account appearance</legend>
+      <div className="flex items-center gap-3">
+        <AccountAvatar look={look} size={40} />
+        <p className="text-xs leading-relaxed text-muted-foreground">Shown next to this account’s pull requests and repositories, so you can tell accounts apart at a glance.</p>
+      </div>
+      <div role="radiogroup" aria-label="Account color" className="flex flex-wrap gap-1.5">
+        {ACCOUNT_COLORS.map((color) => (
+          <button key={color} type="button" role="radio" aria-checked={look.color === color} aria-label={`Color ${color}`} onClick={() => onChange({ [APPEARANCE_KEYS.color]: color })}
+            className={cn("size-7 rounded-full outline-offset-2", look.color === color && "outline-2 outline-ink")} style={{ background: color }} />
+        ))}
+      </div>
+      <div role="radiogroup" aria-label="Account icon" className="flex flex-wrap gap-1">
+        {(Object.keys(ACCOUNT_ICONS) as AccountIconName[]).map((name) => (
+          <button key={name} type="button" role="radio" aria-checked={look.icon === name} aria-label={name.replace(/_/g, " ")} title={name.replace(/_/g, " ")} onClick={() => onChange({ [APPEARANCE_KEYS.icon]: name })}
+            className={cn("flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-raised hover:text-ink", look.icon === name && "bg-selected text-ink")}>
+            <MaterialIcon name={name} className="size-[18px]" style={look.icon === name ? { color: look.color } : undefined} />
+          </button>
+        ))}
+      </div>
+    </fieldset>
   )
 }

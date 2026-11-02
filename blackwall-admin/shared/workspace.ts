@@ -38,7 +38,7 @@ export function validWorkspace(value: unknown): value is Collections {
         courses: { color: ["red", "amber", "teal", "blue", "violet", "green", "slate"] },
       }
       if (Object.entries(enums[key] ?? {}).some(([field, choices]) => !choices.includes(row[field]))) return false
-      const optionalStrings = ["details", "due", "time", "courseId", "learningType", "completedAt", "projectId", "productionUrl", "previewUrl", "notes", "cover", "coverAlt", "remoteSlug", "startDate", "endDate"]
+      const optionalStrings = ["details", "due", "time", "courseId", "learningType", "completedAt", "projectId", "connectionId", "productionUrl", "previewUrl", "notes", "cover", "coverAlt", "remoteSlug", "startDate", "endDate"]
       if (optionalStrings.some((field) => row[field] != null && typeof row[field] !== "string")) return false
       if (row.tags != null && (!Array.isArray(row.tags) || !row.tags.every((tag: unknown) => typeof tag === "string"))) return false
       if (row.credits != null && (typeof row.credits !== "number" || !Number.isFinite(row.credits))) return false

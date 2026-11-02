@@ -69,6 +69,8 @@ export interface RepoLink {
   fullName: string
   url: string
   projectId?: ID
+  /** Which GitHub connection reads this repo; unset = the first working one. */
+  connectionId?: string
   productionUrl?: string
   previewUrl?: string
   notes?: string
