@@ -4,6 +4,7 @@ import { testAnalytics } from "./analytics.ts"
 import { testAzure } from "./azure.ts"
 import { testCloudflare } from "./cloudflare.ts"
 import { testGitHub } from "./github.ts"
+import { testNextcloud } from "./nextcloud.ts"
 import { testOther } from "./other.ts"
 import { testWebsite } from "./website.ts"
 
@@ -15,6 +16,7 @@ const TESTS: Record<StoredConnection["provider"], (c: StoredConnection) => Promi
   cloudflare: testCloudflare,
   analytics: testAnalytics,
   website: testWebsite,
+  nextcloud: testNextcloud,
   other: testOther,
 }
 

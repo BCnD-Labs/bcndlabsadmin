@@ -129,6 +129,8 @@ export interface Service {
   logo?: string
   /** Material Symbols name used when there's no logo, e.g. `dns`. */
   materialIcon?: string
+  /** A logo you uploaded (small image data URL); wins over `logo` and `materialIcon`. */
+  customLogo?: string
   /** Big tile in the row at the top. */
   pinned: boolean
   createdAt: Timestamp

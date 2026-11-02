@@ -44,6 +44,8 @@ interface PrefsState {
   landingPage: LandingPage
   /** Animations: follow the system setting, always reduce, or always full. */
   motion: MotionPref
+  /** Mikoshi launcher: compact rows (default) or an icon grid. */
+  launcherView: "rows" | "grid"
   /** Desktop sidebar: the full tree (true) or the icon strip with hover flyouts (false). */
   navExpanded: boolean
   /** Colour theme: Dim (mid-tone slate, default) or Dark (the original near-black). */
@@ -84,6 +86,7 @@ const DEFAULT_PREFS = (): Persisted => ({
   timeFormat: "12h",
   landingPage: "/",
   motion: "system",
+  launcherView: "rows",
   navExpanded: false,
   theme: "dim",
   uiFont: "sans",
@@ -135,6 +138,7 @@ export const usePrefs = create<PrefsState>()(
           timeFormat: p.timeFormat === "24h" ? "24h" : "12h",
           landingPage: LANDING_PAGES.some((l) => l.value === p.landingPage) ? (p.landingPage as LandingPage) : "/",
           motion: p.motion === "reduce" || p.motion === "full" ? p.motion : "system",
+          launcherView: p.launcherView === "grid" ? "grid" : "rows",
           feedConnections: sanitizeFeedConnections(p.feedConnections),
           navExpanded: p.navExpanded === true,
           theme: p.theme === "dark" ? "dark" : "dim",

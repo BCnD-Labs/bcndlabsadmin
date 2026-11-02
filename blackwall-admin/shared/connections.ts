@@ -3,7 +3,7 @@
  * Secret fields are sent to the connector once and never returned to the browser.
  */
 
-export type ProviderId = "github" | "azure" | "cloudflare" | "analytics" | "website" | "other"
+export type ProviderId = "github" | "azure" | "cloudflare" | "analytics" | "website" | "nextcloud" | "other"
 
 export interface FieldDef {
   key: string
@@ -129,6 +129,17 @@ export const PROVIDERS: ProviderDef[] = [
         placeholder: "github_pat_…",
         help: "Fine-grained token for only this repository, with Contents: Read and write. Kept separate from your read-only GitHub connection.",
       },
+    ],
+  },
+  {
+    id: "nextcloud",
+    name: "Nextcloud",
+    blurb: "Browse, upload, move, rename and delete your files on Mikoshi → Storage, and edit text files in place.",
+    help: { label: "Create an app password (Personal settings → Security)", url: "https://docs.nextcloud.com/server/latest/user_manual/en/session_management.html#managing-devices" },
+    fields: [
+      { key: "url", label: "Nextcloud address", type: "url", required: true, placeholder: "https://mikoshi.example.ts.net" },
+      { key: "username", label: "Username", required: true, help: "Your Nextcloud login name (shown in Personal settings)." },
+      { key: "appPassword", label: "App password", secret: true, required: true, help: "Not your login password: create one under Personal settings → Security → Devices & sessions, so you can revoke it any time." },
     ],
   },
   {

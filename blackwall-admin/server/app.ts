@@ -12,6 +12,8 @@ import { testConnection } from "./providers/index.ts"
 import { toPublic, type ConnectionStore } from "./store.ts"
 import { validWorkspace } from "../shared/workspace.ts"
 import { serviceIcon } from "./icons.ts"
+import { checkServices, validStatusUrls } from "./service-status.ts"
+import { handleStorage } from "./storage.ts"
 import type { WorkspaceStore } from "./workspace.ts"
 import type { System } from "./system.ts"
 
@@ -204,6 +206,18 @@ export function createApi(opts: ApiOptions) {
         return send(res, 200, saved)
       }
       return send(res, 405, { error: "Method not allowed" })
+    }
+
+    // --- Mikoshi storage (Nextcloud over WebDAV) --------------------------------
+    if (parts[0] === "storage") {
+      return handleStorage(store, req, res, url, parts.slice(1).join("/"), method, (status, body) => send(res, status, body), (limit) => readJson(req, limit))
+    }
+
+    // --- service status (Mikoshi launcher tiles) -------------------------------
+    if (parts[0] === "services" && parts[1] === "status" && method === "POST") {
+      const urls = validStatusUrls((await readJson<{ urls?: unknown }>(req)).urls)
+      if (!urls) return send(res, 400, { error: "Send up to 60 http(s) addresses." })
+      return send(res, 200, { checkedAt: new Date().toISOString(), results: await checkServices(urls) })
     }
 
     // --- service logos (Mikoshi launcher) ---------------------------------------

@@ -59,8 +59,9 @@ function Glyph({ name, style }: { name: ServiceIconName; style?: CSSProperties }
 }
 
 /** A service's logo on a dark square; the Material icon (or initials) in Mikoshi green when there's no logo. */
-export function ServiceLogo({ service, size = 36, className }: { service: Pick<Service, "name" | "logo" | "materialIcon">; size?: number; className?: string }) {
-  const { url } = useLogo(service.logo || undefined)
+export function ServiceLogo({ service, size = 36, className }: { service: Pick<Service, "name" | "logo" | "materialIcon" | "customLogo">; size?: number; className?: string }) {
+  const found = useLogo(service.customLogo ? undefined : service.logo || undefined)
+  const url = service.customLogo || found.url
   const pad = Math.round(size * 0.17)
   return (
     <span data-category="mikoshi" className={cn("inline-flex shrink-0 items-center justify-center rounded-[9px] bg-well text-[var(--bw-category)]", className)} style={{ width: size, height: size, padding: pad }} aria-hidden>
@@ -76,3 +77,26 @@ export function ServiceLogo({ service, size = 36, className }: { service: Pick<S
 }
 
 export { Glyph as ServiceGlyph }
+
+/**
+ * An uploaded logo, ready to save on the tile: raster images are scaled to fit 128px and
+ * saved as PNG; SVGs are kept as they are (they only ever render through <img>). 150KB max.
+ */
+export async function logoFromFile(file: File): Promise<string> {
+  if (file.size > 2 * 1024 * 1024) throw new Error("Pick an image under 2 MB.")
+  if (file.type === "image/svg+xml") {
+    const text = await file.text()
+    if (!text.includes("<svg") || text.length > 150_000) throw new Error("That SVG is too large or isn't an SVG.")
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(text)}`
+  }
+  if (!/^image\/(png|jpeg|webp|gif)$/.test(file.type)) throw new Error("Use a PNG, JPG, WebP, GIF or SVG.")
+  const bitmap = await createImageBitmap(file)
+  const scale = Math.min(1, 128 / Math.max(bitmap.width, bitmap.height))
+  const canvas = document.createElement("canvas")
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale))
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale))
+  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+  const url = canvas.toDataURL("image/png")
+  if (url.length > 150_000) throw new Error("That image is too detailed to keep; try a simpler one.")
+  return url
+}

@@ -23,6 +23,13 @@ export const CONNECTION_GUIDANCE: Record<ProviderId, { category: Category; /** W
     prepare: "You’ll need a Cloudflare API token with Zone:Read permission for the domains you select.",
     steps: ["Open Cloudflare’s API token page using the link below.", "Create a token with Zone:Read access for the domains you want to inspect.", "Copy the token and paste it in the next step."],
   },
+  nextcloud: {
+    feeds: "Mikoshi → Storage",
+    category: "mikoshi",
+    outcome: "Browse, upload, move, rename and delete your Nextcloud files from Mikoshi → Storage. Text files open in an editor; office files open in Nextcloud.",
+    prepare: "You’ll need your Nextcloud address, your username and an app password (not your login password).",
+    steps: ["In Nextcloud, open Personal settings → Security.", "Under Devices & sessions, enter a name like “Blackwall” and create a new app password.", "Paste your Nextcloud address, username and that app password in the next step, then test."],
+  },
   analytics: {
     feeds: "Website traffic and the Home traffic panel",
     category: "analytics",

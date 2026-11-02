@@ -101,6 +101,10 @@ Ordinary dates are unfilled, day buttons stay 32px, and week gaps are 4px. A six
 - Mikoshi is its own sidebar section in the homelab's phosphor green (#28b845), with tabs Launcher, Status (Uptime Kuma, next) and Storage (Nextcloud).
 - Layout chosen by Blake: a row of big pinned tiles (Homarr-style) above compact grouped tiles (logo, name, what it is, port), Ant card-grid reference.
 - Tiles are workspace records (`services`), synced across devices. Logos come from dashboard-icons (homarr-labs, Apache-2.0); the server fetches each once and keeps a copy (`/api/icons/<slug>`), so tiles keep logos offline. No logo → a Material icon in Mikoshi green.
+- Any tile can use an uploaded logo instead (PNG/JPG/WebP/GIF scaled to 128px, or SVG; stored on the tile, shown only through <img>).
+- Rows (default) or an icon grid, per browser (`launcherView`).
+- Up/down comes from the Blackwall server checking each address every minute (`POST /api/services/status`): any HTTP answer counts as up, timeouts, connection errors and 5xx as down. Uptime Kuma replaces it once connected.
+- Storage (Nextcloud) uses an app password over WebDAV through the server; deletes go to Nextcloud's trash; text files under 2 MB edit in place with etag conflict checks; office files open in Nextcloud.
 - Status dots stay off until Uptime Kuma is connected; nothing pretends to know a service's state.
 
 ## Learning

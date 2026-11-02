@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,7 +9,9 @@ import type { Service } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useWorkspace } from "@/stores/workspace"
 import { KNOWN_APPS, slugify } from "./known-apps"
-import { SERVICE_ICONS, ServiceGlyph, ServiceLogo, useLogo, type ServiceIconName } from "./service-icons"
+import { SERVICE_ICONS, ServiceGlyph, ServiceLogo, logoFromFile, useLogo, type ServiceIconName } from "./service-icons"
+import { Button } from "@/components/ui/button"
+import { Upload, X } from "lucide-react"
 
 /** Add or edit a Mikoshi launcher tile. Picking a known app fills everything but the address. */
 export function ServiceForm({ id, defaults, onDone }: { id?: string; defaults?: Partial<Service>; onDone: () => void }) {
@@ -35,7 +37,17 @@ export function ServiceForm({ id, defaults, onDone }: { id?: string; defaults?: 
     materialIcon: (base?.materialIcon as ServiceIconName | undefined) ?? "dns",
     pinned: base?.pinned ?? false,
     urlTouched: !!base?.url,
+    customLogo: base?.customLogo ?? "",
   })
+  const fileRef = useRef<HTMLInputElement>(null)
+  const upload = async (file?: File) => {
+    if (!file) return
+    try {
+      set({ customLogo: await logoFromFile(file) })
+    } catch (e) {
+      toast.error((e as Error).message)
+    }
+  }
   const set = (patch: Partial<typeof d>) => setD((x) => ({ ...x, ...patch }))
   const groups = [...new Set(services.map((s) => s.group).filter(Boolean))]
   const logoSlug = (d.logoTouched ? d.logo : slugify(d.name)).trim()
@@ -56,6 +68,7 @@ export function ServiceForm({ id, defaults, onDone }: { id?: string; defaults?: 
       group: d.group.trim() || "Services",
       logo: logo.url ? logoSlug : undefined,
       materialIcon: d.materialIcon,
+      customLogo: d.customLogo || undefined,
       pinned: d.pinned,
     }
     if (existing) {
@@ -100,11 +113,17 @@ export function ServiceForm({ id, defaults, onDone }: { id?: string; defaults?: 
         <Field
           label="Logo"
           htmlFor="svc-logo"
-          hint={!logoSlug ? "A dashboard-icons name, e.g. portainer." : logo.loading ? "Looking it up…" : logo.url ? "Found in dashboard-icons. Your server keeps a copy." : "Not found in dashboard-icons: the icon below is used."}
+          hint={d.customLogo ? "Using your uploaded image." : !logoSlug ? "A dashboard-icons name, e.g. portainer, or upload your own." : logo.loading ? "Looking it up…" : logo.url ? "Found in dashboard-icons. Your server keeps a copy." : "Not in dashboard-icons: upload one, or the icon below is used."}
         >
           <div className="flex items-center gap-2">
-            <ServiceLogo service={{ name: d.name, logo: logo.url ? logoSlug : undefined, materialIcon: d.materialIcon }} size={32} />
-            <Input id="svc-logo" className="font-mono" value={d.logoTouched ? d.logo : slugify(d.name)} onChange={(e) => set({ logo: e.target.value.toLowerCase(), logoTouched: true })} placeholder="portainer" maxLength={64} />
+            <ServiceLogo service={{ name: d.name, logo: logo.url ? logoSlug : undefined, materialIcon: d.materialIcon, customLogo: d.customLogo || undefined }} size={32} />
+            <Input id="svc-logo" className="font-mono" disabled={!!d.customLogo} value={d.logoTouched ? d.logo : slugify(d.name)} onChange={(e) => set({ logo: e.target.value.toLowerCase(), logoTouched: true })} placeholder="portainer" maxLength={64} />
+            <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" className="hidden" onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = "" }} />
+            {d.customLogo ? (
+              <Button type="button" variant="quiet" size="icon-sm" aria-label="Remove uploaded logo" title="Remove uploaded logo" onClick={() => set({ customLogo: "" })}><X /></Button>
+            ) : (
+              <Button type="button" variant="outline" size="icon-sm" aria-label="Upload a logo" title="Upload a logo (PNG, JPG, WebP, GIF or SVG)" onClick={() => fileRef.current?.click()}><Upload /></Button>
+            )}
           </div>
         </Field>
       </div>
