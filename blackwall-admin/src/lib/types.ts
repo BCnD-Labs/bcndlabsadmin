@@ -25,6 +25,8 @@ export interface Task {
   /** Coursework: the course it belongs to and what kind of item it is. */
   courseId?: ID
   learningType?: LearningItemType
+  /** Practice tests (certifications): the score, 0–100. */
+  score?: number
   starred: boolean
   done: boolean
   completedAt?: Timestamp
@@ -117,11 +119,23 @@ export interface Draft {
 /** What a piece of coursework is. All of them are tasks, so they share the calendar and Tasks. */
 export type LearningItemType = "assignment" | "exam" | "milestone" | "event"
 
+/** What kind of learning a record is. Older records have no kind and are courses. */
+export type LearningKind = "course" | "certification" | "selfpaced" | "skill" | "reading"
+
 export type CourseColor = "red" | "amber" | "teal" | "blue" | "violet" | "green" | "slate"
 
-/** A college course (Productivity → Learning). Workspace record; no LMS connection. */
+/**
+ * One piece of learning (Productivity → Learning): a class, a certification, a self-paced
+ * course, a skill or a book. Workspace record; no LMS connection. The shared fields are
+ * relabeled per kind (e.g. `instructor` is the vendor, platform or author).
+ */
 export interface Course {
   id: ID
+  /** Missing on older records, which are courses. */
+  kind?: LearningKind
+  /** Reading: pages read and total pages. */
+  pagesRead?: number
+  pagesTotal?: number
   /** Linked documents (open in their own app). */
   links?: DocLink[]
   title: string

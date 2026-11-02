@@ -87,7 +87,7 @@ export function CourseSelect({ id, value, onChange, className }: { id?: string; 
         <SelectValue />
       </SelectTrigger>
       <SelectContent position="popper">
-        <SelectItem value={NONE}>No course</SelectItem>
+        <SelectItem value={NONE}>None</SelectItem>
         {courses.map((c) => (
           <SelectItem key={c.id} value={c.id}>
             <span className={cn("size-2 rounded-[2px]", courseColor(c.color).dot)} aria-hidden />

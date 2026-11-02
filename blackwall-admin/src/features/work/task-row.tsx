@@ -36,7 +36,7 @@ export function TaskRow({
   const openForm = useUi((s) => s.openForm)
   const course = useWorkspace((s) => (task.courseId ? s.courses.find((c) => c.id === task.courseId) : undefined))
   const overdue = isOverdue(task)
-  const TypeIcon = course ? learningType(task.learningType).icon : null
+  const TypeIcon = course ? learningType(task.learningType, course?.kind).icon : null
 
   return (
     <li
@@ -58,10 +58,10 @@ export function TaskRow({
         type="button"
         onClick={() => openForm({ kind: "task", id: task.id })}
         className="min-w-0 flex-1 rounded-[4px] py-0.5 text-left"
-        title={course ? `Edit ${learningType(task.learningType).label.toLowerCase()}` : "Edit task"}
+        title={course ? `Edit ${learningType(task.learningType, course?.kind).label.toLowerCase()}` : "Edit task"}
       >
         <span className={cn("flex min-w-0 items-center gap-1.5 text-ink", wrap ? "text-sm" : "text-[13px]", task.done && "text-faint line-through")}>
-          {TypeIcon && <TypeIcon className="size-3.5 shrink-0 text-muted-foreground" aria-label={learningType(task.learningType).label} />}
+          {TypeIcon && <TypeIcon className="size-3.5 shrink-0 text-muted-foreground" aria-label={learningType(task.learningType, course?.kind).label} />}
           <span className={wrap ? "line-clamp-2" : "truncate"}>{task.title}</span>
         </span>
         {showDetails && task.details && <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{task.details}</span>}

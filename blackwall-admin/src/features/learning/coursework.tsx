@@ -4,11 +4,21 @@ import { Link } from "react-router-dom"
 import { Checkbox } from "@/components/ui/checkbox"
 import { daysUntil, formatTime, relativeDue } from "@/lib/dates"
 import { courseHref } from "@/lib/routes"
-import type { Course, Task } from "@/lib/types"
+import type { Course, LearningKind, Task } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
-import { courseColor, courseLabel, learningType } from "./learning-utils"
+import { courseColor, courseLabel, kindInfo, learningType } from "./learning-utils"
+
+/** The kind's icon tile in its own hue (Course blue, Certification green, …). */
+export function KindIcon({ kind, className, small }: { kind?: LearningKind; className?: string; small?: boolean }) {
+  const info = kindInfo(kind)
+  return (
+    <span data-category={`kind-${info.value}`} className={cn("bw-category-icon inline-flex shrink-0 items-center justify-center", small ? "size-6 rounded-[6px]" : "size-7 rounded-md", className)} aria-hidden>
+      <info.icon className={small ? "size-3.5" : "size-4"} strokeWidth={1.8} />
+    </span>
+  )
+}
 
 /** The course chip: a coloured square and the course code. Links to the course unless `static`. */
 export function CourseTag({ course, className, asLink = true }: { course?: Course; className?: string; asLink?: boolean }) {
@@ -49,7 +59,7 @@ export function courseworkWhen(t: Task) {
 export function CourseworkRow({ task, course, showCourse }: { task: Task; course?: Course; showCourse?: boolean }) {
   const toggleTask = useWorkspace((s) => s.toggleTask)
   const openForm = useUi((s) => s.openForm)
-  const type = learningType(task.learningType)
+  const type = learningType(task.learningType, course?.kind)
   const Icon = type.icon
   const overdue = !task.done && !!task.due && daysUntil(task.due) < 0
   const soon = !task.done && !!task.due && daysUntil(task.due) >= 0 && daysUntil(task.due) <= 2

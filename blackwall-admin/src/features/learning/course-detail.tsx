@@ -23,17 +23,18 @@ import { daysUntil } from "@/lib/dates"
 import { parseQuickAdd } from "@/lib/quick-add"
 import { learningHref, notesHref } from "@/lib/routes"
 import type { Course, LearningItemType, Task } from "@/lib/types"
-import { cn } from "@/lib/utils"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
-import { CourseTag, CourseworkRow } from "./coursework"
-import { dateRange } from "./learning-page"
-import { COURSE_STATUS_LABEL, LEARNING_TYPES, compareCoursework, courseColor, courseProgress, courseStatus } from "./learning-utils"
+import { Input } from "@/components/ui/input"
+import { CourseworkRow, KindIcon } from "./coursework"
+import { ProgressBar, ProgressRing, dateRange, kindSubtitle } from "./learning-page"
+import { COURSE_STATUS_LABEL, compareCoursework, courseStatus, kindInfo, kindOf, kindProgress, learningType } from "./learning-utils"
 
 type View = "open" | "done" | "all"
 
 function AddItem({ course }: { course: Course }) {
   const openForm = useUi((s) => s.openForm)
+  const info = kindInfo(kindOf(course))
   const add = (learningType: LearningItemType) => openForm({ kind: "task", defaults: { courseId: course.id, learningType } })
   return (
     <DropdownMenu>
@@ -43,12 +44,15 @@ function AddItem({ course }: { course: Course }) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuLabel className="bw-label">Add to {course.code || "course"}</DropdownMenuLabel>
-        {LEARNING_TYPES.map((t) => (
-          <DropdownMenuItem key={t.value} onSelect={() => add(t.value)}>
-            <t.icon /> {t.label}
-          </DropdownMenuItem>
-        ))}
+        <DropdownMenuLabel className="bw-label">Add to {course.code || info.label.toLowerCase()}</DropdownMenuLabel>
+        {info.types.map((t) => {
+          const Icon = learningType(t.value, info.value).icon
+          return (
+            <DropdownMenuItem key={t.value} onSelect={() => add(t.value)}>
+              <Icon /> {t.label}
+            </DropdownMenuItem>
+          )
+        })}
         <DropdownMenuItem onSelect={() => openForm({ kind: "note", defaults: { courseId: course.id, color: "blue" } })}>
           <NoteIcon /> Note
         </DropdownMenuItem>
@@ -58,8 +62,14 @@ function AddItem({ course }: { course: Course }) {
 }
 
 /** Open items grouped by when; done items newest first. */
+const ITEMS_TITLE: Record<string, string> = { course: "Coursework", certification: "Study plan", selfpaced: "Sections", skill: "Milestones", reading: "Chapters" }
+
 function Coursework({ course, items }: { course: Course; items: Task[] }) {
   const create = useWorkspace((s) => s.create)
+  const info = kindInfo(kindOf(course))
+  const first = info.types[0]
+  const firstLabel = first.label.toLowerCase()
+  const article = /^[aeiou]/.test(firstLabel) ? "an" : "a"
   const [view, setView] = useState<View>("open")
   const [quick, setQuick] = useState("")
   const open = items.filter((t) => !t.done).sort(compareCoursework)
@@ -80,16 +90,16 @@ function Coursework({ course, items }: { course: Course; items: Task[] }) {
   const add = () => {
     const { title, due } = parseQuickAdd(quick)
     if (!title) return
-    create("tasks", { title, due, courseId: course.id, learningType: "assignment", starred: false, done: false })
+    create("tasks", { title, due, courseId: course.id, learningType: first.value, starred: false, done: false })
     setQuick("")
-    toast.success(due ? `Assignment added for ${due}` : "Assignment added")
+    toast.success(due ? `${first.label} added for ${due}` : `${first.label} added`)
   }
 
   return (
-    <Panel category="learning" title="Coursework" tool={course.code ? course.code.toLowerCase().replace(/\s+/g, "") : "course"} command="coursework" meta={`${open.length} open · ${done.length} done`}>
+    <Panel category="learning" title={ITEMS_TITLE[info.value]} tool={course.code ? course.code.toLowerCase().replace(/\s+/g, "") : "course"} command="coursework" meta={`${open.length} open · ${done.length} done`}>
       <div className="flex flex-wrap items-center gap-2 border-b border-line px-3.5 py-2.5">
         <SegmentedTabs
-          label="Show coursework"
+          label={`Show ${ITEMS_TITLE[info.value].toLowerCase()}`}
           value={view}
           onChange={setView}
           tabClassName="px-3"
@@ -108,12 +118,12 @@ function Coursework({ course, items }: { course: Course; items: Task[] }) {
         className="flex items-center gap-2 border-b border-line px-3.5 py-2"
       >
         <Plus className="size-3.5 shrink-0 text-faint" aria-hidden />
-        <label htmlFor="course-quick-add" className="sr-only">Add an assignment</label>
+        <label htmlFor="course-quick-add" className="sr-only">Add {article} {firstLabel}</label>
         <input
           id="course-quick-add"
           value={quick}
           onChange={(e) => setQuick(e.target.value)}
-          placeholder="Add an assignment · end with “fri” to set a date"
+          placeholder={`Add ${article} ${firstLabel} · end with “fri” to set a date`}
           className="h-8 min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-faint"
         />
         {quick.trim() && <Button type="submit" size="sm">Add</Button>}
@@ -132,8 +142,8 @@ function Coursework({ course, items }: { course: Course; items: Task[] }) {
           </section>
         ))
       ) : (
-        <EmptyState icon={LEARNING_TYPES[0].icon} title={view === "done" ? "Nothing finished yet" : "Nothing to do"}>
-          {view === "done" ? "Check items off and they land here." : "Add assignments above, or exams, milestones and events from the Add menu."}
+        <EmptyState icon={learningType(first.value, info.value).icon} title={view === "done" ? "Nothing finished yet" : "Nothing to do"}>
+          {view === "done" ? "Check items off and they land here." : `Add ${first.plural.toLowerCase()} above${info.types.length > 1 ? `, or ${info.types.slice(1).map((t) => t.plural.toLowerCase()).join(", ")} from the Add menu` : ""}.`}
         </EmptyState>
       )}
     </Panel>
@@ -150,28 +160,66 @@ function InfoRow({ icon: Icon, label, children }: { icon: typeof Clock; label: s
   )
 }
 
-function CourseInfo({ course, items }: { course: Course; items: Task[] }) {
-  const p = courseProgress(items)
-  const color = courseColor(course.color)
-  const range = dateRange(course)
+/** Reading: update pages read without opening the form. */
+function PagesRead({ course }: { course: Course }) {
+  const update = useWorkspace((s) => s.update)
+  const [v, setV] = useState(String(course.pagesRead ?? ""))
+  const n = Number(v)
+  const ok = v.trim() !== "" && Number.isInteger(n) && n >= 0 && n !== course.pagesRead
   return (
-    <Panel category="learning" title="Course overview" tool="course" command="info" meta={course.credits != null ? `${course.credits} credits` : undefined} bodyClassName="px-3.5 py-3">
-      <div className="mb-3 grid gap-1.5 border-b border-line-soft pb-3.5">
-        <div className="flex items-baseline justify-between">
-          <span className="font-heading text-3xl lg:text-2xl leading-none font-bold text-ink tabular-nums">{p.pct}%</span>
-          <span className="text-xs text-muted-foreground">
-            {p.total ? `${p.done} of ${p.total} done` : "No coursework yet"}
-            {p.overdue > 0 && <span className="ml-2 font-semibold text-amber">{p.overdue} overdue</span>}
-          </span>
-        </div>
-        <div className="h-2 overflow-hidden rounded-full bg-off" role="progressbar" aria-label="Course progress" aria-valuenow={p.pct} aria-valuemin={0} aria-valuemax={100}>
-          <div className={cn("h-full rounded-full", color.bar)} style={{ width: `${p.pct}%` }} />
-        </div>
-        <p className="text-[11px] text-faint">Assignments, exams and milestones count; events don't.</p>
+    <form
+      className="flex items-center gap-2"
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (!ok) return
+        update("courses", course.id, { pagesRead: n })
+        toast.success(`Now on page ${n}`)
+      }}
+    >
+      <label htmlFor="pages-read" className="text-xs text-muted-foreground">Pages read</label>
+      <Input id="pages-read" inputMode="numeric" value={v} onChange={(e) => setV(e.target.value)} className="h-7 w-20 text-[13px]" />
+      <Button type="submit" size="sm" variant="outline" disabled={!ok}>Update</Button>
+    </form>
+  )
+}
+
+function CourseInfo({ course, items }: { course: Course; items: Task[] }) {
+  const info = kindInfo(kindOf(course))
+  const p = kindProgress(course, items)
+  const range = dateRange(course)
+  const cert = info.value === "certification"
+  return (
+    <Panel category="learning" title={`${info.label} overview`} tool="course" command="info" meta={course.credits != null && info.value === "course" ? `${course.credits} credits` : undefined} bodyClassName="px-3.5 py-3">
+      <div data-category={`kind-${info.value}`} className="mb-3 grid gap-1.5 border-b border-line-soft pb-3.5">
+        {cert ? (
+          <div className="flex items-center gap-3.5">
+            <ProgressRing pct={p.pct} label="Exam domains" size={64} />
+            <div className="grid gap-0.5 text-xs text-muted-foreground">
+              <span>{p.total ? <><span className="font-semibold text-ink tabular-nums">{p.done} of {p.total}</span> exam domains</> : "No exam domains yet"}</span>
+              <span>{p.best != null ? <>Best practice test <span className="font-semibold text-ink tabular-nums">{p.best}%</span></> : "No practice test scores yet"}</span>
+              {course.endDate && <span>{daysUntil(course.endDate) >= 0 ? <><span className="font-semibold text-ink tabular-nums">{daysUntil(course.endDate)}</span> days to the exam</> : "Exam date passed"}</span>}
+            </div>
+          </div>
+        ) : p.measured ? (
+          <>
+            <div className="flex items-baseline justify-between">
+              <span className="font-heading text-3xl lg:text-2xl leading-none font-bold text-ink tabular-nums">{p.pct}%</span>
+              <span className="text-xs text-muted-foreground">
+                {p.summary}
+                {p.overdue > 0 && <span className="ml-2 font-semibold text-amber">{p.overdue} overdue</span>}
+              </span>
+            </div>
+            <ProgressBar pct={p.pct} label={`${info.label} progress`} />
+            {info.value === "course" && <p className="text-[11px] text-faint">Assignments, exams and milestones count; events don't.</p>}
+          </>
+        ) : (
+          <p className="text-xs text-muted-foreground">{info.value === "skill" ? "Add milestones to see progress." : p.summary}</p>
+        )}
+        {info.value === "reading" && <PagesRead key={course.pagesRead ?? -1} course={course} />}
       </div>
       <dl>
         {course.instructor && (
-          <InfoRow icon={UserRound} label="Instructor">
+          <InfoRow icon={UserRound} label={info.person?.[0] ?? "Instructor"}>
             {course.instructor}
           </InfoRow>
         )}
@@ -196,7 +244,7 @@ function CourseInfo({ course, items }: { course: Course; items: Task[] }) {
           </InfoRow>
         )}
         {course.url && (
-          <InfoRow icon={ExternalLink} label="Course site">
+          <InfoRow icon={ExternalLink} label={info.linkLabel}>
             <a href={course.url} target="_blank" rel="noreferrer" className="underline-offset-2 hover:underline">
               {course.url.replace(/^https?:\/\//, "").replace(/\/$/, "")}
             </a>
@@ -212,8 +260,8 @@ function CourseInfo({ course, items }: { course: Course; items: Task[] }) {
           </InfoRow>
         )}
       </dl>
-      {course.description && <p className="mt-2.5 border-t border-line-soft pt-2.5 text-xs leading-relaxed whitespace-pre-line text-ink-2">{course.description}</p>}
-      {!!course.links?.length && <div className="mt-2.5 border-t border-line-soft pt-2.5"><p className="bw-label mb-1.5">Linked documents</p><DocLinksList links={course.links} /></div>}
+      {course.description && info.value !== "skill" && <p className="mt-2.5 border-t border-line-soft pt-2.5 text-xs leading-relaxed whitespace-pre-line text-ink-2">{course.description}</p>}
+      {!!course.links?.length && <div className="mt-2.5 border-t border-line-soft pt-2.5"><p className="bw-label mb-1.5">{info.value === "skill" ? "Resources" : "Linked documents"}</p><DocLinksList links={course.links} /></div>}
     </Panel>
   )
 }
@@ -231,7 +279,7 @@ function CourseNotes({ course }: { course: Course }) {
   return (
     <Panel
       category="learning"
-      title="Course notes"
+      title="Notes"
       tool="course"
       command="notes"
       meta={linked.length || undefined}
@@ -249,7 +297,7 @@ function CourseNotes({ course }: { course: Course }) {
         }}
         className="flex flex-col gap-2"
       >
-        <label htmlFor="course-note" className="sr-only">New note for this course</label>
+        <label htmlFor="course-note" className="sr-only">New note</label>
         <Textarea
           id="course-note"
           rows={2}
@@ -261,7 +309,7 @@ function CourseNotes({ course }: { course: Course }) {
               add()
             }
           }}
-          placeholder="Lecture notes, reminders, questions for office hours…"
+          placeholder={kindOf(course) === "course" ? "Lecture notes, reminders, questions for office hours…" : "Notes, reminders, questions…"}
         />
         <div className="flex items-center justify-between gap-2">
           <span className="text-[11px] text-faint">Also on the Notes page · ⌘/Ctrl + Enter</span>
@@ -290,11 +338,11 @@ export function CourseDetail() {
   if (!course) {
     return (
       <>
-        <PageHeader title="Course not found" back={{ to: learningHref, label: "Learning" }} />
+        <PageHeader title="Not found" back={{ to: learningHref, label: "Learning" }} />
         <Panel tool="learning" command={`open ${id}`} className="max-w-2xl">
           <EmptyState
             icon={GraduationCap}
-            title="This course doesn't exist"
+            title="This doesn't exist"
             action={
               <Button variant="outline" asChild>
                 <Link to={learningHref}>Back to Learning</Link>
@@ -310,7 +358,8 @@ export function CourseDetail() {
 
   const items = tasks.filter((t) => t.courseId === course.id)
   const status = courseStatus(course)
-  const sub = [course.instructor, course.term || dateRange(course)].filter(Boolean).join(" · ")
+  const kind = kindOf(course)
+  const sub = kind === "course" ? [course.instructor, course.term || dateRange(course)].filter(Boolean).join(" · ") : kindSubtitle(course)
 
   return (
     <>
@@ -319,7 +368,7 @@ export function CourseDetail() {
         title={course.title}
         badge={
           <>
-            <CourseTag course={course} asLink={false} />
+            <KindIcon kind={kind} small />
             <span className="hidden text-xs text-muted-foreground xl:inline">{COURSE_STATUS_LABEL[status]}</span>
           </>
         }

@@ -30,6 +30,16 @@ test("validation rejects partial snapshots, duplicate IDs and wrong types", () =
   assert.ok(!validWorkspace({ ...emptyWorkspace(), notes: [note("a"), note("a")] }))
   assert.ok(!validWorkspace({ ...emptyWorkspace(), tasks: [note("a")] }))
 })
+test("learning kinds: valid kinds and numbers pass; unknown kinds and non-numeric pages or scores fail", () => {
+  const ts = "2026-11-01T00:00:00Z"
+  const course = (extra: Record<string, unknown>) => ({ id: "c", title: "CCNA", code: "", instructor: "", instructorEmail: "", term: "", schedule: "", location: "", url: "", description: "", tags: [], color: "green", createdAt: ts, updatedAt: ts, ...extra })
+  const task = (extra: Record<string, unknown>) => ({ id: "t", title: "Practice test", starred: false, done: true, createdAt: ts, updatedAt: ts, ...extra })
+  assert.ok(validWorkspace({ ...emptyWorkspace(), courses: [course({})] }), "older records without a kind are still courses")
+  assert.ok(validWorkspace({ ...emptyWorkspace(), courses: [course({ kind: "reading", pagesRead: 12, pagesTotal: 300 })], tasks: [task({ courseId: "c", learningType: "exam", score: 71 })] }))
+  assert.ok(!validWorkspace({ ...emptyWorkspace(), courses: [course({ kind: "podcast" })] }))
+  assert.ok(!validWorkspace({ ...emptyWorkspace(), courses: [course({ kind: "reading", pagesRead: "12" })] }))
+  assert.ok(!validWorkspace({ ...emptyWorkspace(), tasks: [task({ score: "71" })] }))
+})
 test("authenticated API persists across restarts and rejects stale or malformed writes", async () => {
   const root = mkdtempSync(path.join(tmpdir(), "bw-workspace-test-"))
   const workspace = new FileWorkspaceStore(root)

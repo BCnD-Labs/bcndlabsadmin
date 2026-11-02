@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { LEARNING_TYPES, learningType } from "@/features/learning/learning-utils"
+import { kindInfo, learningType } from "@/features/learning/learning-utils"
 import type { LearningItemType, Task } from "@/lib/types"
 import { useWorkspace } from "@/stores/workspace"
 import { CourseSelect, Field, OptionSelect } from "./fields"
@@ -15,6 +15,7 @@ import { FormFrame } from "./form-frame"
 export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Partial<Task>; onDone: () => void }) {
   const existing = useWorkspace((s) => s.tasks.find((t) => t.id === id))
   const hasCourses = useWorkspace((s) => s.courses.length > 0)
+  const courses = useWorkspace((s) => s.courses)
   const { create, update, remove } = useWorkspace.getState()
   const base = existing ?? defaults
   const [draft, setDraft] = useState({
@@ -27,10 +28,17 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
     starred: base?.starred ?? false,
     done: base?.done ?? false,
     links: base?.links ?? [],
+    score: base?.score != null ? String(base.score) : "",
   })
   const set = (patch: Partial<typeof draft>) => setDraft((d) => ({ ...d, ...patch }))
 
-  const type = learningType(draft.learningType)
+  const course = courses.find((c) => c.id === draft.courseId)
+  const kind = kindInfo(course?.kind)
+  const type = learningType(draft.learningType, kind.value)
+  // A practice test (certification) can carry its score.
+  const scored = kind.value === "certification" && draft.learningType === "exam"
+  const score = draft.score.trim() === "" ? undefined : Number(draft.score)
+  const scoreBad = score !== undefined && (!Number.isFinite(score) || score < 0 || score > 100)
   // Coursework reads as what it is: "New assignment", "Exam updated".
   const noun = draft.courseId ? type.label : "Task"
 
@@ -45,6 +53,7 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
       starred: draft.starred,
       done: draft.done,
       links: cleanLinks(draft.links),
+      score: draft.courseId && scored ? score : undefined,
     }
     if (existing) {
       const completedAt = values.done ? (existing.completedAt ?? new Date().toISOString()) : undefined
@@ -61,7 +70,7 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
     <FormFrame
       title={existing ? `Edit ${noun.toLowerCase()}` : `New ${noun.toLowerCase()}`}
       onSubmit={save}
-      canSubmit={draft.title.trim().length > 0}
+      canSubmit={draft.title.trim().length > 0 && !(scored && scoreBad)}
       onDelete={
         existing
           ? () => {
@@ -77,12 +86,20 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
       </Field>
       {(hasCourses || draft.courseId) && (
         <div className="grid gap-x-4 gap-y-3.5 sm:grid-cols-2">
-          <Field label="Course" htmlFor="task-course">
-            <CourseSelect id="task-course" value={draft.courseId} onChange={(courseId) => set({ courseId })} />
+          <Field label="Learning" htmlFor="task-course">
+            <CourseSelect
+              id="task-course"
+              value={draft.courseId}
+              onChange={(courseId) => {
+                // Keep the type when the new kind has it; otherwise use that kind's first type.
+                const next = kindInfo(courses.find((c) => c.id === courseId)?.kind)
+                set({ courseId, learningType: next.types.some((t) => t.value === draft.learningType) ? draft.learningType : next.types[0].value })
+              }}
+            />
           </Field>
           {draft.courseId && (
             <Field label="Type" htmlFor="task-type">
-              <OptionSelect id="task-type" value={draft.learningType} onChange={(learningType) => set({ learningType })} options={LEARNING_TYPES.map((t) => ({ value: t.value, label: t.label }))} />
+              <OptionSelect id="task-type" value={draft.learningType} onChange={(learningType) => set({ learningType })} options={kind.types.map((t) => ({ value: t.value, label: t.label }))} />
             </Field>
           )}
         </div>
@@ -103,6 +120,11 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
         {draft.due && (
           <Field label="Time" htmlFor="task-time" className="w-32">
             <Input id="task-time" type="time" value={draft.time} onChange={(e) => set({ time: e.target.value })} />
+          </Field>
+        )}
+        {draft.courseId && scored && (
+          <Field label="Score %" htmlFor="task-score" className="w-28" error={scoreBad ? "0 to 100." : undefined}>
+            <Input id="task-score" inputMode="decimal" value={draft.score} onChange={(e) => set({ score: e.target.value })} placeholder="—" />
           </Field>
         )}
         <div className="flex items-center gap-2 pb-1.5">

@@ -335,3 +335,15 @@ html[data-accent="pink"] { --bw-red: #d6337f; --bw-red-hover: #be2b70; --bw-red-
 
 /* Density (Settings → Appearance). Compact halves the gaps and trims the title bar. */
 html[data-density="compact"] { --bw-grid-gap: 0.75rem; --bw-panel-header-h: 2.25rem; }
+
+/* Learning kinds (Productivity → Learning): one flat Material hue each, used by KindIcon and card progress. */
+[data-category="kind-course"] { --bw-category: #4f9dff; }
+[data-category="kind-certification"] { --bw-category: #5bd18b; }
+[data-category="kind-selfpaced"] { --bw-category: #26c6a6; }
+[data-category="kind-skill"] { --bw-category: #a57dff; }
+[data-category="kind-reading"] { --bw-category: #ff8a4d; }
+html[data-theme="dark"] [data-category="kind-course"] { --bw-category: #4285f4; }
+html[data-theme="dark"] [data-category="kind-certification"] { --bw-category: #34a853; }
+html[data-theme="dark"] [data-category="kind-selfpaced"] { --bw-category: #12b5cb; }
+html[data-theme="dark"] [data-category="kind-skill"] { --bw-category: #a142f4; }
+html[data-theme="dark"] [data-category="kind-reading"] { --bw-category: #fa7b17; }

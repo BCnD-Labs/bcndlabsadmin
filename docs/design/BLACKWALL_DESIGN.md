@@ -87,6 +87,14 @@ Planner keeps its owner-approved arrangement and matches the rendered Ant Design
 
 Ordinary dates are unfilled, day buttons stay 32px, and week gaps are 4px. A six-week month fits in the calendar unit without shrinking dates; its body can scroll if content or text settings need more space. The legacy shared `--bw-slot-h` and exact Home/Planner viewport-edge contract are retired; alignment now comes from shared column and row units.
 
+## Learning
+
+- Learning is general learning, not only school. Five kinds share one record type (`Course` with `kind`): Course, Certification, Self-paced, Skill, Reading. Older records with no kind are courses.
+- Each kind relabels the shared fields (instructor → vendor, platform or author; end date → exam date, target finish or finished on) and its item types (a certification's milestones are exam domains, its exams are practice tests with a score).
+- Every item is still a task, so it shows in Tasks, the Planner calendar and Upcoming. Certification exam dates show in Upcoming as their own rows.
+- Each kind has one flat Material hue (`[data-category="kind-*"]`): Course blue, Certification green, Self-paced teal, Skill violet, Reading orange. Cards show the kind's own progress: done count, domain ring + best practice score, sections, resources + milestones, pages.
+- No study-session log or study-hours stat yet (held by Blake's choice). If school ever needs more than this, it moves to its own Academics section rather than growing here.
+
 ## Data honesty and content patterns
 
 Every external feed retains a readable `SourceBadge`: Connected, Sample data, Not connected, Error or Loading. Connected means a successful fetch, not ongoing monitoring. Labels use sentence case at medium weight with a small square; source state must remain explicit rather than color-only. Tasks, notes and logs use the shared workspace save indicator rather than external-service badges. Never fabricate totals or decorative charts. Publishing also shows its website connection state explicitly. Home Website content and Website traffic are independent panel choices with independent badges. GitHub and analytics badges include the selected connection label where space allows; tooltips retain the complete source name.

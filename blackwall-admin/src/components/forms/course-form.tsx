@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { COURSE_COLORS, parseTags } from "@/features/learning/learning-utils"
+import { COURSE_COLORS, kindInfo, parseTags } from "@/features/learning/learning-utils"
 import { courseHref, learningHref } from "@/lib/routes"
 import type { Course, CourseColor } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -12,13 +12,17 @@ import { useWorkspace } from "@/stores/workspace"
 import { Field } from "./fields"
 import { FormFrame } from "./form-frame"
 
-/** Add or edit a course (Productivity → Learning → Add learning → Course). */
+/** Add or edit any kind of learning (Productivity → Learning → Add learning). Fields follow the kind. */
 export function CourseForm({ id, defaults, onDone }: { id?: string; defaults?: Partial<Course>; onDone: () => void }) {
   const existing = useWorkspace((s) => s.courses.find((c) => c.id === id))
   const itemCount = useWorkspace((s) => (id ? s.tasks.filter((t) => t.courseId === id).length : 0))
   const { create, update, remove } = useWorkspace.getState()
   const navigate = useNavigate()
   const base = existing ?? defaults
+  const info = kindInfo(base?.kind)
+  const k = info.value
+  const isCourse = k === "course"
+  const noun = info.label.toLowerCase()
   const [d, setD] = useState({
     title: base?.title ?? "",
     code: base?.code ?? "",
@@ -35,6 +39,8 @@ export function CourseForm({ id, defaults, onDone }: { id?: string; defaults?: P
     tags: (base?.tags ?? []).join(", "),
     description: base?.description ?? "",
     links: base?.links ?? [],
+    pagesRead: base?.pagesRead != null ? String(base.pagesRead) : "",
+    pagesTotal: base?.pagesTotal != null ? String(base.pagesTotal) : "",
   })
   const set = (patch: Partial<typeof d>) => setD((x) => ({ ...x, ...patch }))
   const datesBackwards = !!d.startDate && !!d.endDate && d.endDate < d.startDate
@@ -42,6 +48,10 @@ export function CourseForm({ id, defaults, onDone }: { id?: string; defaults?: P
   const creditsBad = credits !== undefined && (!Number.isFinite(credits) || credits < 0 || credits > 30)
   const url = d.url.trim()
   const urlBad = !!url && !/^https?:\/\/\S+$/i.test(url)
+  const pageNum = (v: string) => (v.trim() === "" ? undefined : Number(v))
+  const pagesRead = pageNum(d.pagesRead)
+  const pagesTotal = pageNum(d.pagesTotal)
+  const pagesBad = [pagesRead, pagesTotal].some((n) => n !== undefined && (!Number.isInteger(n) || n < 0 || n > 100_000))
 
   const save = () => {
     const values = {
@@ -60,14 +70,17 @@ export function CourseForm({ id, defaults, onDone }: { id?: string; defaults?: P
       tags: parseTags(d.tags),
       description: d.description.trim(),
       links: cleanLinks(d.links),
+      kind: k,
+      pagesRead: k === "reading" ? pagesRead : undefined,
+      pagesTotal: k === "reading" ? pagesTotal : undefined,
     }
     if (existing) {
       update("courses", existing.id, values)
-      toast.success("Course updated")
+      toast.success(`${info.label} updated`)
       onDone()
     } else {
       const c = create("courses", values)
-      toast.success("Course added")
+      toast.success(`${info.label} added`)
       onDone()
       navigate(courseHref(c.id))
     }
@@ -75,66 +88,95 @@ export function CourseForm({ id, defaults, onDone }: { id?: string; defaults?: P
 
   return (
     <FormFrame
-      title={existing ? "Edit course" : "New course"}
+      title={existing ? `Edit ${noun}` : `New ${noun}`}
       onSubmit={save}
-      submitLabel={existing ? "Save" : "Add course"}
-      canSubmit={d.title.trim().length > 0 && !datesBackwards && !creditsBad && !urlBad}
+      submitLabel={existing ? "Save" : `Add ${noun}`}
+      canSubmit={d.title.trim().length > 0 && !datesBackwards && !creditsBad && !urlBad && !pagesBad}
       onDelete={
         existing
           ? () => {
               remove("courses", existing.id)
-              toast(itemCount ? `Course deleted with its ${itemCount} item${itemCount === 1 ? "" : "s"}; linked notes were kept` : "Course deleted")
+              toast(itemCount ? `${info.label} deleted with its ${itemCount} item${itemCount === 1 ? "" : "s"}; linked notes were kept` : `${info.label} deleted`)
               onDone()
               navigate(learningHref)
             }
           : undefined
       }
     >
-      <div className="grid gap-x-4 gap-y-3.5 sm:grid-cols-[1fr_8rem]">
-        <Field label="Course name" htmlFor="course-title">
-          <Input id="course-title" autoFocus value={d.title} onChange={(e) => set({ title: e.target.value })} placeholder="e.g. Data Structures" />
+      <div className={cn("grid gap-x-4 gap-y-3.5", (isCourse || k === "certification") && "sm:grid-cols-[1fr_8rem]")}>
+        <Field label={info.name[0]} htmlFor="course-title">
+          <Input id="course-title" autoFocus value={d.title} onChange={(e) => set({ title: e.target.value })} placeholder={info.name[1]} />
         </Field>
-        <Field label="Course code" htmlFor="course-code">
-          <Input id="course-code" className="font-mono uppercase" maxLength={16} value={d.code} onChange={(e) => set({ code: e.target.value })} placeholder="CS 2110" />
+        {(isCourse || k === "certification") && (
+          <Field label={isCourse ? "Course code" : "Exam code"} htmlFor="course-code">
+            <Input id="course-code" className="font-mono uppercase" maxLength={16} value={d.code} onChange={(e) => set({ code: e.target.value })} placeholder={isCourse ? "CS 2110" : "200-301"} />
+          </Field>
+        )}
+      </div>
+      {k === "skill" && (
+        <Field label="Goal" htmlFor="course-description" hint="What you want to be able to do. The first line shows on the card.">
+          <Textarea id="course-description" rows={2} value={d.description} onChange={(e) => set({ description: e.target.value })} placeholder="e.g. Ship a small CLI tool in Rust" />
         </Field>
+      )}
+      <div className={cn("grid gap-x-4 gap-y-3.5 sm:grid-cols-2", !info.person && !isCourse && k !== "reading" && "hidden")}>
+        {info.person && (
+          <Field label={info.person[0]} htmlFor="course-instructor">
+            <Input id="course-instructor" value={d.instructor} onChange={(e) => set({ instructor: e.target.value })} placeholder={info.person[1]} />
+          </Field>
+        )}
+        {isCourse && (
+          <>
+            <Field label="Instructor email" htmlFor="course-email">
+              <Input id="course-email" type="email" value={d.instructorEmail} onChange={(e) => set({ instructorEmail: e.target.value })} placeholder="Optional" />
+            </Field>
+            <Field label="Term" htmlFor="course-term">
+              <Input id="course-term" value={d.term} onChange={(e) => set({ term: e.target.value })} placeholder="e.g. Spring 2027" />
+            </Field>
+            <Field label="Credits" htmlFor="course-credits" error={creditsBad ? "Enter a number from 0 to 30." : undefined}>
+              <Input id="course-credits" inputMode="decimal" value={d.credits} onChange={(e) => set({ credits: e.target.value })} placeholder="Optional" />
+            </Field>
+          </>
+        )}
+        {k === "reading" && (
+          <>
+            <Field label="Pages read" htmlFor="course-pages-read" error={pagesBad ? "Whole numbers only." : undefined}>
+              <Input id="course-pages-read" inputMode="numeric" value={d.pagesRead} onChange={(e) => set({ pagesRead: e.target.value })} placeholder="0" />
+            </Field>
+            <Field label="Total pages" htmlFor="course-pages-total">
+              <Input id="course-pages-total" inputMode="numeric" value={d.pagesTotal} onChange={(e) => set({ pagesTotal: e.target.value })} placeholder="Optional" />
+            </Field>
+          </>
+        )}
       </div>
       <div className="grid gap-x-4 gap-y-3.5 sm:grid-cols-2">
-        <Field label="Instructor" htmlFor="course-instructor">
-          <Input id="course-instructor" value={d.instructor} onChange={(e) => set({ instructor: e.target.value })} placeholder="Name" />
-        </Field>
-        <Field label="Instructor email" htmlFor="course-email">
-          <Input id="course-email" type="email" value={d.instructorEmail} onChange={(e) => set({ instructorEmail: e.target.value })} placeholder="Optional" />
-        </Field>
-        <Field label="Term" htmlFor="course-term">
-          <Input id="course-term" value={d.term} onChange={(e) => set({ term: e.target.value })} placeholder="e.g. Spring 2027" />
-        </Field>
-        <Field label="Credits" htmlFor="course-credits" error={creditsBad ? "Enter a number from 0 to 30." : undefined}>
-          <Input id="course-credits" inputMode="decimal" value={d.credits} onChange={(e) => set({ credits: e.target.value })} placeholder="Optional" />
-        </Field>
         <Field label="Start date" htmlFor="course-start">
           <Input id="course-start" type="date" value={d.startDate} onChange={(e) => set({ startDate: e.target.value })} />
         </Field>
-        <Field label="End date" htmlFor="course-end" error={datesBackwards ? "Ends before it starts." : undefined}>
+        <Field label={info.endLabel} htmlFor="course-end" error={datesBackwards ? "Before the start date." : undefined}>
           <Input id="course-end" type="date" value={d.endDate} onChange={(e) => set({ endDate: e.target.value })} />
         </Field>
-        <Field label="Schedule" htmlFor="course-schedule">
-          <Input id="course-schedule" value={d.schedule} onChange={(e) => set({ schedule: e.target.value })} placeholder="e.g. Mon/Wed 10:00–11:15" />
-        </Field>
-        <Field label="Location" htmlFor="course-location">
-          <Input id="course-location" value={d.location} onChange={(e) => set({ location: e.target.value })} placeholder="Room or Online" />
-        </Field>
+        {isCourse && (
+          <>
+            <Field label="Schedule" htmlFor="course-schedule">
+              <Input id="course-schedule" value={d.schedule} onChange={(e) => set({ schedule: e.target.value })} placeholder="e.g. Mon/Wed 10:00–11:15" />
+            </Field>
+            <Field label="Location" htmlFor="course-location">
+              <Input id="course-location" value={d.location} onChange={(e) => set({ location: e.target.value })} placeholder="Room or Online" />
+            </Field>
+          </>
+        )}
       </div>
-      <Field label="Course link" htmlFor="course-url" hint="The course site or LMS page, to open it from here." error={urlBad ? "Start with http:// or https://" : undefined}>
+      <Field label={info.linkLabel} htmlFor="course-url" hint={isCourse ? "The course site or LMS page, to open it from here." : "Opens in a new tab."} error={urlBad ? "Start with http:// or https://" : undefined}>
         <Input id="course-url" type="url" value={d.url} onChange={(e) => set({ url: e.target.value })} placeholder="https://" />
       </Field>
-      <Field label="Linked documents" htmlFor="course-links" hint="Syllabus, shared drives, notebooks. They open in their own app.">
+      <Field label="Linked documents" htmlFor="course-links" hint={k === "skill" ? "Docs, tutorials, notebooks: your resources. They open in their own app." : k === "reading" ? "Your notes on it (SiYuan, Obsidian…). They open in their own app." : isCourse ? "Syllabus, shared drives, notebooks. They open in their own app." : "Study guides, notes, files. They open in their own app."}>
         <DocLinksField value={d.links} onChange={(links) => set({ links })} />
       </Field>
-      <Field label="Tags" htmlFor="course-tags" hint="Separate with commas, e.g. major, online, lab.">
+      <Field label="Tags" htmlFor="course-tags" hint={isCourse ? "Separate with commas, e.g. major, online, lab." : "Separate with commas, e.g. networking, career."}>
         <Input id="course-tags" value={d.tags} onChange={(e) => set({ tags: e.target.value })} />
       </Field>
       <Field label="Colour" htmlFor="course-color-blue">
-        <div role="radiogroup" aria-label="Course colour" className="flex flex-wrap gap-1.5">
+        <div role="radiogroup" aria-label="Colour" className="flex flex-wrap gap-1.5">
           {COURSE_COLORS.map((c) => (
             <button
               key={c.value}
@@ -150,9 +192,11 @@ export function CourseForm({ id, defaults, onDone }: { id?: string; defaults?: P
           ))}
         </div>
       </Field>
-      <Field label="Description" htmlFor="course-description">
-        <Textarea id="course-description" rows={3} value={d.description} onChange={(e) => set({ description: e.target.value })} placeholder="Optional: what it covers, grading, office hours…" />
-      </Field>
+      {k !== "skill" && (
+        <Field label="Description" htmlFor="course-description">
+          <Textarea id="course-description" rows={3} value={d.description} onChange={(e) => set({ description: e.target.value })} placeholder={isCourse ? "Optional: what it covers, grading, office hours…" : "Optional"} />
+        </Field>
+      )}
     </FormFrame>
   )
 }

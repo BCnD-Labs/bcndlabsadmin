@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { learningType } from "@/features/learning/learning-utils"
 import { daysUntil, formatTime, parseKey, timeAgo, toDateKey } from "@/lib/dates"
 import { DEVELOPMENT, courseHref, logHref, plannerHref } from "@/lib/routes"
-import type { CourseColor, Task } from "@/lib/types"
+import type { CourseColor, LearningKind, Task } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useGitHubAccounts, type GitHubAccountView } from "@/services/data"
 import type { PullRequestSummary } from "@/services/types"
@@ -181,12 +181,12 @@ export function ThisWeekPanel() {
   )
 }
 
-function WeekRow({ task, course, today }: { task: Task; course?: { id: string; code: string; color: CourseColor }; today: string }) {
+function WeekRow({ task, course, today }: { task: Task; course?: { id: string; code: string; color: CourseColor; kind?: LearningKind }; today: string }) {
   const color = course ? COURSE_HEX[course.color] : TASK_HEX
   const date = parseKey(task.due!)
   const n = daysUntil(task.due!)
   const isToday = task.due === today
-  const kind = course ? learningType(task.learningType) : undefined
+  const kind = course ? learningType(task.learningType, course?.kind) : undefined
   const KindIcon = kind?.icon ?? CircleCheck
   const [tone, label]: [Tone, string] = n < 0 ? ["red", `${-n}d overdue`] : n === 0 ? ["red", "Today"] : n === 1 ? ["yellow", "Tomorrow"] : ["grey", `${n} days`]
   const to = course ? courseHref(course.id) : logHref(task.due!)
