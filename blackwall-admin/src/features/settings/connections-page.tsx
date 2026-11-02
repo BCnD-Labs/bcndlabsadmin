@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom"
 import { CategoryIcon } from "@/components/common/category-icon"
 import { DEVELOPMENT, postsHref, siteAnalyticsHref } from "@/lib/routes"
 import { CONNECTION_GUIDANCE } from "./connection-guidance"
-import { Loader2, Pencil, Plus, RotateCw, Trash2, X } from "lucide-react"
+import { ChevronRight, Loader2, Pencil, Plus, RotateCw, Trash2, X } from "lucide-react"
 import { useEffect, useRef, useState, type FormEvent } from "react"
 import { useUi } from "@/stores/ui"
 import { toast } from "sonner"
@@ -26,20 +26,23 @@ import {
   type PublicConnection,
 } from "@shared/connections"
 import { Panel } from "@/components/common/panel"
-import { SettingRow, SettingsPage } from "./settings-pages"
+import { SettingsPage } from "./settings-pages"
 
-/** Same shape as SourceBadge: a small square marker and a caps label (spec §6: green = healthy, red = failed). */
-const STATUS: Record<ConnectionStatus, { label: string; square: string; text: string }> = {
-  ok: { label: "Connected", square: "bg-green", text: "text-ink-2" },
-  error: { label: "Error", square: "bg-red", text: "text-red-text" },
-  untested: { label: "Not tested", square: "bg-faint", text: "text-muted-foreground" },
-  saved: { label: "Saved", square: "bg-faint", text: "text-muted-foreground" },
+/**
+ * Connection-record status, styled like SourceBadge (sentence case, tinted pill, square marker)
+ * so "Connected" looks the same here as on the panels it feeds.
+ */
+const STATUS: Record<ConnectionStatus, { label: string; square: string; className: string; hint: string }> = {
+  ok: { label: "Connected", square: "bg-green", className: "bg-green/12 text-green", hint: "The last test reached the service with these details." },
+  error: { label: "Error", square: "bg-red-light", className: "bg-red-soft text-red-light", hint: "The last test failed. Edit the details or test again." },
+  untested: { label: "Not tested", square: "bg-faint", className: "bg-ink-2/8 text-muted-foreground", hint: "Saved, but not tested yet. Click Test." },
+  saved: { label: "Link only", square: "bg-faint", className: "bg-ink-2/8 text-muted-foreground", hint: "A saved link and details. There is no endpoint to test." },
 }
 
 function StatusPill({ status }: { status: ConnectionStatus }) {
   const s = STATUS[status]
   return (
-    <span className={cn("inline-flex h-5 shrink-0 items-center gap-1.5 rounded-full px-2 text-[10px] font-bold tracking-[0.03em] uppercase bg-ink-2/8", s.text)}>
+    <span title={s.hint} className={cn("inline-flex h-5 shrink-0 items-center gap-1.5 rounded-full px-2 text-[10px] font-medium", s.className)}>
       <span className={cn("size-1.5 rounded-[1.5px]", s.square)} aria-hidden />
       {s.label}
     </span>
@@ -74,6 +77,110 @@ export function ConnectionsPage() {
     }
   }
 
+  // Linked services first (in their usual order), then the ones still to set up.
+  const groups = PROVIDERS.map((p) => ({ def: p, accounts: list.filter((c) => c.provider === p.id) }))
+  const linked = groups.filter((g) => g.accounts.length)
+  const unlinked = groups.filter((g) => !g.accounts.length)
+  const counts = {
+    ok: list.filter((c) => c.status === "ok").length,
+    error: list.filter((c) => c.status === "error").length,
+    other: list.filter((c) => c.status === "untested" || c.status === "saved").length,
+  }
+
+  const accountRow = (c: PublicConnection) => {
+    const working = busy[c.id]
+    const details = c.summary?.length || c.provider === "other" || (c.message && c.status !== "error")
+    return (
+      <li key={c.id} data-testid="connection-card" className={cn("rounded-[8px] border bg-well/50", c.status === "error" ? "border-red/40" : "border-line")}>
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 py-2 pr-1.5 pl-3">
+          <StatusPill status={c.status} />
+          <span className="min-w-0 truncate text-[13px] font-medium text-ink">{c.label}</span>
+          {c.account && <span className="min-w-0 truncate font-mono text-[11px] text-muted-foreground">{c.account}</span>}
+          <span className="text-[11px] text-faint">{c.checkedAt ? `checked ${timeAgo(c.checkedAt)}` : c.status === "saved" ? "" : "never checked"}</span>
+          <span className="ml-auto flex items-center gap-0.5">
+            {c.status !== "saved" && (
+              <Button variant="quiet" onClick={() => runTest(c)} disabled={working} aria-label={`Test ${c.label}`}>
+                {working ? <Loader2 className="animate-spin" /> : <RotateCw />} Test
+              </Button>
+            )}
+            <Button size="icon-sm" variant="quiet" aria-label={`Edit ${c.label}`} onClick={() => setDialog({ existing: c })}>
+              <Pencil />
+            </Button>
+            <Button size="icon-sm" variant="quiet" aria-label={`Remove ${c.label}`} onClick={() => setConfirmRemove(c.id)}>
+              <Trash2 />
+            </Button>
+          </span>
+        </div>
+        {c.status === "error" && c.message && <p className="border-t border-line-soft px-3 py-2 text-xs break-words text-red-text">{c.message}</p>}
+        {details ? (
+          <details className="group border-t border-line-soft">
+            <summary className="flex cursor-pointer list-none items-center gap-1 px-3 py-1.5 text-[11px] text-muted-foreground hover:text-ink [&::-webkit-details-marker]:hidden">
+              <ChevronRight className="size-3 transition-transform duration-150 group-open:rotate-90 motion-reduce:transition-none" aria-hidden />
+              Details
+            </summary>
+            <div className="space-y-1.5 px-3 pb-2.5 text-xs">
+              {c.provider === "other" && <OtherDetails c={c} />}
+              {c.message && c.status !== "error" && <p className="text-muted-foreground">{c.message}</p>}
+              {c.summary?.length ? (
+                <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+                  {c.summary.map((s) => (
+                    <div key={s.label} className="contents">
+                      <dt className="text-muted-foreground">{s.label}</dt>
+                      <dd className="min-w-0 break-words">{s.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : null}
+            </div>
+          </details>
+        ) : null}
+        {confirmRemove === c.id && (
+          <div className="flex flex-wrap items-center gap-2 border-t border-line-soft px-3 py-2 text-xs">
+            <span className="text-red-text">Remove {c.label} and its saved secrets?</span>
+            <span className="ml-auto flex gap-2">
+              <Button variant="quiet" onClick={() => setConfirmRemove(null)}>Keep</Button>
+              <Button
+                variant="destructive"
+                onClick={async () => {
+                  await remove(c.id)
+                  setConfirmRemove(null)
+                  toast(`${c.label} removed`)
+                }}
+              >
+                Remove
+              </Button>
+            </span>
+          </div>
+        )}
+      </li>
+    )
+  }
+
+  const serviceRow = ({ def, accounts }: (typeof groups)[number]) => {
+    const guide = CONNECTION_GUIDANCE[def.id]
+    const isLinked = accounts.length > 0
+    return (
+      <li key={def.id} className="px-3.5 py-3">
+        <div className="flex items-start gap-3">
+          <CategoryIcon category={guide.category} />
+          <div className="min-w-0 flex-1">
+            <p className="flex flex-wrap items-baseline gap-x-2 text-[13px] font-semibold text-ink">
+              {def.name}
+              {!isLinked && <span className="text-[11px] font-normal text-faint">Not linked</span>}
+            </p>
+            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+              {isLinked ? <><span className="text-faint">Feeds </span>{guide.feeds}</> : def.blurb}
+            </p>
+          </div>
+          <Button variant={isLinked ? "quiet" : "outline"} onClick={() => setDialog({ provider: def.id })} aria-label={isLinked ? `Add another ${def.name} connection` : `Set up ${def.name}`}>
+            <Plus /> {isLinked ? "Add" : "Set up"}
+          </Button>
+        </div>
+        {isLinked && <ul className="mt-2.5 grid gap-1.5 sm:pl-10" aria-label={`${def.name} connections`}>{accounts.map(accountRow)}</ul>}
+      </li>
+    )
+  }
+
   return (
     <SettingsPage>
 
@@ -88,104 +195,27 @@ export function ConnectionsPage() {
         </Alert>
       )}
 
-      {available && list.length > 0 && (
-        <ul className="grid gap-3" aria-label="Connections">
-          {list.map((c) => {
-            const working = busy[c.id]
-            return (
-              <li key={c.id} data-testid="connection-card">
-                <Panel
-                  title={c.label}
-                  category={CONNECTION_GUIDANCE[c.provider].category}
-                  tool={providerDef(c.provider).name.toLowerCase()}
-                  command={c.label}
-                  badge={<StatusPill status={c.status} />}
-                  actions={
-                    <>
-                      <Button variant="quiet" onClick={() => runTest(c)} disabled={working}>
-                        {working ? <Loader2 className="animate-spin" /> : <RotateCw />} Test
-                      </Button>
-                      <Button size="icon-sm" variant="quiet" aria-label={`Edit ${c.label}`} onClick={() => setDialog({ existing: c })}>
-                        <Pencil />
-                      </Button>
-                      <Button size="icon-sm" variant="quiet" aria-label={`Remove ${c.label}`} onClick={() => setConfirmRemove(c.id)}>
-                        <Trash2 />
-                      </Button>
-                    </>
-                  }
-                  bodyClassName="divide-y divide-line"
-                >
-                  <div className="space-y-1.5 px-3.5 py-3 text-sm">
-                    <p className="text-xs text-muted-foreground">{CONNECTION_GUIDANCE[c.provider].outcome}</p>
-                    {c.account && (
-                      <p>
-                        <span className="text-muted-foreground">Account </span>
-                        {c.account}
-                      </p>
-                    )}
-                    {c.provider === "other" && <OtherDetails c={c} />}
-                    {c.message && <p className={c.status === "error" ? "break-words text-red-text" : "text-muted-foreground"}>{c.message}</p>}
-                    {c.summary?.length ? (
-                      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
-                        {c.summary.map((s) => (
-                          <div key={s.label} className="contents">
-                            <dt className="text-muted-foreground">{s.label}</dt>
-                            <dd className="min-w-0 break-words">{s.value}</dd>
-                          </div>
-                        ))}
-                      </dl>
-                    ) : null}
-                    {!c.account && !c.message && !c.summary?.length && c.provider !== "other" && <p className="text-muted-foreground">Not tested yet.</p>}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 px-3.5 py-2 text-xs text-muted-foreground">
-                    {c.checkedAt ? `Checked ${timeAgo(c.checkedAt)}` : "Never checked"}
-                    {confirmRemove === c.id && (
-                      <span className="ml-auto flex flex-wrap items-center gap-2">
-                        <span className="text-red-text">Remove this connection and its saved secrets?</span>
-                        <Button
-                          variant="destructive"
-                          onClick={async () => {
-                            await remove(c.id)
-                            setConfirmRemove(null)
-                            toast(`${c.label} removed`)
-                          }}
-                        >
-                          Remove
-                        </Button>
-                        <Button variant="quiet" onClick={() => setConfirmRemove(null)}>
-                          Keep
-                        </Button>
-                      </span>
-                    )}
-                  </div>
-                </Panel>
-              </li>
-            )
-          })}
-        </ul>
-      )}
-
       {available && (
-        <Panel title="Add a connection" tool="connections" command={list.length ? "add another" : "add"} bodyClassName="divide-y divide-line">
-          {PROVIDERS.map((p) => {
-            return (
-              <SettingRow
-                key={p.id}
-                title={
-                  <span className="flex items-center gap-2">
-                    <CategoryIcon category={CONNECTION_GUIDANCE[p.id].category} />
-                    {p.name}
-                  </span>
-                }
-                description={p.blurb}
-              >
-                <Button variant="outline" onClick={() => setDialog({ provider: p.id })} aria-label={`Set up ${p.name}`}>
-                  <Plus /> Set up
-                </Button>
-              </SettingRow>
-            )
-          })}
-        </Panel>
+        <>
+          <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground" aria-live="polite">
+            <span><strong className="font-semibold text-ink">{linked.length}</strong> of {PROVIDERS.length} services linked</span>
+            {counts.ok > 0 && <span className="inline-flex items-center gap-1.5"><span className="size-1.5 rounded-[1.5px] bg-green" aria-hidden />{counts.ok} connected</span>}
+            {counts.error > 0 && <span className="inline-flex items-center gap-1.5 text-red-text"><span className="size-1.5 rounded-[1.5px] bg-red-light" aria-hidden />{counts.error} need attention</span>}
+            {counts.other > 0 && <span className="inline-flex items-center gap-1.5"><span className="size-1.5 rounded-[1.5px] bg-faint" aria-hidden />{counts.other} not tested or link only</span>}
+          </p>
+
+          {linked.length > 0 && (
+            <Panel title="Linked" tool="connections" command="ls" meta={`${list.length} ${list.length === 1 ? "connection" : "connections"}`} bodyClassName="p-0">
+              <ul className="divide-y divide-line">{linked.map(serviceRow)}</ul>
+            </Panel>
+          )}
+
+          {unlinked.length > 0 && (
+            <Panel title={linked.length ? "Available to link" : "Link a service"} tool="connections" command="add" bodyClassName="p-0">
+              <ul className="divide-y divide-line">{unlinked.map(serviceRow)}</ul>
+            </Panel>
+          )}
+        </>
       )}
 
       <Dialog open={!!dialog} onOpenChange={(o) => !o && setDialog(null)}>

@@ -161,7 +161,7 @@ function PersonalAnalytics() {
 export function InsightsPage() {
   return (
     <>
-      <PageHeader title="Task & journal insights" />
+      <PageHeader title="Activity insights" />
       <PersonalAnalytics />
     </>
   )

@@ -137,7 +137,7 @@ export function AppearanceSettings() {
             onChange={(v) => set({ theme: v })}
           />
         </SettingRow>
-        <SettingRow title="Category colors" description="Distinct icon colors and subtle panel tints identify tasks, learning, GitHub, content and traffic. Turn off for neutral icons and panels." htmlFor="category-colors" inline>
+        <SettingRow title="Category colors" description="Distinct icon colors and subtle panel tints identify tasks, learning, GitHub, website content and traffic. Turn off for neutral icons and panels." htmlFor="category-colors" inline>
           <Switch id="category-colors" checked={categoryColors} onCheckedChange={(v) => set({ categoryColors: v })} />
         </SettingRow>
         <SettingRow title="Show sidebar labels" description="Keep the full navigation visible on desktop, instead of showing labels only on hover." htmlFor="sidebar-labels" inline>

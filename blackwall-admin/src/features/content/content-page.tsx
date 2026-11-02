@@ -98,7 +98,7 @@ export function ContentPage() {
         <GridItem span="full"><SiteNotice site={site} /></GridItem>
         <GridItem span="full">
 
-        <section className="flex min-w-0 flex-col" aria-label="Content">
+        <section className="flex min-w-0 flex-col" aria-label="Posts & pages">
           <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-2">
             <SegmentedTabs
               label="Posts or pages"

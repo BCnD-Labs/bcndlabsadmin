@@ -1,5 +1,5 @@
 import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
-import { CalendarRange, ChevronDown, Clock, ExternalLink, GraduationCap, Mail, MapPin, NotebookPen, Pencil, Plus, Tag, UserRound } from "lucide-react"
+import { CalendarRange, ChevronDown, Clock, ExternalLink, GraduationCap, Mail, MapPin, Pencil, Plus, StickyNote as NoteIcon, Tag, UserRound } from "lucide-react"
 import { useState, type ReactNode } from "react"
 import { Link, useParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -49,7 +49,7 @@ function AddItem({ course }: { course: Course }) {
           </DropdownMenuItem>
         ))}
         <DropdownMenuItem onSelect={() => openForm({ kind: "note", defaults: { courseId: course.id, color: "blue" } })}>
-          <NotebookPen /> Note
+          <NoteIcon /> Note
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -4,8 +4,8 @@ import {
   FileText,
   FolderKanban,
   GraduationCap,
-  PenLine,
-  NotebookText,
+  NotebookPen,
+  StickyNote,
   Plus,
 } from "lucide-react"
 import { useEffect } from "react"
@@ -21,6 +21,7 @@ import {
   CommandSeparator,
 } from "@/components/ui/command"
 import { courseHref, draftHref, noteHref, projectHref } from "@/lib/routes"
+import { CATEGORIES } from "@/components/common/category-icon"
 import { courseLabel } from "@/features/learning/learning-utils"
 import { DRAFT_STATUS_LABEL } from "@/components/common/tags"
 import { useCreateDraft } from "@/features/content/use-create-draft"
@@ -156,7 +157,7 @@ export function CommandSearch() {
                 keywords={[n.text.slice(0, 500)]}
                 onSelect={() => run(() => navigate(noteHref(n.id)))}
               >
-                <NotebookText />
+                <StickyNote />
                 <span className="truncate">{noteTitle(n.text)}</span>
               </CommandItem>
             ))}
@@ -167,7 +168,7 @@ export function CommandSearch() {
           <CommandGroup heading="Daily logs">
             {[...journal].sort((a, b) => b.id.localeCompare(a.id)).map((j) => (
               <CommandItem key={j.id} value={`log-${j.id}`} keywords={[j.id, format(parseKey(j.id), "EEEE MMMM d"), j.text.slice(0, 2000)]} onSelect={() => run(() => navigate(logHref(j.id)))}>
-                <PenLine />
+                <NotebookPen />
                 <span className="font-mono text-xs">{j.id}</span>
                 <span className="truncate text-muted-foreground">{j.text.split("\n")[0]}</span>
               </CommandItem>
@@ -196,7 +197,7 @@ export function CommandSearch() {
         <CommandGroup heading="Go to">
           {NAV.flatMap((d) =>
             (d.children ?? [{ label: d.label, to: d.to }]).map((c) => {
-              const Icon = d.icon
+              const Icon = CATEGORIES[d.category]
               const label = d.children ? `${d.label} › ${c.label}` : c.label
               return (
                 <CommandItem key={c.to} value={`go-${c.to}`} keywords={["go to", label]} onSelect={() => run(() => navigate(c.to))}>
@@ -220,7 +221,7 @@ export function CommandSearch() {
             </CommandItem>
           ))}
           <CommandItem value="create-log" keywords={["today's log", "daily log", "journal", "write"]} onSelect={() => run(() => navigate(logHref(todayKey())))}>
-            <PenLine />
+            <NotebookPen />
             Today's log
           </CommandItem>
           <CommandItem value="create-draft" keywords={["new", "content draft"]} onSelect={() => run(() => navigate(draftHref(createDraft().id)))}>

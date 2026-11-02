@@ -6,7 +6,7 @@ import {
   GraduationCap,
   ListPlus,
   NotebookPen,
-  PenLine,
+  StickyNote,
 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
@@ -45,10 +45,10 @@ export function QuickCreate({ quiet = false }: { quiet?: boolean }) {
           <ListPlus /> Task
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => navigate(logHref(todayKey()))}>
-          <PenLine /> Today's log
+          <NotebookPen /> Today's log
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => openForm({ kind: "note" })}>
-          <NotebookPen /> Note
+          <StickyNote /> Note
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => openForm({ kind: "task", defaults: { courseId: firstCourse, learningType: "assignment" } })} disabled={!firstCourse}>
@@ -59,7 +59,7 @@ export function QuickCreate({ quiet = false }: { quiet?: boolean }) {
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => navigate(draftHref(createDraft().id))}>
-          <FilePlus2 /> Content draft
+          <FilePlus2 /> Post draft
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => openForm({ kind: "project" })}>
           <FolderPlus /> Project

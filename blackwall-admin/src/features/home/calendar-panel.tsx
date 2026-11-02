@@ -1,5 +1,5 @@
 import { format } from "date-fns"
-import { PenLine } from "lucide-react"
+import { NotebookPen } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Panel } from "@/components/common/panel"
@@ -37,7 +37,7 @@ export function CalendarPanel({ className }: { className?: string }) {
           <p className="text-sm text-muted-foreground">Nothing written yet.</p>
         )}
         <Button size="sm" variant="outline" className="mt-auto self-start" onClick={() => navigate(logHref(today))}>
-          <PenLine /> {preview.length ? "Continue today's log" : "Write today's log"}
+          <NotebookPen /> {preview.length ? "Continue today's log" : "Write today's log"}
         </Button>
       </div>
     </Panel>

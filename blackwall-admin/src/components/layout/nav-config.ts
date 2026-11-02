@@ -1,4 +1,3 @@
-import { Code2, FileText, Home, ListChecks, type LucideIcon } from "lucide-react"
 import type { Category } from "@/components/common/category-icon"
 import { CMS, DEVELOPMENT, PRODUCTIVITY, insightsHref, learningHref, mediaHref, plannerHref, postsHref, projectsHref, siteAnalyticsHref } from "@/lib/routes"
 
@@ -10,7 +9,6 @@ export interface NavChild {
 export interface NavDestination {
   id: string
   label: string
-  icon: LucideIcon
   category: Category
   /** Where selecting the destination itself navigates. */
   to: string
@@ -20,11 +18,11 @@ export interface NavDestination {
 }
 
 export const NAV: NavDestination[] = [
-  { id: "home", label: "Home", icon: Home, category: "home", to: "/", match: "/" },
+  { id: "home", label: "Home", category: "home", to: "/", match: "/" },
   {
     id: "productivity",
     label: "Productivity",
-    icon: ListChecks, category: "tasks",
+    category: "tasks",
     to: plannerHref,
     match: PRODUCTIVITY,
     children: [
@@ -37,14 +35,14 @@ export const NAV: NavDestination[] = [
   {
     id: "development",
     label: "GitHub activity",
-    icon: Code2, category: "development",
+    category: "development",
     to: DEVELOPMENT,
     match: DEVELOPMENT,
   },
   {
     id: "cms",
     label: "Website",
-    icon: FileText, category: "website",
+    category: "website",
     to: postsHref,
     match: CMS,
     children: [

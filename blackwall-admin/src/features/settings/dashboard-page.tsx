@@ -19,7 +19,7 @@ export function DashboardSettings() {
   useEffect(() => { void refresh() }, [refresh])
 
   return <SettingsPage>
-    <Panel title="Home panels" category="home" meta="saved automatically" bodyClassName="divide-y divide-line">
+    <Panel title="Home panels" meta="saved automatically" bodyClassName="divide-y divide-line">
       <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground">Choose up to four panels. Selecting a panel already shown elsewhere swaps the two positions. Hidden positions take up no space. Projects and Daily log have separate controls below.</p>
       {homeSlots.map((type, index) => <SettingRow key={index} title={`Position ${index + 1}`} description={type === "empty" ? "Hidden from Home" : PANELS[type].label} htmlFor={`home-panel-${index}`} keywords="dashboard panels widgets layout order hide">
         <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5">
@@ -35,7 +35,7 @@ export function DashboardSettings() {
       <SettingRow title="Projects on Home" description="Show a preview of your active projects." htmlFor="home-projects" inline><Switch id="home-projects" checked={showHomeProjects} onCheckedChange={(value) => set({ showHomeProjects: value })} /></SettingRow>
       <SettingRow title="Daily log on Home" description="Show today’s log and its writing shortcut." htmlFor="home-log" inline><Switch id="home-log" checked={showHomeLog} onCheckedChange={(value) => set({ showHomeLog: value })} /></SettingRow>
     </Panel>
-    <Panel title="Data sources" category="service" bodyClassName="divide-y divide-line">
+    <Panel title="Data sources" bodyClassName="divide-y divide-line">
       <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground">Choose which account supplies each feed throughout Blackwall in this browser. Automatic uses the first working connection. Selecting an account keeps that choice even if its connection fails.</p>
       {(["github", "analytics"] as const).map((provider) => {
         const options = list.filter((c) => c.provider === provider)

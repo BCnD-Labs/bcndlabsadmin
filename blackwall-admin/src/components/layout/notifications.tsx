@@ -16,8 +16,8 @@ type Filter = "all" | NotificationKind
 const FILTERS: { value: Filter; label: string }[] = [
   { value: "all", label: "All" },
   { value: "alerts", label: "Alerts" },
-  { value: "dev", label: "Dev" },
-  { value: "site", label: "Site" },
+  { value: "dev", label: "GitHub" },
+  { value: "site", label: "Website" },
 ]
 
 const ICON: Record<NotificationKind, { path: string; color: string }> = {

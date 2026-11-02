@@ -281,23 +281,24 @@ html[data-font="mono"] {
   }
 }
 
-/* Category colors identify content; status labels continue to communicate health. */
+/* Category colors identify content; status labels (green/amber/red) communicate health, so
+ * category hues deliberately stay away from those three. Color follows the nav section
+ * (Productivity blue, Learning violet, Projects pink, GitHub cyan, Website orange) and the
+ * icon says what the thing is. Home is the overview, not a category, so it stays neutral. */
 [data-category] { --bw-category: var(--bw-blue); }
-[data-category="learning"] { --bw-category: #c4a7f2; }
-[data-category="development"] { --bw-category: #70cec5; }
-[data-category="website"] { --bw-category: #edc078; }
-[data-category="analytics"] { --bw-category: #7ad2eb; }
-[data-category="projects"] { --bw-category: #b6b4ef; }
-[data-category="journal"] { --bw-category: #eab1ca; }
-[data-category="azure"] { --bw-category: #91bcff; }
-[data-category="cloudflare"] { --bw-category: #f2b27f; }
-[data-category="service"] { --bw-category: #b6bfce; }
-.bw-category-icon { color: var(--bw-category); background: color-mix(in srgb, var(--bw-category) 12%, transparent); }
-.bw-panel[data-category] { border-color: color-mix(in srgb, var(--bw-category) 23%, var(--bw-edge)); }
-.bw-panel[data-category] > .bw-panel-heading { background: color-mix(in srgb, var(--bw-category) 5%, var(--bw-panel)); }
+[data-category="home"], [data-category="service"] { --bw-category: #b8c0cc; }
+[data-category="learning"] { --bw-category: #c2a5f0; }
+[data-category="projects"] { --bw-category: #ec9ec0; }
+[data-category="development"] { --bw-category: #66c3dc; }
+[data-category="website"], [data-category="analytics"], [data-category="cloudflare"] { --bw-category: #ee9f78; }
+[data-category="azure"] { --bw-category: #8fb0ff; }
+/* Identity comes from the icon chip and a faint header wash, not a colored outline. */
+.bw-category-icon { color: var(--bw-category); background: color-mix(in srgb, var(--bw-category) 15%, transparent); }
+.bw-panel[data-category] { border-color: color-mix(in srgb, var(--bw-category) 12%, var(--bw-edge)); }
+.bw-panel[data-category] > .bw-panel-heading { background: color-mix(in srgb, var(--bw-category) 8%, var(--bw-panel)); box-shadow: inset 2px 0 0 color-mix(in srgb, var(--bw-category) 70%, transparent); }
 .bw-home-grid[data-sizing="fit"] .bw-grid-item[data-rows="1"] { height: auto; min-height: 0; }
 
 html[data-category-colors="off"] [data-category] { --bw-category: var(--bw-text-2); }
 html[data-category-colors="off"] .bw-category-icon { background: var(--bw-raised); }
 html[data-category-colors="off"] .bw-panel[data-category] { border-color: var(--bw-edge); }
-html[data-category-colors="off"] .bw-panel[data-category] > .bw-panel-heading { background: var(--bw-panel); }
+html[data-category-colors="off"] .bw-panel[data-category] > .bw-panel-heading { background: var(--bw-panel); box-shadow: none; }

@@ -48,7 +48,7 @@ export const PROVIDERS: ProviderDef[] = [
   {
     id: "azure",
     name: "Azure",
-    blurb: "View subscription, resource group and resource counts on the connection card.",
+    blurb: "View subscription, resource group and resource counts in Connections.",
     help: { label: "Register an app in Microsoft Entra ID", url: "https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" },
     fields: [
       { key: "tenantId", label: "Tenant (directory) ID", required: true, placeholder: "00000000-0000-…" },
@@ -65,7 +65,7 @@ export const PROVIDERS: ProviderDef[] = [
   {
     id: "cloudflare",
     name: "Cloudflare",
-    blurb: "View your domains (zones) and their status on the connection card.",
+    blurb: "View your domains (zones) and their status in Connections.",
     help: { label: "Create an API token", url: "https://dash.cloudflare.com/profile/api-tokens" },
     fields: [
       {

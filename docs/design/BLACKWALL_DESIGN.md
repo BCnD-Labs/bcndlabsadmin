@@ -4,7 +4,7 @@ The running system is defined by `blackwall-admin/src/styles/theme.css` (palette
 
 ## Identity and themes
 
-Dim is the default cool slate theme. Dark keeps the original near-black terminal hardware character. Both retain the red brand/action accent, mono breadcrumbs, small-caps labels and the red BW logo. Category icons replace the prompt on identified Home/settings panels: blue tasks, violet learning, teal GitHub, amber website content, cyan traffic, violet projects and pink daily log. Subtle category borders/header tints separate panels. Category colors can be disabled in Appearance; icons and readable labels remain. Other panels keep the `❯` prompt. Red accent colors are never small body text; use the readable light-red error tokens for error copy. White labels on primary red buttons meet AA.
+Dim is the default cool slate theme. Dark keeps the original near-black terminal hardware character. Both retain the red brand/action accent, mono breadcrumbs, small-caps labels and the red BW logo. Category icons replace the prompt on identified Home panels. Color follows the nav section and the icon says what the thing is: Productivity blue (tasks, calendar, daily log), Learning violet, Projects pink, GitHub cyan, Website orange (content, traffic, Cloudflare), Home and custom services neutral. Category hues stay clear of the green/amber/red status colors so a category never reads as a health state. Identity comes from the icon chip (15% wash), an 8% header wash and a 2px header edge; the panel border carries only a 12% hint, never a colored outline. Settings sections are not categories and get no category icon. Category colors can be disabled in Appearance; icons and readable labels remain. Other panels keep the `❯` prompt. Red accent colors are never small body text; use the readable light-red error tokens for error copy. White labels on primary red buttons meet AA.
 
 | Role/token | Dim | Dark |
 | --- | --- | --- |
@@ -107,6 +107,8 @@ First connection migrates existing browser records and retains a recovery copy. 
 
 
 ## Connection setup and source control
+
+Settings → Connections shows every service exactly once. A summary line counts linked services and connection health (connected, need attention, not tested or link only). **Linked** lists services that have at least one connection, each with what it feeds and one row per connection: status pill, display name, account, last check, Test/Edit/Remove, an always-visible error message when failing, and a Details disclosure for provider summaries. **Available to link** lists the rest with Set up. Connection-record status uses the SourceBadge styling: Connected (last test passed), Error, Not tested, Link only (custom service without an endpoint).
 
 Provider setup uses Prepare → Details & test → Result, with focus moved to each step heading. The preparation page names actual outcomes and prerequisites. Optional publishing branch/folder configuration stays under Advanced settings. A failed test retains the saved record and credentials so a retry updates it. Success offers tracking a repository or opening the appropriate website page. Custom services store details and optionally run a manual HTTP check; they do not imply automatic monitoring or a metrics integration. Legacy account-only custom records remain editable.
 

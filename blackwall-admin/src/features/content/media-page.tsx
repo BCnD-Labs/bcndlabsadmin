@@ -52,7 +52,7 @@ export function MediaPage() {
   return (
     <>
       <PageHeader
-        title="Media"
+        title="Media library"
         badge={<SourceBadge status={site.status} />}
         actions={
           live && (
