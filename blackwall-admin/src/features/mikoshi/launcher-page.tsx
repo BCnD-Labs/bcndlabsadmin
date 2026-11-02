@@ -73,7 +73,7 @@ function PinnedTile({ service, editing, status }: { service: Service; editing: b
 /** Grid view: logo and name only, the status dot in the corner (Homarr-style). */
 function GridTile({ service, editing, status }: { service: Service; editing: boolean; status?: ServiceStatus }) {
   return (
-    <TileShell service={service} editing={editing} className="group relative flex min-w-0 flex-col items-center gap-2 rounded-xl bg-raised px-2 pt-4 pb-3 transition-colors hover:bg-selected">
+    <TileShell service={service} editing={editing} className="group relative flex w-[7.5rem] min-w-0 flex-col items-center gap-2 rounded-xl bg-raised px-2 pt-4 pb-3 transition-colors hover:bg-selected">
       {!editing && <StatusDot status={status} className="absolute top-2.5 right-2.5" />}
       <ServiceLogo service={service} size={40} />
       <span className="max-w-full truncate text-[12.5px] font-medium text-ink">{service.name}</span>
@@ -83,7 +83,7 @@ function GridTile({ service, editing, status }: { service: Service; editing: boo
 
 function ServiceTile({ service, editing, status }: { service: Service; editing: boolean; status?: ServiceStatus }) {
   return (
-    <TileShell service={service} editing={editing} className="group relative flex min-w-0 items-center gap-3 rounded-xl bg-raised px-3.5 py-3 transition-colors hover:bg-selected" >
+    <TileShell service={service} editing={editing} className="group relative flex w-64 max-w-full min-w-0 items-center gap-3 rounded-xl bg-raised px-3.5 py-3 transition-colors hover:bg-selected" >
       <ServiceLogo service={service} size={36} />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-semibold text-ink">{service.name}</span>
@@ -183,19 +183,20 @@ export function LauncherPage() {
               </ul>
             </GridItem>
           )}
-          {sections.map(({ g, items }) => (
-            <GridItem key={g} span={items.length >= 4 ? "full" : 2}>
-              {view === "grid" ? (
-                <Panel category="mikoshi" title={g} bodyClassName="grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-2.5 p-3.5">
-                  {items.map((s) => <GridTile key={s.id} service={s} editing={editing} status={status.get(s.url)} />)}
-                </Panel>
-              ) : (
-                <Panel category="mikoshi" title={g} bodyClassName="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-2.5 p-3.5">
-                  {items.map((s) => <ServiceTile key={s.id} service={s} editing={editing} status={status.get(s.url)} />)}
-                </Panel>
-              )}
+          {sections.length > 0 && (
+            <GridItem span="full">
+              {/* Each group card is only as wide as its tiles; groups flow side by side and wrap. */}
+              <div className="flex flex-wrap items-start gap-[var(--bw-grid-gap)]">
+                {sections.map(({ g, items }) => (
+                  <Panel key={g} category="mikoshi" title={g} className="w-fit max-w-full" bodyClassName="flex flex-wrap gap-2.5 p-3.5">
+                    {items.map((s) => view === "grid"
+                      ? <GridTile key={s.id} service={s} editing={editing} status={status.get(s.url)} />
+                      : <ServiceTile key={s.id} service={s} editing={editing} status={status.get(s.url)} />)}
+                  </Panel>
+                ))}
+              </div>
             </GridItem>
-          ))}
+          )}
           {!sections.length && (
             <GridItem span="full"><Panel category="mikoshi" title="No matches"><EmptyState icon={Search} title="No services match" /></Panel></GridItem>
           )}
