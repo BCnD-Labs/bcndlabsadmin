@@ -1,0 +1,23 @@
+name = "blackwall-forms"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+# Create it with:  npx wrangler kv namespace create SUBMISSIONS
+# then paste the id it prints here.
+[[kv_namespaces]]
+binding = "SUBMISSIONS"
+id = "PASTE_THE_KV_NAMESPACE_ID"
+
+[vars]
+# Your site origins, comma-separated. Empty allows any site to post.
+ALLOWED_ORIGINS = ""
+# Optional: "Your Name <forms@yourdomain.com>" on a domain verified in Resend.
+MAIL_FROM = ""
+# Optional: MailerLite group ID new subscribers join.
+MAILERLITE_GROUP = ""
+
+# Secrets (set with `npx wrangler secret put NAME`, never written here):
+#   ADMIN_TOKEN         required: Blackwall uses it to collect submissions
+#   TURNSTILE_SECRET    optional: Cloudflare Turnstile human check
+#   RESEND_API_KEY      optional: confirmation emails before a submission counts
+#   MAILERLITE_API_KEY  optional: newsletter sign-ups

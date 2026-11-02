@@ -3,7 +3,7 @@
  * Secret fields are sent to the connector once and never returned to the browser.
  */
 
-export type ProviderId = "github" | "azure" | "cloudflare" | "analytics" | "website" | "nextcloud" | "ntfy" | "email" | "other"
+export type ProviderId = "github" | "azure" | "cloudflare" | "analytics" | "website" | "nextcloud" | "ntfy" | "email" | "forms" | "other"
 
 export interface FieldDef {
   key: string
@@ -166,6 +166,16 @@ export const PROVIDERS: ProviderDef[] = [
       { key: "password", label: "Password or app password", secret: true },
       { key: "from", label: "Send from", placeholder: "Defaults to the username" },
       { key: "to", label: "Send to", required: true, placeholder: "alerts@example.com" },
+    ],
+  },
+  {
+    id: "forms",
+    name: "Form receiver",
+    blurb: "Collects form messages, comments and newsletter sign-ups from your CMS sites through your Cloudflare Worker (worker/forms in this repo).",
+    help: { label: "Set up the Worker (worker/forms/README.md)", url: "https://developers.cloudflare.com/workers/get-started/guide/" },
+    fields: [
+      { key: "url", label: "Worker address", type: "url", required: true, placeholder: "https://blackwall-forms.you.workers.dev" },
+      { key: "token", label: "Admin token", secret: true, required: true, help: "The ADMIN_TOKEN secret you gave the Worker." },
     ],
   },
   {

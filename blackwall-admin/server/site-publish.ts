@@ -4,6 +4,8 @@ import type { Collections } from "../shared/workspace.ts"
 import { ProviderError } from "./http.ts"
 import { repoFor } from "./providers/website.ts"
 import type { ConnectionStore } from "./store.ts"
+import { approvedComments } from "../shared/site-inbox.ts"
+import { readInbox } from "./forms-inbox.ts"
 
 /** Paths Blackwall generated last time, so files it no longer makes are removed (and nothing else is). */
 const MANIFEST = ".blackwall-site.json"
@@ -21,7 +23,7 @@ export async function publishSite(store: ConnectionStore, ws: Collections, siteI
   const { cfg, repo } = repoFor(c)
   const root = trimSlashes(site.root ?? "")
   const at = (p: string) => (root ? `${root}/${p}` : p)
-  const files = buildSite(site, ws.pages, ws.drafts, ws.forms)
+  const files = buildSite(site, ws.pages, ws.drafts, ws.forms, approvedComments(await readInbox(store), site.id))
   let previous: string[] = []
   try {
     previous = JSON.parse((await repo.read(at(MANIFEST))) ?? "{}").files ?? []

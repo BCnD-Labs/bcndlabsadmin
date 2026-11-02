@@ -7,6 +7,7 @@ import { testGitHub } from "./github.ts"
 import { testNextcloud } from "./nextcloud.ts"
 import { testEmail, testNtfy } from "./channels.ts"
 import { testOther } from "./other.ts"
+import { testForms } from "../forms-inbox.ts"
 import { testWebsite } from "./website.ts"
 
 export type TestResult = Pick<StoredConnection, "status" | "account" | "message" | "summary">
@@ -20,6 +21,7 @@ const TESTS: Record<StoredConnection["provider"], (c: StoredConnection) => Promi
   nextcloud: testNextcloud,
   ntfy: testNtfy,
   email: testEmail,
+  forms: testForms,
   other: testOther,
 }
 

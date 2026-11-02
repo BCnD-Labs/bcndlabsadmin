@@ -44,6 +44,13 @@ export const CONNECTION_GUIDANCE: Record<ProviderId, { category: Category; /** W
     prepare: "You’ll need your mail provider's SMTP details and, for Gmail or Outlook, an app password.",
     steps: ["Find your provider's SMTP host and port (Gmail: smtp.gmail.com, 587).", "Create an app password if your account uses two-step sign-in.", "Enter them with the address to send to, then test: an email should arrive."],
   },
+  forms: {
+    feeds: "Website → Forms inbox, comments and sign-ups",
+    category: "website",
+    outcome: "Form messages, comments and newsletter sign-ups from your CMS sites land in Website → Forms, with notifications.",
+    prepare: "You'll deploy the Worker in worker/forms to your Cloudflare account first (its README walks through it).",
+    steps: ["Deploy worker/forms with Wrangler and set its ADMIN_TOKEN secret.", "Paste the Worker's address and the same admin token here, then test.", "In Site settings, set Form receiver to the same address so your forms post to it."],
+  },
   analytics: {
     feeds: "Website traffic and the Home traffic panel",
     category: "analytics",

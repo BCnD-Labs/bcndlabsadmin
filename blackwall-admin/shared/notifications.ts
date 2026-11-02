@@ -29,6 +29,9 @@ export const NOTIFY_EVENTS: NotifyEventDef[] = [
   { id: "github.merged", group: "dev", label: "Pull request merged", description: "A pull request was merged in a tracked repository.", defaults: ["bell"] },
   { id: "work.digest", group: "work", label: "Daily summary", description: "Each morning: tasks and coursework due today and anything overdue.", defaults: ["bell", "ntfy"] },
   { id: "work.exam_soon", group: "work", label: "Exam coming up", description: "A certification exam is 7 days or 1 day away.", defaults: ["bell", "ntfy", "email"] },
+  { id: "site.submission", group: "site", label: "Form message", description: "Someone sent a form on one of your sites (after confirming their email, when that's on).", defaults: ["bell", "ntfy"] },
+  { id: "site.comment", group: "site", label: "New comment to approve", description: "A comment is waiting in Website → Forms. It shows on the site once you approve it and publish.", defaults: ["bell"] },
+  { id: "site.subscriber", group: "site", label: "Newsletter sign-up", description: "Someone signed up for your newsletter (MailerLite sends them the confirmation).", defaults: ["bell"] },
   { id: "site.published", group: "site", label: "Scheduled post published", description: "A post you scheduled went live.", defaults: ["bell"] },
   { id: "site.failed", group: "site", label: "Scheduled post failed", description: "A scheduled post couldn't publish (Blackwall keeps retrying).", defaults: ["bell", "ntfy", "email"] },
 ]

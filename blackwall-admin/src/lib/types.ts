@@ -157,6 +157,8 @@ export interface Site {
   /** Public form endpoint (the Cloudflare Worker) and its Turnstile site key. */
   formEndpoint?: string
   turnstileKey?: string
+  /** Show approved comments and a comment form under posts. */
+  comments?: boolean
   publishedAt?: Timestamp
   publishedSha?: string
   createdAt: Timestamp

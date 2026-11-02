@@ -14,6 +14,7 @@ import { validWorkspace } from "../shared/workspace.ts"
 import { serviceIcon } from "./icons.ts"
 import { checkServices, validStatusUrls } from "./service-status.ts"
 import { Notifier } from "./notify.ts"
+import { collectInbox, deleteInbox, readInbox, setInboxStatus } from "./forms-inbox.ts"
 import { publishSite } from "./site-publish.ts"
 import { handleStorage } from "./storage.ts"
 import type { WorkspaceStore } from "./workspace.ts"
@@ -147,6 +148,12 @@ export function createApi(opts: ApiOptions) {
   watch.unref?.()
   setTimeout(() => void notifier.tick().catch(() => {}), 5_000).unref?.()
 
+  // Form messages, comments and sign-ups: collect from the form receiver once a minute.
+  const collect = async () => collectInbox(opts.store, (await opts.workspace.readWorkspace().catch(() => undefined))?.data, (event, m) => notifier.emit(event, m))
+  const inboxTimer = setInterval(() => void collect().catch(() => {}), 60_000)
+  inboxTimer.unref?.()
+  setTimeout(() => void collect().catch(() => {}), 8_000).unref?.()
+
   const publishDue = async () => {
     const due = (await opts.store.listSchedules()).filter(
       (s) => Date.parse(s.publishAt) <= Date.now() && (!s.triedAt || Date.now() - Date.parse(s.triedAt) > 10 * 60_000),
@@ -235,6 +242,25 @@ export function createApi(opts: ApiOptions) {
     // --- CMS sites: build and commit ------------------------------------------
     if (parts[0] === "sites" && parts[2] === "publish" && method === "POST" && parts[1]) {
       return send(res, 200, await publishSite(store, (await opts.workspace.readWorkspace()).data, parts[1]))
+    }
+
+    // --- site inbox (form receiver) ----------------------------------------------
+    if (parts[0] === "inbox") {
+      if (!parts[1] && method === "GET") return send(res, 200, { items: await readInbox(store) })
+      if (parts[1] === "collect" && method === "POST") {
+        const r = await collect()
+        return send(res, 200, { ...r, items: await readInbox(store) })
+      }
+      if (!parts[1] && method === "PATCH") {
+        const { ids, status } = await readJson<{ ids?: string[]; status?: string }>(req)
+        if (!Array.isArray(ids)) return send(res, 400, { error: "ids required" })
+        return send(res, 200, { items: await setInboxStatus(store, ids, status as never) })
+      }
+      if (!parts[1] && method === "DELETE") {
+        const { ids } = await readJson<{ ids?: string[] }>(req)
+        if (!Array.isArray(ids)) return send(res, 400, { error: "ids required" })
+        return send(res, 200, { items: await deleteInbox(store, ids) })
+      }
     }
 
     // --- notifications ---------------------------------------------------------

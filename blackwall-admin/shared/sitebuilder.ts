@@ -7,6 +7,7 @@
  * publishing, so what you preview is exactly what gets committed.
  */
 import { renderMarkdown } from "./site.ts"
+import type { InboxItem } from "./site-inbox.ts"
 import type { Draft, Site, SiteBlock, SiteForm, SitePage, SitePalette } from "../src/lib/types.ts"
 
 /* ------------------------------------------------------------------ colours */
@@ -196,13 +197,22 @@ export const BLOCKS: Record<string, BlockDef> = {
       return posts.length ? ['<div class="post-grid">', ...posts.flatMap((p) => postCard(p, show).map((l) => `  ${l}`)), "</div>"] : ['<p class="muted">No posts yet.</p>']
     },
   },
+  newsletter: {
+    name: "Newsletter sign-up", def: { text: "Get new posts by email.", button: "Subscribe", group: "" },
+    edit: [{ k: "text", l: "Text", kind: "big" }, { k: "button", l: "Button" }, { k: "group", l: "MailerLite group ID", note: "Empty uses the Worker's default group" }],
+    html: (b, ctx) => [
+      ...formOpen(ctx, "newsletter", b.group ? { _group: String(b.group) } : {}, "form form--inline"),
+      b.text ? `  <p class="form__lead">${esc(b.text)}</p>` : "",
+      '  <p class="field field--row">', `    <label class="sr-only" for="nl-${esc(b.id)}">Email</label>`, `    <input id="nl-${esc(b.id)}" name="email" type="email" placeholder="you@example.com" autocomplete="email" required>`, `    <button class="btn" type="submit">${txt(b.button, "Subscribe")}</button>`, "  </p>",
+      ...formClose(ctx, "Thanks! Check your inbox to confirm your subscription."),
+    ].filter(Boolean),
+  },
   form: {
     name: "Form", def: { formId: "" }, edit: [{ k: "formId", l: "Form", kind: "form", note: "Pick one from the form library" }],
     html: (b, ctx) => {
       const form = ctx.forms.find((f) => f.id === b.formId)
       if (!form) return ['<p class="muted">Choose a form for this block.</p>']
-      const action = ctx.site.formEndpoint ? `${ctx.site.formEndpoint.replace(/\/+$/, "")}/submit` : "#"
-      const o = [`<form class="form" data-blackwall-form action="${esc(action)}" method="post">`, `  <input type="hidden" name="_form" value="${esc(form.id)}">`, `  <input type="hidden" name="_site" value="${esc(ctx.site.id)}">`]
+      const o = formOpen(ctx, "form", { _form: form.id })
       const fields = form.fields.some((f) => f.type === "email") ? form.fields : [{ id: "email", label: "Email", type: "email" as const, required: true }, ...form.fields]
       for (const f of fields) {
         const id = `f-${esc(form.id)}-${esc(f.id)}`
@@ -217,8 +227,7 @@ export const BLOCKS: Record<string, BlockDef> = {
         else o.push(`    <input id="${id}" name="${esc(f.id)}" type="${f.type === "email" ? "email" : "text"}"${req}>`)
         o.push("  </p>")
       }
-      if (ctx.site.turnstileKey) o.push(`  <div class="cf-turnstile" data-sitekey="${esc(ctx.site.turnstileKey)}"></div>`)
-      o.push(`  <p><button class="btn" type="submit">${txt(form.submitLabel, "Send")}</button></p>`, `  <p class="form__done" hidden>${txt(form.successMessage, "Thanks! Check your email to confirm.")}</p>`, "</form>")
+      o.push(...formClose(ctx, txt(form.successMessage, "Thanks! Your message was sent."), txt(form.submitLabel, "Send")))
       return o
     },
   },
@@ -236,8 +245,30 @@ export const BLOCKS: Record<string, BlockDef> = {
   },
 }
 
+/** The opening of every form the Worker receives: where it posts, what it is, and a honeypot bots fill in. */
+function formOpen(ctx: BuildCtx, kind: "form" | "comment" | "newsletter", hidden: Record<string, string> = {}, cls = "form") {
+  const action = ctx.site.formEndpoint ? `${ctx.site.formEndpoint.replace(/\/+$/, "")}/submit` : "#"
+  return [
+    `<form class="${cls}" data-blackwall-form action="${esc(action)}" method="post">`,
+    `  <input type="hidden" name="_kind" value="${kind}">`,
+    `  <input type="hidden" name="_site" value="${esc(ctx.site.id)}">`,
+    ...Object.entries(hidden).map(([k, v]) => `  <input type="hidden" name="${esc(k)}" value="${esc(v)}">`),
+    '  <p class="hp" aria-hidden="true"><label>Leave this empty <input name="_hp" tabindex="-1" autocomplete="off"></label></p>',
+  ]
+}
+/** Human check, the button (unless the form placed its own) and the thank-you line. */
+function formClose(ctx: BuildCtx, done: string, button?: string) {
+  return [
+    ctx.site.turnstileKey ? `  <div class="cf-turnstile" data-sitekey="${esc(ctx.site.turnstileKey)}"></div>` : "",
+    button ? `  <p><button class="btn" type="submit">${button}</button></p>` : "",
+    `  <p class="form__done" hidden>${done}</p>`,
+    '  <p class="form__verify" hidden>We emailed you a link: click it to confirm and it\'s sent.</p>',
+    "</form>",
+  ].filter(Boolean)
+}
+
 /** Blocks you can add inside a section (containers and content), in menu order. */
-export const ADDABLE = ["heading", "text", "richtext", "button", "link", "list", "image", "table", "divider", "postsByWeek", "postList", "form", "row", "card"]
+export const ADDABLE = ["heading", "text", "richtext", "button", "link", "list", "image", "table", "divider", "postsByWeek", "postList", "form", "newsletter", "row", "card"]
 
 export const menuPages = (pages: SitePage[]) => [...pages].filter((p) => p.inMenu).sort((a, b) => a.order - b.order)
 
@@ -300,8 +331,15 @@ document.querySelectorAll("form[data-blackwall-form]").forEach(function (f) {
     e.preventDefault();
     var btn = f.querySelector("button[type=submit]"); if (btn) btn.disabled = true;
     fetch(f.action, { method: "POST", body: new FormData(f) }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; }); })
-      .then(function (r) { if (!r.ok) throw new Error(r.j.error || "Couldn't send"); f.querySelectorAll(".field, [type=submit], .cf-turnstile").forEach(function (el) { el.hidden = true; }); f.querySelector(".form__done").hidden = false; })
-      .catch(function (err) { alert(err.message); if (btn) btn.disabled = false; });
+      .then(function (r) {
+        if (!r.ok) throw new Error(r.j.error || "Couldn't send");
+        f.querySelectorAll(".field, [type=submit], .cf-turnstile, .form__lead").forEach(function (el) { el.hidden = true; });
+        var v = f.querySelector(r.j.verify && f.querySelector("[name=_kind]").value !== "newsletter" ? ".form__verify" : ".form__done"); if (v) v.hidden = false;
+      })
+      .catch(function (err) {
+        var m = f.querySelector(".form__error"); if (!m) { m = document.createElement("p"); m.className = "form__error"; m.setAttribute("role", "alert"); f.appendChild(m); }
+        m.textContent = err.message; if (btn) btn.disabled = false; if (window.turnstile) window.turnstile.reset();
+      });
   });
 });
 </script>`
@@ -343,7 +381,30 @@ export function renderPage(site: Site, pages: SitePage[], page: SitePage, opts: 
   return documentHtml(site, pages, { title, description: page.description, body, current: page.id, bodyClass: `page-${slugClass(page.slug || "home")}` }, { preview: !!opts.preview, posts: opts.posts ?? [], forms: opts.forms ?? [] })
 }
 
-export function renderPost(site: Site, pages: SitePage[], post: Draft, opts: { preview?: boolean; forms?: SiteForm[] } = {}) {
+/** Approved comments and the comment form, under a post (when the site has comments on). */
+function commentsHtml(site: Site, pages: SitePage[], post: Draft, comments: InboxItem[], preview: boolean) {
+  const ctx: BuildCtx = { site, pages, posts: [], forms: [], where: "page", h1: true, preview }
+  const mine = comments.filter((c) => c.post === post.slug)
+  const when = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
+  return [
+    '      <section class="section comments" aria-labelledby="comments-title">', '        <div class="container container--narrow">',
+    `          <h2 id="comments-title">${mine.length ? `${mine.length} comment${mine.length === 1 ? "" : "s"}` : "Comments"}</h2>`,
+    ...mine.flatMap((c) => [
+      '          <article class="comment">', `            <p class="comment__meta"><b>${esc(c.name || "Anonymous")}</b> · <time datetime="${esc(c.at)}">${when(c.at)}</time></p>`,
+      ...esc(c.fields.comment ?? "").split(/\n{2,}/).map((para) => `            <p>${para.replace(/\n/g, "<br>")}</p>`), "          </article>",
+    ]),
+    ...[
+      ...formOpen(ctx, "comment", { _post: post.slug }),
+      '  <p class="field"><label for="c-name">Name</label><input id="c-name" name="name" autocomplete="name" required></p>',
+      '  <p class="field"><label for="c-email">Email <span class="muted">(never shown)</span></label><input id="c-email" name="email" type="email" autocomplete="email" required></p>',
+      '  <p class="field"><label for="c-text">Comment</label><textarea id="c-text" name="comment" rows="5" required></textarea></p>',
+      ...formClose(ctx, "Thanks! Your comment will appear once it's approved.", "Post comment"),
+    ].map((l) => `          ${l}`),
+    "        </div>", "      </section>",
+  ]
+}
+
+export function renderPost(site: Site, pages: SitePage[], post: Draft, opts: { preview?: boolean; forms?: SiteForm[]; comments?: InboxItem[] } = {}) {
   const kicker = [post.course, post.week != null && `Week ${post.week}`, post.due && `Due ${fmtDate(post.due)}`].filter(Boolean).join(" · ")
   const body = [
     '      <article class="section post">', '        <div class="container container--narrow">',
@@ -352,6 +413,7 @@ export function renderPost(site: Site, pages: SitePage[], post: Draft, opts: { p
     post.cover ? `          <img class="post__cover" src="${esc(post.cover)}" alt="${esc(post.coverAlt ?? "")}">` : "",
     '          <div class="prose">', renderMarkdown(post.body), "          </div>",
     "        </div>", "      </article>",
+    ...(site.comments ? commentsHtml(site, pages, post, opts.comments ?? [], !!opts.preview) : []),
   ].filter(Boolean)
   return documentHtml(site, pages, { title: `${post.title} — ${site.name}`, description: post.excerpt, body, bodyClass: "page-post" }, { preview: !!opts.preview, posts: [], forms: opts.forms ?? [] })
 }
@@ -404,6 +466,13 @@ th { background: var(--surface); }
 .field input:not([type=checkbox]), .field textarea, .field select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; }
 .field--check label { display: flex; gap: 8px; align-items: center; }
 .cf-turnstile { margin: 0 0 18px; }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.form--inline { max-width: 560px; } .field--row { display: flex; gap: 8px; } .field--row input { flex: 1; min-width: 0; }
+.form__error { color: #c0392b; }
+.comments { border-top: 1px solid var(--border); } .comments .form { margin-top: 28px; }
+.comment { padding: 14px 0; border-bottom: 1px solid var(--border); } .comment p { margin: 0 0 6px; }
+.comment__meta { font-size: 14px; color: var(--muted); } .comment__meta b { color: var(--text); }
 .week { margin: 0 0 40px; }
 .week__label { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .post-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
@@ -432,12 +501,12 @@ const redirectHtml = (to: string) => `<!doctype html><html lang="en"><head><meta
 const cleanPath = (p: string) => "/" + p.replace(/^\/+|\/+$/g, "")
 
 /** Every file of the site, keyed by path relative to the site's root folder. */
-export function buildSite(site: Site, pages: SitePage[], posts: Draft[], forms: SiteForm[]): Record<string, string> {
+export function buildSite(site: Site, pages: SitePage[], posts: Draft[], forms: SiteForm[], comments: InboxItem[] = []): Record<string, string> {
   const files: Record<string, string> = {}
   const live = posts.filter((p) => p.siteId === site.id && p.publishedAt)
   const own = pages.filter((p) => p.siteId === site.id)
   for (const pg of own) files[pg.slug ? `${pg.slug}/index.html` : "index.html"] = renderPage(site, own, pg, { posts: live, forms })
-  for (const p of live) files[`posts/${p.slug}/index.html`] = renderPost(site, own, p, { forms })
+  for (const p of live) files[`posts/${p.slug}/index.html`] = renderPost(site, own, p, { forms, comments })
   files["theme.css"] = buildTheme(site)
   files["style.css"] = buildCss()
   const base = site.domain ? `https://${site.domain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}` : ""

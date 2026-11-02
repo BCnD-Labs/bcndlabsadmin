@@ -80,8 +80,9 @@ export function CmsSiteSettingsPage() {
             <Row label="Folder" htmlFor="ss-root" hint="Where in the repo the site goes. Empty is the repository root."><Input id="ss-root" className="h-8 font-mono text-xs" value={site.root} onChange={(e) => set({ root: e.target.value.replace(/^\/+/, "") })} placeholder="(root)" /></Row>
           </Panel>
           <Panel category="website" title="Forms" className="mt-[var(--bw-grid-gap)]" bodyClassName="divide-y divide-line-soft">
-            <Row label="Form receiver" htmlFor="ss-forms" hint="Your Cloudflare Worker's address. Set up in the next step."><Input id="ss-forms" className="h-8 font-mono text-xs" value={site.formEndpoint ?? ""} onChange={(e) => set({ formEndpoint: e.target.value.trim() || undefined })} placeholder="https://forms.example.workers.dev" /></Row>
+            <Row label="Form receiver" htmlFor="ss-forms" hint="Your form receiver Worker's address (worker/forms). Forms, comments and sign-ups post here."><Input id="ss-forms" className="h-8 font-mono text-xs" value={site.formEndpoint ?? ""} onChange={(e) => set({ formEndpoint: e.target.value.trim() || undefined })} placeholder="https://forms.example.workers.dev" /></Row>
             <Row label="Turnstile site key" htmlFor="ss-turnstile" hint="From Cloudflare Turnstile; shows the bot check on forms."><Input id="ss-turnstile" className="h-8 font-mono text-xs" value={site.turnstileKey ?? ""} onChange={(e) => set({ turnstileKey: e.target.value.trim() || undefined })} /></Row>
+            <Row label="Comments on posts" htmlFor="ss-comments" hint="Visitors can comment under posts. Comments show after you approve them and publish."><Switch id="ss-comments" checked={!!site.comments} onCheckedChange={(comments) => set({ comments })} /></Row>
           </Panel>
         </GridItem>
         <GridItem span={2}>
