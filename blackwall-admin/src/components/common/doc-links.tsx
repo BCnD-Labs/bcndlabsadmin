@@ -6,10 +6,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 
 /**
  * Document links: a label + URL that opens in whatever app owns the file. Blackwall never
- * renders or edits them. Web links plus common app schemes (Obsidian, VS Code, OneNote,
+ * renders or edits them. Web links plus common app schemes (SiYuan, Obsidian, VS Code, OneNote,
  * Office, Notion, AFFiNE) are allowed; script/data URLs never are.
  */
-const SAFE = /^(https?:\/\/|obsidian:|vscode:|onenote:|ms-(word|excel|powerpoint):|notion:|affine:|mailto:)/i
+const SAFE = /^(https?:\/\/|siyuan:|obsidian:|vscode:|onenote:|ms-(word|excel|powerpoint):|notion:|affine:|mailto:)/i
 export const isSafeLink = (url: string) => SAFE.test(url.trim())
 export const cleanLinks = (links: DocLink[]) => links.map((l) => ({ label: l.label.trim(), url: l.url.trim() })).filter((l) => l.url && isSafeLink(l.url)).map((l) => ({ ...l, label: l.label || hostOf(l.url) }))
 
@@ -32,8 +32,8 @@ export function DocLinksField({ value, onChange }: { value: DocLink[]; onChange:
           <div key={i} className="grid grid-cols-[1fr_1.6fr_auto] items-start gap-2">
             <Input aria-label="Link name" placeholder="Name, e.g. Lab 7 doc" value={l.label} onChange={(e) => onChange(value.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} />
             <div>
-              <Input aria-label="Link URL" aria-invalid={bad} placeholder="https://… or obsidian://…" value={l.url} onChange={(e) => onChange(value.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)))} />
-              {bad && <p className="mt-1 text-[11px] text-red-text">Use a web link (https://) or an app link like obsidian://.</p>}
+              <Input aria-label="Link URL" aria-invalid={bad} placeholder="https://… or siyuan://blocks/…" value={l.url} onChange={(e) => onChange(value.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)))} />
+              {bad && <p className="mt-1 text-[11px] text-red-text">Use a web link (https://) or an app link like siyuan://.</p>}
             </div>
             <Button type="button" variant="quiet" size="icon-sm" aria-label="Remove link" onClick={() => onChange(value.filter((_, j) => j !== i))}><X /></Button>
           </div>
