@@ -83,7 +83,7 @@ export function Panel({
         )}
       >
         <h2 id={headingId} title={title ? [tool, command].filter((v) => typeof v === "string").join(" $ ") : undefined} className="min-w-0">
-          {title ? <span className="flex min-w-0 items-center gap-2.5 text-sm font-semibold text-ink">{category ? <CategoryIcon category={category} /> : <span className="font-mono text-red" aria-hidden>❯</span>}<span className="truncate">{title}</span>{subtitle != null && <span className="hidden truncate text-xs font-normal text-muted-foreground sm:inline">{subtitle}</span>}</span> : <Prompt tool={tool} command={command} />}
+          {title ? <span className="flex min-w-0 items-center gap-2.5 text-[17px] leading-none font-semibold text-ink">{category ? <CategoryIcon category={category} /> : <span className="font-mono text-red" aria-hidden>❯</span>}<span className="truncate">{title}</span>{subtitle != null && <span className="hidden truncate text-xs font-normal text-muted-foreground sm:inline">{subtitle}</span>}</span> : <Prompt tool={tool} command={command} />}
         </h2>
         {badge}
         <div className="ml-auto flex items-center gap-1.5">
@@ -94,5 +94,17 @@ export function Panel({
       </header>
       <div className={cn("min-h-0 flex-1", bodyClassName)}>{children}</div>
     </section>
+  )
+}
+
+/** A title bar for floating cards (calendar, notifications, log): icon tile, title, then actions on the right. */
+export function TitleBar({ category, title, meta, children }: { category: Category; title: ReactNode; meta?: ReactNode; children?: ReactNode }) {
+  return (
+    <header className="bw-panel-heading flex shrink-0 items-center gap-2.5 text-xs whitespace-nowrap">
+      <CategoryIcon category={category} />
+      <span className="min-w-0 truncate text-[17px] leading-none font-semibold text-ink">{title}</span>
+      {meta != null && <span className="min-w-0 truncate text-xs text-muted-foreground">{meta}</span>}
+      <div className="ml-auto flex shrink-0 items-center gap-1">{children}</div>
+    </header>
   )
 }

@@ -4,7 +4,7 @@ import type { DayButtonProps } from "react-day-picker"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { CountdownBorder } from "@/components/common/countdown-border"
-import { Prompt } from "@/components/common/panel"
+import { TitleBar } from "@/components/common/panel"
 import { useAutoHide } from "@/hooks/use-auto-hide"
 import { useNow } from "@/hooks/use-now"
 import { toDateKey } from "@/lib/dates"
@@ -178,8 +178,7 @@ export function CalendarMenu() {
           className="bw-pop fixed top-[var(--bw-header-h,88px)] left-3 z-40 w-[300px] max-w-[calc(100vw-24px)] pt-2.5 md:absolute md:top-full md:right-0 md:left-auto"
         >
           <section aria-label="Calendar" className="bw-panel bw-float overflow-hidden">
-            <div className="flex h-10 items-center justify-between gap-2 border-b border-line pr-2 pl-3.5">
-              <Prompt tool="cal" command={format(now, "MMM yyyy")} />
+            <TitleBar category="calendar" title="Calendar" meta={format(now, "MMM yyyy")}>
               {mode === "pinned" ? (
                 <Button variant="quiet" size="sm" aria-label="Close calendar" onClick={close}>
                   hide
@@ -187,7 +186,7 @@ export function CalendarMenu() {
               ) : (
                 <span className="pr-1.5 text-[10px] text-faint">click to pin</span>
               )}
-            </div>
+            </TitleBar>
             <div className="flex flex-col gap-1.5 px-3 pt-2.5 pb-3">
               <DotsContext.Provider value={dots}>
                 <Calendar

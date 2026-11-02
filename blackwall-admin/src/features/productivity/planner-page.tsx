@@ -101,7 +101,7 @@ export function PlannerPage() {
           </section>
           <div ref={asideRef} className="order-1 flex min-w-0 flex-col gap-4 @4xl/main:order-2">
             <section aria-label="Calendar" className="bw-panel flex shrink-0 flex-col self-center overflow-hidden" style={{ margin: 25, width: "calc(100% - 50px)" }}>
-              <ColumnHeader category="calendar" windowButtons={false}><h2 className="-ml-0.5 min-w-0 flex-1 truncate text-center text-[17px] leading-none font-semibold text-ink">Calendar</h2><CalendarSelectors month={month} onMonth={setMonth} /></ColumnHeader>
+              <ColumnHeader category="calendar" windowButtons={false}><h2 className="-ml-0.5 min-w-0 flex-1 truncate text-center text-sm leading-none font-semibold text-ink sm:text-[17px]">Calendar</h2><CalendarSelectors month={month} onMonth={setMonth} /></ColumnHeader>
               <PlannerCalendar selected={date} month={month} onSelect={onDate} />
             </section>
             <TasksCard date={date} />
@@ -258,7 +258,7 @@ function DayHeader({ date, onDate }: { date: string; onDate: (d: string) => void
   const entry = useWorkspace((s) => s.journal.find((j) => j.id === date))
   return (
     <ColumnHeader category="journal" className="md:col-span-2">
-      <h2 className="min-w-0 truncate font-sans text-sm font-semibold text-ink">
+      <h2 className="min-w-0 truncate font-sans text-sm leading-none font-semibold text-ink sm:text-[17px]">
         {format(day, "EEEE, MMM d")}
         {day.getFullYear() !== new Date().getFullYear() && <span className="ml-1 font-normal text-muted-foreground">{format(day, "yyyy")}</span>}
       </h2>

@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { CountdownBorder } from "@/components/common/countdown-border"
 import { NoSignal } from "@/components/common/no-signal"
-import { Prompt } from "@/components/common/panel"
+import { TitleBar } from "@/components/common/panel"
 import { SegmentedTabs } from "@/components/common/segmented-tabs"
 import { useAutoHide } from "@/hooks/use-auto-hide"
 import { shortAgo } from "@/lib/dates"
@@ -115,9 +115,10 @@ export function Notifications() {
         onPointerLeave={hide.onPointerLeave}
         className={cn("bw-panel bw-float bw-slide fixed top-[var(--bw-header-h,88px)] right-3 z-50 flex w-[340px] max-w-[calc(100vw-24px)] flex-col overflow-hidden", items.length ? "bottom-3" : "h-[260px] max-h-[calc(100dvh-var(--bw-header-h,88px)-12px)]")}
       >
-        <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-line pr-2 pl-3.5">
-          <span className="flex items-center gap-2">
-            <Prompt>notifications</Prompt>
+        <TitleBar
+          category="notifications"
+          title="Notifications"
+          meta={
             <span
               className={cn(
                 "min-w-[18px] rounded-[4px] px-[5px] text-center text-[10px] text-white tabular-nums",
@@ -126,8 +127,8 @@ export function Notifications() {
             >
               {unread}
             </span>
-          </span>
-          <div className="flex gap-1">
+          }
+        >
             {items.length > 0 && (
               <Button variant="ghost" size="sm" onClick={markAllRead} disabled={!unread}>
                 read all
@@ -136,8 +137,7 @@ export function Notifications() {
             <Button variant="ghost" size="icon-xs" aria-label="Hide notifications" onClick={close}>
               ✕
             </Button>
-          </div>
-        </div>
+        </TitleBar>
 
         {items.length === 0 ? (
           <div className="flex flex-1 items-center justify-center">

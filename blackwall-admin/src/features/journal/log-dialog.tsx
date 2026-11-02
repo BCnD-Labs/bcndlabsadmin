@@ -3,14 +3,14 @@ import { Link } from "react-router-dom"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
-import { Prompt } from "@/components/common/panel"
+import { TitleBar } from "@/components/common/panel"
 import { daysUntil, todayKey } from "@/lib/dates"
 import type { DateKey } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useWorkspace } from "@/stores/workspace"
 import { compareTasks } from "@/features/work/task-utils"
 import { logHref } from "@/lib/routes"
-import { LOG_PROMPTS, appendPrompt, logCommand, logTitle } from "./log-helpers"
+import { LOG_PROMPTS, appendPrompt, logTitle } from "./log-helpers"
 
 /** The day's log as a dialog (spec §4): tasks due that day, quick prompts, the entry, Save. */
 export function LogDialog({
@@ -72,12 +72,11 @@ function LogBody({ date, close }: { date: DateKey; close: () => void }) {
 
   return (
     <>
-      <div className="flex h-10 items-center justify-between gap-2 border-b border-line pr-2 pl-3.5">
-        <Prompt tool="log" command={logCommand(date)} />
+      <TitleBar category="journal" title="Daily log">
         <Button variant="ghost" size="icon-sm" aria-label="Close log" onClick={close}>
           ✕
         </Button>
-      </div>
+      </TitleBar>
       <form
         className="flex flex-col gap-2.5 px-3.5 pt-3 pb-3.5"
         onSubmit={(e) => {

@@ -1,4 +1,4 @@
-import { BarChart3, CalendarDays, Cloud, FileText, FolderKanban, GitBranch, Globe, GraduationCap, LayoutDashboard, ListChecks, NotebookPen, Plug, StickyNote, type LucideIcon } from "lucide-react"
+import { BarChart3, Bell, CalendarDays, Cloud, FileText, FolderKanban, GitBranch, Globe, GraduationCap, LayoutDashboard, ListChecks, NotebookPen, Plug, StickyNote, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export const CATEGORIES = {
@@ -11,6 +11,7 @@ export const CATEGORIES = {
   analytics: BarChart3,
   projects: FolderKanban,
   journal: NotebookPen,
+  notifications: Bell,
   notes: StickyNote,
   service: Plug,
   azure: Cloud,
