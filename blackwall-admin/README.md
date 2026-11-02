@@ -20,7 +20,7 @@ A personal workspace for keeping track: simple to-dos, a course planner, a calen
 
 Sidebar: **Home · Productivity** (Planner, Projects, Learning, Insights) **· Development · CMS** (Posts & pages, Media, Site analytics). Old `/work`, `/content`, `/notes`, `/analytics`, `/productivity/tasks|notes|calendar` and `/development/*` links redirect to the new places.
 
-> **Two ways to run it.** `npm run dev` runs everything on your computer (no sign-in; credentials in a gitignored `.blackwall/` file). The **home-server deployment** (Portainer stack: Postgres + app + backups, behind Tailscale and a password) is the source of truth for connections and credentials. See [deploy/README.md](./deploy/README.md). Tasks, notes and logs are still saved per browser for now.
+> **Two ways to run it.** `npm run dev` runs everything on your computer (no sign-in; credentials in a gitignored `.blackwall/` file). The **home-server deployment** (Portainer stack: Postgres + app + backups, behind Tailscale and a password) is the source of truth for connections and credentials. See [deploy/README.md](./deploy/README.md). Workspace records also live in Postgres and sync across all devices that can reach this installation and sign in.
 
 ## Run it
 
@@ -64,7 +64,7 @@ Saving a connection runs a live test against the provider and shows the result (
 - `<posts folder>/index.json`: the list of published posts, including each post's Markdown so it can be edited again from any browser;
 - your blog index page (default `pages/blog/blog.html`), but **only** the part between `<!-- blackwall:posts -->` and `<!-- /blackwall:posts -->`, which becomes one card per post in the same markup as your hand-written cards. Without those two comments the page isn't touched.
 
-Images go to the images folder (default `assets/blog_images`) as soon as you upload them. Scheduled posts are kept by Blackwall's server (Postgres on the home server) and published by it once a minute when due, so the browser can be closed; failures are shown in the CMS and retried every 10 minutes. Unpublishing removes the page, the index entry and the card in one commit; your draft stays in the browser. Posts go live when the site finishes redeploying. Pages (your hand-built HTML) are listed with live previews but not edited.
+Images go to the images folder (default `assets/blog_images`) as soon as you upload them. Scheduled posts are kept by Blackwall's server (Postgres on the home server) and published by it once a minute when due, so the browser can be closed; failures are shown in the CMS and retried every 10 minutes. Unpublishing removes the page, the index entry and the card in one commit; your draft stays in your shared workspace. Posts go live when the site finishes redeploying. Pages (your hand-built HTML) are listed with live previews but not edited.
 
 **How credentials are handled.** The browser sends secrets once to Blackwall's server (`server/`), which makes all provider calls itself. On the home server they're encrypted with AES-256-GCM (key from `BLACKWALL_SECRET_KEY`, never stored in the database) before going into Postgres. In local development they're in `.blackwall/connections.json` (gitignored, mode 600). The home server requires a password (scrypt hash, signed HttpOnly SameSite cookie, rate-limited login). The API only returns redacted records ("saved, ends in …a1b2"), only answers requests from a loopback host, and requires an `X-Blackwall` header, which other websites can't send without a CORS preflight it never approves. A static `vite build` deployed elsewhere has no connector, and the UI says so.
 
@@ -74,13 +74,15 @@ Images go to the images folder (default `assets/blog_images`) as soon as you upl
 
 | Area | Source |
 | --- | --- |
-| Tasks, coursework, courses, daily logs, notes, projects, repository links, drafts, search, your activity charts | Saved in this browser |
+| Tasks, coursework, courses, daily logs, notes, projects, repository links, drafts, search, your activity charts | Shared server workspace (Postgres at home; `.blackwall/workspace.json` in development) |
 | Website traffic, development data, published and scheduled posts, site pages and images | Your connections, labelled **Live**, **Error** or **Not connected** |
 | Sample data | Off by default. Settings → Appearance → *Sample data* fills unconnected panels with made-up data labelled **Sample data**, for previewing layouts |
 
 ## Your data
 
-- `blackwall.workspace`: workspace records. A versioned Zustand `persist` store (`src/stores/workspace.ts`, `WORKSPACE_VERSION = 4`). The workspace starts empty. Migrations: v1→v2 removed the example records v1 seeded. v2→v3 converted tasks (high/urgent priority became starred; projects dropped), turned notes into sticky notes, and moved calendar events into the matching day's log as lines. v3→v4 added courses; tasks gained optional `courseId`, `learningType` and `time`, and notes an optional `courseId` (nothing to convert).
+- `blackwall.workspace`: browser cache and unsynced workspace records. A versioned Zustand `persist` store (`src/stores/workspace.ts`, `WORKSPACE_VERSION = 4`). The workspace starts empty. Migrations: v1→v2 removed the example records v1 seeded. v2→v3 converted tasks (high/urgent priority became starred; projects dropped), turned notes into sticky notes, and moved calendar events into the matching day's log as lines. v3→v4 added courses; tasks gained optional `courseId`, `learningType` and `time`, and notes an optional `courseId` (nothing to convert).
+- `blackwall.workspace.sync`: the last server baseline, used to merge independent device edits. First connection migrates existing browser records and keeps a device recovery copy. A competing edit or deletion of the same record opens a review; download the device copy, then choose device or server edits. Other records merge automatically. Offline edits stay cached and retry on reconnect/focus and every 15 seconds while visible. The header status distinguishes server saves from device-only saves. Sign-in is required before showing the workspace; preferences remain per device.
+- PostgreSQL backups include the workspace table automatically. Export/Import and Clear workspace in Settings now affect the shared workspace on **all signed-in devices**. A static hosting deployment without the Blackwall API cannot open the workspace.
 - `blackwall.prefs`: interface preferences (workspace name, retro details, sample data, auto-hide seconds for the calendar and notification cards, and the Home slot layout). Versioned (`PREFS_VERSION = 2`); v1 → v2 added auto-hide and the slot layout, and stored values are sanitised on load.
 - Settings → General can **export** and **import** the workspace as JSON, or clear it, and reset preferences to their defaults.
 - If storage is unavailable (private mode, quota), the store falls back to memory for the session.
@@ -131,8 +133,10 @@ deploy/          Portainer stack, backup job, deployment guide
 2. Write a `test…` function in `server/providers/` and register it in `server/providers/index.ts`.
 3. If it feeds a panel, add a route in `server/plugin.ts` and a feed hook in `src/services/data.ts`.
 
-A SQL-backed workspace backend would replace the bodies of the workspace store's `create` / `update` / `remove` actions; components never touch storage directly. There is deliberately no arbitrary SQL execution UI.
+The workspace API uses atomic revision checks; stale clients cannot overwrite newer server data. There is deliberately no arbitrary SQL execution UI.
 
 ## Upstream sources and licenses
 
 See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md). In short: shadcn/ui components (MIT) generated with the shadcn CLI; layout and global-search patterns informed by shadcn/ui Blocks and satnaing/shadcn-admin (MIT); fonts under the SIL Open Font License.
+
+Workspace persistence tests: `node --test tests/workspace.test.ts` (Node 24; uses disposable files and a loopback API).

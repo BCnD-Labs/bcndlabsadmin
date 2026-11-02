@@ -1,4 +1,6 @@
 import pg from "pg"
+import { randomUUID } from "node:crypto"
+import { emptyWorkspace, type Collections, type WorkspaceSnapshot } from "../shared/workspace.ts"
 import { seal, unseal } from "./crypto.ts"
 import type { ScheduledPost } from "../shared/site.ts"
 import { ConnectionStore, type StoredConnection } from "./store.ts"
@@ -26,6 +28,13 @@ const MIGRATIONS = [
      slug        text PRIMARY KEY,
      publish_at  timestamptz NOT NULL,
      data        jsonb NOT NULL
+   )`,
+  `CREATE TABLE IF NOT EXISTS workspace (
+     singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),
+     id text NOT NULL,
+     revision bigint NOT NULL DEFAULT 0,
+     data jsonb NOT NULL,
+     updated_at timestamptz NOT NULL DEFAULT now()
    )`,
 ]
 
@@ -74,6 +83,25 @@ export class PostgresConnectionStore extends ConnectionStore {
     } finally {
       client.release()
     }
+  }
+
+  async readWorkspace(): Promise<WorkspaceSnapshot> {
+    await this.pool.query(
+      "INSERT INTO workspace (singleton, id, data) VALUES (true, $1, $2) ON CONFLICT (singleton) DO NOTHING",
+      [randomUUID(), JSON.stringify(emptyWorkspace())],
+    )
+    const { rows } = await this.pool.query("SELECT id, revision, data FROM workspace WHERE singleton = true")
+    return { ...rows[0], revision: Number(rows[0].revision) }
+  }
+
+  async writeWorkspace(id: string, revision: number, data: Collections): Promise<WorkspaceSnapshot | null> {
+    // Compare-and-swap is atomic across processes and devices: no stale snapshot can overwrite a newer one.
+    const { rows } = await this.pool.query(
+      `UPDATE workspace SET data = $3, revision = revision + 1, updated_at = now()
+       WHERE singleton = true AND id = $1 AND revision = $2 RETURNING id, revision, data`,
+      [id, revision, JSON.stringify(data)],
+    )
+    return rows.length ? { ...rows[0], revision: Number(rows[0].revision) } : null
   }
 
   async ping() {

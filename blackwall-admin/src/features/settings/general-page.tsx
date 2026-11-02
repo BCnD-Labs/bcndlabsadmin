@@ -1,3 +1,5 @@
+import { emptyWorkspace, validWorkspace } from "@shared/workspace"
+import { downloadWorkspace, downloadMigrationBackup } from "@/services/workspace-sync"
 import { format, formatDistanceToNowStrict } from "date-fns"
 import { Download, ExternalLink, RefreshCw, Upload } from "lucide-react"
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
@@ -8,7 +10,7 @@ import { cn } from "@/lib/utils"
 import { api } from "@/services/connector"
 import { clearFeedCache } from "@/services/data"
 import { usePrefs } from "@/stores/prefs"
-import { WORKSPACE_STORAGE_KEY, useWorkspace } from "@/stores/workspace"
+import { migrateWorkspace, useWorkspace } from "@/stores/workspace"
 import { ConfirmButton, SettingRow, SettingsPage } from "./settings-pages"
 
 type UpdateState =
@@ -289,15 +291,7 @@ function DataPanel() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [pending, setPending] = useState<{ raw: unknown; summary: string } | null>(null)
 
-  const exportData = () => {
-    const raw = localStorage.getItem(WORKSPACE_STORAGE_KEY) ?? "{}"
-    const url = URL.createObjectURL(new Blob([raw], { type: "application/json" }))
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `blackwall-${new Date().toISOString().slice(0, 10)}.json`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
+  const exportData = () => downloadWorkspace()
 
   const describe = (s: Record<string, unknown[] | undefined>) =>
     `${s.tasks?.length ?? 0} tasks, ${s.journal?.length ?? 0} logs, ${s.notes?.length ?? 0} notes, ${s.courses?.length ?? 0} courses`
@@ -305,7 +299,10 @@ function DataPanel() {
   const readImport = async (file: File) => {
     try {
       const parsed = JSON.parse(await file.text())
-      if (!parsed?.state || typeof parsed.version !== "number") throw new Error("Not a Blackwall export")
+      if (!parsed?.state || typeof parsed.version !== "number" || parsed.version > 4) throw new Error("Not a supported Blackwall export")
+      const data = migrateWorkspace(parsed.state, parsed.version)
+      if (!validWorkspace(data)) throw new Error("Invalid workspace records")
+      parsed.state = data
       setPending({ raw: parsed, summary: describe(parsed.state) })
     } catch (e) {
       toast.error(`Import failed: ${(e as Error).message}`)
@@ -314,25 +311,27 @@ function DataPanel() {
 
   const applyImport = async () => {
     if (!pending) return
-    localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(pending.raw))
-    await useWorkspace.persist.rehydrate()
+    useWorkspace.setState({ ...emptyWorkspace(), ...(pending.raw as { state: object }).state })
     setPending(null)
-    toast.success("Workspace imported")
+    toast.success("Workspace imported; syncing to server")
   }
 
   return (
-    <Panel title="Workspace data" tool="workspace" command="data" meta="this browser" bodyClassName="divide-y divide-line">
-      <SettingRow title="Export" description="Download your tasks, notes, daily logs and courses as a file. They're saved in this browser only, so keep a copy.">
+    <Panel title="Workspace data" tool="workspace" command="data" meta="shared across signed-in devices" bodyClassName="divide-y divide-line">
+      <SettingRow title="Export" description="Download your tasks, notes, daily logs and courses as a file. Records sync to your Blackwall server. Exports provide an extra portable copy.">
         <Button variant="outline" onClick={exportData}>
           <Download /> Export
         </Button>
+      </SettingRow>
+      <SettingRow title="Device recovery copy" description="Download this browser’s records from before migration or the last conflict resolution, if available.">
+        <Button variant="outline" onClick={downloadMigrationBackup}>Download recovery copy</Button>
       </SettingRow>
       <SettingRow
         title="Import"
         description={
           pending
             ? `Replace what's here (${describe(useWorkspace.getState() as unknown as Record<string, unknown[]>)}) with the file (${pending.summary})?`
-            : "Load an export, for example to move your workspace to another device."
+            : "Replace the shared server workspace with an export. This affects every signed-in device."
         }
       >
         {pending ? (
@@ -383,7 +382,7 @@ function ResetPanel() {
       <SettingRow title="Reset preferences" description="Put appearance, card timing, the sidebar and the Home layout back to their defaults in this browser.">
         <ConfirmButton confirmLabel="Reset" onConfirm={() => (resetPrefs(), toast.success("Preferences reset"))}>Reset</ConfirmButton>
       </SettingRow>
-      <SettingRow title="Clear workspace" description="Delete every task, note and daily log in this browser. Export first if you want to keep them.">
+      <SettingRow title="Clear workspace" description="Delete all shared workspace records on every signed-in device. Export first if you want to keep them.">
         <ConfirmButton danger confirmLabel="Delete everything" onConfirm={() => (clearAll(), toast.success("Workspace cleared"))}>Clear workspace</ConfirmButton>
       </SettingRow>
     </Panel>

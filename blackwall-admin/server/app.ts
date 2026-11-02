@@ -10,6 +10,8 @@ import { deleteImage, publishPost, siteChrome, siteMedia, siteOverview, siteRaw,
 import { SLUG_RE, cleanPost, type ScheduledPost, type SitePost } from "../shared/site.ts"
 import { testConnection } from "./providers/index.ts"
 import { toPublic, type ConnectionStore } from "./store.ts"
+import { validWorkspace } from "../shared/workspace.ts"
+import type { WorkspaceStore } from "./workspace.ts"
 import type { System } from "./system.ts"
 
 /**
@@ -22,6 +24,7 @@ import type { System } from "./system.ts"
  */
 export interface ApiOptions {
   store: ConnectionStore
+  workspace: WorkspaceStore
   /** Exact Host header values (with port if any) besides loopback. */
   allowedHosts?: string[]
   /** Set on the home server; the local dev connector runs without a login. */
@@ -178,6 +181,20 @@ export function createApi(opts: ApiOptions) {
       return send(res, 200, { authenticated: false }, auth ? { "Set-Cookie": auth.sessions.clear(secure) } : {})
     }
     if (!signedIn) return send(res, 401, { error: "Sign in required" })
+
+    if (parts[0] === "workspace" && parts.length === 1) {
+      if (method === "GET") return send(res, 200, await opts.workspace.readWorkspace())
+      if (method === "PUT") {
+        const body = await readJson<{ id?: unknown; revision?: unknown; data?: unknown }>(req, 16 * 1024 * 1024)
+        if (typeof body.id !== "string" || typeof body.revision !== "number" || !Number.isSafeInteger(body.revision) || body.revision < 0 || !validWorkspace(body.data)) {
+          throw new ProviderError("Invalid workspace. No data was changed.", 400)
+        }
+        const saved = await opts.workspace.writeWorkspace(body.id, body.revision, body.data)
+        if (!saved) return send(res, 409, { error: "Workspace changed on another device. Refresh and merge before saving." })
+        return send(res, 200, saved)
+      }
+      return send(res, 405, { error: "Method not allowed" })
+    }
 
     // --- health & backups ------------------------------------------------------
     if (parts[0] === "health") {

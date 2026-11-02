@@ -5,6 +5,9 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { FormHost } from "@/components/forms/form-host"
 import { CommandSearch } from "@/components/layout/command-search"
 import { useConnections, useSession } from "@/services/connector"
+import { WorkspaceStatus } from "./workspace-status"
+import { useWorkspaceSync } from "@/services/workspace-sync"
+import { Button } from "@/components/ui/button"
 import { SignIn } from "./sign-in"
 import { SettingsModal } from "@/features/settings/settings-modal"
 import { cn } from "@/lib/utils"
@@ -24,6 +27,7 @@ export function AppShell() {
 
   const focusMain = useCallback(() => mainRef.current?.focus({ preventScroll: true }), [])
 
+  const workspaceReady = useWorkspaceSync((s) => s.ready)
   const session = useSession((s) => s.state)
 
   // Check sign-in first; then load connection statuses so panels know what's connected.
@@ -65,6 +69,13 @@ export function AppShell() {
     return () => window.removeEventListener("keydown", onKey)
   }, [])
 
+  if (session === "checking" || session === "offline") return (
+    <div className="mx-auto max-w-sm space-y-3 p-6" role="status">
+      <p>{session === "checking" ? "Connecting to Blackwall…" : "Connect to your Blackwall server to sign in."}</p>
+      {session === "offline" && <Button onClick={() => void useSession.getState().check()}>Reconnect</Button>}
+    </div>
+  )
+
   if (session === "signin") {
     return (
       <>
@@ -95,13 +106,11 @@ export function AppShell() {
         {/* Fixed on the left; after the header in tab order. */}
         <NavRail focusMain={focusMain} />
         <main id="main" ref={mainRef} tabIndex={-1} className="mx-auto w-full max-w-[1280px] pb-3 outline-none">
-          <SectionNav />
-          <Outlet />
+          <WorkspaceStatus connected={session === "open"} />
+          {workspaceReady && <><SectionNav /><Outlet /></>}
         </main>
       </div>
-      <FormHost />
-      <SettingsModal />
-      <CommandSearch />
+      {workspaceReady && <><FormHost /><SettingsModal /><CommandSearch /></>}
       <Toaster position="bottom-right" />
     </TooltipProvider>
   )

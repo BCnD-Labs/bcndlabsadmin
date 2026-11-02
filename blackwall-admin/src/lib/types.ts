@@ -1,4 +1,4 @@
-/** Domain records stored locally in the browser. See stores/workspace.ts. */
+/** Domain records shared through the Blackwall server. See stores/workspace.ts. */
 
 export type ID = string
 /** Calendar date without time, `yyyy-MM-dd`. */
@@ -62,7 +62,7 @@ export interface Project {
   updatedAt: Timestamp
 }
 
-/** A repository the workspace tracks. Only the link is local; activity comes from a DevelopmentService. */
+/** A repository the workspace tracks. The link is a workspace record; activity comes from a DevelopmentService. */
 export interface RepoLink {
   id: ID
   /** `owner/name` */
@@ -107,7 +107,7 @@ export type LearningItemType = "assignment" | "exam" | "milestone" | "event"
 
 export type CourseColor = "red" | "amber" | "teal" | "blue" | "violet" | "green" | "slate"
 
-/** A college course (Productivity → Learning). Local only; no LMS connection. */
+/** A college course (Productivity → Learning). Workspace record; no LMS connection. */
 export interface Course {
   id: ID
   title: string

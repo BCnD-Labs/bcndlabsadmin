@@ -1,5 +1,6 @@
 import type { Connect, Plugin } from "vite"
 import { createApi } from "./app.ts"
+import { FileWorkspaceStore } from "./workspace.ts"
 import { FileConnectionStore } from "./store.ts"
 
 /**
@@ -11,7 +12,7 @@ export function blackwallConnector(root: string): Plugin {
   let handle: ReturnType<typeof createApi> | undefined
   const middleware: Connect.NextHandleFunction = (req, res, next) => {
     if (!req.url?.startsWith("/api/")) return next()
-    handle ??= createApi({ store: new FileConnectionStore(root) })
+    handle ??= createApi({ store: new FileConnectionStore(root), workspace: new FileWorkspaceStore(root) })
     void handle(req, res)
   }
   return {

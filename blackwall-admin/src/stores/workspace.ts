@@ -1,30 +1,18 @@
 import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
 import { newId } from "@/lib/ids"
-import type { Course, Draft, JournalEntry, Note, Project, RepoLink, Task } from "@/lib/types"
+import type { JournalEntry, Note, Task } from "@/lib/types"
 import { V1_EXAMPLE_IDS } from "./seed"
 import { safeLocalStorage } from "./storage"
 
-/**
- * Workspace records, persisted to localStorage under `blackwall.workspace`
- * with a schema version. When the schema changes, bump WORKSPACE_VERSION and
- * add a step to `migrate`.
- *
- * Components only use the actions below, never localStorage, so a future
- * backend can replace this store without touching the UI.
+/** Versioned browser cache. services/workspace-sync reconciles every change with
+ * the authenticated server; existing records migrate without changing their IDs.
  */
 export const WORKSPACE_STORAGE_KEY = "blackwall.workspace"
 export const WORKSPACE_VERSION = 4
 
-export interface Collections {
-  tasks: Task[]
-  notes: Note[]
-  journal: JournalEntry[]
-  projects: Project[]
-  repos: RepoLink[]
-  drafts: Draft[]
-  courses: Course[]
-}
+export type { Collections } from "@shared/workspace"
+import type { Collections } from "@shared/workspace"
 
 type GenericKey = Exclude<keyof Collections, "journal">
 export type Item<K extends GenericKey> = Collections[K][number]
@@ -147,13 +135,13 @@ export const useWorkspace = create<WorkspaceState>()(
         drafts: s.drafts,
         courses: s.courses,
       }),
-      migrate: (persisted, version) => migrate(persisted as Record<string, unknown[]>, version),
+      migrate: (persisted, version) => migrateWorkspace(persisted as Record<string, unknown[]>, version),
     },
   ),
 )
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-function migrate(raw: Record<string, any[]>, version: number): Collections {
+export function migrateWorkspace(raw: Record<string, any[]>, version: number): Collections {
   let d: Record<string, any[]> = { ...raw }
 
   if (version < 2) {

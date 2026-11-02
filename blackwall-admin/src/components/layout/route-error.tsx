@@ -16,7 +16,7 @@ export function RouteError() {
         <div className="flex flex-col gap-3 px-5 py-5">
           <h1 className="font-heading text-xl leading-tight font-bold">Something broke while rendering this view</h1>
           <p className="rounded-[8px] border border-rim bg-well px-3 py-2 font-mono text-[11px] break-words text-red-text">{message}</p>
-          <p className="text-xs text-muted-foreground">Your local records are still saved in this browser.</p>
+          <p className="text-xs text-muted-foreground">Your workspace data is preserved. Reload to reconnect.</p>
           <div className="mt-1 flex gap-2">
             <Button size="lg" onClick={() => location.reload()}>Reload</Button>
             <Button size="lg" variant="outline" asChild><a href="/">Go home</a></Button>

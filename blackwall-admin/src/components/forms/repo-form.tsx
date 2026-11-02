@@ -67,7 +67,7 @@ export function RepoForm({ id, defaults, onDone }: { id?: string; defaults?: Par
       <Field
         label="Repository"
         htmlFor="repo-name"
-        hint="Stored in this browser. Activity needs a GitHub connection."
+        hint="Saved in your shared workspace. Activity needs a GitHub connection."
         error={draft.repo && !parsed ? "Use owner/name or a github.com URL." : undefined}
       >
         <Input id="repo-name" autoFocus className="font-mono" placeholder="owner/name" value={draft.repo} onChange={(e) => set({ repo: e.target.value })} />

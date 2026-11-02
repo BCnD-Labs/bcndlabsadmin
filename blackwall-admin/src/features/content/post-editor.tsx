@@ -1,3 +1,4 @@
+import { useWorkspaceSync } from "@/services/workspace-sync"
 import { format } from "date-fns"
 import { CalendarClock, ExternalLink, FileX, ImagePlus, Loader2, Rocket, Trash2, Undo2, X } from "lucide-react"
 import { useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from "react"
@@ -67,7 +68,7 @@ function Editor({ draft }: { draft: Draft }) {
       return next
     })
 
-  // Saves in this browser as you type.
+  // Stage edits in the workspace; the sync service persists them to the server.
   const dirty = JSON.stringify(value) !== JSON.stringify(pick(draft))
   useEffect(() => {
     if (!dirty) return
@@ -112,7 +113,7 @@ function Editor({ draft }: { draft: Draft }) {
         badge={value.kind === "post" && <PostStateChip state={item?.state ?? "draft"} edited={item?.edited} date={item?.date} />}
         subtitle={
           <span aria-live="polite" data-testid="save-state">
-            {dirty ? "Saving…" : `Saved in this browser ${timeAgo(draft.updatedAt)}`} · {words} {words === 1 ? "word" : "words"}
+            {dirty ? "Saving…" : `Edited ${timeAgo(draft.updatedAt)}`} · {words} {words === 1 ? "word" : "words"}
           </span>
         }
         actions={
@@ -200,7 +201,7 @@ function Editor({ draft }: { draft: Draft }) {
           )}
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-soft px-4 py-2 text-[11px] text-muted-foreground">
             <span>{words} {words === 1 ? "word" : "words"} · Markdown</span>
-            <span aria-live="polite" data-testid="editor-save-state">{dirty ? "Saving…" : "Saved in this browser"}</span>
+            <span aria-live="polite" data-testid="editor-save-state">{dirty ? "Saving…" : <EditorSyncLabel />}</span>
           </div>
         </section>
 
@@ -392,7 +393,7 @@ function PublishPanel({ draft, item, site, onRemoteSlug }: { draft: Draft; item?
             ? "Checking your website…"
             : site.status === "error"
               ? `Couldn't reach your site's repository: ${site.error}`
-              : "Connect your website to publish this post, schedule it, and update it later. Until then it's saved in this browser."}
+              : "Connect your website to publish this post, schedule it, and update it later. Your draft is part of your shared Blackwall workspace."}
         </p>
         {site.status !== "loading" && (
           <Button variant="outline" size="sm" onClick={() => useUi.getState().openSettings("connections", "website")}>
@@ -458,7 +459,7 @@ function PublishPanel({ draft, item, site, onRemoteSlug }: { draft: Draft; item?
           {item.scheduled?.error && <span className="mt-1 block text-red-text">Last try failed: {item.scheduled.error}</span>}
         </p>
       )}
-      {state === "draft" && <p className="text-xs leading-relaxed text-muted-foreground">Only in this browser. Publish it now or pick a time.</p>}
+      {state === "draft" && <p className="text-xs leading-relaxed text-muted-foreground">Workspace draft. Publish it now or pick a time.</p>}
       {item?.edited && <p className="text-xs text-amber">You've changed it since it was {state === "scheduled" ? "scheduled" : "published"}.</p>}
       {problems.length > 0 && <p className="text-[11px] text-muted-foreground">{problems.join(" · ")} before publishing.</p>}
 
@@ -518,4 +519,8 @@ function PublishPanel({ draft, item, site, onRemoteSlug }: { draft: Draft; item?
       toast.success("Scheduled post updated")
     })
   }
+}
+
+function EditorSyncLabel() {
+  return useWorkspaceSync((s) => s.message)
 }

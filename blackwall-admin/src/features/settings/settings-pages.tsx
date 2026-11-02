@@ -12,7 +12,7 @@ import { usePrefs } from "@/stores/prefs"
 import type { SettingsSection } from "@/stores/ui"
 
 export const SETTINGS_SECTIONS: { id: SettingsSection; label: string; icon: LucideIcon; blurb: string }[] = [
-  { id: "general", label: "General", icon: SlidersHorizontal, blurb: "Version and updates, plus the data saved in this browser." },
+  { id: "general", label: "General", icon: SlidersHorizontal, blurb: "Version and updates, plus your shared workspace data." },
   { id: "appearance", label: "Appearance", icon: Palette, blurb: "How Blackwall looks and behaves in this browser." },
   { id: "connections", label: "Connections", icon: Plug, blurb: "Accounts Blackwall reads from. Tokens and passwords are stored encrypted on the server and never sent back to the browser." },
   { id: "server", label: "Server & backups", icon: Server, blurb: "Where server-side data lives, your session, and whether backups are running." },

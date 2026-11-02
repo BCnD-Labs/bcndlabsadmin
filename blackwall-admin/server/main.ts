@@ -34,6 +34,7 @@ const system = System.fromEnv(path.join(import.meta.dirname, ".."))
 
 const api = createApi({
   store,
+  workspace: store,
   allowedHosts,
   auth: { passwordHash, sessions: new Sessions(key) },
   backupDir: process.env.BACKUP_DIR ?? "/backups",
