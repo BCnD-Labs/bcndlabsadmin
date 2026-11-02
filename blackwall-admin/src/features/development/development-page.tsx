@@ -15,7 +15,8 @@ import { ACTIVITY_ICON } from "@/features/home/dev-attention"
 import { shortAgo, timeAgo, toDateKey } from "@/lib/dates"
 import type { RepoLink } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { useGitHubAccounts, type GitHubAccountView } from "@/services/data"
+import { useGitHubAccounts } from "@/services/data"
+import { mergeAccounts, mergeDays, sumSince } from "./github-utils"
 import { AccountAvatar, AccountChip, type AccountLook } from "@/components/accounts/account-appearance"
 import { Sparkline, lastDays } from "@/features/home/overview-panels"
 import type { DevelopmentOverview, RepoActivity, RepoSummary } from "@/services/types"
@@ -112,21 +113,6 @@ export function DevelopmentPage() {
   )
 }
 
-/** Every account's slice merged into one overview (a PR found by two searches counts once). */
-function mergeAccounts(accounts: GitHubAccountView[]): DevelopmentOverview | undefined {
-  const parts = accounts.flatMap((a) => (a.overview ? [a.overview] : []))
-  if (!parts.length) return undefined
-  const prs = new Map<string, DevelopmentOverview["prs"][number]>()
-  for (const p of parts.flatMap((o) => o.prs)) if (!prs.has(p.id)) prs.set(p.id, p)
-  return {
-    prs: [...prs.values()],
-    failures: parts.flatMap((o) => o.failures),
-    issues: parts.flatMap((o) => o.issues),
-    activity: parts.flatMap((o) => o.activity).sort((x, y) => y.at.localeCompare(x.at)),
-    repos: parts.flatMap((o) => o.repos ?? []),
-  }
-}
-
 function StatCard({ label, value, sub, tone }: { label: string; value: ReactNode; sub?: string; tone?: "error" }) {
   return (
     <div className="bw-panel min-w-0 px-4 py-3.5">
@@ -135,17 +121,6 @@ function StatCard({ label, value, sub, tone }: { label: string; value: ReactNode
       {sub && <p className="mt-1.5 truncate text-xs text-muted-foreground">{sub}</p>}
     </div>
   )
-}
-
-function mergeDays(repos: RepoSummary[]) {
-  const out: Record<string, number> = {}
-  for (const r of repos) for (const [d, n] of Object.entries(r.commitsByDay)) out[d] = (out[d] ?? 0) + n
-  return out
-}
-
-function sumSince(days: Record<string, number>, n: number) {
-  const from = toDateKey(addDays(new Date(), -(n - 1)))
-  return Object.entries(days).reduce((a, [d, c]) => (d >= from ? a + c : a), 0)
 }
 
 /* ------------------------------------------------------------- repo card */

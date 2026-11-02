@@ -25,7 +25,7 @@ const fmt = new Intl.NumberFormat("en")
 /** A labelled horizontal bar for small breakdowns (referrers, open tasks by due date). */
 function BarRow({ label, value, max, tone, mono }: { label: string; value: number; max: number; tone?: "warn"; mono?: boolean }) {
   return (
-    <li className={cn("grid items-center gap-3 text-xs", mono ? "grid-cols-[minmax(0,1fr)_5rem_2rem]" : "grid-cols-[minmax(0,7rem)_1fr_3rem]")}>
+    <li className={cn("grid items-center gap-3 text-xs", mono ? "grid-cols-[minmax(0,1fr)_minmax(5rem,40%)_2rem]" : "grid-cols-[minmax(0,7rem)_1fr_3rem]")}>
       <span className={cn("truncate", mono && "font-mono text-[11px] text-ink-2", tone === "warn" && value ? "text-amber" : !mono && "text-muted-foreground")} title={label}>{label}</span>
       <span className="h-2 rounded-[2px] bg-off">
         <span className={cn("block h-full rounded-[2px]", tone === "warn" ? "bg-amber" : "bg-chart-1")} style={{ width: `${(value / max) * 100}%` }} />
@@ -65,44 +65,35 @@ function WebsiteAnalytics() {
         <RangeToggle value={range} onChange={setRange} className="ml-auto" />
       </div>
       </GridItem>
-      <GridItem span={2}><StatStrip
+      <GridItem span="full"><StatStrip
         items={[
           { label: "Visitors", value: fmt.format(visitors), sub: `${(visitors / range).toFixed(1)} a day on average` },
           { label: "Pageviews", value: fmt.format(pageviews), sub: visitors ? `${(pageviews / visitors).toFixed(1)} pages per visit` : undefined },
+          { label: "Days with visits", value: `${activeDays} / ${range}` },
+          { label: "Busiest day", value: busiest.visitors ? format(parseKey(busiest.date), "MMM d") : "—", sub: busiest.visitors ? `${busiest.visitors} visitors` : undefined },
         ]}
-      />
-      <details className="bw-panel mt-3 px-3.5 py-1">
-        <summary className="min-h-8 cursor-pointer content-center text-xs text-ink-2">Details</summary>
-        <dl className="grid grid-cols-2 gap-4 py-2 text-xs text-muted-foreground">
-          <div><dt>Days with visits</dt><dd className="mt-1 text-ink">{activeDays} / {range}</dd></div>
-          <div><dt>Busiest day</dt><dd className="mt-1 text-ink">{busiest.visitors ? `${format(parseKey(busiest.date), "MMM d")} · ${busiest.visitors} visitors` : "—"}</dd></div>
-        </dl>
-      </details></GridItem>
-        <GridItem span={2}><Panel category="analytics" title="Daily visitors" tool="site" command={`visitors --${range}d`} bodyClassName="px-2 pt-2 pb-1.5">
-          <DailyBars data={traffic} range={range} className="h-36 w-full" />
-        </Panel></GridItem>
-        <GridItem span={2}><Panel category="analytics" title="Traffic sources & pages" tool="site" command="breakdown" bodyClassName="space-y-4 px-3.5 py-3">
-          <section aria-label="Top pages">
-            <h3 className="bw-label mb-2">Top pages · views</h3>
-            {pages.length ? (
-              <ul className="space-y-2">
-                {pages.slice(0, 6).map((p) => <BarRow key={p.path} label={p.path} value={p.pageviews} max={maxPage} mono />)}
-              </ul>
-            ) : (
-              <p className="text-[11px] text-muted-foreground">No page views in this range.</p>
-            )}
-          </section>
-          <section aria-label="Referrers">
-            <h3 className="bw-label mb-2">Referrers · visitors</h3>
-            {referrers.length ? (
-              <ul className="space-y-2">
-                {referrers.slice(0, 5).map((r) => <BarRow key={r.source} label={r.source} value={r.visitors} max={maxRef} />)}
-              </ul>
-            ) : (
-              <p className="text-[11px] text-muted-foreground">No referrers in this range.</p>
-            )}
-          </section>
-        </Panel></GridItem>
+      /></GridItem>
+      <GridItem span="full"><Panel category="analytics" title="Daily visitors" tool="site" command={`visitors --${range}d`} bodyClassName="px-2 pt-2 pb-1.5">
+        <DailyBars data={traffic} range={range} className="h-40 w-full" />
+      </Panel></GridItem>
+      <GridItem span={2}><Panel category="analytics" title="Top pages" tool="site" command="pages" meta="views" bodyClassName="px-3.5 py-3">
+        {pages.length ? (
+          <ul className="space-y-2.5">
+            {pages.slice(0, 8).map((p) => <BarRow key={p.path} label={p.path} value={p.pageviews} max={maxPage} mono />)}
+          </ul>
+        ) : (
+          <p className="text-[11px] text-muted-foreground">No page views in this range.</p>
+        )}
+      </Panel></GridItem>
+      <GridItem span={2}><Panel category="analytics" title="Referrers" tool="site" command="referrers" meta="visitors" bodyClassName="px-3.5 py-3">
+        {referrers.length ? (
+          <ul className="space-y-2.5">
+            {referrers.slice(0, 8).map((r) => <BarRow key={r.source} label={r.source} value={r.visitors} max={maxRef} />)}
+          </ul>
+        ) : (
+          <p className="text-[11px] text-muted-foreground">No referrers in this range.</p>
+        )}
+      </Panel></GridItem>
     </WorkspaceGrid>
   )
 }

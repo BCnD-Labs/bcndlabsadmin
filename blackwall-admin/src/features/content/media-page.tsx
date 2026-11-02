@@ -92,7 +92,7 @@ export function MediaPage() {
           }}
         >
           {items.map((m) => (
-            <li key={m.path} className={cn("group flex flex-col overflow-hidden rounded-[10px] border border-line bg-raised", confirm === m.path && "border-red/60")}>
+            <li key={m.path} className={cn("group flex flex-col overflow-hidden rounded-[10px] bg-raised", confirm === m.path && "ring-1 ring-red/60")}>
               <SiteImage path={m.path} siteUrl={site.overview?.siteUrl} alt={m.name} className="aspect-square w-full border-b border-line" />
               <div className="flex items-center gap-1 px-2 py-1.5">
                 <span className="min-w-0 flex-1">

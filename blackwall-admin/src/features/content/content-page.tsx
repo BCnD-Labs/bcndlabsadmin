@@ -99,7 +99,7 @@ export function ContentPage() {
         <GridItem span="full">
 
         <section className="flex min-w-0 flex-col" aria-label="Posts & pages">
-          <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-2">
+          <div className="flex flex-wrap items-center gap-2">
             <SegmentedTabs
               label="Posts or pages"
               value={view}
@@ -112,19 +112,14 @@ export function ContentPage() {
             />
             {view === "posts" && (
               <>
-                <div role="group" aria-label="Filter posts" className="flex flex-wrap gap-1">
-                  {(["all", "published", "scheduled", "draft"] as Show[]).map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      aria-pressed={show === s}
-                      onClick={() => set({ show: s === "all" ? null : s === "draft" ? "drafts" : s })}
-                      className="inline-flex h-8 items-center gap-1.5 rounded-full border border-line px-2.5 text-xs text-muted-foreground hover:text-ink aria-pressed:border-rim aria-pressed:bg-selected aria-pressed:text-ink"
-                    >
-                      {SHOW_LABEL[s]} <span className="text-[10px] text-muted-foreground tabular-nums">{count(s)}</span>
-                    </button>
-                  ))}
-                </div>
+                <SegmentedTabs
+                  label="Filter posts"
+                  value={show}
+                  onChange={(s) => set({ show: s === "all" ? null : s === "draft" ? "drafts" : s })}
+                  className="max-w-full overflow-x-auto [scrollbar-width:none]"
+                  tabClassName="flex-none px-2.5"
+                  tabs={(["all", "published", "scheduled", "draft"] as Show[]).map((s) => ({ value: s, label: SHOW_LABEL[s], count: count(s) }))}
+                />
                 <label className="relative ml-auto w-full sm:w-48">
                   <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-faint" aria-hidden />
                   <input
@@ -133,7 +128,7 @@ export function ContentPage() {
                     onChange={(e) => setQ(e.target.value)}
                     placeholder="Search posts"
                     aria-label="Search posts"
-                    className="h-8 w-full rounded-[7px] border border-rim bg-well pr-2 pl-8 text-base text-ink outline-none placeholder:text-faint focus:border-ink-2/40 md:text-[13px]"
+                    className="h-8 w-full rounded-[7px] bg-well pr-2 pl-8 text-base text-ink outline-none placeholder:text-faint focus:border-ink-2/40 md:text-[13px]"
                   />
                 </label>
               </>
@@ -147,7 +142,7 @@ export function ContentPage() {
 
           {view === "posts" ? (
             shown.length ? (
-              <ul className="bw-card-grid py-3" aria-label="Posts">
+              <ul className="bw-card-grid pt-3" aria-label="Posts">
                 {shown.map((i) => (
                   <PostCard key={i.key} item={i} siteUrl={site.overview?.siteUrl} postsBase={site.overview} />
                 ))}
@@ -256,14 +251,14 @@ function PostCard({ item, siteUrl, postsBase }: { item: PostItem; siteUrl?: stri
   }
 
   return (
-    <li className={cn("group relative flex flex-col overflow-hidden rounded-[10px] border border-line bg-raised transition-colors hover:border-rim", busy && "opacity-60")} data-testid="post-card">
+    <li className={cn("bw-panel group relative flex flex-col overflow-hidden transition-colors hover:bg-raised", busy && "opacity-60")} data-testid="post-card">
       <button type="button" onClick={edit} className="flex flex-1 flex-col text-left" aria-label={`Edit ${item.title}`}>
         {item.cover ? (
-          <SiteImage path={item.cover} siteUrl={siteUrl} className="aspect-[2/1] w-full border-b border-line" />
+          <SiteImage path={item.cover} siteUrl={siteUrl} className="aspect-[2/1] w-full" />
         ) : (
-          <CoverPlaceholder title={item.title} className="aspect-[2/1] w-full border-b border-line" />
+          <CoverPlaceholder title={item.title} className="h-20 w-full" />
         )}
-        <span className="flex flex-1 flex-col gap-1 px-3 pt-2.5 pb-3">
+        <span className="flex flex-1 flex-col gap-1 px-3.5 pt-3 pb-3.5">
           <span className="line-clamp-2 text-[13px] leading-snug font-semibold text-ink">{item.title || "Untitled"}</span>
           {item.excerpt && <span className="line-clamp-2 text-xs leading-relaxed text-muted-foreground max-sm:hidden">{item.excerpt}</span>}
           <span className="mt-auto flex flex-wrap items-center gap-1.5 pt-1.5">
@@ -281,7 +276,7 @@ function PostCard({ item, siteUrl, postsBase }: { item: PostItem; siteUrl?: stri
           {item.tags.length > 0 && (
             <span className="flex flex-wrap gap-1 pt-1">
               {item.tags.slice(0, 3).map((t) => (
-                <span key={t} className="rounded-[4px] border border-line px-1.5 text-[10px] leading-4 text-muted-foreground">{t}</span>
+                <span key={t} className="rounded-full bg-ink-2/8 px-2 text-[10px] leading-4 text-muted-foreground">{t}</span>
               ))}
             </span>
           )}
@@ -343,10 +338,10 @@ function PagesGrid({ pages, drafts, status }: { pages: { path: string; title: st
     )
   return (
     <>
-      <ul className="bw-card-grid py-3" aria-label="Pages">
+      <ul className="bw-card-grid pt-3" aria-label="Pages">
         {pages.map((p) => (
-          <li key={p.path} className="group flex flex-col overflow-hidden rounded-[10px] border border-line bg-raised hover:border-rim" data-testid="page-card">
-            {p.url ? <LiveThumb url={p.url} title={p.title} className="aspect-[2/1] w-full border-b border-line" /> : <CoverPlaceholder title={p.title} className="aspect-[2/1] w-full border-b border-line" />}
+          <li key={p.path} className="bw-panel group flex flex-col overflow-hidden hover:bg-raised" data-testid="page-card">
+            {p.url ? <LiveThumb url={p.url} title={p.title} className="aspect-[2/1] w-full" /> : <CoverPlaceholder title={p.title} className="h-20 w-full" />}
             <div className="flex items-center gap-2 px-3 py-2.5">
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[13px] font-semibold text-ink">{p.title}</span>
@@ -363,9 +358,9 @@ function PagesGrid({ pages, drafts, status }: { pages: { path: string; title: st
           </li>
         ))}
         {drafts.map((d) => (
-          <li key={d.id} className="flex flex-col overflow-hidden rounded-[10px] border border-dashed border-line bg-raised/60">
+          <li key={d.id} className="bw-panel flex flex-col overflow-hidden opacity-90 hover:bg-raised">
             <Link to={draftHref(d.id)} className="flex flex-1 flex-col">
-              <CoverPlaceholder title={d.title} className="aspect-[2/1] w-full border-b border-line" />
+              <CoverPlaceholder title={d.title} className="h-20 w-full" />
               <span className="flex flex-col gap-0.5 px-3 py-2.5">
                 <span className="truncate text-[13px] font-semibold text-ink">{d.title}</span>
                 <span className="text-[11px] text-faint">Page draft · edited {timeAgo(d.updatedAt)}</span>
@@ -375,7 +370,7 @@ function PagesGrid({ pages, drafts, status }: { pages: { path: string; title: st
         ))}
       </ul>
       {pages.length > 0 && (
-        <p className="border-t border-line px-3 py-2 text-[11px] text-muted-foreground">
+        <p className="pt-3 text-[11px] text-muted-foreground">
           Pages are your site's hand-built HTML; edit them in the site's code. Blackwall publishes posts.
         </p>
       )}

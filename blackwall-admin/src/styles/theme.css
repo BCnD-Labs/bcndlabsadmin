@@ -260,6 +260,8 @@ html[data-font="mono"] {
   .bw-grid-item { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
   .bw-grid-item > .bw-panel { flex: 1; min-height: 0; }
   .bw-grid-item[data-span="full"] { grid-column: 1 / -1; }
+  /* A grid item whose content rendered nothing (e.g. no notice) takes no row and no gap. */
+  .bw-grid-item:empty { display: none; }
   .bw-panel-heading { min-height: var(--bw-panel-header-h); padding-block: 0.25rem; padding-inline: 0.5rem 0.875rem; background: var(--bw-titlebar); border-bottom-color: transparent; }
   /* The icon tile sits flush in the title bar's far-left corner. */
   .bw-panel-heading .bw-category-icon { width: 1.75rem; height: 1.75rem; border-radius: 0.5rem; }

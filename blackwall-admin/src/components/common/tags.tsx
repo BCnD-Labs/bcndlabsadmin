@@ -30,6 +30,28 @@ export const PROJECT_DOT: Record<ProjectColor, string> = {
   slate: "bg-muted-foreground",
 }
 
+/** The same project colours as CSS colours, for icon tiles and sparklines. */
+export const PROJECT_HEX: Record<ProjectColor, string> = {
+  teal: "#74aab9",
+  amber: "var(--bw-amber)",
+  red: "var(--bw-red-light)",
+  slate: "var(--bw-text-2)",
+}
+
+/** A project's icon tile: its code on a tint of its colour (same shape as the category tiles). */
+export function ProjectTile({ project, size = 36 }: { project: Project; size?: number }) {
+  const c = PROJECT_HEX[project.color]
+  return (
+    <span
+      aria-hidden
+      className="inline-flex shrink-0 items-center justify-center rounded-[9px] font-heading font-bold tracking-wide"
+      style={{ width: size, height: size, fontSize: size < 32 ? 9 : 11, color: c, background: `color-mix(in srgb, ${c} 20%, transparent)`, boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${c} 38%, transparent)` }}
+    >
+      {(project.code || project.name).slice(0, 3).toUpperCase()}
+    </span>
+  )
+}
+
 export function ProjectTag({ project, className, asLink = false }: { project?: Project; className?: string; asLink?: boolean }) {
   if (!project) return null
   const cls = cn("inline-flex h-5 max-w-full shrink-0 items-center gap-1.5 rounded-full bg-ink-2/8 px-2 text-[11px] font-medium text-ink-2", asLink && "min-h-8 hover:bg-selected hover:text-ink md:min-h-0", className)

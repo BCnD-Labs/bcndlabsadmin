@@ -1,3 +1,4 @@
+import { FileText } from "lucide-react"
 import { ImageOff } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { joinUrl } from "@shared/site"
@@ -69,19 +70,13 @@ export function LiveThumb({ url, title, className }: { url: string; title: strin
 }
 
 /** Stand-in when a post has no cover: its initials on a quiet tile. */
+/** No cover yet: a quiet band with the Website icon tile, so cards without images stay short. */
 export function CoverPlaceholder({ title, className }: { title: string; className?: string }) {
-  const letters = title
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase())
-    .join("")
   return (
-    <span
-      className={cn("flex items-center justify-center bg-panel font-heading text-lg font-medium text-muted-foreground", className)}
-      aria-hidden
-    >
-      {letters || "—"}
+    <span className={cn("flex items-center justify-center bg-well", className)} aria-hidden title={title}>
+      <span data-category="website" className="bw-category-icon inline-flex size-9 items-center justify-center rounded-[9px]">
+        <FileText className="size-4" strokeWidth={1.8} />
+      </span>
     </span>
   )
 }
