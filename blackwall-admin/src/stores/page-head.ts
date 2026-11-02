@@ -10,6 +10,8 @@ export interface PageHead {
   badge?: ReactNode
   subtitle?: ReactNode
   actions?: ReactNode
+  /** Detail pages: where the back arrow goes. */
+  back?: { to: string; label: string }
   /** Which PageHeader set it, so an unmounting page only clears its own. */
   owner?: string
 }

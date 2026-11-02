@@ -2,6 +2,7 @@ import { CategoryIcon } from "@/components/common/category-icon"
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { ChevronRight, PanelLeftClose, Settings } from "lucide-react"
+import { SyncStatus } from "./workspace-status"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { useUi } from "@/stores/ui"
@@ -254,6 +255,7 @@ export function NavRail({ focusMain }: { focusMain: () => void }) {
       <BrandButton expanded={expanded} onToggle={toggleExpanded} />
       {expanded ? <NavTree /> : <ul className="mt-2 flex flex-col items-center gap-2">{NAV.map(renderItem)}</ul>}
       <div className="flex-1" />
+      <SyncStatus expanded={expanded} />
       <SettingsButton expanded={expanded} />
     </nav>
   )

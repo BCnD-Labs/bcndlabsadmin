@@ -13,6 +13,7 @@ export function PageHeader({
   subtitle,
   actions,
   badge,
+  back,
   className,
 }: {
   title: ReactNode
@@ -20,13 +21,13 @@ export function PageHeader({
   subtitle?: ReactNode
   actions?: ReactNode
   badge?: ReactNode
-  /** Kept for callers; the header's breadcrumb links back now. */
+  /** Detail pages: a back arrow before the title. */
   back?: { to: string; label: string }
   className?: string
 }) {
   const owner = useId()
   useLayoutEffect(() => {
-    usePageHead.setState({ title, subtitle, actions, badge, owner }, true)
+    usePageHead.setState({ title, subtitle, actions, badge, back, owner }, true)
   })
   useLayoutEffect(
     () => () => {

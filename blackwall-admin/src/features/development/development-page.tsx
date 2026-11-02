@@ -82,7 +82,7 @@ export function DevelopmentPage() {
         <div className="grid grid-cols-1 items-start @5xl/main:grid-cols-[minmax(0,1fr)_25rem]" style={{ gap: "var(--bw-grid-gap)" }}>
           <div className="grid min-w-0" style={{ gap: "var(--bw-grid-gap)" }}>
             <Panel category="development" title="Repositories" subtitle={repos.length ? `${repos.length} tracked` : undefined} tool="repos" command="ls"
-              actions={repos.length ? <Button variant="outline" size="sm" onClick={track}><Plus /> Track repository</Button> : undefined}
+              actions={repos.length ? <Button variant="quiet" size="icon-sm" aria-label="Track repository" title="Track repository" onClick={track}><Plus /></Button> : undefined}
               bodyClassName="@container">
               {repos.length ? (
                 <ul aria-label="Tracked repositories" className="grid grid-cols-1 gap-4 p-4 @lg:grid-cols-2 @3xl:grid-cols-3">

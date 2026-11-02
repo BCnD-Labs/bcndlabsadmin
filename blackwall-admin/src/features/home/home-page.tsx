@@ -1,4 +1,5 @@
-import { useState, type DragEvent, type ReactNode } from "react"
+import { PageHeader } from "@/components/common/page-header"
+import { useLayoutEffect, useRef, useState, type DragEvent, type HTMLAttributes, type ReactNode } from "react"
 import { ChevronDown, ChevronUp, EyeOff, GripVertical, Plus, RotateCcw, SlidersHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Panel } from "@/components/common/panel"
@@ -32,6 +33,32 @@ function Block({ id }: { id: BlockId }) {
   }
 }
 
+/** Masonry rows: each panel spans as many 4px rows as its height needs, so a short panel
+ * no longer leaves a hole beside a tall one. Order is kept (no dense packing). */
+const ROW = 4
+function MasonryItem({ className, children, ...props }: HTMLAttributes<HTMLDivElement>) {
+  const ref = useRef<HTMLDivElement>(null)
+  const inner = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    const body = inner.current
+    if (!el || !body) return
+    const fit = () => {
+      const gap = parseFloat(getComputedStyle(el.parentElement!).columnGap) || 0
+      el.style.gridRowEnd = `span ${Math.max(1, Math.ceil((body.getBoundingClientRect().height + gap) / ROW))}`
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
+    ro.observe(body)
+    return () => ro.disconnect()
+  }, [])
+  return (
+    <div ref={ref} className={className} {...props}>
+      <div ref={inner} className="relative flex min-w-0 flex-col">{children}</div>
+    </div>
+  )
+}
+
 const SPAN: Record<BlockWidth, string> = { narrow: "", wide: "@2xl/main:col-span-2", full: "col-span-full" }
 const WIDTH_LABEL: Record<BlockWidth, string> = { narrow: "Narrow", wide: "Wide", full: "Full" }
 const MIME = "application/x-blackwall-block"
@@ -61,21 +88,18 @@ export function HomePage() {
 
   return (
     <div className="@container/main mx-auto grid w-full max-w-[var(--bw-page-max)] pb-6" style={{ gap: "var(--bw-grid-gap)" }}>
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        {editing ? (
-          <>
-            <p className="mr-auto text-xs text-muted-foreground">Drag panels to reorder. Width and hide controls sit on each panel. Changes save as you go.</p>
-            <Button variant="quiet" size="sm" onClick={() => save(DEFAULT_LAYOUT.map((b) => ({ ...b })))}><RotateCcw /> Reset layout</Button>
-            <Button size="sm" onClick={() => setEditing(false)}>Done</Button>
-          </>
-        ) : (
-          <Button variant="quiet" size="sm" onClick={() => setEditing(true)}><SlidersHorizontal /> Customize</Button>
-        )}
-      </div>
+      <PageHeader title="Home" actions={!editing && <Button variant="ghost" onClick={() => setEditing(true)}><SlidersHorizontal /> Customize</Button>} />
+      {editing && (
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <p className="mr-auto text-xs text-muted-foreground">Drag panels to reorder. Width and hide controls sit on each panel. Changes save as you go.</p>
+          <Button variant="quiet" size="sm" onClick={() => save(DEFAULT_LAYOUT.map((b) => ({ ...b })))}><RotateCcw /> Reset layout</Button>
+          <Button size="sm" onClick={() => setEditing(false)}>Done</Button>
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 items-start @2xl/main:grid-cols-2 @5xl/main:grid-cols-3" style={{ gap: "var(--bw-grid-gap)" }} data-testid="home-grid">
+      <div className="grid grid-cols-1 items-start @2xl/main:grid-cols-2 @5xl/main:grid-cols-3" style={{ columnGap: "var(--bw-grid-gap)", gridAutoRows: `${ROW}px` }} data-testid="home-grid">
         {visible.map((b, i) => (
-          <div
+          <MasonryItem
             key={b.id}
             data-block={b.id}
             className={cn("relative flex min-w-0 flex-col", SPAN[b.width], dragging === b.id && "opacity-40")}
@@ -107,7 +131,7 @@ export function HomePage() {
                 </span>
               </EditFrame>
             )}
-          </div>
+          </MasonryItem>
         ))}
       </div>
 

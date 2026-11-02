@@ -73,12 +73,12 @@ export function PullRequestsPanel() {
   const feed = useGitHubAccounts()
   const [filter, setFilter] = useState<PrFilter>("needs")
   const rows: PrRow[] = useMemo(
-    () => (feed.data ?? []).flatMap((a) => {
-      // A PR can come back from both searches (review requested and authored): keep one, preferring "review requested".
-      const byId = new Map<string, PullRequestSummary>()
-      for (const p of a.overview?.prs ?? []) if (!byId.has(p.id)) byId.set(p.id, p)
-      return [...byId.values()].map((p) => ({ ...p, look: a.look, account: a.label }))
-    }).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+    () => {
+      // A PR can come back from both searches (review requested and authored), or from two accounts
+      // that both see the repo: keep one, the first found (review requested comes first).
+      const seen = new Set<string>()
+      return (feed.data ?? []).flatMap((a) => (a.overview?.prs ?? []).filter((p) => !seen.has(p.id) && !!seen.add(p.id)).map((p) => ({ ...p, look: a.look, account: a.label }))).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    },
     [feed.data],
   )
   const needs = rows.filter((p) => p.kind === "review-requested" || p.checks === "failing")
@@ -130,7 +130,7 @@ export function PullRequestsPanel() {
       ) : (
         <div className="px-5 py-4"><FeedFallback feed={feed} provider="github" what="pull requests from your GitHub accounts" /></div>
       )}
-      <PanelFooter left={feed.status === "live" ? "Live from GitHub" : feed.status === "sample" ? "Sample data" : undefined}>
+      <PanelFooter left={feed.status === "live" ? "Live from GitHub" : undefined}>
         <Link to={DEVELOPMENT} className={footerLink}>Open GitHub activity <ArrowRight className="size-3.5" aria-hidden /></Link>
       </PanelFooter>
     </Panel>
@@ -248,9 +248,6 @@ export function RepositoriesPanel() {
   // The server reads up to REPO_LIMIT repositories per account; the rest are listed but not read.
   const rows = visible.flatMap((a) => a.repos.map((repo, i) => ({ repo, a, capped: i >= REPO_LIMIT, info: a.overview?.repos?.find((r) => r.repo === repo), failures: a.overview?.failures.filter((f) => f.repo === repo).length ?? 0 })))
   const repoErrors = visible.filter((a) => a.error)
-  const commits30 = rows.reduce((sum, r) => sum + lastDays(r.info?.commitsByDay, 30).reduce((x, y) => x + y, 0), 0)
-  const prs = visible.reduce((sum, a) => sum + (a.overview?.prs.length ?? 0), 0)
-  const failing = visible.reduce((sum, a) => sum + (a.overview?.failures.length ?? 0), 0)
 
   return (
     <Panel
@@ -276,12 +273,7 @@ export function RepositoriesPanel() {
       ) : feed.data ? (
         <div className="px-5 py-5">
           {repoErrors.map((a) => <p key={a.id} className="mb-3 text-xs text-red-text">{a.label}: {a.error}</p>)}
-          <div className="grid grid-cols-1 gap-4 @container sm:grid-cols-3">
-            <Stat label="Commits · 30 days" value={commits30} />
-            <Stat label="Open pull requests" value={prs} />
-            <Stat label="Failing CI" value={failing} tone={failing ? "red" : undefined} />
-          </div>
-          <p className="mt-6 mb-2 text-[11.5px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">Tracked repositories</p>
+          <p className="mb-2 text-[11.5px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">Tracked repositories</p>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[560px] border-collapse text-left">
               <thead>
@@ -318,19 +310,10 @@ export function RepositoriesPanel() {
       ) : (
         <div className="px-5 py-4"><FeedFallback feed={feed} provider="github" what="activity for your tracked repositories" /></div>
       )}
-      <PanelFooter left={feed.status === "live" ? "Live from GitHub" : feed.status === "sample" ? "Sample data" : undefined}>
+      <PanelFooter left={feed.status === "live" ? "Live from GitHub" : undefined}>
         <button type="button" className={footerLink} onClick={() => useUi.getState().openForm({ kind: "repo" })}>Track a repository <Plus className="size-3.5" aria-hidden /></button>
       </PanelFooter>
     </Panel>
-  )
-}
-
-function Stat({ label, value, tone }: { label: string; value: number; tone?: Tone }) {
-  return (
-    <div className="rounded-xl bg-raised px-4 py-3.5">
-      <p className="text-[12.5px] text-muted-foreground">{label}</p>
-      <p className="mt-1 font-heading text-[26px] leading-none font-semibold tabular-nums" style={tone ? { color: TONE[tone] } : undefined}>{value}</p>
-    </div>
   )
 }
 

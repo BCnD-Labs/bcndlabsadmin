@@ -1,6 +1,9 @@
 import { useEffect } from "react"
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { CircleCheck, CircleX, Download, LoaderCircle, RotateCw } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { cn } from "@/lib/utils"
 import { downloadWorkspace, downloadConflictServerCopy, workspaceConflictDetails, resolveWorkspaceConflict, startWorkspaceSync, stopWorkspaceSync, syncWorkspace, useWorkspaceSync } from "@/services/workspace-sync"
 
 export function WorkspaceStatus({ connected }: { connected: boolean }) {
@@ -47,11 +50,42 @@ export function WorkspaceStatus({ connected }: { connected: boolean }) {
       </DialogContent>
     </Dialog>
   )
+  return null
+}
+
+/**
+ * Save status as one small icon (the rail, above Settings): a check when saved, a
+ * pulsing dot while saving, a cross when offline. Click for details and, offline,
+ * Retry or Export.
+ */
+export function SyncStatus({ expanded = false }: { expanded?: boolean }) {
+  const { status, message } = useWorkspaceSync()
+  const tone = status === "saved" ? "text-green" : status === "offline" ? "text-red-light" : "text-amber"
+  const Icon = status === "saved" ? CircleCheck : status === "offline" ? CircleX : LoaderCircle
   return (
-    <div role="status" className="mb-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground" data-testid="workspace-status">
-      <span className={`size-1.5 ${status === "saved" ? "bg-green" : "bg-amber"}`} aria-hidden />
-      <span>{message}</span>
-      {status === "offline" && <><Button size="sm" variant="quiet" onClick={() => void syncWorkspace()}>Retry</Button><Button size="sm" variant="quiet" onClick={() => downloadWorkspace()}>Export unsynced copy</Button></>}
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label={`Workspace: ${message}`}
+          title={message}
+          data-testid="workspace-status"
+          data-status={status}
+          className={cn(
+            "flex shrink-0 items-center rounded-[10px] text-[12px] text-muted-foreground hover:bg-raised hover:text-ink-2",
+            expanded ? "h-8 w-full gap-3 px-2.5" : "size-[var(--bw-nav-item)] justify-center",
+          )}
+        >
+          <Icon className={cn("size-4 shrink-0", tone, status === "pending" && "animate-spin motion-reduce:animate-none")} strokeWidth={2} aria-hidden />
+          {expanded && <span className="min-w-0 flex-1 truncate text-left">{message}</span>}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="right" align="end" className="w-60">
+        <DropdownMenuLabel className="bw-label">Workspace</DropdownMenuLabel>
+        <p className="px-2 pb-1.5 text-xs text-ink-2">{message}</p>
+        <DropdownMenuItem onSelect={() => void syncWorkspace()}><RotateCw /> Sync now</DropdownMenuItem>
+        {status === "offline" && <DropdownMenuItem onSelect={() => downloadWorkspace()}><Download /> Export unsynced copy</DropdownMenuItem>}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

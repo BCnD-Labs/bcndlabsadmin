@@ -81,9 +81,7 @@ export function PlannerPage() {
 
   return (
     <>
-      <PageHeader
-        title="Planner"
-      />
+      <PageHeader title="Planner" actions={<Button onClick={() => useUi.getState().openForm({ kind: "task", defaults: { due: date } })}><Plus /> Task</Button>} />
       {/* Main + aside (the standard dashboard split). Left: one card with notes beside the
           selected day's log. Right: calendar with tasks under it. The card matches the aside's
           height, which comes from its content, never a fixed unit. Narrow: aside first. */}
@@ -101,7 +99,7 @@ export function PlannerPage() {
           </section>
           <div ref={asideRef} className="order-1 flex min-w-0 flex-col gap-4 @4xl/main:order-2">
             <section aria-label="Calendar" className="bw-panel flex shrink-0 flex-col self-center overflow-hidden" style={{ margin: 25, width: "calc(100% - 50px)" }}>
-              <ColumnHeader category="calendar" windowButtons={false}><h2 className="-ml-0.5 min-w-0 flex-1 truncate text-center text-sm leading-none font-semibold text-ink sm:text-[17px]">Calendar</h2><CalendarSelectors month={month} onMonth={setMonth} /></ColumnHeader>
+              <ColumnHeader category="calendar" title="Calendar"><span className="flex-1" /><CalendarSelectors month={month} onMonth={setMonth} /><span className="flex-1" /></ColumnHeader>
               <PlannerCalendar selected={date} month={month} onSelect={onDate} />
             </section>
             <TasksCard date={date} />
@@ -112,14 +110,16 @@ export function PlannerPage() {
   )
 }
 
-/** A column header inside the shared card, the same height as a panel header. */
-function ColumnHeader({ children, className, category, windowButtons = true }: { children: ReactNode; className?: string; category?: Category; windowButtons?: boolean }) {
+/** A column header inside the shared card: the same title bar as a panel (icon + title only), controls in the row below. */
+function ColumnHeader({ title, children, className, category }: { title: ReactNode; children?: ReactNode; className?: string; category?: Category }) {
   return (
-    <header className={cn("bw-panel-heading flex shrink-0 items-center gap-1.5 border-b border-line-soft text-xs", className)}>
-      {category && <CategoryIcon category={category} className="mr-0.5" />}
-      {children}
-      {windowButtons && <span className="bw-window-buttons" aria-hidden><span /><span /></span>}
-    </header>
+    <div className={cn("flex shrink-0 flex-col", className)}>
+      <header className="bw-panel-heading flex items-center gap-2.5">
+        {category && <CategoryIcon category={category} />}
+        <h2 className="bw-panel-title min-w-0 truncate">{title}</h2>
+      </header>
+      {children && <div className="bw-panel-toolbar flex items-center gap-1.5 text-xs">{children}</div>}
+    </div>
   )
 }
 
@@ -257,18 +257,18 @@ function DayHeader({ date, onDate }: { date: string; onDate: (d: string) => void
   const day = parseKey(date)
   const entry = useWorkspace((s) => s.journal.find((j) => j.id === date))
   return (
-    <ColumnHeader category="journal" className="md:col-span-2">
-      <h2 className="min-w-0 truncate font-sans text-sm leading-none font-semibold text-ink sm:text-[17px]">
-        {format(day, "EEEE, MMM d")}
-        {day.getFullYear() !== new Date().getFullYear() && <span className="ml-1 font-normal text-muted-foreground">{format(day, "yyyy")}</span>}
-      </h2>
+    <ColumnHeader
+      category="journal"
+      className="md:col-span-2"
+      title={<>{format(day, "EEEE, MMM d")}{day.getFullYear() !== new Date().getFullYear() && <span className="ml-1 font-normal text-muted-foreground">{format(day, "yyyy")}</span>}</>}
+    >
       {isToday(day) && (
         <span className="inline-flex h-5 items-center rounded-full px-2 text-[11px] font-semibold text-red-light" style={{ background: "color-mix(in srgb, var(--bw-red) 18%, transparent)" }}>Today</span>
       )}
       <span className="ml-auto hidden truncate pr-1 text-[11px] text-faint sm:inline" aria-live="polite" data-testid="log-state">
         {entry ? `Saved ${timeAgo(entry.updatedAt)}` : ""}
       </span>
-      <Button variant="quiet" size="icon-sm" aria-label="Previous day" onClick={() => onDate(toDateKey(addDays(day, -1)))}><ChevronLeft /></Button>
+      <Button variant="quiet" size="icon-sm" aria-label="Previous day" className="max-sm:ml-auto" onClick={() => onDate(toDateKey(addDays(day, -1)))}><ChevronLeft /></Button>
       <Button variant="outline" size="xs" disabled={isToday(day)} onClick={() => onDate(todayKey())}>Today</Button>
       <Button variant="quiet" size="icon-sm" aria-label="Next day" onClick={() => onDate(toDateKey(addDays(day, 1)))}><ChevronRight /></Button>
     </ColumnHeader>
@@ -389,8 +389,8 @@ function TasksCard({ date }: { date: string }) {
           <Button variant="quiet" size="icon-sm" aria-label="Starred only" aria-pressed={starred} onClick={() => setStarred(!starred)}>
             <Star className={cn(starred && "fill-current text-amber")} />
           </Button>
-          <Button size="sm" title={`New task, due ${dueLabel}`} onClick={add}>
-            <Plus /> Task
+          <Button variant="quiet" size="icon-sm" aria-label={`New task, due ${dueLabel}`} title={`New task, due ${dueLabel}`} onClick={add}>
+            <Plus />
           </Button>
         </>
       }

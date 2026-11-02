@@ -6,8 +6,8 @@ const ids = (l: { id: string }[]) => l.map((b) => b.id).join(",")
 
 test("moving a block drops it at the target's position in either direction", () => {
   const base = sanitizeLayout(DEFAULT_LAYOUT)
-  const later = moveBlock(base, "prs", "repos")
-  assert.equal(ids(later).split(",").slice(0, 3).join(","), "week,repos,prs", "dragging down lands after the target")
+  const later = moveBlock(base, "prs", "productivity")
+  assert.equal(ids(later).split(",").slice(0, 3).join(","), "week,productivity,prs", "dragging down lands after the target")
   const earlier = moveBlock(base, "log", "prs")
   assert.equal(ids(earlier).split(",")[0], "log", "dragging up lands before the target")
   assert.equal(earlier.length, base.length)

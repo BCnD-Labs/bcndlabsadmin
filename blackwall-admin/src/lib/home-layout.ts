@@ -31,16 +31,18 @@ export const BLOCK_LABELS: Record<BlockId, string> = {
   services: "Linked services",
 }
 
+/** Default order pairs each wide panel with a narrow one so the masonry rows fill evenly.
+ * Assignments & exams starts hidden: This week already lists coursework (no duplicate rows). */
 export const DEFAULT_LAYOUT: LayoutItem[] = [
   { id: "prs", visible: true, width: "wide" },
   { id: "week", visible: true, width: "narrow" },
-  { id: "repos", visible: true, width: "full" },
   { id: "productivity", visible: true, width: "wide" },
-  { id: "coursework", visible: true, width: "narrow" },
+  { id: "repos", visible: true, width: "full" },
   { id: "website", visible: true, width: "wide" },
-  { id: "services", visible: true, width: "narrow" },
-  { id: "projects", visible: true, width: "narrow" },
   { id: "log", visible: true, width: "narrow" },
+  { id: "projects", visible: true, width: "narrow" },
+  { id: "services", visible: true, width: "narrow" },
+  { id: "coursework", visible: false, width: "narrow" },
   { id: "development", visible: false, width: "narrow" },
   { id: "calendar", visible: false, width: "wide" },
   { id: "analytics", visible: false, width: "wide" },

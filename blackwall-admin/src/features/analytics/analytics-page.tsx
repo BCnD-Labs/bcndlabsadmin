@@ -28,7 +28,7 @@ function BarRow({ label, value, max, tone, mono }: { label: string; value: numbe
     <li className={cn("grid items-center gap-3 text-xs", mono ? "grid-cols-[minmax(0,1fr)_minmax(5rem,40%)_2rem]" : "grid-cols-[minmax(0,7rem)_1fr_3rem]")}>
       <span className={cn("truncate", mono && "font-mono text-[11px] text-ink-2", tone === "warn" && value ? "text-amber" : !mono && "text-muted-foreground")} title={label}>{label}</span>
       <span className="h-2 rounded-[2px] bg-off">
-        <span className={cn("block h-full rounded-[2px]", tone === "warn" ? "bg-amber" : "bg-chart-1")} style={{ width: `${(value / max) * 100}%` }} />
+        <span className={cn("block h-full rounded-[2px]", tone === "warn" ? "bg-amber" : "bg-[var(--bw-category)]")} style={{ width: `${(value / max) * 100}%` }} />
       </span>
       <span className="text-right font-mono text-[11px] text-ink-2 tabular-nums">{fmt.format(value)}</span>
     </li>
@@ -120,8 +120,6 @@ function PersonalAnalytics() {
       <StatStrip
 
         items={[
-          { label: "Open tasks", value: s.open },
-          { label: "Overdue", value: s.overdue, tone: s.overdue ? "warn" : undefined },
           { label: "Done this week", value: s.thisWeek, sub: `last week ${s.lastWeek}` },
           { label: "Task streak", value: s.doneStreak, sub: "days in a row" },
           { label: "Log streak", value: s.logStreak, sub: "days in a row" },

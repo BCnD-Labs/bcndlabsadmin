@@ -15,7 +15,6 @@ import { usePrefs } from "@/stores/prefs"
 import { useUi } from "@/stores/ui"
 import { Header } from "./header"
 import { MobileNav } from "./mobile-nav"
-import { SectionNav } from "./section-nav"
 import { NavRail } from "./nav-rail"
 import { useMobileView } from "./mobile/use-mobile-view"
 import { MobileBoundary, MobileOutlet, MobileTabBar } from "./mobile/mobile-shell"
@@ -111,8 +110,8 @@ export function AppShell() {
         <main id="main" ref={mainRef} tabIndex={-1} className={cn("bw-workspace outline-none", mobileView ? "pb-[calc(4.5rem+env(safe-area-inset-bottom))]" : "pb-3")} data-layout={mobileView ? "mobile" : "responsive"}>
           <WorkspaceStatus connected={session === "open"} />
           {workspaceReady && (mobileView
-            ? <MobileBoundary key={pathname}><SectionNav /><MobileOutlet /></MobileBoundary>
-            : <><SectionNav /><Outlet /></>)}
+            ? <MobileBoundary key={pathname}><MobileOutlet /></MobileBoundary>
+            : <Outlet />)}
         </main>
       </div>
       {mobileView && <MobileTabBar />}

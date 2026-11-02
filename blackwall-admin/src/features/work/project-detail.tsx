@@ -51,11 +51,11 @@ function RepoRow({ repo, act, live, color }: { repo: RepoLink; act: ProjectActiv
 }
 
 function Overview({ project, act, live, drafts }: { project: Project; act: ProjectActivity; live: boolean; drafts: number }) {
+  // Only what the panels beside it don't already show (status is in the header; PRs and CI are on each repo row).
   const rows: [string, ReactNode][] = [
-    ["Status", <ProjectStatusLabel key="s" status={project.status} />],
-    ["Repositories", act.linked.length],
+    ...(live ? ([["Open issues", act.issues.length]] as [string, ReactNode][]) : []),
     ["Drafts", drafts],
-    ...(live ? ([["Open pull requests", act.prs.length], ["Open issues", act.issues.length], ["Failed runs", act.failures.length]] as [string, ReactNode][]) : []),
+    ["Created", timeAgo(project.createdAt)],
     ["Updated", timeAgo(project.updatedAt)],
   ]
   return (
