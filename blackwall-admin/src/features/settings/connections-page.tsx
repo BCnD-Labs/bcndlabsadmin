@@ -334,7 +334,8 @@ function ProviderForm({
 }) {
   const def = providerDef(provider)
   const guide = CONNECTION_GUIDANCE[provider]
-  const allGithub = useConnections((st) => st.list.filter((c) => c.provider === "github"))
+  const connectionList = useConnections((st) => st.list)
+  const allGithub = connectionList.filter((c) => c.provider === "github")
   const githubCount = allGithub.length
   const githubIndex = (id: string) => Math.max(0, allGithub.findIndex((c) => c.id === id))
   const navigate = useNavigate()

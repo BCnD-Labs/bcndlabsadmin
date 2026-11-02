@@ -29,7 +29,8 @@ export function RepoForm({ id, defaults, onDone }: { id?: string; defaults?: Par
     projectId: base?.projectId,
     connectionId: base?.connectionId ?? "auto",
   })
-  const githubAccounts = useConnections((st) => st.list.filter((c) => c.provider === "github"))
+  const connectionList = useConnections((st) => st.list)
+  const githubAccounts = connectionList.filter((c) => c.provider === "github")
   const set = (patch: Partial<typeof draft>) => setDraft((d) => ({ ...d, ...patch }))
   const parsed = parseRepo(draft.repo)
 

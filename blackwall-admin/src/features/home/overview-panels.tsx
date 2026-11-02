@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
-import { format } from "date-fns"
+import { addDays, format, subDays } from "date-fns"
 import { ArrowRight, CircleCheck, ExternalLink, Plus } from "lucide-react"
 import { Panel } from "@/components/common/panel"
 import { SourceBadge } from "@/components/common/source-badge"
@@ -73,12 +73,18 @@ export function PullRequestsPanel() {
   const feed = useGitHubAccounts()
   const [filter, setFilter] = useState<PrFilter>("needs")
   const rows: PrRow[] = useMemo(
-    () => (feed.data ?? []).flatMap((a) => (a.overview?.prs ?? []).map((p) => ({ ...p, look: a.look, account: a.label }))).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+    () => (feed.data ?? []).flatMap((a) => {
+      // A PR can come back from both searches (review requested and authored): keep one, preferring "review requested".
+      const byId = new Map<string, PullRequestSummary>()
+      for (const p of a.overview?.prs ?? []) if (!byId.has(p.id)) byId.set(p.id, p)
+      return [...byId.values()].map((p) => ({ ...p, look: a.look, account: a.label }))
+    }).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
     [feed.data],
   )
   const needs = rows.filter((p) => p.kind === "review-requested" || p.checks === "failing")
   const shown = (filter === "needs" ? needs : filter === "mine" ? rows.filter((p) => p.kind === "authored") : rows).slice(0, 6)
   const failed = feed.data?.filter((a) => a.error) ?? []
+  const allFailed = !!feed.data?.length && failed.length === feed.data.length
 
   return (
     <Panel
@@ -94,20 +100,22 @@ export function PullRequestsPanel() {
       {feed.data ? (
         <>
           {failed.map((a) => <p key={a.id} className="mx-5 mt-4 text-xs text-red-text">{a.label}: {a.error}</p>)}
-          {shown.length ? (
+          {allFailed ? (
+            <p className="px-5 py-5 text-sm text-muted-foreground">Pull requests couldn’t be loaded from any account. Check the connections in Settings.</p>
+          ) : shown.length ? (
             <ul className="grid gap-1 px-2 py-3">
               {shown.map((p) => {
                 const [tone, label] = prStatus(p)
                 return (
-                  <li key={`${p.account}-${p.id}`} className="flex items-center gap-3.5 rounded-xl px-3 py-2.5 hover:bg-raised">
+                  <li key={`${p.account}-${p.id}`} className="flex min-w-0 flex-wrap items-center gap-x-3.5 gap-y-1.5 rounded-xl px-3 py-2.5 hover:bg-raised sm:flex-nowrap">
                     <AccountAvatar look={p.look} label={p.account} />
-                    <span className="min-w-0 flex-1">
+                    <span className="min-w-0 flex-1 basis-40">
                       <span className="block truncate text-[14.5px] font-medium text-ink">{p.title}</span>
                       <span className="block truncate font-mono text-xs text-muted-foreground">{p.repo} #{p.number} · {timeAgo(p.updatedAt)}</span>
                     </span>
-                    <Pill tone={tone}>{label}</Pill>
+                    <span className="max-sm:ml-[50px]"><Pill tone={tone}>{label}</Pill></span>
                     {p.url && (
-                      <Button asChild variant="quiet" size="icon-sm" aria-label={`Open ${p.repo} #${p.number} on GitHub`}>
+                      <Button asChild variant="quiet" size="icon-sm" className="max-sm:hidden" aria-label={`Open ${p.repo} #${p.number} on GitHub`}>
                         <a href={p.url} target="_blank" rel="noreferrer"><ExternalLink /></a>
                       </Button>
                     )}
@@ -146,7 +154,7 @@ export function ThisWeekPanel() {
     .sort((a, b) => a.due!.localeCompare(b.due!) || (a.time ?? "").localeCompare(b.time ?? ""))
   const shown = week.filter((t) => (filter === "course" ? t.courseId : filter === "tasks" ? !t.courseId : true)).slice(0, 6)
   const overdue = week.filter((t) => t.due! < today).length
-  const end = format(parseKey(toDateKey(new Date(Date.now() + 7 * 864e5))), "MMM d")
+  const end = format(addDays(parseKey(today), 7), "MMM d")
 
   return (
     <Panel
@@ -206,9 +214,13 @@ function WeekRow({ task, course, today }: { task: Task; course?: { id: string; c
 
 // ---------------------------------------------------------------- Repositories
 
+/** Matches the server's per-account cap in githubOverview (server/providers/github.ts). */
+const REPO_LIMIT = 10
+
 function lastDays(byDay: Record<string, number> | undefined, days: number) {
   const out: number[] = []
-  for (let i = days - 1; i >= 0; i--) out.push(byDay?.[toDateKey(new Date(Date.now() - i * 864e5))] ?? 0)
+  const now = new Date()
+  for (let i = days - 1; i >= 0; i--) out.push(byDay?.[toDateKey(subDays(now, i))] ?? 0)
   return out
 }
 
@@ -233,7 +245,9 @@ export function RepositoriesPanel() {
   const accounts = feed.data ?? []
   const multi = accounts.length > 1
   const visible = accounts.filter((a) => only === "all" || a.id === only)
-  const rows = visible.flatMap((a) => a.repos.map((repo) => ({ repo, a, info: a.overview?.repos?.find((r) => r.repo === repo), failures: a.overview?.failures.filter((f) => f.repo === repo).length ?? 0 })))
+  // The server reads up to REPO_LIMIT repositories per account; the rest are listed but not read.
+  const rows = visible.flatMap((a) => a.repos.map((repo, i) => ({ repo, a, capped: i >= REPO_LIMIT, info: a.overview?.repos?.find((r) => r.repo === repo), failures: a.overview?.failures.filter((f) => f.repo === repo).length ?? 0 })))
+  const repoErrors = visible.filter((a) => a.error)
   const commits30 = rows.reduce((sum, r) => sum + lastDays(r.info?.commitsByDay, 30).reduce((x, y) => x + y, 0), 0)
   const prs = visible.reduce((sum, a) => sum + (a.overview?.prs.length ?? 0), 0)
   const failing = visible.reduce((sum, a) => sum + (a.overview?.failures.length ?? 0), 0)
@@ -261,6 +275,7 @@ export function RepositoriesPanel() {
         </div>
       ) : feed.data ? (
         <div className="px-5 py-5">
+          {repoErrors.map((a) => <p key={a.id} className="mb-3 text-xs text-red-text">{a.label}: {a.error}</p>)}
           <div className="grid grid-cols-1 gap-4 @container sm:grid-cols-3">
             <Stat label="Commits · 30 days" value={commits30} />
             <Stat label="Open pull requests" value={prs} />
@@ -278,7 +293,7 @@ export function RepositoriesPanel() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map(({ repo, a, info, failures }) => {
+                {rows.map(({ repo, a, info, failures, capped }) => {
                   const days = lastDays(info?.commitsByDay, 14)
                   return (
                     <tr key={`${a.id}-${repo}`} className="border-t border-line-soft">
@@ -286,9 +301,9 @@ export function RepositoriesPanel() {
                         <a href={`https://github.com/${repo}`} target="_blank" rel="noreferrer" className="block truncate font-mono text-[13.5px] font-semibold text-ink hover:underline">{repo.split("/")[1]}</a>
                         <AccountChip look={a.look} name={multi ? a.label : repo.split("/")[0]} className="mt-1" />
                       </td>
-                      <td className="py-3 pr-4"><span className="flex items-end gap-2">{info ? <><Sparkline values={days} color={a.look.color} /><span className="text-xs text-muted-foreground tabular-nums">{days.reduce((x, y) => x + y, 0)}</span></> : <span className="text-xs text-faint">{a.error ? "Unavailable" : "—"}</span>}</span></td>
+                      <td className="py-3 pr-4"><span className="flex items-end gap-2">{info ? <><Sparkline values={days} color={a.look.color} /><span className="text-xs text-muted-foreground tabular-nums">{days.reduce((x, y) => x + y, 0)}</span></> : <span className="text-xs text-faint">{a.error ? "Unavailable" : capped ? `Not read (over ${REPO_LIMIT} per account)` : "—"}</span>}</span></td>
                       <td className="py-3 pr-4 text-[13.5px]">
-                        {a.error ? <span className="text-faint">—</span> : (
+                        {a.error || capped ? <span className="text-faint">—</span> : (
                           <span className="inline-flex items-center gap-2"><span className="size-2 rounded-full" style={{ background: failures ? TONE.red : TONE.green }} aria-hidden />{failures ? `${failures} failing` : "No failed runs"}</span>
                         )}
                       </td>

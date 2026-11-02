@@ -32,7 +32,7 @@ export interface AccountLook {
   icon: AccountIconName
 }
 
-const isIcon = (v: string | undefined): v is AccountIconName => !!v && v in ACCOUNT_ICONS
+const isIcon = (v: string | undefined): v is AccountIconName => !!v && Object.hasOwn(ACCOUNT_ICONS, v)
 const isColor = (v: string | undefined): v is string => !!v && /^#[0-9a-f]{6}$/i.test(v)
 
 /** A connection's chosen look, or a stable default from its position among same-provider connections. */
