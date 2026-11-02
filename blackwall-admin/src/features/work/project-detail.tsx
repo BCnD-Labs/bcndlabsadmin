@@ -48,7 +48,7 @@ export function ProjectDetail() {
         actions={<Button variant="ghost" onClick={() => openForm({ kind: "project", id })}><Pencil /> Edit</Button>}
       />
 
-      <Panel tool="project" command="links" bodyClassName="grid gap-4 px-3.5 py-3 lg:grid-cols-2">
+      <Panel tool="project" command="links" className="lg:max-w-3xl" bodyClassName="grid gap-4 px-3.5 py-3 lg:grid-cols-2">
         <section aria-label="Repositories" className="min-w-0">
           <div className="mb-1 flex items-center justify-between gap-2"><h3 className="bw-label">Repositories · {pRepos.length}</h3><Button size="icon-sm" variant="quiet" aria-label="Link a repository" onClick={newRepo}><Plus /></Button></div>
           {pRepos.length ? (

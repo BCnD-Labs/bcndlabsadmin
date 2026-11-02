@@ -29,7 +29,7 @@ Keep the five surface tokens, but use fewer visible layers within a section. Sof
 
 ## Typography, shape and density
 
-Sans is the default interface font (system stack); Appearance can select Mono. JetBrains Mono remains for terminal prompts, breadcrumbs, code, repository names and keys. Space Grotesk supplies page titles and large values; Silkscreen is reserved for the BW mark. Major titles are 24px/700 on desktop, 20px on phones, with a 26px line height. Body copy is typically 12–14px; small metadata is 10–11px. `.bw-label` is 10.5px/600 with `.07em` spacing and uppercase presentation.
+Sans is the default interface font (system stack); Appearance can select Mono. JetBrains Mono remains for terminal prompts, breadcrumbs, code, repository names and keys. Space Grotesk supplies page titles and large values; Silkscreen is reserved for the BW mark. Page titles are 22px/700 from `lg`, 24px on intermediate screens and 20px on phones, with a 26px line height. Home retains its 24px desktop greeting. Body copy is typically 12–14px; small metadata is 10–11px. `.bw-label` is 10.5px/600 with `.07em` spacing and uppercase presentation.
 
 Panels have 10px corners, controls generally 6–8px, and small square markers 1.5–2px. Keep 12px panel gaps and 12–14px content insets. Density describes content rather than forcing every row to one height:
 
@@ -40,6 +40,8 @@ Panels have 10px corners, controls generally 6–8px, and small square markers 1
 | Two-line | 48px or more | Title with metadata, coursework and activity rows |
 
 Button variants are 30px default, 32px `lg`, 26px `sm`, 22px `xs`, and 32/28/24px icon variants on desktop. Shared Buttons have a 32px minimum height and width below `md`; segmented phone buttons and Planner date buttons are also at least 32px. Form inputs normally use 36px, toolbar inputs 32px. Do not shrink global body text or reduce opacity to gain density.
+
+Desktop widgets use bounded widths instead of filling every available pixel. Stat strips size to their contents at about 160px per metric, constrained to the available width; desktop values are 18px and vertical padding is 8px. Learning cards target roughly 355px in a 1088px content area, project cards about 344px in 1056px, and Development fits its repository cards/history within 1120px. Site analytics is capped at 896px, Insights at 1024px, project associations at 768px, and CMS grids at 1120px. Spare canvas space is intentional. These limits apply from `lg`; Home/Planner keep their shared slot layout and phones retain their existing stacking. Course/project card titles use 14px desktop type, and course progress uses 24px rather than 30px.
 
 ## Panel, section and control hierarchy
 

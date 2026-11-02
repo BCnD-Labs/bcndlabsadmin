@@ -52,7 +52,7 @@ function WebsiteAnalytics() {
   const maxRef = Math.max(1, ...referrers.map((r) => r.visitors))
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 lg:max-w-4xl">
       <div className="flex flex-wrap items-center gap-2">
         {badge}
         <span className="text-[11px] text-muted-foreground">Last {range} days, ending yesterday</span>
@@ -64,7 +64,7 @@ function WebsiteAnalytics() {
           { label: "Pageviews", value: fmt.format(pageviews), sub: visitors ? `${(pageviews / visitors).toFixed(1)} pages per visit` : undefined },
         ]}
       />
-      <details className="bw-panel px-3.5 py-1">
+      <details className="bw-panel px-3.5 py-1 lg:max-w-[28rem]">
         <summary className="min-h-8 cursor-pointer content-center text-xs text-ink-2">Details</summary>
         <dl className="grid grid-cols-2 gap-4 py-2 text-xs text-muted-foreground">
           <div><dt>Days with visits</dt><dd className="mt-1 text-ink">{activeDays} / {range}</dd></div>
@@ -111,7 +111,7 @@ function PersonalAnalytics() {
   const total30 = s.completed.reduce((a, d) => a + d.count, 0)
 
   return (
-    <div className="grid gap-3 lg:grid-cols-12">
+    <div className="grid gap-3 lg:max-w-5xl lg:grid-cols-12">
       <StatStrip
         className="lg:col-span-12"
         items={[
@@ -124,7 +124,7 @@ function PersonalAnalytics() {
         ]}
       />
       <Panel tool="tasks" command="completed --30d" meta={`${total30} total`} className="lg:col-span-8" bodyClassName="px-3.5 py-3">
-        <CompletedChart data={s.completed} className="h-44" />
+        <CompletedChart data={s.completed} className="h-44 lg:h-36" />
       </Panel>
       <Panel tool="tasks" command="open --by-due" meta={open.length} className="lg:col-span-4" bodyClassName="px-3.5 py-3">
         {open.length ? (

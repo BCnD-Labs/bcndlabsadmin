@@ -63,7 +63,7 @@ function CourseCard({ course, items }: { course: Course; items: Task[] }) {
     <li className="flex">
       <Link
         to={courseHref(course.id)}
-        className="bw-panel group flex flex-1 flex-col gap-3 p-4 transition-colors duration-150 hover:bg-raised"
+        className="bw-panel group flex flex-1 flex-col gap-3 p-4 lg:gap-2 lg:p-3 transition-colors duration-150 hover:bg-raised"
         data-testid="course-card"
       >
         <span className={cn("absolute inset-x-0 top-0 h-[3px] rounded-t-[10px]", color.bar)} aria-hidden />
@@ -72,7 +72,7 @@ function CourseCard({ course, items }: { course: Course; items: Task[] }) {
           <span className={cn("ml-auto text-[11px]", status === "active" ? "text-ink-2" : "text-muted-foreground")}>{COURSE_STATUS_LABEL[status]}</span>
         </div>
         <div className="min-w-0">
-          <span className="block font-heading text-base leading-snug font-bold text-ink">{course.title}</span>
+          <span className="block font-heading text-base lg:text-sm leading-snug font-bold text-ink">{course.title}</span>
           <span className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
             {course.instructor && (
               <span className="inline-flex items-center gap-1">
@@ -217,7 +217,7 @@ export function LearningPage() {
           </EmptyState>
         </Panel>
       ) : (
-        <div className="grid gap-3">
+        <div className="grid gap-3 lg:max-w-[68rem]">
           <StatStrip
             items={[
               { label: "Courses in progress", value: counts.active, sub: counts.upcoming ? `${counts.upcoming} upcoming` : undefined },
@@ -230,7 +230,7 @@ export function LearningPage() {
             <section aria-label="Courses" className="grid gap-3 lg:col-span-2">
               <SegmentedTabs
                 label="Show courses"
-                className="w-full sm:w-auto sm:self-start"
+                className="w-full sm:w-auto sm:self-start lg:justify-self-start"
                 tabClassName="px-2 sm:px-3"
                 value={effective}
                 onChange={setFilter}

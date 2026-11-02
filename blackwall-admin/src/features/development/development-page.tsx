@@ -87,7 +87,7 @@ export function DevelopmentPage() {
           </>
         }
       />
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 lg:max-w-[70rem]">
         <StatStrip compactOnPhone
           items={[
             { label: "Repositories", value: repos.length, icon: <GitBranch className="size-3" aria-hidden /> },

@@ -156,7 +156,7 @@ function CourseInfo({ course, items }: { course: Course; items: Task[] }) {
     <Panel tool="course" command="info" meta={course.credits != null ? `${course.credits} credits` : undefined} bodyClassName="px-3.5 py-3">
       <div className="mb-3 grid gap-1.5 border-b border-line-soft pb-3.5">
         <div className="flex items-baseline justify-between">
-          <span className="font-heading text-3xl leading-none font-bold text-ink tabular-nums">{p.pct}%</span>
+          <span className="font-heading text-3xl lg:text-2xl leading-none font-bold text-ink tabular-nums">{p.pct}%</span>
           <span className="text-xs text-muted-foreground">
             {p.total ? `${p.done} of ${p.total} done` : "No coursework yet"}
             {p.overdue > 0 && <span className="ml-2 font-semibold text-amber">{p.overdue} overdue</span>}
@@ -328,7 +328,7 @@ export function CourseDetail() {
           </>
         }
       />
-      <div className="grid items-start gap-3 lg:grid-cols-3">
+      <div className="grid items-start gap-3 lg:max-w-[68rem] lg:grid-cols-3">
         <div className="lg:col-span-2">
           <Coursework course={course} items={items} />
         </div>

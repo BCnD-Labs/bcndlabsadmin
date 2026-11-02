@@ -79,7 +79,7 @@ export function ContentPage() {
           </>
         }
       />
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 lg:max-w-[70rem]">
         <StatStrip
           items={[
             { label: "Published", value: site.overview ? count("published") : <span className="text-faint">—</span> },

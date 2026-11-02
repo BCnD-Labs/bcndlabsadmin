@@ -90,7 +90,7 @@ export function Header() {
             <>
               <Breadcrumb items={items} />
               <div className="flex min-w-0 items-center gap-2.5">
-                <h1 className="min-w-0 truncate font-heading text-xl leading-[26px] font-bold sm:text-2xl">{head.title ?? items.at(-1)?.label}</h1>
+                <h1 className="min-w-0 truncate font-heading text-xl leading-[26px] font-bold sm:text-2xl lg:text-[22px]">{head.title ?? items.at(-1)?.label}</h1>
                 <span className="flex shrink-0 items-center gap-2">{head.badge}</span>
                 {head.subtitle && <span className="hidden min-w-0 truncate text-xs text-muted-foreground 2xl:inline">{head.subtitle}</span>}
               </div>

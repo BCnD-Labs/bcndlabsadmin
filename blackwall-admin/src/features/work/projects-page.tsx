@@ -25,7 +25,7 @@ export function ProjectsPage() {
         actions={<Button onClick={newProject}><Plus /> New project</Button>}
       />
       {sorted.length ? (
-        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 lg:max-w-[66rem]">
           {sorted.map((p) => {
             const counts = [
               [repos.filter((r) => r.projectId === p.id).length, "repos"],
@@ -41,7 +41,7 @@ export function ProjectsPage() {
                     <ProjectTag project={p} />
                     <span className="ml-auto"><ProjectStatusLabel status={p.status} /></span>
                   </div>
-                  <span className="font-heading text-base leading-snug font-bold">{p.name}</span>
+                  <span className="font-heading text-base lg:text-sm leading-snug font-bold">{p.name}</span>
                   <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">{p.description || "No description."}</p>
                   <dl className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line-soft pt-2.5 text-[11px] text-muted-foreground">
                     {counts.map(([n, label]) => (
