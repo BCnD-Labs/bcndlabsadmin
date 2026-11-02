@@ -1,6 +1,6 @@
 import { addDays, format, isToday } from "date-fns"
 import { ChevronLeft, ChevronRight, ListChecks, Pin, PinOff, Plus, Search, Star, StickyNote, X } from "lucide-react"
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -226,20 +226,8 @@ function DayColumn({ date, onDate }: { date: string; onDate: (d: string) => void
 
   const entry = useWorkspace((s) => s.journal.find((j) => j.id === date))
   const saveJournal = useWorkspace((s) => s.saveJournal)
-  const [text, setText] = useState(entry?.text ?? "")
-  const dirty = text !== (entry?.text ?? "")
-
-  // Saves shortly after typing stops, and when switching days.
-  useEffect(() => {
-    if (!dirty) return
-    const t = window.setTimeout(() => saveJournal(date, text), 600)
-    return () => window.clearTimeout(t)
-  }, [text, dirty, date, saveJournal])
-  const latest = useRef({ text, dirty })
-  useEffect(() => {
-    latest.current = { text, dirty }
-  })
-  useEffect(() => () => void (latest.current.dirty && saveJournal(date, latest.current.text)), [date, saveJournal])
+  const text = entry?.text ?? ""
+  const dirty = false
 
   return (
     <div id="day" className="flex min-w-0 scroll-mt-28 flex-col">
@@ -290,7 +278,7 @@ function DayColumn({ date, onDate }: { date: string; onDate: (d: string) => void
       <textarea
         id="planner-log"
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => saveJournal(date, e.target.value)}
         placeholder={isToday(day) ? "What happened today? What did you learn? What's next?" : `Write the log for ${format(day, "MMMM d")}…`}
         className="mx-3 mb-3 h-64 min-h-48 resize-y rounded-[8px] border border-transparent bg-panel px-3 py-2.5 text-base leading-relaxed text-ink outline-none placeholder:text-faint focus:border-rim md:text-[13px]"
       />

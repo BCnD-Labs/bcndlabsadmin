@@ -1,7 +1,7 @@
 import { useWorkspaceSync } from "@/services/workspace-sync"
 import { format } from "date-fns"
 import { CalendarClock, ExternalLink, FileX, ImagePlus, Loader2, Rocket, Trash2, Undo2, X } from "lucide-react"
-import { useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from "react"
+import { useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 import { joinUrl, renderPostPage, type SiteChrome } from "@shared/site"
@@ -55,36 +55,20 @@ function Editor({ draft }: { draft: Draft }) {
   const navigate = useNavigate()
   const site = useSite()
   const live = site.status === "live" && !!site.overview
-  const [value, setValue] = useState<Editable>(() => pick(draft))
+  const value = pick(draft)
   const [slugTouched, setSlugTouched] = useState(draft.slug !== slugify(draft.title) || !!draft.remoteSlug)
   const [tab, setTab] = useState<"write" | "preview">("write")
   const [confirmDelete, setConfirmDelete] = useState(false)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
 
-  const set = (patch: Partial<Editable>) =>
-    setValue((v) => {
-      const next = { ...v, ...patch }
-      if (patch.title !== undefined && !slugTouched) next.slug = slugify(patch.title) || "untitled"
-      return next
-    })
-
-  // Stage edits in the workspace; the sync service persists them to the server.
-  const dirty = JSON.stringify(value) !== JSON.stringify(pick(draft))
-  useEffect(() => {
-    if (!dirty) return
-    const t = window.setTimeout(() => update("drafts", draft.id, { ...value, slug: slugify(value.slug) || "untitled" }), 500)
-    return () => window.clearTimeout(t)
-  }, [value, dirty, draft.id, update])
-  const latest = useRef({ value, dirty })
-  useEffect(() => {
-    latest.current = { value, dirty }
-  })
-  useEffect(
-    () => () => {
-      if (latest.current.dirty) update("drafts", draft.id, { ...latest.current.value, slug: slugify(latest.current.value.slug) || "untitled" })
-    },
-    [draft.id, update],
-  )
+  // Put keystrokes in the workspace immediately. Only network saves are debounced,
+  // so incoming server updates cannot be mistaken for unsaved editor changes.
+  const set = (patch: Partial<Editable>) => {
+    const next = { ...value, ...patch }
+    if (patch.title !== undefined && !slugTouched) next.slug = slugify(patch.title) || "untitled"
+    update("drafts", draft.id, { ...next, slug: slugify(next.slug) || "untitled" })
+  }
+  const dirty = false
 
   // The current local copy, as the publish panel sees it.
   const current: Draft = { ...draft, ...value, slug: slugify(value.slug) || "untitled" }
