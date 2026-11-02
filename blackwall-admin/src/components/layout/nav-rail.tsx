@@ -245,7 +245,7 @@ export function NavRail({ focusMain }: { focusMain: () => void }) {
       data-testid="nav-rail"
       data-expanded={expanded}
       className={cn(
-        "bw-panel fixed top-3 bottom-3 left-3 z-40 hidden flex-col py-3.5 after:hidden md:flex",
+        "bw-navigation fixed top-3 bottom-3 left-3 z-40 hidden flex-col py-3.5 after:hidden md:flex",
         "transition-[width] duration-200 ease-bw motion-reduce:transition-none",
         expanded ? "w-[220px] px-2.5" : "w-[60px] items-center gap-2",
       )}

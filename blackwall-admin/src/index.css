@@ -227,14 +227,6 @@ html[data-theme="dark"] {
   --bw-settings-side: #0f1218;
   --bw-settings-card: #1a1f28;
 }
-/*
- * Height of one Home square. The Planner uses two of them plus the gap, so its
- * cards end exactly where Home's do.
- */
-:root {
-  --bw-slot-h: min(22rem, calc((100dvh - var(--bw-header-h, 92px) - 1.5rem) / 2));
-}
-
 /* Interface font: Settings → Appearance (Sans by default, Mono for the all-terminal look). */
 html[data-font="mono"] {
   --bw-ui-font: var(--font-mono);
@@ -306,7 +298,7 @@ html[data-font="mono"] {
   .bw-panel {
     position: relative;
     background: var(--bw-panel);
-    border-radius: 10px;
+    border-radius: 8px;
     border-style: solid;
     border-color: var(--bw-panel-colors);
     border-width: var(--bw-panel-borders);
@@ -448,4 +440,9 @@ html[data-font="mono"] {
     min-height: 32px;
     min-width: 32px;
   }
+}
+
+@layer components {
+  .bw-navigation { background: var(--bw-ground); border-right: 1px solid var(--bw-line-soft); }
+  .bw-app-header { background: var(--bw-ground); }
 }

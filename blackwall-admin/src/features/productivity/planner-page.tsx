@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/common/empty-state"
 import { ListGroupLabel } from "@/components/common/list"
 import { PageHeader } from "@/components/common/page-header"
-import { Panel, Prompt } from "@/components/common/panel"
+import { Panel } from "@/components/common/panel"
 import { SegmentedTabs } from "@/components/common/segmented-tabs"
 import { CourseTag } from "@/features/learning/coursework"
 import { noteColor, noteTitle } from "@/features/notes/note-colors"
@@ -66,10 +66,10 @@ export function PlannerPage() {
         title="Planner"
       />
       <div
-        className="grid grid-cols-1 gap-3 lg:h-[calc(var(--bw-slot-h)*2+0.75rem)] lg:min-h-[34.75rem] lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]"
+        className="grid grid-cols-1 items-start gap-3 lg:grid-cols-[minmax(0,1fr)_20rem]"
         data-testid="planner"
       >
-        <section aria-label="Notes and daily log" className="bw-panel order-2 grid min-h-[30rem] grid-cols-1 overflow-hidden md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:order-1 lg:min-h-0">
+        <section aria-label="Notes and daily log" className="bw-panel order-2 grid grid-cols-1 overflow-hidden md:grid-cols-[14rem_minmax(0,1fr)] lg:order-1">
           <NotesColumn />
           <DayColumn key={date} date={date} onDate={onDate} />
         </section>
@@ -87,7 +87,7 @@ export function PlannerPage() {
 
 /** A column header inside the shared card, the same height as a panel header. */
 function ColumnHeader({ children, className }: { children: ReactNode; className?: string }) {
-  return <header className={cn("flex h-[38px] md:h-8 shrink-0 items-center gap-1.5 border-b border-line-soft pr-2 pl-3.5 text-xs", className)}>{children}</header>
+  return <header className={cn("flex min-h-9 shrink-0 items-center gap-1.5 border-b border-line-soft pr-2 pl-3.5 text-xs", className)}>{children}</header>
 }
 
 function SearchBox({ value, onChange, label, onClose }: { value: string; onChange: (v: string) => void; label: string; onClose: () => void }) {
@@ -133,15 +133,13 @@ function NotesColumn() {
   return (
     <div id="notes" className="flex min-h-0 min-w-0 scroll-mt-28 flex-col border-b border-line md:border-r md:border-b-0">
       <ColumnHeader>
-        <h2 className="min-w-0 font-mono text-xs font-normal">
-          <Prompt tool="notes" command={q ? `grep "${q}"` : "ls"} />
-        </h2>
+        <h2 className="flex min-w-0 items-center gap-2 text-[13px] font-semibold"><span className="font-mono text-red" aria-hidden>❯</span>Notes</h2>
         <span className="ml-auto text-[11px] text-muted-foreground">{notes.length}</span>
         <Button variant="quiet" size="icon-sm" aria-label="Search notes" aria-pressed={searching} onClick={() => (searching ? closeSearch() : setSearching(true))}>
           <Search />
         </Button>
-        <Button variant="ghost" size="sm" onClick={() => openForm({ kind: "note" })}>
-          <Plus /> Note
+        <Button variant="quiet" size="icon-sm" aria-label="New note" onClick={() => openForm({ kind: "note" })}>
+          <Plus />
         </Button>
       </ColumnHeader>
       {searching && <SearchBox value={q} onChange={setQ} label="Search notes" onClose={closeSearch} />}
@@ -245,7 +243,7 @@ function DayColumn({ date, onDate }: { date: string; onDate: (d: string) => void
   useEffect(() => () => void (latest.current.dirty && saveJournal(date, latest.current.text)), [date, saveJournal])
 
   return (
-    <div id="day" className="flex min-h-[24rem] min-w-0 scroll-mt-28 flex-col md:min-h-0">
+    <div id="day" className="flex min-w-0 scroll-mt-28 flex-col">
       <ColumnHeader className="pl-1.5">
         <Button variant="quiet" size="icon-sm" aria-label="Previous day" onClick={() => onDate(toDateKey(addDays(day, -1)))}>
           <ChevronLeft />
@@ -295,7 +293,7 @@ function DayColumn({ date, onDate }: { date: string; onDate: (d: string) => void
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={isToday(day) ? "What happened today? What did you learn? What's next?" : `Write the log for ${format(day, "MMMM d")}…`}
-        className="mx-3 mb-3 min-h-48 flex-1 resize-none rounded-[8px] border border-transparent bg-panel px-3 py-2.5 text-base leading-relaxed text-ink outline-none placeholder:text-faint focus:border-rim md:text-[13px]"
+        className="mx-3 mb-3 h-64 min-h-48 flex-1 resize-y rounded-[8px] border border-transparent bg-panel px-3 py-2.5 text-base leading-relaxed text-ink outline-none placeholder:text-faint focus:border-rim md:text-[13px]"
       />
     </div>
   )
@@ -357,9 +355,10 @@ function TasksCard({ date }: { date: string }) {
   return (
     <Panel
       id="tasks"
+      title="Tasks"
       tool="tasks"
       command={tab}
-      className="min-h-[22rem] scroll-mt-28 lg:min-h-0 lg:flex-1"
+      className="scroll-mt-28"
       bodyClassName="flex min-h-0 flex-col"
       actions={
         <>
@@ -391,7 +390,7 @@ function TasksCard({ date }: { date: string }) {
         />
       </div>
       {searching && <SearchBox value={q} onChange={setQ} label="Search tasks" onClose={closeSearch} />}
-      <div id="planner-tasks-panel" role="tabpanel" aria-labelledby={`planner-tasks-tab-${tab}`} className={cn("min-h-0 flex-1 overflow-y-auto", searching && "mt-2")}>
+      <div id="planner-tasks-panel" role="tabpanel" aria-labelledby={`planner-tasks-tab-${tab}`} className={cn("max-h-80 min-h-0 overflow-y-auto", searching && "mt-2")}>
         {rows.length ? (
           groups.map((g) => (
             <section key={g.name ?? "done"} aria-label={g.name ?? "Completed"}>

@@ -25,12 +25,12 @@ function SlotMenu({ index, type }: { index: number; type: PanelType }) {
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label={`Slot ${index + 1}: choose what to show`}
-        className="bw-well flex h-[26px] min-w-[118px] items-center justify-between gap-2 rounded-[6px] px-2 text-xs text-ink-2 hover:border-ledge-hi aria-expanded:border-ledge-hi"
+        className="flex size-7 items-center justify-center rounded-[6px] text-ink-2 hover:bg-raised aria-expanded:bg-selected"
         // Don't start a header drag from the menu button.
         draggable={false}
         onDragStart={(e) => e.preventDefault()}
       >
-        {PANELS[type].label}
+        <span className="sr-only">{PANELS[type].label}</span>
         <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56 text-[13px]">
@@ -84,7 +84,7 @@ export function HomeSlot({
 
   return (
     <div
-      className={cn("relative flex min-w-0 flex-col md:h-[var(--bw-slot-h)] md:min-h-[17rem]", type !== "empty" && "min-h-[17rem]", dragFrom === index && "opacity-50")}
+      className={cn("relative flex min-w-0 flex-col", dragFrom === index && "opacity-50")}
       data-testid={`slot-${index + 1}`}
       data-type={type}
       onDragOver={(e) => {
@@ -108,11 +108,12 @@ export function HomeSlot({
       <Panel
         tool={def.tool}
         command={def.command}
+        title={{ productivity: "Today's work", coursework: "Upcoming coursework", calendar: "Calendar & agenda", development: "Development", website: "Website", empty: "Choose a panel" }[type]}
         meta={Meta && <Meta />}
         label={`Slot ${index + 1}: ${def.label}`}
         actions={<SlotMenu index={index} type={type} />}
         className="flex-1"
-        bodyClassName={cn("flex flex-col", def.bodyClassName)}
+        bodyClassName={cn("flex flex-col lg:max-h-[25rem] lg:overflow-y-auto", def.bodyClassName)}
         headerProps={{
           draggable: true,
           title: "Drag onto another square to swap",

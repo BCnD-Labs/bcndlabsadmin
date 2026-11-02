@@ -1,4 +1,4 @@
-import type { HTMLAttributes, ReactNode } from "react"
+import { useId, type HTMLAttributes, type ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
 /** The `❯ tool $ command` terminal prompt used in panel and card headers. */
@@ -28,6 +28,7 @@ export function Prompt({ tool, command, children }: { tool?: ReactNode; command?
 export function Panel({
   tool,
   command,
+  title,
   meta,
   badge,
   actions,
@@ -41,6 +42,8 @@ export function Panel({
 }: {
   tool?: ReactNode
   command?: ReactNode
+  /** Readable section heading; the command remains available as a tooltip. */
+  title?: string
   /** Small muted text on the right of the header. */
   meta?: ReactNode
   badge?: ReactNode
@@ -55,7 +58,8 @@ export function Panel({
   /** Accessible name when the header has no text title. */
   label?: string
 }) {
-  const headingId = id ? `${id}-title` : undefined
+  const generatedId = useId()
+  const headingId = id ? `${id}-title` : generatedId
   return (
     <section
       id={id}
@@ -66,13 +70,13 @@ export function Panel({
       <header
         {...headerProps}
         className={cn(
-          "flex min-h-[38px] md:min-h-8 shrink-0 flex-wrap items-center gap-2 border-b border-line-soft py-1 md:py-0 pr-2 pl-3.5 text-xs whitespace-nowrap text-muted-foreground",
+          "flex min-h-9 shrink-0 flex-wrap items-center gap-2 border-b border-line-soft py-1 pr-2 pl-3.5 text-xs whitespace-nowrap text-muted-foreground",
           headerClassName,
           headerProps?.className,
         )}
       >
-        <h2 id={headingId} className="min-w-0 font-mono text-xs font-normal">
-          <Prompt tool={tool} command={command} />
+        <h2 id={headingId} title={title ? [tool, command].filter((v) => typeof v === "string").join(" $ ") : undefined} className="min-w-0">
+          {title ? <span className="flex min-w-0 items-center gap-2 text-[13px] font-semibold text-ink"><span className="font-mono text-red" aria-hidden>❯</span><span className="truncate">{title}</span></span> : <Prompt tool={tool} command={command} />}
         </h2>
         {badge}
         <div className="ml-auto flex items-center gap-1.5">

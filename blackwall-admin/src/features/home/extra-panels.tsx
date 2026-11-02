@@ -52,7 +52,7 @@ export function HomeCalendarPanel() {
       <div className="flex min-h-0 min-w-0 flex-col">
         <h3 className="bw-label px-3 pt-2.5 pb-1">Due today · {due.length}</h3>
         {due.length ? (
-          <ul className="min-h-0 flex-1 overflow-y-auto">{due.map((t) => <TaskRow key={t.id} task={t} dense hideDate />)}</ul>
+          <ul className="max-h-60 min-h-0 overflow-y-auto">{due.map((t) => <TaskRow key={t.id} task={t} dense hideDate />)}</ul>
         ) : (
           <p className="px-3 text-[11px] text-muted-foreground">Nothing due today.</p>
         )}
@@ -91,7 +91,7 @@ export function HomeDevelopmentPanel() {
       </div>
       {data ? (
         items.length ? (
-          <ul className="min-h-0 flex-1 overflow-y-auto">
+          <ul className="max-h-60 min-h-0 overflow-y-auto">
             {items.map((it) => (
               <li key={it.id} className="flex min-h-10 items-center gap-2.5 border-b border-line-soft px-3 py-1.5 last:border-b-0">
                 {it.icon}
@@ -141,7 +141,7 @@ export function HomeWebsitePanel() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {items.length ? (
-        <ul className="min-h-0 flex-1 overflow-y-auto">
+        <ul className="max-h-60 min-h-0 overflow-y-auto">
           {items.map((i) => (
             <li key={i.key} className="border-b border-line-soft last:border-b-0">
               <Link to={i.draft ? draftHref(i.draft.id) : postsHref} className="flex items-center gap-2.5 px-3 py-1.5 hover:bg-raised">

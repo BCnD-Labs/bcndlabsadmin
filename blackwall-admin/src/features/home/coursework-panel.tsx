@@ -21,14 +21,14 @@ export function CourseworkPanel() {
   const items = tasks
     .filter((t) => t.courseId && courses.has(t.courseId) && !t.done && t.due && daysUntil(t.due) <= 14)
     .sort(compareCoursework)
-    .slice(0, 8)
+    .slice(0, 5)
 
   if (!courses.size) {
     return (
       <EmptyState
         icon={GraduationCap}
         title="No courses yet"
-        className="h-full"
+        className="items-start text-left"
         action={
           <Button variant="outline" asChild>
             <Link to={learningHref}>Go to Learning</Link>
@@ -40,9 +40,9 @@ export function CourseworkPanel() {
     )
   }
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex flex-col">
       {items.length ? (
-        <ul className="min-h-0 flex-1 overflow-y-auto">
+        <ul className="max-h-72 min-h-0 overflow-y-auto">
           {items.map((t) => (
             <CourseworkRow key={t.id} task={t} course={courses.get(t.courseId!)} showCourse />
           ))}

@@ -12,6 +12,7 @@ import { usePrefs } from "@/stores/prefs"
 import { useUi } from "@/stores/ui"
 import { Header } from "./header"
 import { MobileNav } from "./mobile-nav"
+import { SectionNav } from "./section-nav"
 import { NavRail } from "./nav-rail"
 
 export function AppShell() {
@@ -93,7 +94,8 @@ export function AppShell() {
         </div>
         {/* Fixed on the left; after the header in tab order. */}
         <NavRail focusMain={focusMain} />
-        <main id="main" ref={mainRef} tabIndex={-1} className="mx-auto w-full max-w-[1600px] pb-3 outline-none">
+        <main id="main" ref={mainRef} tabIndex={-1} className="mx-auto w-full max-w-[1280px] pb-3 outline-none">
+          <SectionNav />
           <Outlet />
         </main>
       </div>

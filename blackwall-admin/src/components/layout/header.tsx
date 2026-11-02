@@ -47,7 +47,7 @@ function Breadcrumb({ items }: { items: { label: string; to?: string }[] }) {
   )
 }
 
-/** Spec §3 header: a panel-styled bar with the date line and greeting (or breadcrumb), search, + New, calendar and bell. */
+/** Application header: a quiet bar with the date line and greeting (or breadcrumb), search, + New, calendar and bell. */
 export function Header() {
   const setMobileNavOpen = useUi((s) => s.setMobileNavOpen)
   const mobileNavOpen = useUi((s) => s.mobileNavOpen)
@@ -60,7 +60,7 @@ export function Header() {
   const items = crumbs(pathname, search)
 
   return (
-    <header className="bw-panel z-20 flex flex-col gap-2.5 py-2.5 pr-2.5 pl-3 md:flex-row md:items-center md:justify-between md:gap-3 md:pl-4">
+    <header className="bw-app-header mx-auto z-20 flex w-full max-w-[1280px] flex-col gap-2.5 border-b border-line-soft py-2 pr-0 pl-0 md:flex-row md:items-center md:justify-between md:gap-3">
       <div className="flex min-w-0 items-center gap-2 md:flex-1">
         {/* Small screens only; desktop has the rail. */}
         <Button

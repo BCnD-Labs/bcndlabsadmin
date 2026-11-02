@@ -77,7 +77,7 @@ export function ProductivityPanel({ slot }: PanelBodyProps) {
 
   return (
     <div className="grid flex-1 grid-cols-1 sm:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-      <div className="flex min-h-56 min-w-0 flex-col gap-[9px] border-b border-line pt-3 pr-3 pb-3.5 pl-3.5 sm:border-r sm:border-b-0">
+      <div className="flex min-w-0 flex-col gap-[9px] border-b border-line pt-3 pr-3 pb-3.5 pl-3.5 sm:border-r sm:border-b-0">
         <SegmentedTabs
           label="Task views"
           idBase={idBase}
@@ -104,7 +104,7 @@ export function ProductivityPanel({ slot }: PanelBodyProps) {
           id={`${idBase}-panel`}
           role="tabpanel"
           aria-labelledby={`${idBase}-tab-${tab}`}
-          className="-mx-1 min-h-0 flex-1 basis-0 overflow-y-auto px-1"
+          className="-mx-1 min-h-0 flex-1 max-h-52 overflow-y-auto px-1"
         >
           {rows.length ? (
             <ul className="flex flex-col">
@@ -166,7 +166,7 @@ export function ProductivityPanel({ slot }: PanelBodyProps) {
                   <button
                     type="button"
                     onClick={() => openForm({ kind: "note", id: n.id })}
-                    className="flex w-full flex-col gap-1 rounded-[8px] border-t border-r-[3px] border-b-[3px] border-l border-ledge bg-raised px-2.5 py-2 text-left hover:border-ledge-hi"
+                    className="flex w-full flex-col gap-1 rounded-[6px] border border-line-soft bg-raised/50 px-2.5 py-2 text-left hover:border-ledge-hi"
                     data-testid="prod-note"
                   >
                     <span className="flex w-full items-center justify-between gap-1.5">
