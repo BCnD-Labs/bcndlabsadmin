@@ -217,7 +217,7 @@ function WeekRow({ task, course, today }: { task: Task; course?: { id: string; c
 /** Matches the server's per-account cap in githubOverview (server/providers/github.ts). */
 const REPO_LIMIT = 10
 
-function lastDays(byDay: Record<string, number> | undefined, days: number) {
+export function lastDays(byDay: Record<string, number> | undefined, days: number) {
   const out: number[] = []
   const now = new Date()
   for (let i = days - 1; i >= 0; i--) out.push(byDay?.[toDateKey(subDays(now, i))] ?? 0)
@@ -225,7 +225,7 @@ function lastDays(byDay: Record<string, number> | undefined, days: number) {
 }
 
 /** 14-day commit bars in the account's color; the last 4 days at full strength (Ant Tiny.Column). */
-function Sparkline({ values, color }: { values: number[]; color: string }) {
+export function Sparkline({ values, color }: { values: number[]; color: string }) {
   const max = Math.max(1, ...values)
   const w = 8, gap = 3, h = 32
   return (

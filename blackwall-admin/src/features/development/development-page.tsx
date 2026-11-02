@@ -1,52 +1,27 @@
-import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
 import { addDays, format, isToday, isYesterday, startOfWeek } from "date-fns"
-import { CheckCircle2, CircleDot, ExternalLink, GitBranch, GitCommitHorizontal, GitPullRequest, Globe, Lock, Pencil, Plus, RotateCw, Star, XCircle } from "lucide-react"
+import { CheckCircle2, CircleDot, ExternalLink, GitBranch, GitCommitHorizontal, GitPullRequest, Globe, Lock, Pencil, Plus, RotateCw, XCircle } from "lucide-react"
 import { useMemo, useState, type ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { EmptyState } from "@/components/common/empty-state"
-import { FeedFallback, hasData } from "@/components/common/feed-fallback"
+import { FeedFallback } from "@/components/common/feed-fallback"
 import { PageHeader } from "@/components/common/page-header"
 import { PhoneDisclosure } from "@/components/common/phone-disclosure"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { Panel } from "@/components/common/panel"
 import { SourceBadge } from "@/components/common/source-badge"
-import { StatStrip } from "@/components/common/stat-strip"
 import { ProjectTag, StatusMarker } from "@/components/common/tags"
-import { ACTIVITY_ICON, CHECK_TONE } from "@/features/home/dev-attention"
+import { ACTIVITY_ICON } from "@/features/home/dev-attention"
 import { shortAgo, timeAgo, toDateKey } from "@/lib/dates"
 import type { RepoLink } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { useDevelopment } from "@/services/data"
+import { useGitHubAccounts, type GitHubAccountView } from "@/services/data"
+import { AccountAvatar, AccountChip, type AccountLook } from "@/components/accounts/account-appearance"
+import { Sparkline, lastDays } from "@/features/home/overview-panels"
 import type { DevelopmentOverview, RepoActivity, RepoSummary } from "@/services/types"
 import { useUi } from "@/stores/ui"
 import { useProjectMap, useWorkspace } from "@/stores/workspace"
 
-/** GitHub's own language colours, for the language bar. */
-const LANG_COLOR: Record<string, string> = {
-  TypeScript: "#3178c6",
-  JavaScript: "#f1e05a",
-  HTML: "#e34c26",
-  CSS: "#663399",
-  SCSS: "#c6538c",
-  Python: "#3572A5",
-  Shell: "#89e051",
-  Dockerfile: "#384d54",
-  Go: "#00ADD8",
-  Rust: "#dea584",
-  Java: "#b07219",
-  "C#": "#178600",
-  C: "#555555",
-  "C++": "#f34b7d",
-  Ruby: "#701516",
-  PHP: "#4F5D95",
-  Vue: "#41b883",
-  Svelte: "#ff3e00",
-  Astro: "#ff5a03",
-  MDX: "#fcb32c",
-  PLpgSQL: "#336790",
-}
-const langColor = (name: string) => LANG_COLOR[name] ?? "#8b949e"
 
 /** Commit counts → heatmap shade (GitHub-style greens, toned for the dark theme). */
 const SHADES = ["bg-off", "bg-green/30", "bg-green/50", "bg-green/75", "bg-green"]
@@ -58,9 +33,10 @@ const shade = (n: number, max: number) => (n <= 0 ? SHADES[0] : SHADES[Math.min(
  */
 export function DevelopmentPage() {
   const repos = useWorkspace((s) => s.repos)
-  const feed = useDevelopment()
+  const feed = useGitHubAccounts()
   const openForm = useUi((s) => s.openForm)
-  const data = hasData(feed) ? feed.data : undefined
+  const accounts = useMemo(() => feed.data ?? [], [feed.data])
+  const data = useMemo(() => mergeAccounts(accounts), [accounts])
   const track = () => openForm({ kind: "repo" })
 
   const reviews = data?.prs.filter((p) => p.kind === "review-requested").length ?? 0
@@ -69,6 +45,8 @@ export function DevelopmentPage() {
   const commits7 = sumSince(allDays, 7)
   const dash = <span className="text-faint">—</span>
   const single = repos.length <= 1
+  const accountOf = (fullName: string) => accounts.find((a) => a.repos.some((r) => r.toLowerCase() === fullName.toLowerCase()))
+  const failing = data?.failures[0]
 
   return (
     <>
@@ -88,46 +66,74 @@ export function DevelopmentPage() {
           </>
         }
       />
-      <WorkspaceGrid>
-        {repos.length > 0 && <GridItem span="full" className="max-sm:order-[-2]"><StatStrip compactOnPhone
-          items={[
-            { label: "Repositories", value: repos.length, icon: <GitBranch className="size-3" aria-hidden /> },
-            { label: "Commits, 30 days", value: data?.repos ? commits30 : dash, sub: data?.repos ? `${commits7} this week` : undefined, icon: <GitCommitHorizontal className="size-3" aria-hidden /> },
-            { label: "Open pull requests", value: data ? data.prs.length : dash, sub: data ? (reviews ? `${reviews} waiting on your review` : "none waiting on you") : undefined, icon: <GitPullRequest className="size-3" aria-hidden /> },
-            { label: "Failed Actions runs", value: data ? data.failures.length : dash, tone: data?.failures.length ? "error" : undefined, sub: data && !data.failures.length ? "latest runs passing" : undefined, icon: <XCircle className="size-3" aria-hidden /> },
-            { label: "Open issues", value: data ? data.issues.length : dash, icon: <CircleDot className="size-3" aria-hidden /> },
-          ]}
-        /></GridItem>}
-
-        <div className="contents">
-          {repos.length ? (
-            <ul className="contents" aria-label="Tracked repositories">
-              {repos.map((r) => (
-                <RepoCard key={r.id} repo={r} data={data} summary={data?.repos?.find((s) => s.repo.toLowerCase() === r.fullName.toLowerCase())} />
-              ))}
-            </ul>
-          ) : (
-            <GridItem span={2}><Panel category="development" title="Tracked repositories" tool="repos" command="ls">
-              <EmptyState roomy icon={GitBranch} title="No repositories tracked" action={<Button variant="outline" onClick={track}><Plus /> Track repository</Button>}>
-                Add the ones you work on; their commits, status and links show up here.
-              </EmptyState>
-            </Panel></GridItem>
-          )}
-          {repos.length > 0 && data?.repos && <GridItem span={2} rows={1}><PhoneDisclosure label="History · 26 weeks"><CommitHeatmap days={allDays} /></PhoneDisclosure></GridItem>}
-        </div>
-
-        {data ? (
-          <>
-            <GridItem span={2} rows={1} className="max-sm:order-[-1]"><Attention data={data} single={single} /></GridItem>
-            <GridItem span={2} rows={1}><PhoneDisclosure label="Recent commits"><Activity data={data} single={single} /></PhoneDisclosure></GridItem>
-          </>
-        ) : (
-          repos.length > 0 && <GridItem span={2}><Panel category="development" title="GitHub activity" tool="github" command="status">
-            <FeedFallback feed={feed} provider="github" what="commits, pull requests, failed runs and issues" />
-          </Panel></GridItem>
+      {/* Layout follows Ant Design's Statistic row + Card.Grid + Activity list (docs/design). */}
+      <div className="@container/main mx-auto grid w-full max-w-[var(--bw-page-max)] pb-6" style={{ gap: "var(--bw-grid-gap)" }}>
+        {repos.length > 0 && (
+          <section aria-label="Summary" className="grid grid-cols-2 @3xl/main:grid-cols-3 @6xl/main:grid-cols-5" style={{ gap: "var(--bw-grid-gap)" }}>
+            <StatCard label="Repositories" value={repos.length} sub={accounts.length > 1 ? `across ${accounts.length} accounts` : undefined} />
+            <StatCard label="Commits · 30 days" value={data?.repos ? commits30 : dash} sub={data?.repos ? `${commits7} this week` : undefined} />
+            <StatCard label="Open pull requests" value={data ? data.prs.length : dash} sub={data ? (reviews ? `${reviews} waiting on you` : "none waiting on you") : undefined} />
+            <StatCard label="Failed runs" value={data ? data.failures.length : dash} tone={data?.failures.length ? "error" : undefined} sub={data ? (failing ? `${shortRepo(failing.repo, single)} · ${failing.branch}` : "latest runs passing") : undefined} />
+            <StatCard label="Open issues" value={data ? data.issues.length : dash} />
+          </section>
         )}
-      </WorkspaceGrid>
+
+        <div className="grid grid-cols-1 items-start @5xl/main:grid-cols-[minmax(0,1fr)_25rem]" style={{ gap: "var(--bw-grid-gap)" }}>
+          <div className="grid min-w-0" style={{ gap: "var(--bw-grid-gap)" }}>
+            <Panel category="development" title="Repositories" subtitle={repos.length ? `${repos.length} tracked` : undefined} tool="repos" command="ls"
+              actions={repos.length ? <Button variant="outline" size="sm" onClick={track}><Plus /> Track repository</Button> : undefined}
+              bodyClassName="@container">
+              {repos.length ? (
+                <ul aria-label="Tracked repositories" className="grid grid-cols-1 gap-4 p-4 @lg:grid-cols-2 @3xl:grid-cols-3">
+                  {repos.map((r) => {
+                    const acct = accountOf(r.fullName)
+                    return <RepoCard key={r.id} repo={r} data={data} look={acct?.look} account={accounts.length > 1 ? acct?.label : undefined} summary={data?.repos?.find((s) => s.repo.toLowerCase() === r.fullName.toLowerCase())} />
+                  })}
+                </ul>
+              ) : (
+                <EmptyState roomy icon={GitBranch} title="No repositories tracked" action={<Button variant="outline" onClick={track}><Plus /> Track repository</Button>}>
+                  Add the ones you work on; their commits, status and links show up here.
+                </EmptyState>
+              )}
+            </Panel>
+            {data && <Attention data={data} single={single} />}
+          </div>
+          {data ? (
+            <PhoneDisclosure label="Recent commits"><Activity data={data} single={single} /></PhoneDisclosure>
+          ) : (
+            repos.length > 0 && <Panel category="development" title="GitHub activity" tool="github" command="status" bodyClassName="px-4 py-3">
+              <FeedFallback feed={feed} provider="github" what="commits, pull requests, failed runs and issues" />
+            </Panel>
+          )}
+        </div>
+        {repos.length > 0 && data?.repos && <PhoneDisclosure label="History · 26 weeks"><CommitHeatmap days={allDays} /></PhoneDisclosure>}
+      </div>
     </>
+  )
+}
+
+/** Every account's slice merged into one overview (a PR found by two searches counts once). */
+function mergeAccounts(accounts: GitHubAccountView[]): DevelopmentOverview | undefined {
+  const parts = accounts.flatMap((a) => (a.overview ? [a.overview] : []))
+  if (!parts.length) return undefined
+  const prs = new Map<string, DevelopmentOverview["prs"][number]>()
+  for (const p of parts.flatMap((o) => o.prs)) if (!prs.has(p.id)) prs.set(p.id, p)
+  return {
+    prs: [...prs.values()],
+    failures: parts.flatMap((o) => o.failures),
+    issues: parts.flatMap((o) => o.issues),
+    activity: parts.flatMap((o) => o.activity).sort((x, y) => y.at.localeCompare(x.at)),
+    repos: parts.flatMap((o) => o.repos ?? []),
+  }
+}
+
+function StatCard({ label, value, sub, tone }: { label: string; value: ReactNode; sub?: string; tone?: "error" }) {
+  return (
+    <div className="bw-panel min-w-0 px-4 py-3.5">
+      <p className="truncate text-[12.5px] text-muted-foreground">{label}</p>
+      <p className={cn("mt-1 font-heading text-[26px] leading-none font-semibold tabular-nums", tone === "error" ? "text-red-light" : "text-ink")}>{value}</p>
+      {sub && <p className="mt-1.5 truncate text-xs text-muted-foreground">{sub}</p>}
+    </div>
   )
 }
 
@@ -153,54 +159,10 @@ function Pill({ href, icon, children }: { href: string; icon: ReactNode; childre
   )
 }
 
-function LanguageBar({ languages }: { languages: RepoSummary["languages"] }) {
-  const total = languages.reduce((a, l) => a + l.bytes, 0)
-  if (!total) return null
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex h-1.5 overflow-hidden rounded-full bg-off" role="img" aria-label={languages.map((l) => `${l.name} ${Math.round((l.bytes / total) * 100)}%`).join(", ")}>
-        {languages.map((l) => (
-          <span key={l.name} style={{ width: `${(l.bytes / total) * 100}%`, background: langColor(l.name) }} className="h-full first:rounded-l-full last:rounded-r-full" />
-        ))}
-      </div>
-      <ul className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
-        {languages.slice(0, 4).map((l) => (
-          <li key={l.name} className="inline-flex items-center gap-1.5">
-            <span className="size-2 rounded-full" style={{ background: langColor(l.name) }} aria-hidden />
-            <span className="text-ink-2">{l.name}</span> {((l.bytes / total) * 100).toFixed(l.bytes / total < 0.1 ? 1 : 0)}%
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
 
-/** The last 30 days of commits as tiny bars. */
-function CommitSpark({ days }: { days: Record<string, number> }) {
-  const series = Array.from({ length: 30 }, (_, i) => {
-    const d = toDateKey(addDays(new Date(), i - 29))
-    return { d, n: days[d] ?? 0 }
-  })
-  const max = Math.max(1, ...series.map((s) => s.n))
-  const total = series.reduce((a, s) => a + s.n, 0)
-  return (
-    <div className="flex items-end gap-3">
-      <div className="flex h-8 flex-1 items-end gap-[2px]" role="img" aria-label={`${total} commits in the last 30 days`}>
-        {series.map((s) => (
-          <span key={s.d} title={`${format(new Date(`${s.d}T12:00`), "MMM d")}: ${s.n} ${s.n === 1 ? "commit" : "commits"}`} className={cn("flex-1 rounded-[1.5px]", s.n ? "bg-green/80" : "bg-off")} style={{ height: s.n ? `${Math.max(18, (s.n / max) * 100)}%` : "12%" }} />
-        ))}
-      </div>
-      <span className="shrink-0 text-right text-[11px] leading-tight text-muted-foreground">
-        <span className="block font-heading text-base font-bold text-ink tabular-nums">{total}</span>
-        commits · 30d
-      </span>
-    </div>
-  )
-}
 
-function RepoCard({ repo, data, summary }: { repo: RepoLink; data?: DevelopmentOverview; summary?: RepoSummary }) {
-  const phone = useMediaQuery("(max-width: 639px)")
-  const [details, setDetails] = useState(false)
+
+function RepoCard({ repo, data, summary, look, account }: { repo: RepoLink; data?: DevelopmentOverview; summary?: RepoSummary; look?: AccountLook; account?: string }) {
   const projects = useProjectMap()
   const openForm = useUi((s) => s.openForm)
   const same = (r: string) => r.toLowerCase() === repo.fullName.toLowerCase()
@@ -209,66 +171,54 @@ function RepoCard({ repo, data, summary }: { repo: RepoLink; data?: DevelopmentO
   const issues = data?.issues.filter((i) => same(i.repo)) ?? []
   const [owner, name] = repo.fullName.split("/")
   const tone = !data ? "off" : failures.length ? "error" : prs.some((p) => p.checks === "pending") ? "warn" : "ok"
-  const status = !data ? "Needs GitHub" : failures.length ? `${failures.length} failed ${failures.length === 1 ? "run" : "runs"}` : "Checks passing"
+  const status = !data ? "Needs GitHub" : failures.length ? `${failures.length} failed ${failures.length === 1 ? "run" : "runs"}` : "Passing"
+  const days = lastDays(summary?.commitsByDay, 14)
+  const total = days.reduce((x, y) => x + y, 0)
+  const langs = summary?.languages ?? []
+  const langBytes = langs.reduce((x, l) => x + l.bytes, 0) || 1
 
   return (
-    <li className="bw-grid-item bw-panel flex flex-col gap-2 overflow-y-auto p-2.5 sm:gap-3 sm:p-3.5" data-span="1" data-rows="1" data-testid="repo-card">
+    <li className="flex min-w-0 flex-col gap-3 rounded-xl bg-raised p-4" data-testid="repo-card">
       <div className="flex items-start gap-3">
-        <span className="hidden size-9 shrink-0 sm:flex items-center justify-center rounded-[9px] border border-line bg-well font-heading text-sm font-bold text-ink-2 uppercase">
-          {(name ?? repo.fullName).slice(0, 2)}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-            <a href={repo.url} target="_blank" rel="noreferrer" className="group/a inline-flex min-h-8 min-w-0 items-center sm:min-h-0 gap-1 text-sm font-semibold text-ink hover:underline">
-              <span className="truncate">{name ?? repo.fullName}</span>
-              <ExternalLink className="size-3 shrink-0 text-faint group-hover/a:text-ink-2" aria-label="opens GitHub" />
-            </a>
-            {summary && (
-              <span className="inline-flex h-[18px] items-center gap-1 rounded-full border border-line px-1.5 text-[10px] text-muted-foreground">
-                {summary.private ? <Lock className="size-2.5" aria-hidden /> : <Globe className="size-2.5" aria-hidden />}
-                {summary.private ? "Private" : "Public"}
-              </span>
-            )}
-          </div>
-          <p className="truncate text-[11px] text-faint">
-            <span className="font-mono">{owner}</span>
-            {summary && <> · {summary.defaultBranch}</>}
-            {summary && summary.stars > 0 && (
-              <span className="ml-1.5 inline-flex items-center gap-0.5"><Star className="size-2.5" aria-hidden /> {summary.stars}</span>
-            )}
-          </p>
-        </div>
-        {phone && <Button variant="quiet" size="sm" aria-expanded={details} aria-label={`Details for ${repo.fullName}`} onClick={() => setDetails(!details)}>Details {details ? "▾" : "▸"}</Button>}
-        <ProjectTag asLink project={repo.projectId ? projects.get(repo.projectId) : undefined} />
-        <Button variant="quiet" size="icon-xs" aria-label={`Edit ${repo.fullName}`} onClick={() => openForm({ kind: "repo", id: repo.id })}>
-          <Pencil />
-        </Button>
-      </div>
-
-      {(!phone || details) && <>
-        {summary?.description && <p className="-mt-1 line-clamp-2 text-xs text-muted-foreground">{summary.description}</p>}
-        {summary && summary.languages.length > 0 && <LanguageBar languages={summary.languages} />}
-        {summary && <CommitSpark days={summary.commitsByDay} />}
-      </>}
-
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:border-t border-line-soft sm:pt-2.5 text-[11px] text-muted-foreground">
-        <span className="inline-flex items-center gap-1.5">
-          <StatusMarker tone={tone} /> {status}
-        </span>
-        {data && (
-          <>
-            <span className="inline-flex items-center gap-1" title="Open pull requests"><GitPullRequest className="size-3" aria-hidden /> {prs.length}</span>
-            <span className="inline-flex items-center gap-1" title="Open issues"><CircleDot className="size-3" aria-hidden /> {issues.length}</span>
-          </>
+        {look ? <AccountAvatar look={look} size={38} label={account} /> : (
+          <span className="flex size-[38px] shrink-0 items-center justify-center rounded-full bg-selected font-heading text-xs font-bold text-ink-2 uppercase">{(name ?? repo.fullName).slice(0, 2)}</span>
         )}
-        {summary?.pushedAt && <span className="ml-auto">pushed {shortAgo(summary.pushedAt)} ago</span>}
+        <div className="min-w-0 flex-1">
+          <a href={repo.url} target="_blank" rel="noreferrer" className="group/a inline-flex max-w-full items-center gap-1 font-mono text-sm font-semibold text-ink hover:underline">
+            <span className="truncate">{name ?? repo.fullName}</span>
+            <ExternalLink className="size-3 shrink-0 text-faint group-hover/a:text-ink-2" aria-label="opens GitHub" />
+          </a>
+          <p className="line-clamp-2 text-xs text-muted-foreground">{summary?.description || <span className="font-mono">{owner}{summary ? ` · ${summary.defaultBranch}` : ""}</span>}</p>
+        </div>
+        <Button variant="quiet" size="icon-xs" aria-label={`Edit ${repo.fullName}`} onClick={() => openForm({ kind: "repo", id: repo.id })}><Pencil /></Button>
       </div>
-      {(!phone || details) && (repo.productionUrl || repo.previewUrl) && (
-        <div className="-mt-1 flex flex-wrap gap-1.5">
+      {summary && (
+        <div className="flex items-end justify-between gap-3">
+          <Sparkline values={days} color={look?.color ?? "#9aa0a6"} />
+          <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{total} commits · 14d</span>
+        </div>
+      )}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5 text-ink-2"><StatusMarker tone={tone} /> {status}</span>
+        {data && <span className="inline-flex items-center gap-1" title="Open pull requests"><GitPullRequest className="size-3" aria-hidden /> {prs.length}</span>}
+        {data && <span className="inline-flex items-center gap-1" title="Open issues"><CircleDot className="size-3" aria-hidden /> {issues.length}</span>}
+        {langs.length > 0 && <span className="ml-auto truncate">{langs.slice(0, 2).map((l) => `${l.name} ${Math.round((l.bytes / langBytes) * 100)}%`).join(" · ")}</span>}
+      </div>
+      {(account || repo.projectId || summary?.private !== undefined || repo.productionUrl || repo.previewUrl) && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {account && look && <AccountChip look={look} name={account} />}
+          {summary && (
+            <span className="inline-flex h-[20px] items-center gap-1 rounded-full bg-selected px-2 text-[11px] text-muted-foreground">
+              {summary.private ? <Lock className="size-2.5" aria-hidden /> : <Globe className="size-2.5" aria-hidden />}
+              {summary.private ? "Private" : "Public"}
+            </span>
+          )}
+          <ProjectTag asLink project={repo.projectId ? projects.get(repo.projectId) : undefined} />
           {repo.productionUrl && <Pill href={repo.productionUrl} icon={<Globe className="size-3 shrink-0" aria-hidden />}>{repo.productionUrl.replace(/^https?:\/\//, "")}</Pill>}
           {repo.previewUrl && <Pill href={repo.previewUrl} icon={<span className="text-[9px] font-bold text-faint">PRE</span>}>{repo.previewUrl.replace(/^https?:\/\//, "")}</Pill>}
         </div>
       )}
+      {summary?.pushedAt && <p className="-mt-1 text-[11px] text-faint">pushed {shortAgo(summary.pushedAt)} ago</p>}
     </li>
   )
 }
@@ -360,12 +310,7 @@ function Attention({ data, single }: { data: DevelopmentOverview; single: boolea
       title: p.title,
       meta: `${shortRepo(p.repo, single)}#${p.number} · ${p.author}`,
       url: p.url,
-      side: (
-        <span className="inline-flex items-center gap-1.5">
-          {p.checks !== "unknown" && <StatusMarker tone={CHECK_TONE[p.checks]} />}
-          {p.kind === "review-requested" ? "Review" : "Yours"}
-        </span>
-      ),
+      side: p.kind === "review-requested" ? <TonePill tone="blue">Review requested</TonePill> : p.checks === "failing" ? <TonePill tone="red">Checks failing</TonePill> : <TonePill tone="grey">Yours</TonePill>,
       rank: p.kind === "review-requested" ? 0 : 2,
       at: p.updatedAt,
     })),
@@ -379,7 +324,7 @@ function Attention({ data, single }: { data: DevelopmentOverview; single: boolea
       ),
       meta: `${shortRepo(f.repo, single)}@${f.commit}`.replace(/^@/, ""),
       url: f.url,
-      side: "Failed",
+      side: <TonePill tone="red">Failed run</TonePill>,
       rank: 1,
       at: f.failedAt,
     })),
@@ -389,7 +334,7 @@ function Attention({ data, single }: { data: DevelopmentOverview; single: boolea
       title: i.title,
       meta: `${shortRepo(i.repo, single)}#${i.number}${i.labels.length ? ` · ${i.labels.join(", ")}` : ""}`,
       url: i.url,
-      side: "Issue",
+      side: <TonePill tone="grey">Issue</TonePill>,
       rank: 3,
       at: i.updatedAt,
     })),
@@ -512,4 +457,10 @@ function Activity({ data, single }: { data: DevelopmentOverview; single: boolean
       )}
     </Panel>
   )
+}
+
+/** Flat Material tonal pill (same as Home's overview panels). */
+function TonePill({ tone, children }: { tone: "blue" | "red" | "grey"; children: ReactNode }) {
+  const c = { blue: ["#8ab4f8", "#4285f4"], red: ["#f28b82", "#ea4335"], grey: ["#bdc1c6", "#9aa0a6"] }[tone]
+  return <span className="inline-flex h-6 items-center rounded-full px-2.5 text-xs font-semibold whitespace-nowrap" style={{ color: c[0], background: `color-mix(in srgb, ${c[1]} 16%, transparent)` }}>{children}</span>
 }

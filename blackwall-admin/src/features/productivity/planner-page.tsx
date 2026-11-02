@@ -71,12 +71,14 @@ export function PlannerPage() {
           selected day's log. Right: calendar with tasks under it. The card matches the aside's
           height, which comes from its content, never a fixed unit. Narrow: aside first. */}
       <div className="@container/main mx-auto w-full max-w-[var(--bw-page-max)]">
-        <div className="grid grid-cols-1 gap-3 @4xl/main:grid-cols-[minmax(0,1fr)_23rem] @6xl/main:grid-cols-[minmax(0,1fr)_26rem]" data-testid="planner">
-          <section aria-label="Notes and daily log" className="bw-panel order-2 grid min-h-0 grid-cols-1 overflow-hidden @4xl/main:order-1 md:grid-cols-[14rem_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 @4xl/main:grid-cols-[minmax(0,1fr)_23rem] @6xl/main:grid-cols-[minmax(0,1fr)_24rem]" style={{ gap: "var(--bw-grid-gap)" }} data-testid="planner">
+          {/* One card, one title bar: the selected day with ‹ Today › (Ant Design Card title + extra). */}
+          <section aria-label="Notes and daily log" className="bw-panel order-2 grid min-h-0 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] overflow-hidden @4xl/main:order-1 md:grid-cols-[15rem_minmax(0,1fr)]">
+            <DayHeader date={date} onDate={onDate} />
             <NotesColumn />
-            <DayColumn key={date} date={date} onDate={onDate} />
+            <DayColumn key={date} date={date} />
           </section>
-          <div className="order-1 flex min-w-0 flex-col gap-3 @4xl/main:order-2">
+          <div className="order-1 flex min-w-0 flex-col @4xl/main:order-2" style={{ gap: "var(--bw-grid-gap)" }}>
             <section aria-label="Calendar" className="bw-panel flex shrink-0 flex-col overflow-hidden">
               <ColumnHeader category="calendar"><h2 className="min-w-0 text-[13px] font-semibold text-ink">Calendar</h2><span className="ml-auto" /></ColumnHeader>
               <div className="flex flex-col items-center gap-1.5 pt-1.5 pb-2.5">
@@ -145,18 +147,18 @@ function NotesColumn() {
 
   return (
     <div id="notes" className="flex min-h-0 min-w-0 scroll-mt-28 flex-col border-b border-line md:border-r md:border-b-0">
-      <ColumnHeader category="notes" windowButtons={false}>
-        <h2 className="min-w-0 text-[13px] font-semibold text-ink">Notes</h2>
-        <span className="ml-auto text-[11px] text-muted-foreground">{notes.length}</span>
+      <div className="flex shrink-0 items-center gap-1 px-3.5 pt-3 pb-1">
+        <h2 className="bw-label">Notes <span className="text-faint">· {notes.length}</span></h2>
+        <span className="ml-auto" />
         <Button variant="quiet" size="icon-sm" aria-label="Search notes" aria-pressed={searching} onClick={() => (searching ? closeSearch() : setSearching(true))}>
           <Search />
         </Button>
         <Button variant="quiet" size="icon-sm" aria-label="New note" onClick={() => openForm({ kind: "note" })}>
           <Plus />
         </Button>
-      </ColumnHeader>
+      </div>
       {searching && <SearchBox value={q} onChange={setQ} label="Search notes" onClose={closeSearch} />}
-      <div className="max-h-96 min-h-0 flex-1 overflow-y-auto py-1.5">
+      <div className="max-h-[28rem] min-h-0 flex-1 overflow-y-auto pb-2">
         {pinned.length + others.length === 0 ? (
           <EmptyState icon={StickyNote} title={q ? "No notes match" : "No notes yet"} className="py-8" action={!q && <Button variant="outline" size="sm" onClick={() => openForm({ kind: "note" })}><Plus /> Add a note</Button>}>
             {q ? "Try a different search." : "Pinned notes also show on Home."}
@@ -199,7 +201,7 @@ function NoteLine({ note }: { note: Note }) {
       <button
         type="button"
         onClick={() => openForm({ kind: "note", id: note.id })}
-        className={cn("flex h-8 w-full items-center gap-2.5 pl-3.5 text-left hover:bg-raised", note.links?.length ? "pr-[4.5rem]" : "pr-9")}
+        className={cn("flex h-10 w-full items-center gap-2.5 border-b border-line-soft pl-3.5 text-left hover:bg-raised", note.links?.length ? "pr-[4.5rem]" : "pr-9")}
         title={note.text.trim().slice(0, 300)}
       >
         <span className={cn("size-2 shrink-0 rounded-full", noteColor(note.color).swatch)} aria-hidden />
@@ -210,7 +212,7 @@ function NoteLine({ note }: { note: Note }) {
         {course && <CourseTag course={course} asLink={false} className="hidden h-4 px-1.5 text-[10px] xl:inline-flex" />}
         <span className="shrink-0 text-[10px] text-faint tabular-nums">{shortAgo(note.updatedAt)}</span>
       </button>
-      <DocLinksMenu links={note.links} className="absolute top-1 right-9" />
+      <DocLinksMenu links={note.links} className="absolute top-2 right-9" />
       <button
         type="button"
         aria-label={note.pinned ? `Unpin "${title}"` : `Pin "${title}"`}
@@ -220,7 +222,7 @@ function NoteLine({ note }: { note: Note }) {
           toast(note.pinned ? "Unpinned" : "Pinned to Home")
         }}
         className={cn(
-          "absolute top-1 right-2 flex size-6 items-center justify-center rounded-[6px] text-faint hover:bg-ledge hover:text-ink",
+          "absolute top-2 right-2 flex size-6 items-center justify-center rounded-[6px] text-faint hover:bg-ledge hover:text-ink",
           note.pinned ? "text-ink-2" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100",
         )}
       >
@@ -232,8 +234,31 @@ function NoteLine({ note }: { note: Note }) {
 
 /* -------------------------------------------------------------- daily log */
 
-/** The selected day: step through days, see what's due, and write its log. */
-function DayColumn({ date, onDate }: { date: string; onDate: (d: string) => void }) {
+/** Title bar for the Notes + log card: the selected day, saved state, and ‹ Today ›. */
+function DayHeader({ date, onDate }: { date: string; onDate: (d: string) => void }) {
+  const day = parseKey(date)
+  const entry = useWorkspace((s) => s.journal.find((j) => j.id === date))
+  return (
+    <ColumnHeader category="journal" className="md:col-span-2">
+      <h2 className="min-w-0 truncate font-sans text-sm font-semibold text-ink">
+        {format(day, "EEEE, MMM d")}
+        {day.getFullYear() !== new Date().getFullYear() && <span className="ml-1 font-normal text-muted-foreground">{format(day, "yyyy")}</span>}
+      </h2>
+      {isToday(day) && (
+        <span className="inline-flex h-5 items-center rounded-full px-2 text-[11px] font-semibold text-red-light" style={{ background: "color-mix(in srgb, var(--bw-red) 18%, transparent)" }}>Today</span>
+      )}
+      <span className="ml-auto hidden truncate pr-1 text-[11px] text-faint sm:inline" aria-live="polite" data-testid="log-state">
+        {entry ? `Saved ${timeAgo(entry.updatedAt)}` : ""}
+      </span>
+      <Button variant="quiet" size="icon-sm" aria-label="Previous day" onClick={() => onDate(toDateKey(addDays(day, -1)))}><ChevronLeft /></Button>
+      <Button variant="outline" size="xs" disabled={isToday(day)} onClick={() => onDate(todayKey())}>Today</Button>
+      <Button variant="quiet" size="icon-sm" aria-label="Next day" onClick={() => onDate(toDateKey(addDays(day, 1)))}><ChevronRight /></Button>
+    </ColumnHeader>
+  )
+}
+
+/** The selected day: what's due, and its log. */
+function DayColumn({ date }: { date: string }) {
   const day = parseKey(date)
   const tasks = useWorkspace((s) => s.tasks)
   const due = tasks.filter((t) => t.due === date && !t.done).sort((a, b) => (a.time ?? "99").localeCompare(b.time ?? "99") || compareTasks(a, b))
@@ -242,39 +267,14 @@ function DayColumn({ date, onDate }: { date: string; onDate: (d: string) => void
   const entry = useWorkspace((s) => s.journal.find((j) => j.id === date))
   const saveJournal = useWorkspace((s) => s.saveJournal)
   const text = entry?.text ?? ""
-  const dirty = false
 
   return (
-    <div id="day" className="flex min-h-0 min-w-0 flex-1 scroll-mt-28 flex-col">
-      <ColumnHeader category="journal">
-        <Button variant="quiet" size="icon-sm" aria-label="Previous day" onClick={() => onDate(toDateKey(addDays(day, -1)))}>
-          <ChevronLeft />
-        </Button>
-        <h2 className="min-w-0 truncate font-sans text-[13px] font-semibold text-ink">
-          {format(day, "EEEE, MMM d")}
-          {day.getFullYear() !== new Date().getFullYear() && <span className="ml-1 font-normal text-muted-foreground">{format(day, "yyyy")}</span>}
-        </h2>
-        <Button variant="quiet" size="icon-sm" aria-label="Next day" onClick={() => onDate(toDateKey(addDays(day, 1)))}>
-          <ChevronRight />
-        </Button>
-        {isToday(day) ? (
-          <span className="inline-flex h-5 items-center gap-1.5 rounded-full bg-ink-2/8 px-2 text-[10px] font-bold tracking-[0.03em] text-ink-2 uppercase">
-            <span className="size-1.5 rounded-[1.5px] bg-red" aria-hidden /> Today
-          </span>
-        ) : (
-          <Button variant="outline" size="xs" onClick={() => onDate(todayKey())}>
-            Today
-          </Button>
-        )}
-        <span className="ml-auto truncate pl-2 text-[10px] text-faint" aria-live="polite" data-testid="log-state">
-          {dirty ? "Saving…" : entry ? `Saved ${timeAgo(entry.updatedAt)}` : ""}
-        </span>
-      </ColumnHeader>
+    <div id="day" className="flex min-h-0 min-w-0 flex-1 scroll-mt-28 flex-col px-1">
       {(due.length > 0 || doneThatDay > 0) && (
-        <div className="shrink-0 border-b border-line">
+        <div className="shrink-0">
           {due.length > 0 && (
             <>
-              <h3 className="bw-label px-3 pt-2 pb-0.5">Due this day · {due.length}</h3>
+              <h3 className="bw-label px-3 pt-3 pb-0.5">Due this day <span className="text-faint">· {due.length}</span></h3>
               <ul className="max-h-40 overflow-y-auto">
                 {due.map((t) => (
                   <TaskRow key={t.id} task={t} dense hideDate />
@@ -289,13 +289,13 @@ function DayColumn({ date, onDate }: { date: string; onDate: (d: string) => void
           )}
         </div>
       )}
-      <label htmlFor="planner-log" className="bw-label px-3.5 pt-2.5 pb-1">Daily log</label>
+      <label htmlFor="planner-log" className="bw-label px-3 pt-3 pb-1.5">Daily log</label>
       <textarea
         id="planner-log"
         value={text}
         onChange={(e) => saveJournal(date, e.target.value)}
         placeholder={isToday(day) ? "What happened today? What did you learn? What's next?" : `Write the log for ${format(day, "MMMM d")}…`}
-        className="mx-3 mb-3 h-64 min-h-48 flex-1 resize-y rounded-[8px] border border-transparent bg-panel px-3 py-2.5 text-base leading-relaxed text-ink outline-none placeholder:text-faint focus:border-rim md:text-[13px]"
+        className="mx-3 mb-3.5 h-64 min-h-48 flex-1 resize-y rounded-[10px] border border-line bg-well px-3 py-2.5 text-base leading-relaxed text-ink outline-none placeholder:text-faint focus:border-rim md:text-[13px]"
       />
     </div>
   )
@@ -371,13 +371,13 @@ function TasksCard({ date }: { date: string }) {
           <Button variant="quiet" size="icon-sm" aria-label="Starred only" aria-pressed={starred} onClick={() => setStarred(!starred)}>
             <Star className={cn(starred && "fill-current text-amber")} />
           </Button>
-          <Button variant="ghost" size="sm" title={`New task, due ${dueLabel}`} onClick={add}>
+          <Button size="sm" title={`New task, due ${dueLabel}`} onClick={add}>
             <Plus /> Task
           </Button>
         </>
       }
     >
-      <div className="shrink-0 border-b border-line px-2.5 py-2">
+      <div className="shrink-0 px-2.5 pt-2.5 pb-1.5">
         <SegmentedTabs
           label="Task views"
           idBase="planner-tasks"
