@@ -32,7 +32,7 @@ export const PROJECT_DOT: Record<ProjectColor, string> = {
 
 export function ProjectTag({ project, className, asLink = false }: { project?: Project; className?: string; asLink?: boolean }) {
   if (!project) return null
-  const cls = cn("inline-flex h-5 max-w-full shrink-0 items-center gap-1.5 rounded-full bg-ink-2/8 px-2 text-[11px] font-medium text-ink-2", asLink && "hover:bg-selected hover:text-ink", className)
+  const cls = cn("inline-flex h-5 max-w-full shrink-0 items-center gap-1.5 rounded-full bg-ink-2/8 px-2 text-[11px] font-medium text-ink-2", asLink && "min-h-8 hover:bg-selected hover:text-ink md:min-h-0", className)
   const content = <><span className={cn("size-1.5 shrink-0 rounded-[1.5px]", PROJECT_DOT[project.color])} aria-hidden />{project.code}</>
   return asLink ? <Link to={projectHref(project.id)} className={cls} title={project.name}>{content}</Link> : <span className={cls} title={project.name}>{content}</span>
 }

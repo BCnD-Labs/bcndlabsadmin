@@ -98,7 +98,7 @@ export function DevelopmentPage() {
           ]}
         />}
 
-        <div className={cn("grid gap-3", data?.repos && "xl:grid-cols-[minmax(0,1fr)_auto]")}>
+        <div className={cn("grid items-start gap-3", data?.repos && "xl:grid-cols-[minmax(0,1fr)_auto]")}>
           {repos.length ? (
             <ul className={cn("grid content-start gap-3", repos.length > 1 && "sm:grid-cols-2")} aria-label="Tracked repositories">
               {repos.map((r) => (
@@ -116,7 +116,7 @@ export function DevelopmentPage() {
         </div>
 
         {data ? (
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+          <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
             <Attention data={data} single={single} />
             <PhoneDisclosure label="Recent commits"><Activity data={data} single={single} /></PhoneDisclosure>
           </div>
@@ -295,7 +295,7 @@ function CommitHeatmap({ days }: { days: Record<string, number> }) {
   const today = new Date()
 
   return (
-    <Panel title="Commit history" tool="git" command={`log --${weeks}w`} meta={`${total} commits · 26w total`} bodyClassName="flex flex-col gap-3 px-3.5 py-3">
+    <Panel className="sm:w-fit sm:max-w-full" title="Commit history" tool="git" command={`log --${weeks}w`} meta={`${total} commits · 26w total`} bodyClassName="flex flex-col gap-3 px-3.5 py-3">
       <div className="overflow-x-auto">
         {phone && <Button variant="outline" className="mb-2" onClick={() => setExpanded(!expanded)}>{expanded ? "Recent 12 weeks" : "Expand history"}</Button>}
         <p className="sr-only">Showing {weeks} weeks, ending this week</p>

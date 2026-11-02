@@ -19,7 +19,7 @@ export function Prompt({ tool, command, children }: { tool?: ReactNode; command?
 }
 
 /**
- * Major panel: theme surface, 10px radius and a 32px desktop prompt header.
+ * Major panel: theme surface, 8px radius and a readable heading in a 36px band.
  * Dark retains a subtle hardware ledge and optional scanlines.
  * (`❯ tool $ command      meta  actions`).
  *

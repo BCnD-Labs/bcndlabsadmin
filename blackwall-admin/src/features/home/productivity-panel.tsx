@@ -78,8 +78,8 @@ export function ProductivityPanel({ slot }: PanelBodyProps) {
   const idBase = `slot${slot}-tasks`
 
   return (
-    <div className="grid flex-1 grid-cols-1 sm:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-      <div className="flex min-w-0 flex-col gap-[9px] border-b border-line pt-3 pr-3 pb-3.5 pl-3.5 sm:border-r sm:border-b-0">
+    <div className="grid flex-1 grid-cols-1 @min-[30rem]:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+      <div className="flex min-w-0 flex-col gap-[9px] border-b border-line pt-3 pr-3 pb-3.5 pl-3.5 @min-[30rem]:border-r @min-[30rem]:border-b-0">
         <SegmentedTabs
           label="Task views"
           idBase={idBase}

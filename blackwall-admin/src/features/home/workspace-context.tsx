@@ -24,6 +24,8 @@ export function WorkspaceSummary() {
   )
 }
 
+const countLabel = (count: number, noun: string) => `${count} ${noun}${count === 1 ? "" : "s"}`
+
 /** Existing project associations and today's real log, reachable from the organizational overview. */
 export function WorkspaceContext() {
   const { projects, repos, drafts, journal } = useWorkspace()
@@ -37,7 +39,7 @@ export function WorkspaceContext() {
         {shown.length ? <ul className="grid divide-y divide-line-soft sm:grid-cols-2 sm:divide-x sm:divide-y-0">
           {shown.map((p) => <li key={p.id}><Link to={projectHref(p.id)} className="flex min-h-[72px] items-center gap-2.5 px-3.5 py-2 hover:bg-raised">
             <FolderKanban className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-            <span className="min-w-0 flex-1"><span className="block truncate text-[13px] font-medium">{p.name}</span><span className="block text-[11px] text-muted-foreground">{repos.filter((r) => r.projectId === p.id).length} repos · {drafts.filter((d) => d.projectId === p.id).length} drafts</span></span>
+            <span className="min-w-0 flex-1"><span className="block truncate text-[13px] font-medium">{p.name}</span><span className="block text-[11px] text-muted-foreground">{countLabel(repos.filter((r) => r.projectId === p.id).length, "repo")} · {countLabel(drafts.filter((d) => d.projectId === p.id).length, "draft")}</span></span>
             <ProjectStatusLabel status={p.status} /><ArrowUpRight className="size-3.5 shrink-0 text-faint" aria-hidden />
           </Link></li>)}
         </ul> : <p className="px-3.5 py-4 text-xs text-muted-foreground">Group related repositories and drafts into a project.</p>}

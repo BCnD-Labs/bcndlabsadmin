@@ -25,6 +25,7 @@ function SlotMenu({ index, type }: { index: number; type: PanelType }) {
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label={`Slot ${index + 1}: choose what to show`}
+        title="Choose or move this panel"
         className="flex size-7 items-center justify-center rounded-[6px] text-ink-2 hover:bg-raised aria-expanded:bg-selected"
         // Don't start a header drag from the menu button.
         draggable={false}
@@ -113,7 +114,7 @@ export function HomeSlot({
         label={`Slot ${index + 1}: ${def.label}`}
         actions={<SlotMenu index={index} type={type} />}
         className="flex-1"
-        bodyClassName={cn("flex flex-col lg:max-h-[25rem] lg:overflow-y-auto", def.bodyClassName)}
+        bodyClassName={cn("@container flex flex-col lg:max-h-[25rem] lg:overflow-y-auto", def.bodyClassName)}
         headerProps={{
           draggable: true,
           title: "Drag onto another square to swap",

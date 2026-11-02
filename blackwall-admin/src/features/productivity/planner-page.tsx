@@ -25,9 +25,8 @@ const VALID_DAY = /^\d{4}-\d{2}-\d{2}$/
 
 /**
  * Productivity → Planner. Left: one card with notes (a compact list) beside the
- * selected day's log. Right: the calendar with tasks under it. On wide screens
- * the page fits the window and each part scrolls on its own; narrower screens
- * stack them (calendar and tasks first).
+ * selected day's log. Right: the calendar with tasks under it. The writing area
+ * has a useful starting height and can be resized; lists have their own limits. Narrower screens stack them (calendar and tasks first).
  */
 export function PlannerPage() {
   const [params, setParams] = useSearchParams()
@@ -143,7 +142,7 @@ function NotesColumn() {
         </Button>
       </ColumnHeader>
       {searching && <SearchBox value={q} onChange={setQ} label="Search notes" onClose={closeSearch} />}
-      <div className="min-h-0 flex-1 overflow-y-auto py-1.5">
+      <div className="max-h-52 min-h-0 flex-1 overflow-y-auto py-1.5 md:max-h-96">
         {pinned.length + others.length === 0 ? (
           <EmptyState icon={StickyNote} title={q ? "No notes match" : "No notes yet"} className="py-8" action={!q && <Button variant="outline" size="sm" onClick={() => openForm({ kind: "note" })}><Plus /> Add a note</Button>}>
             {q ? "Try a different search." : "Pinned notes also show on Home."}
@@ -293,7 +292,7 @@ function DayColumn({ date, onDate }: { date: string; onDate: (d: string) => void
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={isToday(day) ? "What happened today? What did you learn? What's next?" : `Write the log for ${format(day, "MMMM d")}…`}
-        className="mx-3 mb-3 h-64 min-h-48 flex-1 resize-y rounded-[8px] border border-transparent bg-panel px-3 py-2.5 text-base leading-relaxed text-ink outline-none placeholder:text-faint focus:border-rim md:text-[13px]"
+        className="mx-3 mb-3 h-64 min-h-48 resize-y rounded-[8px] border border-transparent bg-panel px-3 py-2.5 text-base leading-relaxed text-ink outline-none placeholder:text-faint focus:border-rim md:text-[13px]"
       />
     </div>
   )

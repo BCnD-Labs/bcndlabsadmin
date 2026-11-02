@@ -1,4 +1,8 @@
 import { useState } from "react"
+import { Link } from "react-router-dom"
+import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/common/empty-state"
+import { plannerHref } from "@/lib/routes"
 import { useWorkspace } from "@/stores/workspace"
 import { GROUP_ORDER, groupOf } from "@/features/work/task-utils"
 import { CompletedChart, JournalHeatmap } from "./personal-charts"
@@ -109,6 +113,14 @@ function PersonalAnalytics() {
   const byGroup = GROUP_ORDER.map((g) => ({ g, n: open.filter((t) => groupOf(t) === g).length }))
   const maxGroup = Math.max(1, ...byGroup.map((b) => b.n))
   const total30 = s.completed.reduce((a, d) => a + d.count, 0)
+
+  if (!tasks.length && ![...s.logWords.values()].some(Boolean)) {
+    return <Panel title="Activity insights" tool="activity" command="overview" className="max-w-lg">
+      <EmptyState roomy title="Your activity will take shape here" action={<Button variant="outline" asChild><Link to={plannerHref}>Open Planner</Link></Button>}>
+        Add tasks or write a daily log to see your progress and patterns over time.
+      </EmptyState>
+    </Panel>
+  }
 
   return (
     <div className="grid gap-3 lg:max-w-5xl lg:grid-cols-12">

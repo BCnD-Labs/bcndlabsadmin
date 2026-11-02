@@ -45,8 +45,8 @@ export function HomeCalendarPanel() {
   const tasks = useWorkspace((s) => s.tasks)
   const due = tasks.filter((t) => !t.done && t.due === today).sort(compareTasks)
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-1 sm:grid-cols-[auto_minmax(0,1fr)]">
-      <div className="flex flex-col items-center gap-1 border-b border-line px-2 pt-1 pb-2 sm:border-r sm:border-b-0">
+    <div className="grid min-h-0 flex-1 grid-cols-1 @min-[30rem]:grid-cols-[auto_minmax(0,1fr)]">
+      <div className="flex flex-col items-center gap-1 border-b border-line px-2 pt-1 pb-2 @min-[30rem]:border-r @min-[30rem]:border-b-0">
         <JournalCalendar selected={today} onSelect={(d) => navigate(logHref(d))} />
         <CalendarLegend />
       </div>
