@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 import type { Category } from "@/components/common/category-icon"
 import { usePrefs } from "@/stores/prefs"
-import { CMS, DEVELOPMENT, PRODUCTIVITY, insightsHref, learningHref, mediaHref, plannerHref, postsHref, projectsHref, siteAnalyticsHref } from "@/lib/routes"
+import { CMS, DEVELOPMENT, MIKOSHI, PRODUCTIVITY, launcherHref, mikoshiStatusHref, mikoshiStorageHref, insightsHref, learningHref, mediaHref, plannerHref, postsHref, projectsHref, siteAnalyticsHref } from "@/lib/routes"
 
 export interface NavChild {
   label: string
@@ -53,6 +53,18 @@ export const NAV: NavDestination[] = [
       { label: "Website traffic", to: siteAnalyticsHref },
     ],
   },
+  {
+    id: "mikoshi",
+    label: "Mikoshi",
+    category: "mikoshi",
+    to: launcherHref,
+    match: MIKOSHI,
+    children: [
+      { label: "Launcher", to: launcherHref },
+      { label: "Status", to: mikoshiStatusHref },
+      { label: "Storage", to: mikoshiStorageHref },
+    ],
+  },
 ]
 
 export function isActive(dest: NavDestination, pathname: string) {
@@ -69,7 +81,7 @@ export function activeChild(dest: NavDestination, pathname: string, search = "")
   )
 }
 
-/** NAV with your own section names (Settings → Appearance → Sidebar); hidden sections are left out unless asked for. */
+/** NAV with your own section names (Settings → Sidebar); hidden sections are left out unless asked for. */
 export function useNav(includeHidden = false): NavDestination[] {
   const labels = usePrefs((s) => s.navLabels)
   const hidden = usePrefs((s) => s.navHidden)

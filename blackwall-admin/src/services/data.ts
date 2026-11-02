@@ -66,7 +66,7 @@ export function useDevelopment(): Feed<DevelopmentOverview> {
   const live = useLive<DevelopmentOverview>(usable ? `github/overview?repos=${encodeURIComponent(repos.join(","))}&connection=${encodeURIComponent(conn.id)}` : null, 120_000)
 
   const refresh = () => { void useConnections.getState().refresh(); live.refresh() }
-  if (selected && !conn) return { status: available === null ? "loading" : "error", error: available === false ? "Blackwall’s server is unavailable. Reconnect and retry." : "Your selected GitHub connection is unavailable. Choose a data source in Settings → Dashboard.", refresh }
+  if (selected && !conn) return { status: available === null ? "loading" : "error", error: available === false ? "Blackwall’s server is unavailable. Reconnect and retry." : "Your selected GitHub connection is unavailable. Choose a data source in Settings → Connections.", refresh }
   const source = conn ? `${conn.label}${conn.account ? ` · ${conn.account}` : ""}` : undefined
   if (usable) {
     if (live.error) return { status: "error", error: live.error, provider: source, refresh }
@@ -88,7 +88,7 @@ export function useAnalytics(range: TrafficRange): Feed<AnalyticsReport> {
   const live = useLive<AnalyticsReport>(usable ? `analytics/report?days=${range}&connection=${encodeURIComponent(conn.id)}` : null, 300_000)
   const provider = conn ? `${conn.label} · ${ANALYTICS_NAME[conn.config.provider] ?? "Analytics"}${conn.config.siteId ? ` · ${conn.config.siteId}` : ""}` : undefined
   const refresh = () => { void useConnections.getState().refresh(); live.refresh() }
-  if (selected && !conn) return { status: available === null ? "loading" : "error", error: available === false ? "Blackwall’s server is unavailable. Reconnect and retry." : "Your selected analytics connection is unavailable. Choose a data source in Settings → Dashboard.", refresh }
+  if (selected && !conn) return { status: available === null ? "loading" : "error", error: available === false ? "Blackwall’s server is unavailable. Reconnect and retry." : "Your selected analytics connection is unavailable. Choose a data source in Settings → Connections.", refresh }
 
   if (usable) {
     if (live.error) return { status: "error", error: live.error, provider, refresh }

@@ -3,7 +3,7 @@ import { usePrefs } from "@/stores/prefs"
 
 /**
  * Spec §4 auto-hide for floating cards: when a mouse leaves the open card, start
- * a timer (Settings → Appearance, default 5s) and retract the card's red countdown border;
+ * a timer (Settings → Notifications, default 5s) and retract the card's red countdown border;
  * re-entering cancels it. Call `disarm` whenever the card closes another way.
  */
 export function useAutoHide(open: boolean, close: () => void) {

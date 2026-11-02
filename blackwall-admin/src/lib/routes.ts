@@ -2,6 +2,10 @@
 export const PRODUCTIVITY = "/productivity"
 export const DEVELOPMENT = "/development"
 export const CMS = "/cms"
+export const MIKOSHI = "/mikoshi"
+export const launcherHref = MIKOSHI
+export const mikoshiStatusHref = `${MIKOSHI}/status`
+export const mikoshiStorageHref = `${MIKOSHI}/storage`
 
 /** Productivity → Planner holds tasks, the calendar with the daily log, and notes on one page. */
 export const plannerHref = PRODUCTIVITY

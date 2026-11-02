@@ -25,6 +25,7 @@ const ID_PREFIX: Record<GenericKey, string> = {
   repos: "rep",
   drafts: "drf",
   courses: "crs",
+  services: "svc",
 }
 
 interface WorkspaceState extends Collections {
@@ -41,7 +42,7 @@ interface WorkspaceState extends Collections {
   clearAll: () => void
 }
 
-const empty: Collections = { tasks: [], notes: [], journal: [], projects: [], repos: [], drafts: [], courses: [] }
+const empty: Collections = { tasks: [], notes: [], journal: [], projects: [], repos: [], drafts: [], courses: [], services: [] }
 const now = () => new Date().toISOString()
 
 export const useWorkspace = create<WorkspaceState>()(
@@ -134,6 +135,7 @@ export const useWorkspace = create<WorkspaceState>()(
         repos: s.repos,
         drafts: s.drafts,
         courses: s.courses,
+        services: s.services,
       }),
       migrate: (persisted, version) => migrateWorkspace(persisted as Record<string, unknown[]>, version),
     },

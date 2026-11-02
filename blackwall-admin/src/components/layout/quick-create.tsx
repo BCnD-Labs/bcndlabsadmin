@@ -6,8 +6,7 @@ import {
   GraduationCap,
   ListPlus,
   NotebookPen,
-  StickyNote,
-} from "lucide-react"
+  StickyNote,, Server } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import {
@@ -55,7 +54,7 @@ export function QuickCreate({ quiet = false }: { quiet?: boolean }) {
           <ClipboardList /> Assignment
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => openForm({ kind: "course" })}>
-          <GraduationCap /> Course
+          <GraduationCap /> Learning
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => navigate(draftHref(createDraft().id))}>
@@ -66,6 +65,9 @@ export function QuickCreate({ quiet = false }: { quiet?: boolean }) {
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => openForm({ kind: "repo" })}>
           <GitBranchPlus /> Repository link
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => openForm({ kind: "service" })}>
+          <Server /> Mikoshi service
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

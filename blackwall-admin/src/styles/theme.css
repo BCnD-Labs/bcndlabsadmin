@@ -314,6 +314,8 @@ html[data-font="mono"] {
 [data-category="website"], [data-category="analytics"], [data-category="cloudflare"] { --bw-category: #ff8a4d; }
 [data-category="azure"] { --bw-category: #5b8cff; }
 [data-category="notifications"] { --bw-category: #f5c542; }
+/* Mikoshi: the homelab's own phosphor green. */
+[data-category="mikoshi"] { --bw-category: #28b845; }
 /* Dark: Google Material brand hues, brighter and cleaner against the near-black ground. */
 html[data-theme="dark"] [data-category] { --bw-category: #4285f4; }
 html[data-theme="dark"] [data-category="learning"] { --bw-category: #a142f4; }

@@ -1,6 +1,6 @@
 import { create } from "zustand"
 import type { ProviderId } from "@shared/connections"
-import type { Course, Note, Project, RepoLink, Task } from "@/lib/types"
+import type { Course, Note, Project, RepoLink, Service, Task } from "@/lib/types"
 
 export type SettingsSection = "general" | "appearance" | "home" | "sidebar" | "notifications" | "connections" | "data" | "server" | "shortcuts" | "about"
 
@@ -11,6 +11,7 @@ export type FormRequest =
   | { kind: "project"; id?: string; defaults?: Partial<Project> }
   | { kind: "repo"; id?: string; defaults?: Partial<RepoLink> }
   | { kind: "course"; id?: string; defaults?: Partial<Course> }
+  | { kind: "service"; id?: string; defaults?: Partial<Service> }
 
 interface UiState {
   form: FormRequest | null

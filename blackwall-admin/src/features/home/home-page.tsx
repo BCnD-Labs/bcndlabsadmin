@@ -66,7 +66,7 @@ const MIME = "application/x-blackwall-block"
 /**
  * Home: every block from your saved layout, in order, at its width (narrow = one column,
  * wide = two, full = the row). Customize switches to edit mode: drag to reorder, change
- * width, hide, or bring hidden panels back. The same choices live in Settings → Dashboard.
+ * width, hide, or bring hidden panels back. The same choices live in Settings → Home.
  */
 export function HomePage() {
   const layout = usePrefs((s) => s.homeLayout)

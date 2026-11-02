@@ -1,4 +1,4 @@
-import type { Course, Draft, JournalEntry, Note, Project, RepoLink, Task } from "../src/lib/types.ts"
+import type { Course, Draft, JournalEntry, Note, Project, RepoLink, Service, Task } from "../src/lib/types.ts"
 
 export interface Collections {
   tasks: Task[]
@@ -8,20 +8,26 @@ export interface Collections {
   repos: RepoLink[]
   drafts: Draft[]
   courses: Course[]
+  services: Service[]
 }
-export const COLLECTION_KEYS = ["tasks", "notes", "journal", "projects", "repos", "drafts", "courses"] as const
-export const emptyWorkspace = (): Collections => ({ tasks: [], notes: [], journal: [], projects: [], repos: [], drafts: [], courses: [] })
+export const COLLECTION_KEYS = ["tasks", "notes", "journal", "projects", "repos", "drafts", "courses", "services"] as const
+/** Collections added after the first release: a snapshot written before them simply has none yet. */
+const LATER_KEYS: readonly (keyof Collections)[] = ["services"]
+export const emptyWorkspace = (): Collections => ({ tasks: [], notes: [], journal: [], projects: [], repos: [], drafts: [], courses: [], services: [] })
 export interface WorkspaceSnapshot { id: string; revision: number; data: Collections }
 
 /** Validate both imports and API writes before they can replace durable data. */
 export function validWorkspace(value: unknown): value is Collections {
   if (!value || typeof value !== "object") return false
   const data = value as Record<string, unknown>
+  // Older snapshots (server, browser cache or an export) predate these collections: they start empty.
+  for (const key of LATER_KEYS) if (data[key] === undefined) data[key] = []
   const required: Record<keyof Collections, string[]> = {
     tasks: ["title"], notes: ["text", "color"], journal: ["text"],
     projects: ["name", "code", "status", "description", "color"], repos: ["fullName", "url"],
     drafts: ["title", "slug", "kind", "status", "excerpt", "body"],
     courses: ["title", "code", "instructor", "instructorEmail", "term", "schedule", "location", "url", "description", "color"],
+    services: ["name", "url", "description", "group"],
   }
   return COLLECTION_KEYS.every((key) => {
     const rows = data[key]
@@ -38,14 +44,14 @@ export function validWorkspace(value: unknown): value is Collections {
         courses: { color: ["red", "amber", "teal", "blue", "violet", "green", "slate"] },
       }
       if (Object.entries(enums[key] ?? {}).some(([field, choices]) => !choices.includes(row[field]))) return false
-      const optionalStrings = ["details", "due", "time", "courseId", "learningType", "completedAt", "projectId", "connectionId", "productionUrl", "previewUrl", "notes", "cover", "coverAlt", "remoteSlug", "startDate", "endDate"]
+      const optionalStrings = ["details", "due", "time", "courseId", "learningType", "completedAt", "projectId", "connectionId", "productionUrl", "previewUrl", "notes", "cover", "coverAlt", "remoteSlug", "startDate", "endDate", "logo", "materialIcon"]
       if (optionalStrings.some((field) => row[field] != null && typeof row[field] !== "string")) return false
       if (row.links != null && (!Array.isArray(row.links) || row.links.length > 50 || !row.links.every((l: unknown) => !!l && typeof l === "object" && typeof (l as { label?: unknown }).label === "string" && typeof (l as { url?: unknown }).url === "string"))) return false
       if (row.tags != null && (!Array.isArray(row.tags) || !row.tags.every((tag: unknown) => typeof tag === "string"))) return false
       if (["credits", "score", "pagesRead", "pagesTotal"].some((field) => row[field] != null && (typeof row[field] !== "number" || !Number.isFinite(row[field])))) return false
       if (key === "courses" && row.kind != null && !["course", "certification", "selfpaced", "skill", "reading"].includes(row.kind)) return false
       if (key === "tasks" && (typeof row.done !== "boolean" || typeof row.starred !== "boolean")) return false
-      if (key === "notes" && typeof row.pinned !== "boolean") return false
+      if ((key === "notes" || key === "services") && typeof row.pinned !== "boolean") return false
       if (key === "courses" && (!Array.isArray(row.tags) || !row.tags.every((tag: unknown) => typeof tag === "string"))) return false
       return true
     })

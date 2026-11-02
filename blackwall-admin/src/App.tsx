@@ -12,6 +12,8 @@ import { SettingsRoute } from "@/features/settings/settings-route"
 import { ProjectDetail } from "@/features/work/project-detail"
 import { ProjectsPage } from "@/features/work/projects-page"
 import { PlannerPage } from "@/features/productivity/planner-page"
+import { LauncherPage } from "@/features/mikoshi/launcher-page"
+import { MikoshiStatusPage, MikoshiStoragePage } from "@/features/mikoshi/upcoming-pages"
 import { NotFound } from "@/components/layout/not-found"
 import { RouteError } from "@/components/layout/route-error"
 
@@ -64,6 +66,9 @@ const router = createBrowserRouter([
       { path: "cms/drafts/:id", element: <Moved from="/cms/drafts" to="/cms/posts" /> },
       { path: "cms/media", element: <MediaPage /> },
       { path: "cms/analytics", element: <SiteAnalyticsPage /> },
+      { path: "mikoshi", element: <LauncherPage /> },
+      { path: "mikoshi/status", element: <MikoshiStatusPage /> },
+      { path: "mikoshi/storage", element: <MikoshiStoragePage /> },
       // Old addresses (bookmarks, links in notes).
       { path: "work/*", element: <Moved from="/work" to="/productivity" /> },
       { path: "work", element: <Navigate to="/productivity" replace /> },

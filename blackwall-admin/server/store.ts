@@ -25,6 +25,9 @@ export abstract class ConnectionStore {
   abstract listSchedules(): Promise<ScheduledPost[]>
   abstract putSchedule(s: ScheduledPost): Promise<void>
   abstract deleteSchedule(slug: string): Promise<boolean>
+  /** Service logos (Mikoshi launcher): an SVG copy kept so tiles work without the CDN. */
+  abstract getIcon(slug: string): Promise<string | undefined>
+  abstract putIcon(slug: string, svg: string): Promise<void>
 
   list() {
     return this.all()
@@ -85,7 +88,7 @@ export abstract class ConnectionStore {
 /** Development backend: `.blackwall/connections.json` next to the app (gitignored, mode 600). */
 export class FileConnectionStore extends ConnectionStore {
   readonly where: string
-  private data: { version: 1; connections: StoredConnection[]; schedules?: ScheduledPost[] }
+  private data: { version: 1; connections: StoredConnection[]; schedules?: ScheduledPost[]; icons?: Record<string, string> }
 
   constructor(root: string) {
     super()
@@ -129,6 +132,15 @@ export class FileConnectionStore extends ConnectionStore {
     if (this.data.schedules.length === before) return false
     this.flush()
     return true
+  }
+
+  async getIcon(slug: string) {
+    return this.data.icons?.[slug]
+  }
+
+  async putIcon(slug: string, svg: string) {
+    this.data.icons = { ...(this.data.icons ?? {}), [slug]: svg }
+    this.flush()
   }
 
   private flush() {

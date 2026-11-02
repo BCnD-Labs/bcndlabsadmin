@@ -116,6 +116,25 @@ export interface Draft {
   updatedAt: Timestamp
 }
 
+/** A launcher tile on the Mikoshi page: a link to one self-hosted service. */
+export interface Service {
+  id: ID
+  name: string
+  url: string
+  /** "Containers", "Files": what it is, one or two words. */
+  description: string
+  /** The section it sits in, e.g. "Infrastructure". */
+  group: string
+  /** dashboard-icons slug (e.g. `portainer`); the server keeps a copy. Empty = Material icon. */
+  logo?: string
+  /** Material Symbols name used when there's no logo, e.g. `dns`. */
+  materialIcon?: string
+  /** Big tile in the row at the top. */
+  pinned: boolean
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+
 /** What a piece of coursework is. All of them are tasks, so they share the calendar and Tasks. */
 export type LearningItemType = "assignment" | "exam" | "milestone" | "event"
 

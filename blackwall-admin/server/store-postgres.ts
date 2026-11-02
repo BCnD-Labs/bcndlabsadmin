@@ -36,6 +36,11 @@ const MIGRATIONS = [
      data jsonb NOT NULL,
      updated_at timestamptz NOT NULL DEFAULT now()
    )`,
+  `CREATE TABLE IF NOT EXISTS icons (
+     slug       text PRIMARY KEY,
+     svg        text NOT NULL,
+     fetched_at timestamptz NOT NULL DEFAULT now()
+   )`,
 ]
 
 interface Row {
@@ -163,6 +168,15 @@ export class PostgresConnectionStore extends ConnectionStore {
   async deleteSchedule(slug: string) {
     const r = await this.pool.query("DELETE FROM scheduled_posts WHERE slug = $1", [slug])
     return (r.rowCount ?? 0) > 0
+  }
+
+  async getIcon(slug: string) {
+    const { rows } = await this.pool.query<{ svg: string }>("SELECT svg FROM icons WHERE slug = $1", [slug])
+    return rows[0]?.svg
+  }
+
+  async putIcon(slug: string, svg: string) {
+    await this.pool.query("INSERT INTO icons (slug, svg) VALUES ($1, $2) ON CONFLICT (slug) DO UPDATE SET svg = EXCLUDED.svg, fetched_at = now()", [slug, svg])
   }
 
   private fromRow(r: Row): StoredConnection {

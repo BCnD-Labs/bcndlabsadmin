@@ -1,6 +1,7 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { useUi } from "@/stores/ui"
 import { CourseForm } from "./course-form"
+import { ServiceForm } from "@/features/mikoshi/service-form"
 import { NoteForm } from "./note-form"
 import { ProjectForm } from "./project-form"
 import { RepoForm } from "./repo-form"
@@ -20,6 +21,7 @@ export function FormHost() {
         {form?.kind === "project" && <ProjectForm key={key} id={form.id} defaults={form.defaults} onDone={close} />}
         {form?.kind === "repo" && <RepoForm key={key} id={form.id} defaults={form.defaults} onDone={close} />}
         {form?.kind === "course" && <CourseForm key={key} id={form.id} defaults={form.defaults} onDone={close} />}
+        {form?.kind === "service" && <ServiceForm key={key} id={form.id} defaults={form.defaults} onDone={close} />}
       </DialogContent>
     </Dialog>
   )

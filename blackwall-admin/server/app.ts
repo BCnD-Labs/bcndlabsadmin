@@ -11,6 +11,7 @@ import { SLUG_RE, cleanPost, type ScheduledPost, type SitePost } from "../shared
 import { testConnection } from "./providers/index.ts"
 import { toPublic, type ConnectionStore } from "./store.ts"
 import { validWorkspace } from "../shared/workspace.ts"
+import { serviceIcon } from "./icons.ts"
 import type { WorkspaceStore } from "./workspace.ts"
 import type { System } from "./system.ts"
 
@@ -96,7 +97,7 @@ function validInput(body: Partial<ConnectionInput>, partial = false): Connection
 async function feedConnection(store: ConnectionStore, provider: "github" | "analytics", id: string | null) {
   if (!id) return store.firstOk(provider)
   const connection = await store.get(id)
-  if (!connection || connection.provider !== provider) throw new ProviderError("The selected data source is unavailable. Choose another in Settings → Dashboard.", 409)
+  if (!connection || connection.provider !== provider) throw new ProviderError("The selected data source is unavailable. Choose another in Settings → Connections.", 409)
   if (connection.status !== "ok") throw new ProviderError("The selected data source needs attention. Test it in Settings → Connections.", 409)
   return connection
 }
@@ -203,6 +204,12 @@ export function createApi(opts: ApiOptions) {
         return send(res, 200, saved)
       }
       return send(res, 405, { error: "Method not allowed" })
+    }
+
+    // --- service logos (Mikoshi launcher) ---------------------------------------
+    if (parts[0] === "icons" && parts.length === 2 && method === "GET") {
+      const result = await serviceIcon(store, parts[1])
+      return "svg" in result ? send(res, 200, result, { "Cache-Control": "private, max-age=86400" }) : send(res, result.status, { error: result.error })
     }
 
     // --- health & backups ------------------------------------------------------
