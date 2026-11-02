@@ -3,6 +3,7 @@ import { useUi } from "@/stores/ui"
 import { CourseForm } from "./course-form"
 import { ServiceForm } from "@/features/mikoshi/service-form"
 import { NewPageForm, NewSiteForm, SiteFormForm } from "@/features/cms/cms-forms"
+import { SocialAccountForm } from "@/features/social/social-ui"
 import { NoteForm } from "./note-form"
 import { ProjectForm } from "./project-form"
 import { RepoForm } from "./repo-form"
@@ -26,6 +27,7 @@ export function FormHost() {
         {form?.kind === "site" && <NewSiteForm key={key} onDone={close} />}
         {form?.kind === "sitePage" && <NewPageForm key={key} onDone={close} />}
         {form?.kind === "siteForm" && <SiteFormForm key={key} id={form.id} onDone={close} />}
+        {form?.kind === "socialAccount" && <SocialAccountForm key={key} id={form.id} onDone={close} />}
       </DialogContent>
     </Dialog>
   )

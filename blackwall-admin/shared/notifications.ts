@@ -4,7 +4,7 @@
  * the same feed. Settings → Notifications chooses channels per event.
  */
 export type NotifyChannel = "bell" | "ntfy" | "email"
-export type NotifyGroup = "server" | "dev" | "work" | "site"
+export type NotifyGroup = "server" | "dev" | "work" | "site" | "social"
 
 export interface NotifyEventDef {
   id: string
@@ -15,7 +15,7 @@ export interface NotifyEventDef {
   defaults: NotifyChannel[]
 }
 
-export const NOTIFY_GROUP_LABEL: Record<NotifyGroup, string> = { server: "Services & server", dev: "GitHub", work: "Due work", site: "Website" }
+export const NOTIFY_GROUP_LABEL: Record<NotifyGroup, string> = { server: "Services & server", dev: "GitHub", work: "Due work", site: "Website", social: "Social" }
 
 export const NOTIFY_EVENTS: NotifyEventDef[] = [
   { id: "service.down", group: "server", label: "Service went down", description: "A Mikoshi launcher service stopped answering (two checks in a row).", defaults: ["bell", "ntfy"] },
@@ -32,6 +32,7 @@ export const NOTIFY_EVENTS: NotifyEventDef[] = [
   { id: "site.submission", group: "site", label: "Form message", description: "Someone sent a form on one of your sites (after confirming their email, when that's on).", defaults: ["bell", "ntfy"] },
   { id: "site.comment", group: "site", label: "New comment to approve", description: "A comment is waiting in Website → Forms. It shows on the site once you approve it and publish.", defaults: ["bell"] },
   { id: "site.subscriber", group: "site", label: "Newsletter sign-up", description: "Someone signed up for your newsletter (MailerLite sends them the confirmation).", defaults: ["bell"] },
+  { id: "social.due", group: "social", label: "Time to post", description: "A scheduled social post's time has come. Tap to open its copy-ready kit.", defaults: ["bell", "ntfy"] },
   { id: "site.published", group: "site", label: "Scheduled post published", description: "A post you scheduled went live.", defaults: ["bell"] },
   { id: "site.failed", group: "site", label: "Scheduled post failed", description: "A scheduled post couldn't publish (Blackwall keeps retrying).", defaults: ["bell", "ntfy", "email"] },
 ]

@@ -29,6 +29,8 @@ const ID_PREFIX: Record<GenericKey, string> = {
   sites: "sit",
   pages: "pag",
   forms: "frm",
+  socialAccounts: "sac",
+  socialPosts: "spo",
 }
 
 interface WorkspaceState extends Collections {
@@ -45,7 +47,7 @@ interface WorkspaceState extends Collections {
   clearAll: () => void
 }
 
-const empty: Collections = { tasks: [], notes: [], journal: [], projects: [], repos: [], drafts: [], courses: [], services: [], sites: [], pages: [], forms: [] }
+const empty: Collections = { tasks: [], notes: [], journal: [], projects: [], repos: [], drafts: [], courses: [], services: [], sites: [], pages: [], forms: [], socialAccounts: [], socialPosts: [] }
 const now = () => new Date().toISOString()
 
 export const useWorkspace = create<WorkspaceState>()(
@@ -87,6 +89,10 @@ export const useWorkspace = create<WorkspaceState>()(
         if (key === "sites") {
           next.pages = state.pages.filter((p) => p.siteId !== id)
           next.drafts = state.drafts.map((d) => (d.siteId === id ? { ...d, siteId: undefined } : d))
+        }
+        // Deleting a social account takes it off posts (they keep their other accounts).
+        if (key === "socialAccounts") {
+          next.socialPosts = state.socialPosts.map((p) => (p.accountIds.includes(id) || p.posted.some((x) => x.accountId === id) ? { ...p, accountIds: p.accountIds.filter((a) => a !== id), posted: p.posted.filter((x) => x.accountId !== id) } : p))
         }
         set(next)
       },
@@ -147,6 +153,8 @@ export const useWorkspace = create<WorkspaceState>()(
         sites: s.sites,
         pages: s.pages,
         forms: s.forms,
+        socialAccounts: s.socialAccounts,
+        socialPosts: s.socialPosts,
       }),
       migrate: (persisted, version) => migrateWorkspace(persisted as Record<string, unknown[]>, version),
     },

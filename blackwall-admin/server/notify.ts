@@ -23,6 +23,8 @@ interface Memory {
   digestDay?: string
   examsSent: string[]
   siteFailed: string[]
+  /** Social posts already reminded about ("id@scheduledAt"). */
+  socialSent?: string[]
   updateTree?: string
   updateAt?: number
   /** Last delivery problem per channel, shown in Settings → Notifications. */
@@ -104,7 +106,8 @@ export class Notifier {
   async emit(event: string, m: Outgoing, opts: { force?: NotifyChannel[] } = {}): Promise<NotifyChannel[]> {
     const def = NOTIFY_EVENTS.find((e) => e.id === event)
     const channels = opts.force ?? channelsFor(await this.settings(), event)
-    const url = m.url ?? this.d.baseUrl
+    // Links like "/cms/forms" become full addresses for pushes and emails.
+    const url = m.url?.startsWith("/") ? (this.d.baseUrl ? `${this.d.baseUrl}${m.url}` : undefined) : (m.url ?? this.d.baseUrl)
     const sent: NotifyChannel[] = []
     if (channels.includes("bell")) {
       const item: FeedItem = { id: randomUUID(), event, group: def?.group ?? "server", title: m.title, body: m.body, url: m.url, at: new Date(this.now()).toISOString(), read: false }
@@ -140,6 +143,7 @@ export class Notifier {
       await this.watchConnections()
       await this.watchGitHub(ws)
       await this.dailyWork(ws, settings)
+      await this.watchSocial(ws)
       await this.watchUpdates()
       await this.saveMem()
     } finally {
@@ -263,6 +267,24 @@ export class Notifier {
         await this.emit("work.exam_soon", { title: `${c.title} exam ${left === 1 ? "tomorrow" : "in a week"}`, body: `Your ${c.title} exam is on ${c.endDate}.`, url: this.d.baseUrl ? `${this.d.baseUrl}/productivity/learning/${c.id}` : undefined, priority: 4, tags: ["mortar_board"] })
       }
     }
+  }
+
+  /** A scheduled social post's time came and it isn't posted everywhere yet: remind once. Long-past ones are skipped quietly. */
+  private async watchSocial(ws: Collections) {
+    const mem = await this.mem()
+    const sent = new Set(mem.socialSent ?? [])
+    const now = this.now()
+    for (const p of ws.socialPosts ?? []) {
+      if (!p.scheduledAt || Date.parse(p.scheduledAt) > now) continue
+      const key = `${p.id}@${p.scheduledAt}`
+      if (sent.has(key)) continue
+      sent.add(key)
+      const left = p.accountIds.filter((a) => !p.posted.some((x) => x.accountId === a))
+      if (!left.length || now - Date.parse(p.scheduledAt) > 2 * 3600_000) continue
+      const names = ws.socialAccounts.filter((a) => left.includes(a.id)).map((a) => `${a.name} (${a.platform})`)
+      await this.emit("social.due", { title: `Time to post: ${p.title || "Untitled post"}`, body: names.length ? `Post to ${names.join(", ")}.` : "It's time to post this.", url: `/social/${p.id}`, priority: 4, tags: ["mega"] })
+    }
+    mem.socialSent = [...sent].slice(-300)
   }
 
   private async watchUpdates() {

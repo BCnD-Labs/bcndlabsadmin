@@ -20,6 +20,7 @@ export const LANDING_PAGES = [
   { value: "/productivity/learning", label: "Learning" },
   { value: "/development", label: "GitHub activity" },
   { value: "/cms", label: "Website" },
+  { value: "/social", label: "Social" },
 ] as const
 export type LandingPage = (typeof LANDING_PAGES)[number]["value"]
 
@@ -48,6 +49,9 @@ interface PrefsState {
   launcherView: "rows" | "grid"
   /** CMS: the site the Website section is showing. */
   cmsSiteId: string
+  /** Social: the platform and brand filters (empty = all). */
+  socialPlatforms: string[]
+  socialBrands: string[]
   /** Desktop sidebar: the full tree (true) or the icon strip with hover flyouts (false). */
   navExpanded: boolean
   /** Colour theme: Dim (mid-tone slate, default) or Dark (the original near-black). */
@@ -90,6 +94,8 @@ const DEFAULT_PREFS = (): Persisted => ({
   motion: "system",
   launcherView: "rows",
   cmsSiteId: "",
+  socialPlatforms: [],
+  socialBrands: [],
   navExpanded: false,
   theme: "dim",
   uiFont: "sans",
@@ -143,6 +149,8 @@ export const usePrefs = create<PrefsState>()(
           motion: p.motion === "reduce" || p.motion === "full" ? p.motion : "system",
           launcherView: p.launcherView === "grid" ? "grid" : "rows",
           cmsSiteId: typeof p.cmsSiteId === "string" ? p.cmsSiteId.slice(0, 40) : "",
+          socialPlatforms: strList(p.socialPlatforms),
+          socialBrands: strList(p.socialBrands),
           feedConnections: sanitizeFeedConnections(p.feedConnections),
           navExpanded: p.navExpanded === true,
           theme: p.theme === "dark" ? "dark" : "dim",
@@ -182,3 +190,7 @@ function applyLook({ theme, uiFont, categoryColors, accent, density, motion }: P
 }
 applyLook(usePrefs.getState())
 usePrefs.subscribe(applyLook)
+
+function strList(v: unknown): string[] {
+  return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string").map((x) => x.slice(0, 60)).slice(0, 30) : []
+}

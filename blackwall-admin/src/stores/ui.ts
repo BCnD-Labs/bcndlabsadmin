@@ -15,6 +15,7 @@ export type FormRequest =
   | { kind: "site"; id?: string; defaults?: undefined }
   | { kind: "sitePage"; id?: string; defaults?: undefined }
   | { kind: "siteForm"; id?: string; defaults?: undefined }
+  | { kind: "socialAccount"; id?: string; defaults?: undefined }
 
 interface UiState {
   form: FormRequest | null

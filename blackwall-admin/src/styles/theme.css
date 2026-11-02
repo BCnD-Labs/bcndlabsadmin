@@ -319,6 +319,8 @@ html[data-font="mono"] {
 [data-category="notifications"] { --bw-category: #f5c542; }
 /* Mikoshi: the homelab's own phosphor green. */
 [data-category="mikoshi"] { --bw-category: #28b845; }
+/* Social: indigo, between Productivity blue and Learning violet but clearly its own. */
+[data-category="social"] { --bw-category: #7b74ff; }
 /* Dark: Google Material brand hues, brighter and cleaner against the near-black ground. */
 html[data-theme="dark"] [data-category] { --bw-category: #4285f4; }
 html[data-theme="dark"] [data-category="learning"] { --bw-category: #a142f4; }
@@ -327,6 +329,7 @@ html[data-theme="dark"] [data-category="development"] { --bw-category: #24c1e0; 
 html[data-theme="dark"] :is([data-category="website"], [data-category="analytics"], [data-category="cloudflare"]) { --bw-category: #fa7b17; }
 html[data-theme="dark"] [data-category="azure"] { --bw-category: #669df6; }
 html[data-theme="dark"] [data-category="notifications"] { --bw-category: #fbbc04; }
+html[data-theme="dark"] [data-category="social"] { --bw-category: #8f87ff; }
 html[data-theme="dark"] :is([data-category="home"], [data-category="service"]) { --bw-category: #bdc1c6; }
 .bw-category-icon {
   color: var(--bw-category);

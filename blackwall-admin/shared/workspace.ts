@@ -1,4 +1,4 @@
-import type { Course, Draft, JournalEntry, Note, Project, RepoLink, Service, Site, SiteForm, SitePage, Task } from "../src/lib/types.ts"
+import type { Course, Draft, JournalEntry, Note, Project, RepoLink, Service, Site, SiteForm, SitePage, SocialAccount, SocialPost, Task } from "../src/lib/types.ts"
 
 export interface Collections {
   tasks: Task[]
@@ -12,11 +12,13 @@ export interface Collections {
   sites: Site[]
   pages: SitePage[]
   forms: SiteForm[]
+  socialAccounts: SocialAccount[]
+  socialPosts: SocialPost[]
 }
-export const COLLECTION_KEYS = ["tasks", "notes", "journal", "projects", "repos", "drafts", "courses", "services", "sites", "pages", "forms"] as const
+export const COLLECTION_KEYS = ["tasks", "notes", "journal", "projects", "repos", "drafts", "courses", "services", "sites", "pages", "forms", "socialAccounts", "socialPosts"] as const
 /** Collections added after the first release: a snapshot written before them simply has none yet. */
-const LATER_KEYS: readonly (keyof Collections)[] = ["services", "sites", "pages", "forms"]
-export const emptyWorkspace = (): Collections => ({ tasks: [], notes: [], journal: [], projects: [], repos: [], drafts: [], courses: [], services: [], sites: [], pages: [], forms: [] })
+const LATER_KEYS: readonly (keyof Collections)[] = ["services", "sites", "pages", "forms", "socialAccounts", "socialPosts"]
+export const emptyWorkspace = (): Collections => ({ tasks: [], notes: [], journal: [], projects: [], repos: [], drafts: [], courses: [], services: [], sites: [], pages: [], forms: [], socialAccounts: [], socialPosts: [] })
 export interface WorkspaceSnapshot { id: string; revision: number; data: Collections }
 
 /** Validate both imports and API writes before they can replace durable data. */
@@ -34,6 +36,8 @@ export function validWorkspace(value: unknown): value is Collections {
     sites: ["name", "domain", "root", "starter", "customCss", "footerText"],
     pages: ["siteId", "title", "slug", "description"],
     forms: ["name", "submitLabel", "successMessage"],
+    socialAccounts: ["platform", "name", "brand", "url"],
+    socialPosts: ["title", "body", "stage"],
   }
   return COLLECTION_KEYS.every((key) => {
     const rows = data[key]
@@ -48,9 +52,11 @@ export function validWorkspace(value: unknown): value is Collections {
         projects: { status: ["active", "planned", "paused", "done"], color: ["teal", "amber", "red", "slate"] },
         drafts: { kind: ["post", "page"], status: ["idea", "drafting", "review", "ready"] },
         courses: { color: ["red", "amber", "teal", "blue", "violet", "green", "slate"] },
+        socialAccounts: { platform: ["instagram", "facebook", "threads", "x", "tiktok", "reddit", "other"] },
+        socialPosts: { stage: ["idea", "draft", "ready"] },
       }
       if (Object.entries(enums[key] ?? {}).some(([field, choices]) => !choices.includes(row[field]))) return false
-      const optionalStrings = ["details", "due", "time", "courseId", "learningType", "completedAt", "projectId", "connectionId", "productionUrl", "previewUrl", "notes", "cover", "coverAlt", "remoteSlug", "startDate", "endDate", "logo", "materialIcon", "customLogo", "siteId", "course", "publishedAt", "formEndpoint", "turnstileKey", "publishedSha"]
+      const optionalStrings = ["details", "due", "time", "courseId", "learningType", "completedAt", "projectId", "connectionId", "productionUrl", "previewUrl", "notes", "cover", "coverAlt", "remoteSlug", "startDate", "endDate", "logo", "materialIcon", "customLogo", "siteId", "course", "publishedAt", "formEndpoint", "turnstileKey", "publishedSha", "link", "media", "scheduledAt"]
       if (optionalStrings.some((field) => row[field] != null && typeof row[field] !== "string")) return false
       if (row.links != null && (!Array.isArray(row.links) || row.links.length > 50 || !row.links.every((l: unknown) => !!l && typeof l === "object" && typeof (l as { label?: unknown }).label === "string" && typeof (l as { url?: unknown }).url === "string"))) return false
       if (row.tags != null && (!Array.isArray(row.tags) || !row.tags.every((tag: unknown) => typeof tag === "string"))) return false
@@ -64,6 +70,7 @@ export function validWorkspace(value: unknown): value is Collections {
       if (key === "sites" && (!isPalette(row.light) || !isPalette(row.dark) || typeof row.darkMode !== "boolean" || !Array.isArray(row.redirects) || !row.redirects.every((x: unknown) => !!x && typeof (x as { from?: unknown }).from === "string" && typeof (x as { to?: unknown }).to === "string"))) return false
       if (key === "pages" && (typeof row.inMenu !== "boolean" || typeof row.order !== "number" || !Array.isArray(row.sections) || JSON.stringify(row.sections).length > 2_000_000)) return false
       if (key === "forms" && (!Array.isArray(row.fields) || row.fields.length > 40 || !row.fields.every((f: unknown) => !!f && typeof (f as { label?: unknown }).label === "string"))) return false
+      if (key === "socialPosts" && (!Array.isArray(row.accountIds) || !row.accountIds.every((a: unknown) => typeof a === "string") || !Array.isArray(row.posted) || !row.posted.every((x: unknown) => !!x && typeof (x as { accountId?: unknown }).accountId === "string" && typeof (x as { at?: unknown }).at === "string"))) return false
       if (key === "courses" && (!Array.isArray(row.tags) || !row.tags.every((tag: unknown) => typeof tag === "string"))) return false
       return true
     })

@@ -3,6 +3,9 @@ export const PRODUCTIVITY = "/productivity"
 export const DEVELOPMENT = "/development"
 export const CMS = "/cms"
 export const MIKOSHI = "/mikoshi"
+export const SOCIAL = "/social"
+export const socialHref = SOCIAL
+export const socialPostHref = (id: string) => `${SOCIAL}/${id}`
 export const launcherHref = MIKOSHI
 export const mikoshiStatusHref = `${MIKOSHI}/status`
 export const mikoshiStorageHref = `${MIKOSHI}/storage`

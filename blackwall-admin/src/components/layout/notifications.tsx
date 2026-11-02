@@ -23,8 +23,8 @@ const FILTERS: { value: Filter; label: string }[] = [
 ]
 
 /** Each group in its category's color (the same tiles as panel title bars). */
-const GROUP_CATEGORY: Record<NotificationKind, Category> = { server: "mikoshi", dev: "development", work: "tasks", site: "website" }
-const SOURCE: Record<NotificationKind, string> = { server: "Mikoshi", dev: "GitHub", work: "Planner", site: "Website" }
+const GROUP_CATEGORY: Record<NotificationKind, Category> = { server: "mikoshi", dev: "development", work: "tasks", site: "website", social: "social" }
+const SOURCE: Record<NotificationKind, string> = { server: "Mikoshi", dev: "GitHub", work: "Planner", site: "Website", social: "Social" }
 
 function groupLabel(n: BwNotification) {
   const d = parseISO(n.at)

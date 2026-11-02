@@ -192,6 +192,42 @@ export interface SiteForm {
   updatedAt: Timestamp
 }
 
+/** A social platform. "other" covers anything else (YouTube, LinkedIn, Bluesky…). */
+export type SocialPlatform = "instagram" | "facebook" | "threads" | "x" | "tiktok" | "reddit" | "other"
+
+/** One of your social accounts, tagged with the brand it speaks for. */
+export interface SocialAccount {
+  id: ID
+  platform: SocialPlatform
+  /** @handle or page name. */
+  name: string
+  /** "Personal", "BCnD Labs", "Sprouts & Scraps"… what the account speaks for. */
+  brand: string
+  /** Profile address; also what "Open" uses. */
+  url: string
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+
+/** A social post you plan, write once and post by hand to one or more accounts. */
+export interface SocialPost {
+  id: ID
+  title: string
+  /** The caption / post text. */
+  body: string
+  link?: string
+  /** Where the photo or video is (a Nextcloud link, a file name) and notes on it. */
+  media?: string
+  stage: "idea" | "draft" | "ready"
+  accountIds: string[]
+  /** When to post it; you get a reminder then. */
+  scheduledAt?: Timestamp
+  /** Accounts it's been posted to, when, and the live post's address. */
+  posted: { accountId: string; at: Timestamp; url?: string }[]
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+
 /** A launcher tile on the Mikoshi page: a link to one self-hosted service. */
 export interface Service {
   id: ID

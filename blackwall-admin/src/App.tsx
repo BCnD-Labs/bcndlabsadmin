@@ -8,6 +8,8 @@ import { CmsPostsPage } from "@/features/cms/posts-tab"
 import { CmsFormsPage } from "@/features/cms/forms-tab"
 import { CmsSiteSettingsPage } from "@/features/cms/site-settings"
 import { PageEditor } from "@/features/cms/page-editor"
+import { SocialPage } from "@/features/social/social-page"
+import { SocialPostPage } from "@/features/social/social-post"
 import { DevelopmentPage } from "@/features/development/development-page"
 import { HomePage } from "@/features/home/home-page"
 import { CourseDetail } from "@/features/learning/course-detail"
@@ -74,6 +76,8 @@ const router = createBrowserRouter([
       { path: "cms/drafts/:id", element: <Moved from="/cms/drafts" to="/cms/posts" /> },
       { path: "cms/media", element: <MediaPage /> },
       { path: "cms/analytics", element: <SiteAnalyticsPage /> },
+      { path: "social", element: <SocialPage /> },
+      { path: "social/:id", element: <SocialPostPage /> },
       { path: "mikoshi", element: <LauncherPage /> },
       { path: "mikoshi/status", element: <MikoshiStatusPage /> },
       { path: "mikoshi/storage", element: <MikoshiStoragePage /> },
