@@ -1,9 +1,7 @@
 import type { Category } from "@/components/common/category-icon"
 import { HomeTrafficPanel, TrafficMeta } from "./extra-panels"
 import type { ComponentType } from "react"
-import { Button } from "@/components/ui/button"
-import { PANEL_TYPES, type PanelType } from "@/lib/home-slots"
-import { usePrefs } from "@/stores/prefs"
+import type { PanelType } from "@/lib/home-slots"
 import { CourseworkMeta, CourseworkPanel } from "./coursework-panel"
 import { ProductivityMeta, ProductivityPanel } from "./productivity-panel"
 import { CalendarMeta, DevelopmentMeta, HomeCalendarPanel, HomeDevelopmentPanel, HomeWebsitePanel, WebsiteMeta } from "./extra-panels"
@@ -29,31 +27,8 @@ export interface PanelDef {
   bodyClassName?: string
 }
 
-/** An unassigned square: "Choose a panel" and a picker. Deliberately unlike NoSignal (not connected). */
-function EmptySlot({ slot }: PanelBodyProps) {
-  const slots = usePrefs((s) => s.homeSlots)
-  const setSlot = usePrefs((s) => s.setSlot)
-  const options = PANEL_TYPES.filter((t) => t !== "empty")
-  return (
-    <div className="flex h-full p-3">
-      <div className="flex flex-1 flex-col items-center justify-center gap-2.5 rounded-[10px] border border-dashed border-ledge-hi px-4 py-5 text-center" data-testid="empty-slot">
-        <p className="font-mono text-[11px] font-semibold tracking-[0.3em] text-faint">No panel selected</p>
-        <p className="text-[11px] text-muted-foreground">Choose what to show in this position.</p>
-        <div className="flex flex-wrap justify-center gap-1.5">
-          {options.map((t) => {
-            const from = slots.indexOf(t)
-            return (
-              <Button key={t} variant="ghost" size="sm" onClick={() => setSlot(slot, t)}>
-                + {PANELS[t].label}
-                {from >= 0 && <span className="text-faint">· moves from position {from + 1}</span>}
-              </Button>
-            )
-          })}
-        </div>
-      </div>
-    </div>
-  )
-}
+/** Retired four-slot layout leftover: an empty position renders nothing. */
+const EmptySlot = () => null
 
 export const PANELS: Record<PanelType, PanelDef> = {
   productivity: { label: "Tasks & notes", category: "tasks", tool: "productivity", command: "today", Meta: ProductivityMeta, Body: ProductivityPanel },

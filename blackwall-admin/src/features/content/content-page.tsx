@@ -13,7 +13,7 @@ import { SegmentedTabs } from "@/components/common/segmented-tabs"
 import { SourceBadge } from "@/components/common/source-badge"
 import { StatStrip } from "@/components/common/stat-strip"
 import { StatusMarker } from "@/components/common/tags"
-import { timeAgo } from "@/lib/dates"
+import { timeAgo, timeFmt } from "@/lib/dates"
 import { draftHref } from "@/lib/routes"
 import { cn } from "@/lib/utils"
 import { useAnalytics } from "@/services/data"
@@ -163,7 +163,7 @@ export function ContentPage() {
 
 function nextScheduled(items: PostItem[]) {
   const next = items.filter((i) => i.state === "scheduled" && i.date).sort((a, b) => a.date!.localeCompare(b.date!))[0]
-  return next ? `next ${format(new Date(next.date!), "EEE MMM d, h:mm a")}` : undefined
+  return next ? `next ${format(new Date(next.date!), `EEE MMM d, ${timeFmt()}`)}` : undefined
 }
 
 /** Setup hints: blog index without the markers, or a scheduled post that failed. */
@@ -181,7 +181,7 @@ function SiteNotice({ site }: { site: ReturnType<typeof useSite> }) {
     <>
       {failed.map((s) => (
         <Notice key={s.post.slug} tone="error">
-          “{s.post.title}” was due {format(new Date(s.publishAt), "MMM d, h:mm a")} but didn't publish: {s.error}. Blackwall retries every 10 minutes.
+          “{s.post.title}” was due {format(new Date(s.publishAt), `MMM d, ${timeFmt()}`)} but didn't publish: {s.error}. Blackwall retries every 10 minutes.
         </Notice>
       ))}
       {!site.overview.indexMarkers && (
@@ -265,7 +265,7 @@ function PostCard({ item, siteUrl, postsBase }: { item: PostItem; siteUrl?: stri
             <PostStateChip state={item.state} edited={item.edited} date={item.date} />
             <span className="text-[11px] text-faint">
               {item.state === "scheduled" && item.date
-                ? format(new Date(item.date), "MMM d, h:mm a")
+                ? format(new Date(item.date), `MMM d, ${timeFmt()}`)
                 : item.state === "published" && item.date
                   ? format(new Date(item.date), "MMM d, yyyy")
                   : item.updatedAt

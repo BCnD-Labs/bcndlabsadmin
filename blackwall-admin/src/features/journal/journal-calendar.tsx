@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { Calendar } from "@/components/ui/calendar"
-import { parseKey, toDateKey, todayKey } from "@/lib/dates"
+import { parseKey, toDateKey, todayKey, weekStart } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import { useWorkspace } from "@/stores/workspace"
 
@@ -35,6 +35,7 @@ export function JournalCalendar({
   const before = "before:pointer-events-none before:absolute before:bottom-0.5 before:z-20 before:size-1 before:rounded-[1px]"
   return (
     <Calendar
+      weekStartsOn={weekStart()}
       mode="single"
       required
       showOutsideDays={false}

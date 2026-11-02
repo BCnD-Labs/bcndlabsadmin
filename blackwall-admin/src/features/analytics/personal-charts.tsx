@@ -5,7 +5,7 @@ import { useMediaQuery } from "@/hooks/use-media-query"
 import { useNavigate } from "react-router-dom"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart"
-import { parseKey, toDateKey } from "@/lib/dates"
+import { parseKey, toDateKey, weekStart } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import { logHref } from "@/lib/routes"
 import type { DayCount } from "./personal-stats"
@@ -62,7 +62,7 @@ export function JournalHeatmap({ logWords, weeks = 16, cell = "size-3" }: { logW
   const phone = useMediaQuery("(max-width: 639px)")
   const [expanded, setExpanded] = useState(false)
   const shownWeeks = phone && !expanded ? Math.min(8, weeks) : weeks
-  const start = addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), -(shownWeeks - 1) * 7)
+  const start = addDays(startOfWeek(new Date(), { weekStartsOn: weekStart() }), -(shownWeeks - 1) * 7)
   const today = toDateKey(new Date())
   const cols = Array.from({ length: shownWeeks }, (_, w) => Array.from({ length: 7 }, (_, d) => toDateKey(addDays(start, w * 7 + d))))
 

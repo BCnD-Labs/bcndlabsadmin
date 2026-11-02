@@ -1,6 +1,6 @@
 import { addDays, differenceInCalendarDays, startOfWeek } from "date-fns"
 import { useMemo } from "react"
-import { toDateKey, todayKey } from "@/lib/dates"
+import { toDateKey, todayKey, weekStart as firstDay } from "@/lib/dates"
 import { useWorkspace } from "@/stores/workspace"
 
 export interface DayCount {
@@ -37,7 +37,7 @@ export function usePersonalStats(days = 30) {
     }
     const completed: DayCount[] = lastDays(days).map((date) => ({ date, count: doneByDay.get(date) ?? 0 }))
 
-    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: firstDay() })
     const thisWeek = [...doneByDay].filter(([d]) => differenceInCalendarDays(new Date(`${d}T00:00`), weekStart) >= 0).reduce((a, [, n]) => a + n, 0)
     const lastWeek = [...doneByDay]
       .filter(([d]) => {

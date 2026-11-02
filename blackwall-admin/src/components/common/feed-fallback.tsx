@@ -26,7 +26,7 @@ export function FeedFallback({ feed, provider, what }: { feed: Feed<unknown>; pr
         <div className="mt-1 flex flex-wrap gap-2">
           <Button variant="outline" onClick={feed.refresh}><RotateCw /> Retry</Button>
           <Button variant="quiet" onClick={() => useUi.getState().openSettings("connections")}>Connection settings</Button>
-          {(provider === "github" || provider === "analytics") && <Button variant="outline" onClick={() => useUi.getState().openSettings("dashboard")}>Choose data source</Button>}
+          {(provider === "github" || provider === "analytics") && <Button variant="outline" onClick={() => useUi.getState().openSettings("home")}>Choose data source</Button>}
         </div>
       </div>
     )

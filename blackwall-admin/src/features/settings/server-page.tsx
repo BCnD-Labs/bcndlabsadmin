@@ -32,8 +32,23 @@ function Marker({ tone }: { tone: "ok" | "warn" | "error" | "off" }) {
 }
 
 /** Where Blackwall's server-side data lives, sign-out, and backup health. */
-export function ServerSettings() {
+/** Sign out lives with accounts (Connections & accounts → Session). */
+export function SessionGroup() {
   const { authRequired, logout } = useSession()
+  if (!authRequired) return null
+  return (
+    <Panel title="Session" tool="server" command="session" bodyClassName="divide-y divide-line">
+      <SettingRow title="Sign out" description="End your session in this browser.">
+        <Button variant="outline" onClick={() => void logout()}>
+          <LogOut /> Sign out
+        </Button>
+      </SettingRow>
+    </Panel>
+  )
+}
+
+export function ServerSettings() {
+  const { authRequired } = useSession()
   const [health, setHealth] = useState<Health | null>(null)
   const [backups, setBackups] = useState<Backups | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -72,10 +87,6 @@ export function ServerSettings() {
         <>
           <Panel title="Server status" tool="server" command="status" meta={health?.database === "ok" ? "database ok" : undefined} bodyClassName="divide-y divide-line">
             <SettingRow
-              title="Running on"
-              description={onServer ? "Home server. Signing in is required." : "This computer (local development). No sign-in."}
-            />
-            <SettingRow
               title="Connections stored in"
               description={
                 <>
@@ -84,13 +95,6 @@ export function ServerSettings() {
                 </>
               }
             />
-            {onServer && (
-              <SettingRow title="Sign out" description="End your session in this browser.">
-                <Button variant="outline" onClick={() => void logout()}>
-                  <LogOut /> Sign out
-                </Button>
-              </SettingRow>
-            )}
           </Panel>
 
           <Panel title="Backups" tool="server" command="backups" meta={backups?.configured ? `${backups.count ?? 0} on the server` : undefined} bodyClassName="divide-y divide-line">

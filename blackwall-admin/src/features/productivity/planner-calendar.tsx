@@ -1,6 +1,6 @@
 import { useMemo, type KeyboardEvent } from "react"
 import { addDays, addMonths, format, isSameMonth, isToday, startOfMonth, startOfWeek } from "date-fns"
-import { parseKey, toDateKey, todayKey } from "@/lib/dates"
+import { parseKey, toDateKey, todayKey, weekStart } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import { useWorkspace } from "@/stores/workspace"
 
@@ -22,7 +22,8 @@ export function PlannerCalendar({ selected, month, onSelect }: { selected: strin
     return { logged, due, overdue }
   }, [journal, tasks])
 
-  const start = startOfWeek(startOfMonth(month))
+  const first = weekStart()
+  const start = startOfWeek(startOfMonth(month), { weekStartsOn: first })
   const days = Array.from({ length: 42 }, (_, i) => addDays(start, i))
 
   const onKey = (e: KeyboardEvent) => {
@@ -37,7 +38,7 @@ export function PlannerCalendar({ selected, month, onSelect }: { selected: strin
   return (
     <div role="grid" aria-label={format(month, "MMMM yyyy")} onKeyDown={onKey} className="px-2 pt-2 pb-2">
       <div role="row" className="grid grid-cols-7 border-b border-line-soft pb-1.5 text-center text-base text-ink-2">
-        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => <span key={d} role="columnheader">{d}</span>)}
+        {(first ? ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"] : ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]).map((d) => <span key={d} role="columnheader">{d}</span>)}
       </div>
       <div className="grid grid-cols-7 pt-1">
         {days.map((d) => {

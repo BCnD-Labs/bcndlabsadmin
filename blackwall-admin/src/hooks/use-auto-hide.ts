@@ -8,6 +8,7 @@ import { usePrefs } from "@/stores/prefs"
  */
 export function useAutoHide(open: boolean, close: () => void) {
   const seconds = usePrefs((s) => s.autoHideSeconds)
+  const keepOpen = usePrefs((s) => s.keepCardsOpen)
   const [leaving, setLeaving] = useState(false)
   const timer = useRef<number | undefined>(undefined)
   const closeRef = useRef(close)
@@ -24,7 +25,7 @@ export function useAutoHide(open: boolean, close: () => void) {
 
   const onPointerEnter = (e: PointerEvent) => e.pointerType === "mouse" && disarm()
   const onPointerLeave = (e: PointerEvent) => {
-    if (!open || e.pointerType !== "mouse") return
+    if (!open || keepOpen || e.pointerType !== "mouse") return
     window.clearTimeout(timer.current)
     setLeaving(true)
     timer.current = window.setTimeout(() => {

@@ -162,14 +162,23 @@
   .bw-settings-body .bw-panel::after {
     background-image: none;
   }
+  /* In Settings a panel is a plain group: a small caption, an optional note, then rows. */
   .bw-settings-body .bw-panel > header {
+    min-height: 0;
+    padding: 0.75rem 1rem 0.25rem;
     background: transparent;
-    border-bottom: 0;
   }
-  .bw-settings-body .bw-window-buttons { display: none; }
-  .bw-settings-body .bw-panel > header h2 > span > span:first-child:not(.bw-category-icon) {
-    display: none;
+  .bw-settings-body .bw-panel > header .bw-category-icon,
+  .bw-settings-body .bw-panel > header h2 > span[aria-hidden] { display: none; }
+  .bw-settings-body .bw-panel > header .bw-panel-title {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--bw-text-2);
   }
+  .bw-settings-body .bw-panel > .bw-panel-toolbar { min-height: 0; padding: 0 1rem 0.5rem; border-bottom: 1px solid var(--bw-line-soft); }
+  .bw-settings-body .bw-panel > .bw-panel-toolbar > div { margin-left: 0 !important; }
 
   /* §1 label: small caps, faint (Mantine section-label style). */
   .bw-label {

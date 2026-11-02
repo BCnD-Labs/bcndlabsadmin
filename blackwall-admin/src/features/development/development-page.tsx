@@ -12,7 +12,7 @@ import { Panel } from "@/components/common/panel"
 import { SourceBadge } from "@/components/common/source-badge"
 import { ProjectTag, StatusMarker } from "@/components/common/tags"
 import { ACTIVITY_ICON } from "@/features/home/dev-attention"
-import { shortAgo, timeAgo, toDateKey } from "@/lib/dates"
+import { shortAgo, timeAgo, toDateKey, weekStart } from "@/lib/dates"
 import type { RepoLink } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useGitHubAccounts } from "@/services/data"
@@ -205,7 +205,7 @@ function CommitHeatmap({ days }: { days: Record<string, number> }) {
   const phone = useMediaQuery("(max-width: 639px)")
   const [expanded, setExpanded] = useState(false)
   const weeks = phone && !expanded ? 12 : 26
-  const start = startOfWeek(addDays(new Date(), -(weeks - 1) * 7))
+  const start = startOfWeek(addDays(new Date(), -(weeks - 1) * 7), { weekStartsOn: weekStart() })
   const cols = Array.from({ length: weeks }, (_, w) => Array.from({ length: 7 }, (_, d) => addDays(start, w * 7 + d)))
   const max = Math.max(1, ...Object.values(days))
   const total = Object.values(days).reduce((a, b) => a + b, 0)

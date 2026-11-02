@@ -5,8 +5,13 @@ import { useUi, type SettingsSection } from "@/stores/ui"
 
 const SECTION: Record<string, SettingsSection> = {
   general: "general",
-  dashboard: "dashboard",
+  dashboard: "home",
+  home: "home",
   appearance: "appearance",
+  sidebar: "sidebar",
+  notifications: "notifications",
+  data: "data",
+  about: "about",
   connections: "connections",
   integrations: "connections",
   server: "server",

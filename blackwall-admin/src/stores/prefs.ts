@@ -1,7 +1,7 @@
 import type { ProviderId } from "@shared/connections"
 import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
-import { DEFAULT_SLOTS, OLD_DEFAULT_SLOTS, assignSlot, sanitizeSlots, swapSlots, type PanelType } from "@/lib/home-slots"
+import { DEFAULT_SLOTS, OLD_DEFAULT_SLOTS, type PanelType } from "@/lib/home-slots"
 import { safeLocalStorage } from "./storage"
 import { DEFAULT_LAYOUT, layoutFromSlots, sanitizeLayout, type LayoutItem } from "@/lib/home-layout"
 
@@ -11,13 +11,21 @@ export const ACCENTS = ["red", "blue", "violet", "cyan", "orange", "green", "pin
 export type Accent = (typeof ACCENTS)[number]
 export type Density = "comfortable" | "compact"
 export type LayoutMode = "responsive" | "mobile"
+export type TimeFormat = "12h" | "24h"
+export type MotionPref = "system" | "reduce" | "full"
+/** Pages you can land on when Blackwall opens at its root. */
+export const LANDING_PAGES = [
+  { value: "/", label: "Home" },
+  { value: "/productivity", label: "Planner" },
+  { value: "/productivity/learning", label: "Learning" },
+  { value: "/development", label: "GitHub activity" },
+  { value: "/cms", label: "Posts & pages" },
+] as const
+export type LandingPage = (typeof LANDING_PAGES)[number]["value"]
 
 /** Per-browser interface preferences (not workspace data). */
 interface PrefsState {
   categoryColors: boolean
-  homeSizing: "fit" | "uniform"
-  showHomeProjects: boolean
-  showHomeLog: boolean
   /** Explicit read-only feed choices; publishing remains installation-wide. */
   feedConnections: Partial<Record<"github" | "analytics", string>>
   retroDetails: boolean
@@ -27,8 +35,15 @@ interface PrefsState {
   workspaceName: string
   /** Seconds the calendar and notification cards stay open after the pointer leaves. */
   autoHideSeconds: number
-  /** What each of the four Home squares shows. */
-  homeSlots: PanelType[]
+  /** Calendar and notification cards stay open until closed (ignores autoHideSeconds). */
+  keepCardsOpen: boolean
+  /** First day of the week in the calendar, Planner and Insights: 0 Sunday, 1 Monday. */
+  weekStartsOn: 0 | 1
+  timeFormat: TimeFormat
+  /** Where "/" lands when the app opens (Home unless changed). */
+  landingPage: LandingPage
+  /** Animations: follow the system setting, always reduce, or always full. */
+  motion: MotionPref
   /** Desktop sidebar: the full tree (true) or the icon strip with hover flyouts (false). */
   navExpanded: boolean
   /** Colour theme: Dim (mid-tone slate, default) or Dark (the original near-black). */
@@ -46,29 +61,29 @@ interface PrefsState {
   navHidden: string[]
   /** On phone-sized screens: the responsive layout (default) or the dedicated mobile view. */
   layoutMode: LayoutMode
-  set: (patch: Partial<Omit<PrefsState, "set" | "setSlot" | "swapSlots" | "reset">>) => void
-  /** Show `type` in slot `i`; if it's already in another slot, the two swap. */
-  setSlot: (i: number, type: PanelType) => void
-  swapSlots: (i: number, j: number) => void
+  set: (patch: Partial<Omit<PrefsState, "set" | "reset">>) => void
   /** Back to the defaults below (workspace data isn't touched). */
   reset: () => void
 }
 
-type Persisted = Pick<PrefsState, "categoryColors" | "homeSizing" | "showHomeProjects" | "showHomeLog" | "feedConnections" | "retroDetails" | "showSamples" | "workspaceName" | "autoHideSeconds" | "homeSlots" | "navExpanded" | "theme" | "uiFont" | "homeLayout" | "accent" | "density" | "navLabels" | "navHidden" | "layoutMode">
+type Persisted = Omit<PrefsState, "set" | "reset">
+/** Older stored shapes, read only by the migration. */
+type Legacy = Partial<Persisted> & { homeSlots?: PanelType[]; showHomeProjects?: boolean; showHomeLog?: boolean }
 
-export const PREFS_VERSION = 5
+export const PREFS_VERSION = 6
 
 const DEFAULT_PREFS = (): Persisted => ({
   categoryColors: true,
-  homeSizing: "fit",
-  showHomeProjects: true,
-  showHomeLog: true,
   feedConnections: {},
   retroDetails: true,
   showSamples: false,
   workspaceName: "",
   autoHideSeconds: 5,
-  homeSlots: [...DEFAULT_SLOTS],
+  keepCardsOpen: false,
+  weekStartsOn: 0,
+  timeFormat: "12h",
+  landingPage: "/",
+  motion: "system",
   navExpanded: false,
   theme: "dim",
   uiFont: "sans",
@@ -82,39 +97,29 @@ const DEFAULT_PREFS = (): Persisted => ({
 
 export const usePrefs = create<PrefsState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       ...DEFAULT_PREFS(),
       set: (patch) => set(patch),
       reset: () => set(DEFAULT_PREFS()),
-      setSlot: (i, type) => set({ homeSlots: assignSlot(get().homeSlots, i, type) }),
-      swapSlots: (i, j) => set({ homeSlots: swapSlots(get().homeSlots, i, j) }),
     }),
     {
       name: "blackwall.prefs",
       version: PREFS_VERSION,
       storage: createJSONStorage(() => safeLocalStorage),
-      partialize: ({ categoryColors, homeSizing, showHomeProjects, showHomeLog, feedConnections, retroDetails, showSamples, workspaceName, autoHideSeconds, homeSlots, navExpanded, theme, uiFont, homeLayout, accent, density, navLabels, navHidden, layoutMode }): Persisted => ({
-        homeLayout, accent, density, navLabels, navHidden, layoutMode,
-        categoryColors, homeSizing, showHomeProjects, showHomeLog, feedConnections,
-        retroDetails,
-        showSamples,
-        workspaceName,
-        autoHideSeconds,
-        homeSlots,
-        navExpanded,
-        theme,
-        uiFont,
-      }),
+      partialize: ({ set: _set, reset: _reset, ...rest }): Persisted => rest,
       // v1 → v2: adds autoHideSeconds and the Home slot layout.
       // v2 → v3: new panel types; a Home still on the old default (one panel, three empty) gets the new default.
       migrate: (persisted, version) => {
-        let p = (persisted ?? {}) as Partial<Persisted>
+        let p = (persisted ?? {}) as Legacy
         // (autoHideSeconds may already be there: it was saved under v1 before the bump.)
         if (version < 2) p = { ...p, autoHideSeconds: p.autoHideSeconds ?? 5, homeSlots: p.homeSlots ?? [...OLD_DEFAULT_SLOTS] }
         if (version < 3 && JSON.stringify(p.homeSlots) === JSON.stringify(OLD_DEFAULT_SLOTS)) p = { ...p, homeSlots: [...DEFAULT_SLOTS] }
         // v4 → v5: the four slots become the full Home layout, keeping your chosen panels and their order.
         if (version < 5) p = { ...p, homeLayout: layoutFromSlots(p.homeSlots, p.showHomeProjects !== false, p.showHomeLog !== false) }
-        return p
+        // v5 → v6: the four-slot fields are gone (Home layout replaced them); new options take their defaults.
+        const { homeSlots: _a, showHomeProjects: _b, showHomeLog: _c, ...rest } = p as Legacy & { homeSizing?: unknown }
+        delete (rest as Record<string, unknown>).homeSizing
+        return rest
       },
       // Never trust stored values blindly: unknown panel types or bad numbers fall back to defaults.
       merge: (persisted, current) => {
@@ -124,11 +129,12 @@ export const usePrefs = create<PrefsState>()(
           ...current,
           ...p,
           autoHideSeconds: Number.isFinite(secs) ? Math.min(15, Math.max(2, Math.round(secs))) : current.autoHideSeconds,
-          homeSlots: sanitizeSlots(p.homeSlots),
           categoryColors: p.categoryColors !== false,
-          homeSizing: p.homeSizing === "uniform" ? "uniform" : "fit",
-          showHomeProjects: p.showHomeProjects !== false,
-          showHomeLog: p.showHomeLog !== false,
+          keepCardsOpen: p.keepCardsOpen === true,
+          weekStartsOn: p.weekStartsOn === 1 ? 1 : 0,
+          timeFormat: p.timeFormat === "24h" ? "24h" : "12h",
+          landingPage: LANDING_PAGES.some((l) => l.value === p.landingPage) ? (p.landingPage as LandingPage) : "/",
+          motion: p.motion === "reduce" || p.motion === "full" ? p.motion : "system",
           feedConnections: sanitizeFeedConnections(p.feedConnections),
           navExpanded: p.navExpanded === true,
           theme: p.theme === "dark" ? "dark" : "dim",
@@ -157,8 +163,9 @@ function sanitizeFeedConnections(raw: unknown): Persisted["feedConnections"] {
 }
 
 /** Theme and font live on <html> so every screen (sign-in included) follows them. */
-function applyLook({ theme, uiFont, categoryColors, accent, density }: Pick<PrefsState, "theme" | "uiFont" | "categoryColors" | "accent" | "density">) {
+function applyLook({ theme, uiFont, categoryColors, accent, density, motion }: Pick<PrefsState, "theme" | "uiFont" | "categoryColors" | "accent" | "density" | "motion">) {
   if (typeof document === "undefined") return
+  document.documentElement.dataset.motion = motion
   document.documentElement.dataset.accent = accent
   document.documentElement.dataset.density = density
   document.documentElement.dataset.theme = theme

@@ -7,7 +7,7 @@ import { CountdownBorder } from "@/components/common/countdown-border"
 import { TitleBar } from "@/components/common/panel"
 import { useAutoHide } from "@/hooks/use-auto-hide"
 import { useNow } from "@/hooks/use-now"
-import { toDateKey } from "@/lib/dates"
+import { toDateKey, weekStart } from "@/lib/dates"
 import type { DateKey } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useWorkspace } from "@/stores/workspace"
@@ -190,6 +190,7 @@ export function CalendarMenu() {
             <div className="flex flex-col gap-1.5 px-3 pt-2.5 pb-3">
               <DotsContext.Provider value={dots}>
                 <Calendar
+                  weekStartsOn={weekStart()}
                   month={now}
                   hideNavigation
                   showOutsideDays

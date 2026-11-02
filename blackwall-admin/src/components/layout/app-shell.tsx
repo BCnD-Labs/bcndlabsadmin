@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react"
-import { Outlet, useLocation } from "react-router-dom"
+import { Outlet, useLocation, useNavigate } from "react-router-dom"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { FormHost } from "@/components/forms/form-host"
@@ -24,8 +24,16 @@ export function AppShell() {
   const navExpanded = usePrefs((s) => s.navExpanded)
   const mainRef = useRef<HTMLElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
-  const { pathname } = useLocation()
+  const { pathname, search, hash } = useLocation()
+  const navigate = useNavigate()
   const mobileView = useMobileView()
+
+  // Settings → General → Open on: only when the app first opens at its root, never when you click Home.
+  useEffect(() => {
+    const landing = usePrefs.getState().landingPage
+    if (pathname === "/" && !search && !hash && landing !== "/") navigate(landing, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const focusMain = useCallback(() => mainRef.current?.focus({ preventScroll: true }), [])
 

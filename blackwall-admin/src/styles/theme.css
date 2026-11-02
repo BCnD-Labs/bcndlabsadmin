@@ -354,3 +354,11 @@ html[data-theme="dark"] [data-category="kind-certification"] { --bw-category: #3
 html[data-theme="dark"] [data-category="kind-selfpaced"] { --bw-category: #12b5cb; }
 html[data-theme="dark"] [data-category="kind-skill"] { --bw-category: #a142f4; }
 html[data-theme="dark"] [data-category="kind-reading"] { --bw-category: #fa7b17; }
+
+/* Settings → Appearance → Motion: "reduce" stops animations everywhere; "system" leaves it to the OS (motion-reduce: classes). */
+html[data-motion="reduce"] *, html[data-motion="reduce"] *::before, html[data-motion="reduce"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}

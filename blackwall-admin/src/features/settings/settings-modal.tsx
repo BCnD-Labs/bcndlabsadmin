@@ -1,4 +1,4 @@
-import { DashboardSettings } from "./dashboard-page"
+import { DataSourcesGroup, HomeSettings } from "./dashboard-page"
 import { Search, SearchX } from "lucide-react"
 import { useState, type ComponentType } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
@@ -7,19 +7,42 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils"
 import { useUi, type SettingsSection } from "@/stores/ui"
 import { ConnectionsPage } from "./connections-page"
-import { GeneralSettings } from "./general-page"
-import { ServerSettings } from "./server-page"
-import { AppearanceSettings, SETTINGS_SECTIONS, SectionContext, SettingsQuery, ShortcutsSettings } from "./settings-pages"
+import { AboutSettings, DataPanel, ResetPanel } from "./general-page"
+import { ServerSettings, SessionGroup } from "./server-page"
+import { AppearanceSettings, GeneralSettings, NotificationsSettings, SETTINGS_SECTIONS, SampleDataGroup, SectionContext, SettingsPage, SettingsQuery, ShortcutsSettings, SidebarSettings } from "./settings-pages"
 
 const BUILD = __BLACKWALL_BUILD__
 
+function ConnectionsSettings() {
+  return (
+    <>
+      <ConnectionsPage />
+      <div className="mt-5 grid gap-5"><DataSourcesGroup /><SessionGroup /></div>
+    </>
+  )
+}
+
+function DataSettings() {
+  return (
+    <SettingsPage>
+      <SampleDataGroup />
+      <DataPanel />
+      <ResetPanel />
+    </SettingsPage>
+  )
+}
+
 const BODY: Record<SettingsSection, ComponentType> = {
   general: GeneralSettings,
-  dashboard: DashboardSettings,
   appearance: AppearanceSettings,
-  connections: ConnectionsPage,
+  home: HomeSettings,
+  sidebar: SidebarSettings,
+  notifications: NotificationsSettings,
+  connections: ConnectionsSettings,
+  data: DataSettings,
   server: ServerSettings,
   shortcuts: ShortcutsSettings,
+  about: AboutSettings,
 }
 
 /**
@@ -95,7 +118,6 @@ export function SettingsModal() {
             </Select>
           </div>
           <nav aria-label="Settings sections" className="hidden md:block">
-            <p className="bw-label mt-1 mb-2 px-1">Options</p>
             <ul className="flex flex-col gap-0.5">
               {SETTINGS_SECTIONS.map(({ id, label, icon: Icon }) => {
                 const on = id === current && !q

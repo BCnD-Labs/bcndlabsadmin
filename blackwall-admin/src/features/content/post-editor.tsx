@@ -15,7 +15,7 @@ import { Panel } from "@/components/common/panel"
 import { SegmentedTabs } from "@/components/common/segmented-tabs"
 import { Field, OptionSelect, ProjectSelect } from "@/components/forms/fields"
 import { slugify } from "@/lib/ids"
-import { timeAgo } from "@/lib/dates"
+import { timeAgo, timeFmt } from "@/lib/dates"
 import { postsHref } from "@/lib/routes"
 import type { Draft, DraftKind } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -423,7 +423,7 @@ function PublishPanel({ draft, item, site, onRemoteSlug }: { draft: Draft; item?
       await schedule(draftToPost(draft, at.toISOString()), at.toISOString())
       onRemoteSlug(draft.slug)
       setScheduling(false)
-      toast.success(`Scheduled for ${format(at, "EEE MMM d, h:mm a")}`)
+      toast.success(`Scheduled for ${format(at, `EEE MMM d, ${timeFmt()}`)}`)
     })
 
   return (
@@ -442,7 +442,7 @@ function PublishPanel({ draft, item, site, onRemoteSlug }: { draft: Draft; item?
       )}
       {state === "scheduled" && item?.date && (
         <p className="text-xs leading-relaxed text-muted-foreground">
-          Publishes <span className="text-ink">{format(new Date(item.date), "EEE, MMM d 'at' h:mm a")}</span>. Blackwall's server publishes it then, even if this tab is closed.
+          Publishes <span className="text-ink">{format(new Date(item.date), `EEE, MMM d 'at' ${timeFmt()}`)}</span>. Blackwall's server publishes it then, even if this tab is closed.
           {item.scheduled?.error && <span className="mt-1 block text-red-text">Last try failed: {item.scheduled.error}</span>}
         </p>
       )}

@@ -1,3 +1,4 @@
+import { timeFmt } from "@/lib/dates"
 import { format } from "date-fns"
 import { ArrowLeft, Menu, Search } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
@@ -51,8 +52,8 @@ export function Header() {
           {home ? (
             <>
               <time className="bw-label truncate leading-4" dateTime={now.toISOString()} data-testid="header-clock">
-                <span className="sm:hidden">{format(now, "EEE · MMM d · h:mm a")}</span>
-                <span className="hidden sm:inline">{format(now, "EEEE · MMM d · h:mm a")}</span>
+                <span className="sm:hidden">{format(now, `EEE · MMM d · ${timeFmt()}`)}</span>
+                <span className="hidden sm:inline">{format(now, `EEEE · MMM d · ${timeFmt()}`)}</span>
               </time>
               <h1 className="truncate font-heading text-xl leading-[26px] font-bold sm:text-2xl">
                 {greeting(now)}

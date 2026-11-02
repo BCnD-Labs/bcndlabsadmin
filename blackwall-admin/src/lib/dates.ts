@@ -1,3 +1,4 @@
+import { usePrefs } from "@/stores/prefs"
 import {
   addDays,
   differenceInCalendarDays,
@@ -44,7 +45,7 @@ export function formatTime(hhmm?: string): string {
   const [h, m] = hhmm.split(":").map(Number)
   const d = new Date()
   d.setHours(h, m, 0, 0)
-  return format(d, "h:mm a")
+  return format(d, timeFmt())
 }
 
 /** Compact age for dense lists: "now", "12m", "3h", "2d", "5w". */
@@ -58,3 +59,8 @@ export function shortAgo(iso: string, now = new Date()): string {
   if (m < 60 * 24 * 7) return `${Math.floor(m / 1440)}d`
   return `${Math.floor(m / 10080)}w`
 }
+
+/** The clock pattern from Settings → General (12-hour by default). */
+export const timeFmt = () => (usePrefs.getState().timeFormat === "24h" ? "HH:mm" : "h:mm a")
+/** First day of the week from Settings → General: 0 Sunday (default), 1 Monday. */
+export const weekStart = (): 0 | 1 => usePrefs.getState().weekStartsOn

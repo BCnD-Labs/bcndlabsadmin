@@ -1,3 +1,4 @@
+import { timeFmt } from "@/lib/dates"
 import { emptyWorkspace, validWorkspace } from "@shared/workspace"
 import { downloadWorkspace, downloadMigrationBackup } from "@/services/workspace-sync"
 import { format, formatDistanceToNowStrict } from "date-fns"
@@ -53,19 +54,18 @@ const FIRST_CHECK_MS = 45_000
 const CHECK_EVERY_MS = 30_000
 const GIVE_UP_MS = 10 * 60_000
 
-export function GeneralSettings() {
+/** About: version, updates and installing the app. */
+export function AboutSettings() {
   return (
     <SettingsPage>
       <AboutPanel />
       <InstallPanel />
-      <DataPanel />
-      <ResetPanel />
     </SettingsPage>
   )
 }
 
 /** How to put Blackwall on a phone's home screen. Same address, same account, same data as the browser. */
-function InstallPanel() {
+export function InstallPanel() {
   const installed = typeof window !== "undefined" && (window.matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true)
   return (
     <Panel title="App" tool="blackwall" command="install" bodyClassName="divide-y divide-line">
@@ -82,7 +82,7 @@ function InstallPanel() {
   )
 }
 
-function AboutPanel() {
+export function AboutPanel() {
   const [info, setInfo] = useState<SystemInfo | null>(null)
   const [infoError, setInfoError] = useState<string | null>(null)
   const [nonce, setNonce] = useState(0)
@@ -111,7 +111,7 @@ function AboutPanel() {
             <>
               <dt className="text-muted-foreground">Built</dt>
               <dd>
-                {format(new Date(info.build.builtAt), "MMM d, yyyy 'at' h:mm a")} <span className="text-muted-foreground">· {ago(info.build.builtAt)}</span>
+                {format(new Date(info.build.builtAt), `MMM d, yyyy 'at' ${timeFmt()}`)} <span className="text-muted-foreground">· {ago(info.build.builtAt)}</span>
               </dd>
             </>
           )}
@@ -306,7 +306,7 @@ function UpdateRow({ info, onRestarted }: { info: SystemInfo; onRestarted: () =>
   )
 }
 
-function DataPanel() {
+export function DataPanel() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [pending, setPending] = useState<{ raw: unknown; summary: string } | null>(null)
 
@@ -379,7 +379,7 @@ function DataPanel() {
   )
 }
 
-function ResetPanel() {
+export function ResetPanel() {
   const resetPrefs = usePrefs((s) => s.reset)
   const clearAll = useWorkspace((s) => s.clearAll)
 
@@ -394,7 +394,7 @@ function ResetPanel() {
   }
 
   return (
-    <Panel title="Reset" tool="blackwall" command="reset" bodyClassName="divide-y divide-line">
+    <Panel title="Danger zone" tool="blackwall" command="reset" bodyClassName="divide-y divide-line">
       <SettingRow title="Clear cache" description="Reload the page and fetch fresh data from your connections. Nothing you've saved is affected.">
         <Button variant="outline" onClick={clearCache}>Clear cache</Button>
       </SettingRow>

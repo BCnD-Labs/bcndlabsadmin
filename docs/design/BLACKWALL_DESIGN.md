@@ -87,6 +87,15 @@ Planner keeps its owner-approved arrangement and matches the rendered Ant Design
 
 Ordinary dates are unfilled, day buttons stay 32px, and week gaps are 4px. A six-week month fits in the calendar unit without shrinking dates; its body can scroll if content or text settings need more space. The legacy shared `--bw-slot-h` and exact Home/Planner viewport-edge contract are retired; alignment now comes from shared column and row units.
 
+## Title bars, header and settings (Nov 2026 review)
+
+- A panel title bar holds only the category icon tile and the title (36px bar, 24px tile, 16px title). Subtitles, badges, counts, selectors and buttons go in one slim toolbar row under it. Floating cards (calendar, notifications, log) follow the same rule.
+- The app header shows the page title with the section tabs under it; no breadcrumb, no "Saved on server" line. Detail pages get a back arrow. Save status is an icon in the rail above Settings (check / spinner / cross), in the header on phones.
+- One red button per page, in the header. "+ New" is always quiet. Panel-level adds are icon buttons.
+- Home uses masonry rows (4px units) so short panels don't leave holes; order is still yours.
+- Settings is a normal settings menu: General · Appearance · Home · Sidebar · Notifications · Connections · Data & storage · Server & backups · Keyboard shortcuts · About. Groups are a small caption over compact rows (label + one-line description + control).
+- Kept on purpose despite the review: the Planner calendar's 25px inset and Comfortable as the default density.
+
 ## Learning
 
 - Learning is general learning, not only school. Five kinds share one record type (`Course` with `kind`): Course, Certification, Self-paced, Skill, Reading. Older records with no kind are courses.

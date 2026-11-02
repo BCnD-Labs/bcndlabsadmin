@@ -1,5 +1,5 @@
 import { createContext, isValidElement, useContext, useState, type ReactNode } from "react"
-import { Keyboard, LayoutDashboard, Palette, Plug, Server, SlidersHorizontal, type LucideIcon } from "lucide-react"
+import { Bell, Database, Info, Keyboard, LayoutDashboard, PanelLeft, Palette, Plug, Server, SlidersHorizontal, type LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Kbd } from "@/components/ui/kbd"
@@ -8,17 +8,22 @@ import { Switch } from "@/components/ui/switch"
 import { Panel } from "@/components/common/panel"
 import { SegmentedTabs } from "@/components/common/segmented-tabs"
 import { cn } from "@/lib/utils"
-import { ACCENTS, usePrefs, type Accent } from "@/stores/prefs"
+import { OptionSelect } from "@/components/forms/fields"
+import { ACCENTS, LANDING_PAGES, usePrefs, type Accent } from "@/stores/prefs"
 import { NAV } from "@/components/layout/nav-config"
 import type { SettingsSection } from "@/stores/ui"
 
 export const SETTINGS_SECTIONS: { id: SettingsSection; label: string; icon: LucideIcon; blurb: string }[] = [
-  { id: "general", label: "General", icon: SlidersHorizontal, blurb: "Version and updates, plus your shared workspace data." },
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, blurb: "Choose your Home panels and data sources. These choices are saved automatically in this browser." },
-  { id: "appearance", label: "Appearance", icon: Palette, blurb: "How Blackwall looks and behaves in this browser." },
-  { id: "connections", label: "Connections", icon: Plug, blurb: "Accounts Blackwall reads from or publishes to, plus saved custom services. Credentials stay on your Blackwall server and are never returned to the browser." },
-  { id: "server", label: "Server & backups", icon: Server, blurb: "Where server-side data lives, your session, and whether backups are running." },
-  { id: "shortcuts", label: "Shortcuts", icon: Keyboard, blurb: "Keys that work anywhere in Blackwall." },
+  { id: "general", label: "General", icon: SlidersHorizontal, blurb: "Your name, dates and times, and where Blackwall opens." },
+  { id: "appearance", label: "Appearance", icon: Palette, blurb: "Theme, color, spacing and motion in this browser." },
+  { id: "home", label: "Home", icon: LayoutDashboard, blurb: "Which panels Home shows, in what order and width." },
+  { id: "sidebar", label: "Sidebar", icon: PanelLeft, blurb: "Labels, names and which sections show in the sidebar." },
+  { id: "notifications", label: "Notifications", icon: Bell, blurb: "How the notification and calendar cards behave." },
+  { id: "connections", label: "Connections", icon: Plug, blurb: "Linked services, which account feeds each panel, and your session. Credentials stay on your server." },
+  { id: "data", label: "Data & storage", icon: Database, blurb: "Sample data, export and import, and resets." },
+  { id: "server", label: "Server & backups", icon: Server, blurb: "Where server data lives and whether backups run." },
+  { id: "shortcuts", label: "Keyboard shortcuts", icon: Keyboard, blurb: "Keys that work anywhere in Blackwall." },
+  { id: "about", label: "About", icon: Info, blurb: "Version, updates and installing the app." },
 ]
 
 /** Which section a SettingsPage belongs to (set by the settings modal). */
@@ -40,11 +45,11 @@ export function SettingsPage({ actions, children }: { actions?: ReactNode; child
   const id = useContext(SectionContext)
   const section = SETTINGS_SECTIONS.find((s) => s.id === id) ?? SETTINGS_SECTIONS[0]
   return (
-    <div data-settings-section={id} className="grid min-w-0 content-start gap-4">
-      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 pb-1">
+    <div data-settings-section={id} className="grid min-w-0 content-start gap-5">
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
-          <h2 className="font-heading text-xl font-bold tracking-tight">{section.label}</h2>
-          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-ink-2">{section.blurb}</p>
+          <h2 className="font-heading text-lg leading-tight font-bold tracking-tight">{section.label}</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">{section.blurb}</p>
         </div>
         {actions && <div className="flex items-center gap-2">{actions}</div>}
       </div>
@@ -79,7 +84,7 @@ export function SettingRow({
     <div
       data-setting-row
       data-match={match}
-      className={cn("flex gap-2 px-4 py-3 sm:items-center sm:gap-6", inline ? "items-center gap-4" : "flex-col sm:flex-row", className)}
+      className={cn("flex min-h-12 gap-2 px-4 py-2.5 sm:items-center sm:gap-6", inline ? "items-center gap-4" : "flex-col sm:flex-row", className)}
     >
       <div className="min-w-0 flex-1">
         {htmlFor ? (
@@ -87,7 +92,7 @@ export function SettingRow({
         ) : (
           <div className="text-[13px] font-medium text-ink">{title}</div>
         )}
-        {description && <div className="mt-1 max-w-[62ch] text-xs leading-relaxed text-muted-foreground">{description}</div>}
+        {description && <div className="mt-0.5 max-w-[62ch] text-xs leading-snug text-muted-foreground">{description}</div>}
       </div>
       {children && <div className="flex shrink-0 flex-wrap items-center gap-2">{children}</div>}
     </div>
@@ -112,102 +117,140 @@ export function ConfirmButton({ children, confirmLabel, onConfirm, danger }: { c
   )
 }
 
+export function GeneralSettings() {
+  const workspaceName = usePrefs((s) => s.workspaceName)
+  const weekStartsOn = usePrefs((s) => s.weekStartsOn)
+  const timeFormat = usePrefs((s) => s.timeFormat)
+  const landingPage = usePrefs((s) => s.landingPage)
+  const set = usePrefs((s) => s.set)
+  return (
+    <SettingsPage>
+      <Panel title="Workspace" tool="general" command="edit" bodyClassName="divide-y divide-line">
+        <SettingRow title="Your name" description="Shown in the Home greeting." htmlFor="ws-name" keywords="workspace name greeting">
+          <Input id="ws-name" className="h-8 w-full sm:w-52" maxLength={32} placeholder="e.g. Blake" value={workspaceName} onChange={(e) => set({ workspaceName: e.target.value })} />
+        </SettingRow>
+        <SettingRow title="Open on" description="The page Blackwall shows when it first opens." htmlFor="landing" keywords="default landing start page home">
+          <OptionSelect id="landing" value={landingPage} onChange={(v) => set({ landingPage: v })} options={LANDING_PAGES.map((l) => ({ value: l.value, label: l.label }))} className="w-52 max-w-full" />
+        </SettingRow>
+      </Panel>
+      <Panel title="Date & time" tool="general" command="time" bodyClassName="divide-y divide-line">
+        <SettingRow title="Week starts on" description="Calendars, the Planner and Insights." keywords="week start sunday monday calendar">
+          <SegmentedTabs label="Week starts on" className="w-full sm:w-52" tabs={[{ value: "0", label: "Sunday" }, { value: "1", label: "Monday" }]} value={String(weekStartsOn)} onChange={(v) => set({ weekStartsOn: v === "1" ? 1 : 0 })} />
+        </SettingRow>
+        <SettingRow title="Time format" description="Clock, due times and schedules." keywords="clock 24 hour 12 hour am pm time">
+          <SegmentedTabs label="Time format" className="w-full sm:w-52" tabs={[{ value: "12h", label: "1:30 PM" }, { value: "24h", label: "13:30" }]} value={timeFormat} onChange={(v) => set({ timeFormat: v })} />
+        </SettingRow>
+      </Panel>
+    </SettingsPage>
+  )
+}
+
 export function AppearanceSettings() {
   const categoryColors = usePrefs((s) => s.categoryColors)
-  const expanded = usePrefs((s) => s.navExpanded)
   const retro = usePrefs((s) => s.retroDetails)
-  const samples = usePrefs((s) => s.showSamples)
-  const workspaceName = usePrefs((s) => s.workspaceName)
-  const autoHide = usePrefs((s) => s.autoHideSeconds)
   const theme = usePrefs((s) => s.theme)
   const uiFont = usePrefs((s) => s.uiFont)
   const accent = usePrefs((s) => s.accent)
   const density = usePrefs((s) => s.density)
+  const motion = usePrefs((s) => s.motion)
   const layoutMode = usePrefs((s) => s.layoutMode)
   const set = usePrefs((s) => s.set)
 
   return (
     <SettingsPage>
-      <Panel title="Preferences" tool="appearance" command="edit" meta="this browser" bodyClassName="divide-y divide-line">
-        <SettingRow title="Theme" description="Dim is a softer slate between dark and light. Dark is the original near-black look." keywords="dark mode dim colour color contrast">
-          <SegmentedTabs
-            label="Theme"
-            className="w-full sm:w-52"
-            tabs={[
-              { value: "dim", label: "Dim" },
-              { value: "dark", label: "Dark" },
-            ]}
-            value={theme}
-            onChange={(v) => set({ theme: v })}
-          />
+      <Panel title="Look" tool="appearance" command="edit" bodyClassName="divide-y divide-line">
+        <SettingRow title="Theme" description="Dim is soft slate; Dark is near-black." keywords="dark mode dim colour color contrast">
+          <SegmentedTabs label="Theme" className="w-full sm:w-52" tabs={[{ value: "dim", label: "Dim" }, { value: "dark", label: "Dark" }]} value={theme} onChange={(v) => set({ theme: v })} />
         </SettingRow>
-        <SettingRow title="Accent color" description="Buttons, the BW logo and active markers. Error colors always stay red." keywords="accent brand color colour primary">
+        <SettingRow title="Accent color" description="Buttons, the logo and active markers. Errors stay red." keywords="accent brand color colour primary">
           <div role="radiogroup" aria-label="Accent color" className="flex flex-wrap gap-1.5">
             {ACCENTS.map((a) => (
               <button key={a} type="button" role="radio" aria-checked={accent === a} aria-label={a} title={a[0].toUpperCase() + a.slice(1)} onClick={() => set({ accent: a })}
-                className={cn("size-7 rounded-full outline-offset-2", accent === a && "outline-2 outline-ink")} style={{ background: ACCENT_SWATCH[a] }} />
+                className={cn("size-6 rounded-full outline-offset-2", accent === a && "outline-2 outline-ink")} style={{ background: ACCENT_SWATCH[a] }} />
             ))}
           </div>
         </SettingRow>
-        <SettingRow title="Density" description="Comfortable gives panels room to breathe; compact fits more on screen." keywords="spacing compact comfortable gap padding">
+        <SettingRow title="Interface font" description="Sans with mono for numbers, or mono everywhere." keywords="typeface font monospace">
+          <SegmentedTabs label="Interface font" className="w-full sm:w-52" tabs={[{ value: "sans", label: "Sans" }, { value: "mono", label: "Mono" }]} value={uiFont} onChange={(v) => set({ uiFont: v })} />
+        </SettingRow>
+        <SettingRow title="Category colors" description="Colored icons for tasks, learning, GitHub, website and traffic." htmlFor="category-colors" inline>
+          <Switch id="category-colors" checked={categoryColors} onCheckedChange={(v) => set({ categoryColors: v })} />
+        </SettingRow>
+        <SettingRow title="Background grid & scanlines" description="The faint grid behind pages and lines on panels." htmlFor="retro" inline keywords="retro details">
+          <Switch id="retro" checked={retro} onCheckedChange={(v) => set({ retroDetails: v })} />
+        </SettingRow>
+      </Panel>
+      <Panel title="Layout & motion" tool="appearance" command="layout" bodyClassName="divide-y divide-line">
+        <SettingRow title="Density" description="Space between and inside panels." keywords="spacing compact comfortable gap padding">
           <SegmentedTabs label="Density" className="w-full sm:w-52" tabs={[{ value: "comfortable", label: "Comfortable" }, { value: "compact", label: "Compact" }]} value={density} onChange={(v) => set({ density: v })} />
         </SettingRow>
+        <SettingRow title="Motion" description="Animations and transitions." keywords="reduce motion animation accessibility">
+          <SegmentedTabs label="Motion" className="w-full sm:w-52" tabs={[{ value: "system", label: "System" }, { value: "reduce", label: "Reduce" }, { value: "full", label: "Full" }]} value={motion} onChange={(v) => set({ motion: v })} />
+        </SettingRow>
         <SettingRow
-          title="Phone layout"
-          description={<>
-            Applies on phone-sized screens only; tablets and computers always use the normal layout.{" "}
-            <strong className="font-medium text-ink-2">Mobile view</strong> is built for phones page by page; pages without a mobile version yet show the responsive page inside it.{" "}
-            <strong className="font-medium text-ink-2">Responsive</strong> is the desktop layout reflowed to fit: it works today, but phones aren't its focus, so some items may not fit or behave perfectly.
-            {" "}If the mobile view ever breaks, switch back here, use the button it shows, or open any address with <code className="font-mono">?layout=responsive</code>.
+          title="Layout on phones"
+          description={<>Phone-sized screens only.{" "}
+            <details className="inline [&[open]]:block">
+              <summary className="inline cursor-pointer underline-offset-2 hover:underline">Learn more</summary>
+              <span className="mt-1 block">
+                <strong className="font-medium text-ink-2">Mobile view</strong> is built for phones page by page; pages without a mobile version show the responsive page inside it.{" "}
+                <strong className="font-medium text-ink-2">Responsive</strong> is the desktop layout reflowed: it works, but phones aren't its focus. If the mobile view breaks, switch back here or open any address with <code className="font-mono">?layout=responsive</code>.
+              </span>
+            </details>
           </>}
           keywords="mobile phone layout responsive view pwa"
         >
-          <SegmentedTabs label="Phone layout" className="w-full sm:w-56" tabs={[{ value: "responsive", label: "Responsive" }, { value: "mobile", label: "Mobile view" }]} value={layoutMode} onChange={(v) => set({ layoutMode: v })} />
+          <SegmentedTabs label="Layout on phones" className="w-full sm:w-56" tabs={[{ value: "responsive", label: "Responsive" }, { value: "mobile", label: "Mobile view" }]} value={layoutMode} onChange={(v) => set({ layoutMode: v })} />
         </SettingRow>
-        <SettingRow title="Category colors" description="Distinct icon colors and subtle panel tints identify tasks, learning, GitHub, website content and traffic. Turn off for neutral icons and panels." htmlFor="category-colors" inline>
-          <Switch id="category-colors" checked={categoryColors} onCheckedChange={(v) => set({ categoryColors: v })} />
-        </SettingRow>
-        <SettingRow title="Show sidebar labels" description="Keep the full navigation visible on desktop, instead of showing labels only on hover." htmlFor="sidebar-labels" inline>
+      </Panel>
+    </SettingsPage>
+  )
+}
+
+export function SidebarSettings() {
+  const expanded = usePrefs((s) => s.navExpanded)
+  const set = usePrefs((s) => s.set)
+  return (
+    <SettingsPage>
+      <Panel title="Sidebar" tool="sidebar" command="edit" bodyClassName="divide-y divide-line">
+        <SettingRow title="Show labels" description="The full sidebar instead of icons with hover labels." htmlFor="sidebar-labels" inline keywords="sidebar labels expanded navigation">
           <Switch id="sidebar-labels" checked={expanded} onCheckedChange={(v) => set({ navExpanded: v })} />
-        </SettingRow>
-        <SettingRow title="Interface font" description="Sans for everyday text with mono kept for prompts and numbers, or mono everywhere." keywords="typeface font monospace">
-          <SegmentedTabs
-            label="Interface font"
-            className="w-full sm:w-52"
-            tabs={[
-              { value: "sans", label: "Sans" },
-              { value: "mono", label: "Mono" },
-            ]}
-            value={uiFont}
-            onChange={(v) => set({ uiFont: v })}
-          />
-        </SettingRow>
-        <SettingRow title="Workspace name" description="Shown in the Home greeting and as initials at the bottom of the sidebar." htmlFor="ws-name">
-          <Input id="ws-name" className="h-8 w-full sm:w-52" maxLength={32} placeholder="e.g. your org" value={workspaceName} onChange={(e) => set({ workspaceName: e.target.value })} />
-        </SettingRow>
-        <SettingRow title="Auto-hide cards" description="How long the calendar and notification cards stay open after you move away." htmlFor="auto-hide">
-          <input
-            id="auto-hide"
-            type="range"
-            min={2}
-            max={15}
-            step={1}
-            value={autoHide}
-            onChange={(e) => set({ autoHideSeconds: Number(e.target.value) })}
-            aria-valuetext={`${autoHide} seconds`}
-            className="w-32 accent-[var(--bw-red)]"
-          />
-          <output htmlFor="auto-hide" className="w-8 text-right font-mono text-xs text-ink-2 tabular-nums">{autoHide}s</output>
-        </SettingRow>
-        <SettingRow title="Retro details" description="Background grid and panel scanlines." htmlFor="retro" inline>
-          <Switch id="retro" checked={retro} onCheckedChange={(v) => set({ retroDetails: v })} />
-        </SettingRow>
-        <SettingRow title="Sample data" description="Fill panels that aren't connected yet with made-up data, labelled “Sample data”, to preview the layout." htmlFor="samples" inline>
-          <Switch id="samples" checked={samples} onCheckedChange={(v) => set({ showSamples: v })} />
         </SettingRow>
       </Panel>
       <SidebarPanel />
     </SettingsPage>
+  )
+}
+
+export function NotificationsSettings() {
+  const autoHide = usePrefs((s) => s.autoHideSeconds)
+  const keepOpen = usePrefs((s) => s.keepCardsOpen)
+  const set = usePrefs((s) => s.set)
+  return (
+    <SettingsPage>
+      <Panel title="Cards" tool="notifications" command="edit" bodyClassName="divide-y divide-line">
+        <SettingRow title="Keep cards open" description="Calendar and notification cards stay until you close them." htmlFor="keep-open" inline keywords="auto hide dismiss notification calendar card">
+          <Switch id="keep-open" checked={keepOpen} onCheckedChange={(v) => set({ keepCardsOpen: v })} />
+        </SettingRow>
+        <SettingRow title="Hide after" description="How long a card stays open after the pointer leaves it." htmlFor="auto-hide" keywords="auto hide seconds timer">
+          <input id="auto-hide" type="range" min={2} max={15} step={1} value={autoHide} disabled={keepOpen} onChange={(e) => set({ autoHideSeconds: Number(e.target.value) })} aria-valuetext={`${autoHide} seconds`} className="w-32 accent-[var(--bw-red)] disabled:opacity-40" />
+          <output htmlFor="auto-hide" className="w-8 text-right font-mono text-xs text-ink-2 tabular-nums">{autoHide}s</output>
+        </SettingRow>
+      </Panel>
+    </SettingsPage>
+  )
+}
+
+/** Sample data plus the workspace export/import and resets (General page pieces). */
+export function SampleDataGroup() {
+  const samples = usePrefs((s) => s.showSamples)
+  const set = usePrefs((s) => s.set)
+  return (
+    <Panel title="Preview" tool="data" command="samples" bodyClassName="divide-y divide-line">
+      <SettingRow title="Sample data" description="Fill unconnected panels with labelled made-up data to preview them." htmlFor="samples" inline keywords="demo preview fake">
+        <Switch id="samples" checked={samples} onCheckedChange={(v) => set({ showSamples: v })} />
+      </SettingRow>
+    </Panel>
   )
 }
 
@@ -249,9 +292,9 @@ function SidebarPanel() {
   const hidden = usePrefs((s) => s.navHidden)
   const set = usePrefs((s) => s.set)
   return (
-    <Panel title="Sidebar" tool="appearance" command="nav" meta="this browser" bodyClassName="divide-y divide-line">
+    <Panel title="Sections" tool="sidebar" command="nav" meta="Rename or hide. Hidden pages stay reachable by search." bodyClassName="divide-y divide-line">
       {NAV.map((d) => (
-        <SettingRow key={d.id} title={d.label} description={d.id === "home" ? "Always shown." : hidden.includes(d.id) ? "Hidden from the sidebar" : "Shown"} htmlFor={`nav-label-${d.id}`} keywords="sidebar navigation rename hide section">
+        <SettingRow key={d.id} title={d.label} description={d.id === "home" ? "Always shown." : undefined} htmlFor={`nav-label-${d.id}`} keywords="sidebar navigation rename hide section">
           <div className="flex w-full min-w-0 items-center gap-2">
             <Input id={`nav-label-${d.id}`} aria-label={`Name for ${d.label}`} placeholder={d.label} value={labels[d.id] ?? ""} maxLength={32}
               onChange={(e) => set({ navLabels: { ...labels, [d.id]: e.target.value } })} className="w-44" />
