@@ -1,7 +1,7 @@
 import { create } from "zustand"
 import { COLLECTION_KEYS, emptyWorkspace, mergeWorkspace, same, validWorkspace, type Collections, type WorkspaceSnapshot } from "@shared/workspace"
-import { useWorkspace, WORKSPACE_VERSION } from "@/stores/workspace"
-import { safeLocalStorage } from "@/stores/storage"
+import { useWorkspace, WORKSPACE_VERSION, WORKSPACE_STORAGE_KEY } from "@/stores/workspace"
+import { safeLocalStorage, storageIsDurable } from "@/stores/storage"
 import { api, ConnectorError } from "./connector"
 
 const SYNC_KEY = "blackwall.workspace.sync"
@@ -112,7 +112,7 @@ export async function syncWorkspace() {
     useWorkspaceSync.setState({ status: "pending", message: "Other devices are editing. Retrying shortly…" })
     later()
   } catch (e) {
-    if (active && run === generation) useWorkspaceSync.setState({ ready: true, status: "offline", message: `Saved on this device only. ${(e as Error).message}` })
+    if (active && run === generation) useWorkspaceSync.setState({ ready: true, status: "offline", message: `${storageIsDurable(WORKSPACE_STORAGE_KEY) ? "Saved on this device only." : "Browser storage unavailable. Keep this tab open or export unsynced edits."} ${(e as Error).message}` })
   } finally {
     busy = false
     // React StrictMode can stop and restart while a request is in flight.
@@ -145,4 +145,26 @@ export function downloadWorkspace(data = pick(), name = "workspace") {
 export function downloadMigrationBackup() {
   const raw = safeLocalStorage.getItem(BACKUP_KEY)
   if (typeof raw === "string") downloadWorkspace(JSON.parse(raw).state as Collections, "recovery")
+}
+
+export function workspaceConflictDetails() {
+  if (!conflictRemote) return []
+  const local = pick(), remote = conflictRemote.data
+  return useWorkspaceSync.getState().conflicts.map((conflict) => {
+    const split = conflict.indexOf(": ")
+    const key = conflict.slice(0, split) as keyof Collections, id = conflict.slice(split + 2)
+    const ours = local[key].find((row) => row.id === id), theirs = remote[key].find((row) => row.id === id)
+    const first = (ours ?? theirs) as unknown as Record<string, unknown> | undefined
+    const title = String(first?.title ?? first?.name ?? first?.fullName ?? first?.text ?? id).split("\n")[0]
+    const left = ours as unknown as Record<string, unknown> | undefined, right = theirs as unknown as Record<string, unknown> | undefined
+    const text = (value: unknown, deleted: boolean) => deleted ? "Record deleted" : value == null ? "Not set" : typeof value === "boolean" ? (value ? "Yes" : "No") : Array.isArray(value) ? value.join(", ") : String(value)
+    const fields = [...new Set([...Object.keys(left ?? {}), ...Object.keys(right ?? {})])]
+      .filter((field) => !["id", "createdAt", "updatedAt"].includes(field) && !same(left?.[field], right?.[field]))
+      .map((field) => ({ label: field.replace(/([A-Z])/g, " $1"), device: text(left?.[field], !left), server: text(right?.[field], !right) }))
+    return { id: conflict, title: `${key} · ${title}`, fields }
+
+  })
+}
+export function downloadConflictServerCopy() {
+  if (conflictRemote) downloadWorkspace(conflictRemote.data, "server-conflict")
 }

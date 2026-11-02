@@ -1,6 +1,7 @@
 import { useEffect } from "react"
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { downloadWorkspace, resolveWorkspaceConflict, startWorkspaceSync, stopWorkspaceSync, syncWorkspace, useWorkspaceSync } from "@/services/workspace-sync"
+import { downloadWorkspace, downloadConflictServerCopy, workspaceConflictDetails, resolveWorkspaceConflict, startWorkspaceSync, stopWorkspaceSync, syncWorkspace, useWorkspaceSync } from "@/services/workspace-sync"
 
 export function WorkspaceStatus({ connected }: { connected: boolean }) {
   const { status, message, conflicts } = useWorkspaceSync()
@@ -26,18 +27,25 @@ export function WorkspaceStatus({ connected }: { connected: boolean }) {
     }
   }, [connected])
   if (status === "conflict") return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/95 p-4" role="dialog" aria-modal="true" aria-labelledby="sync-conflict">
-      <div className="bw-panel w-full max-w-lg space-y-4 p-5">
-        <h2 id="sync-conflict" className="text-base font-semibold">Review workspace changes</h2>
-        <p>{message}</p>
+    <Dialog open>
+      <DialogContent showCloseButton={false} className="z-[100] max-h-[90dvh] overflow-y-auto sm:max-w-2xl" onEscapeKeyDown={(e) => e.preventDefault()} onInteractOutside={(e) => e.preventDefault()}>
+        <DialogTitle>Review workspace changes</DialogTitle>
+        <DialogDescription>{message}</DialogDescription>
         <p className="text-xs text-muted-foreground">{conflicts.length} conflicting records. Changes to other records are merged. Download this device’s copy before choosing; a recovery copy is also kept in Settings.</p>
+        <div className="max-h-72 space-y-3 overflow-y-auto">
+          {workspaceConflictDetails().map((item) => <section key={item.id} className="rounded-md border border-line p-3">
+            <h3 className="mb-2 break-all text-xs font-semibold">{item.title}</h3>
+            {item.fields.map((field) => <div key={field.label} className="mb-3 last:mb-0"><p className="mb-1 text-xs font-medium capitalize">{field.label}</p><div className="grid gap-3 sm:grid-cols-2">{([["This device", field.device], ["Server", field.server]] as const).map(([label, text]) => <div key={label} className="min-w-0"><p className="bw-label">{label}</p><p className="max-h-36 overflow-auto whitespace-pre-wrap break-words text-xs">{text}</p></div>)}</div></div>)}
+          </section>)}
+        </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => downloadWorkspace()}>Download device copy</Button>
+          <Button variant="outline" onClick={downloadConflictServerCopy}>Download server copy</Button>
           <Button onClick={() => resolveWorkspaceConflict("device")}>Keep device edits</Button>
           <Button variant="outline" onClick={() => resolveWorkspaceConflict("server")}>Keep server edits</Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
   return (
     <div role="status" className="mb-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground" data-testid="workspace-status">
