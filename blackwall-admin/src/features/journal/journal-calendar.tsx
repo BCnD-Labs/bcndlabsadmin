@@ -42,13 +42,14 @@ export function JournalCalendar({
       onSelect={(d) => d && onSelect(toDateKey(d))}
       month={month}
       onMonthChange={onMonthChange}
+      classNames={{ week: "mt-1 flex w-full", month: "flex w-full flex-col gap-2" }}
       modifiers={{ logged, due, overdue }}
       modifiersClassNames={{
         logged: cn(after, "after:left-[calc(50%-5px)] after:bg-muted-foreground"),
         due: cn(before, "before:left-[calc(50%+1px)] before:bg-red"),
         overdue: cn(before, "before:left-[calc(50%+1px)] before:bg-amber"),
       }}
-      className={cn("bg-transparent p-1 [--cell-size:--spacing(7.5)]", className)}
+      className={cn("bg-transparent p-1 [--cell-size:--spacing(8)]", className)}
     />
   )
 }

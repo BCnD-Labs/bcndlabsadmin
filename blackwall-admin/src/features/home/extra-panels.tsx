@@ -161,10 +161,13 @@ export function HomeWebsitePanel() {
         <p className="px-3 py-3 text-xs text-muted-foreground">No posts yet.</p>
       )}
       <div className="flex items-end gap-3 border-t border-line px-3 pt-2 pb-1.5">
-        <Link to={siteAnalyticsHref} className="shrink-0">
-          <span className="block text-[10px] text-muted-foreground">Visitors · 30d</span>
-          <span className="font-heading text-lg leading-tight font-bold">{visitors ?? <span className="text-faint">—</span>}</span>
-        </Link>
+        <div className="shrink-0">
+          <Link to={siteAnalyticsHref} className="block text-[10px] text-muted-foreground hover:text-ink">Visitors · 30d</Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-heading text-lg leading-tight font-bold">{visitors ?? <span className="text-faint">—</span>}</span>
+            <SourceBadge status={traffic.status} hint={traffic.status === "sample" ? "Sample analytics; website content has its own connection status above." : undefined} />
+          </div>
+        </div>
         {traffic.data && <DailyBars data={traffic.data.traffic} range={30} bare className="h-10 min-w-0 flex-1" />}
       </div>
       <Footer to={postsHref}>Posts & pages</Footer>

@@ -295,7 +295,7 @@ function DayColumn({ date, onDate }: { date: string; onDate: (d: string) => void
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={isToday(day) ? "What happened today? What did you learn? What's next?" : `Write the log for ${format(day, "MMMM d")}…`}
-        className="mx-3 mb-3 min-h-48 flex-1 resize-none rounded-[8px] border border-line-soft bg-well px-3 py-2.5 text-base leading-relaxed text-ink outline-none placeholder:text-faint focus:border-rim md:text-[13px]"
+        className="mx-3 mb-3 min-h-48 flex-1 resize-none rounded-[8px] border border-transparent bg-panel px-3 py-2.5 text-base leading-relaxed text-ink outline-none placeholder:text-faint focus:border-rim md:text-[13px]"
       />
     </div>
   )
