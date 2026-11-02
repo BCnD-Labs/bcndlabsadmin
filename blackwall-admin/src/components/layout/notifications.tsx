@@ -9,22 +9,22 @@ import { useAutoHide } from "@/hooks/use-auto-hide"
 import { shortAgo } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import { useUi } from "@/stores/ui"
-import { useNotifications, type BwNotification, type NotificationKind } from "@/services/notifications"
+import { startNotifications, useNotifications, type BwNotification, type NotificationKind } from "@/services/notifications"
+import { CategoryIcon, type Category } from "@/components/common/category-icon"
 
 type Filter = "all" | NotificationKind
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: "all", label: "All" },
-  { value: "alerts", label: "Alerts" },
+  { value: "server", label: "Server" },
   { value: "dev", label: "GitHub" },
+  { value: "work", label: "Work" },
   { value: "site", label: "Website" },
 ]
 
-const ICON: Record<NotificationKind, { path: string; color: string }> = {
-  alerts: { path: "M12 3l10 18H2zM12 10v4M12 17h.01", color: "var(--bw-red)" },
-  dev: { path: "M6 3v12M18 9a3 3 0 100-6 3 3 0 000 6zM6 21a3 3 0 100-6 3 3 0 000 6zM18 9c0 6-12 3-12 9", color: "var(--bw-text-2)" },
-  site: { path: "M12 3a9 9 0 100 18 9 9 0 000-18zM3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18", color: "var(--bw-text-2)" },
-}
+/** Each group in its category's color (the same tiles as panel title bars). */
+const GROUP_CATEGORY: Record<NotificationKind, Category> = { server: "mikoshi", dev: "development", work: "tasks", site: "website" }
+const SOURCE: Record<NotificationKind, string> = { server: "Mikoshi", dev: "GitHub", work: "Planner", site: "Website" }
 
 function groupLabel(n: BwNotification) {
   const d = parseISO(n.at)
@@ -37,6 +37,8 @@ function groupLabel(n: BwNotification) {
  */
 export function Notifications() {
   const items = useNotifications((s) => s.items)
+  const loaded = useNotifications((s) => s.loaded)
+  useEffect(() => startNotifications(), [])
   const markRead = useNotifications((s) => s.markRead)
   const markAllRead = useNotifications((s) => s.markAllRead)
   const [open, setOpen] = useState(false)
@@ -65,7 +67,7 @@ export function Notifications() {
   }, [open, disarm])
 
   const shown = [...items]
-    .filter((n) => filter === "all" || n.kind === filter)
+    .filter((n) => filter === "all" || n.group === filter)
     .sort((a, b) => b.at.localeCompare(a.at))
   const groups = (["Today", "Yesterday", "Earlier"] as const)
     .map((label) => ({ label, items: shown.filter((n) => groupLabel(n) === label) }))
@@ -140,8 +142,15 @@ export function Notifications() {
         </TitleBar>
 
         {items.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center">
-            <NoSignal message="No notification sources connected." onNavigate={close} />
+          <div className="flex flex-1 flex-col items-center justify-center gap-1 px-6 text-center">
+            {loaded ? (
+              <>
+                <p className="text-sm text-ink-2">You're all caught up</p>
+                <p className="text-[11px] text-muted-foreground">Service outages, GitHub reviews, due work and more land here. Choose what reaches your phone or email in Settings.</p>
+              </>
+            ) : (
+              <NoSignal message="Loading notifications…" onNavigate={close} />
+            )}
           </div>
         ) : (
           <>
@@ -157,20 +166,19 @@ export function Notifications() {
                     <button
                       key={n.id}
                       type="button"
-                      onClick={() => markRead(n.id)}
+                      onClick={() => {
+                        markRead(n.id)
+                        if (n.url) window.open(n.url, n.url.startsWith(location.origin) ? "_self" : "_blank", "noreferrer")
+                      }}
                       aria-label={`${n.title}${n.read ? "" : ", unread"}`}
                       className="grid w-full grid-cols-[30px_minmax(0,1fr)_8px] items-start gap-2.5 rounded-[8px] px-2 py-[9px] text-left hover:bg-raised"
                     >
-                      <span className="flex size-[30px] items-center justify-center rounded-[7px] border-r-2 border-b-2 border-ledge bg-raised">
-                        <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={ICON[n.kind].color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d={ICON[n.kind].path} />
-                        </svg>
-                      </span>
+                      <CategoryIcon category={GROUP_CATEGORY[n.group] ?? "notifications"} className="size-[30px]" />
                       <span className="flex min-w-0 flex-col gap-[3px]">
                         <span className={cn("text-xs", n.read ? "text-ink-2" : "font-semibold text-white")}>{n.title}</span>
-                        <span className="text-[11px] leading-[1.45] text-muted-foreground">{n.body}</span>
+                        <span className="text-[11px] leading-[1.45] whitespace-pre-line text-muted-foreground">{n.body}</span>
                         <span className="text-[10px] text-faint">
-                          {n.source} · {shortAgo(n.at)}
+                          {SOURCE[n.group] ?? "Blackwall"} · {shortAgo(n.at)}
                         </span>
                       </span>
                       <span aria-hidden className={cn("mt-[5px] size-[7px] rounded-[2px]", !n.read && "bg-red")} />
@@ -188,7 +196,7 @@ export function Notifications() {
             type="button"
             onClick={() => {
               close()
-              useUi.getState().openSettings("appearance")
+              useUi.getState().openSettings("notifications")
             }}
             className="rounded-[4px] text-ink-2 hover:text-ink"
           >

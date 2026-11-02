@@ -1,5 +1,12 @@
-import { createContext, isValidElement, useContext, useState, type ReactNode } from "react"
-import { Bell, Database, Info, Keyboard, LayoutDashboard, PanelLeft, Palette, Plug, Server, SlidersHorizontal, type LucideIcon } from "lucide-react"
+import { createContext, isValidElement, useContext, useEffect, useState, type ReactNode } from "react"
+import { format } from "date-fns"
+import { toast } from "sonner"
+import { NOTIFY_EVENTS, NOTIFY_GROUP_LABEL, channelsFor, type NotifyChannel, type NotifyGroup, type NotifySettings } from "@shared/notifications"
+import { api, useConnections } from "@/services/connector"
+import { useNotifications } from "@/services/notifications"
+import { useUi } from "@/stores/ui"
+import { timeFmt } from "@/lib/dates"
+import { Bell, Check, Database, Info, Keyboard, LayoutDashboard, PanelLeft, Palette, Plug, Server, SlidersHorizontal, type LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Kbd } from "@/components/ui/kbd"
@@ -18,7 +25,7 @@ export const SETTINGS_SECTIONS: { id: SettingsSection; label: string; icon: Luci
   { id: "appearance", label: "Appearance", icon: Palette, blurb: "Theme, color, spacing and motion in this browser." },
   { id: "home", label: "Home", icon: LayoutDashboard, blurb: "Which panels Home shows, in what order and width." },
   { id: "sidebar", label: "Sidebar", icon: PanelLeft, blurb: "Labels, names and which sections show in the sidebar." },
-  { id: "notifications", label: "Notifications", icon: Bell, blurb: "How the notification and calendar cards behave." },
+  { id: "notifications", label: "Notifications", icon: Bell, blurb: "What notifies you, and whether it reaches the bell, your phone (ntfy) or email." },
   { id: "connections", label: "Connections", icon: Plug, blurb: "Linked services, which account feeds each panel, and your session. Credentials stay on your server." },
   { id: "data", label: "Data & storage", icon: Database, blurb: "Sample data, export and import, and resets." },
   { id: "server", label: "Server & backups", icon: Server, blurb: "Where server data lives and whether backups run." },
@@ -222,12 +229,103 @@ export function SidebarSettings() {
   )
 }
 
+const CHANNEL_LABEL: Record<NotifyChannel, string> = { bell: "Bell", ntfy: "Phone", email: "Email" }
+
+/** One event's channels as three small toggles: Bell, Phone (ntfy), Email. */
+function ChannelToggles({ event, on, onChange, connected }: { event: string; on: NotifyChannel[]; onChange: (next: NotifyChannel[]) => void; connected: Record<NotifyChannel, boolean> }) {
+  return (
+    <div role="group" aria-label={`Channels for ${event}`} className="flex gap-1">
+      {(["bell", "ntfy", "email"] as const).map((ch) => {
+        const active = on.includes(ch)
+        return (
+          <button key={ch} type="button" aria-pressed={active} title={!connected[ch] ? `${CHANNEL_LABEL[ch]} isn't connected yet; this choice applies once it is.` : undefined}
+            onClick={() => onChange(active ? on.filter((x) => x !== ch) : [...on, ch])}
+            className={cn("inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-[11.5px] font-medium transition-colors", active ? "bg-[color-mix(in_srgb,var(--bw-red)_24%,transparent)] text-ink" : "text-faint ring-1 ring-line ring-inset hover:text-ink-2", active && !connected[ch] && "text-ink-2")}>
+            {active && <Check className="size-3" aria-hidden />}
+            {CHANNEL_LABEL[ch]}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 export function NotificationsSettings() {
   const autoHide = usePrefs((s) => s.autoHideSeconds)
   const keepOpen = usePrefs((s) => s.keepCardsOpen)
   const set = usePrefs((s) => s.set)
+  const connections = useConnections((s) => s.list)
+  const [settings, setSettings] = useState<NotifySettings | null>(null)
+  const [errors, setErrors] = useState<Partial<Record<NotifyChannel, { at: string; message: string }>>>({})
+  const [testing, setTesting] = useState<NotifyChannel | null>(null)
+  const deviceZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  useEffect(() => {
+    api<{ settings: NotifySettings; errors: typeof errors }>("notifications/settings")
+      .then((r) => {
+        setErrors(r.errors ?? {})
+        // First visit: the server doesn't know your time zone yet, so take this device's.
+        if (r.settings.timeZone === "UTC" && deviceZone !== "UTC" && !Object.keys(r.settings.rules).length) save({ ...r.settings, timeZone: deviceZone })
+        else setSettings(r.settings)
+      })
+      .catch((e: Error) => toast.error(`Couldn't load notification settings: ${e.message}`))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const save = (next: NotifySettings) => {
+    setSettings(next)
+    void api("notifications/settings", { method: "PUT", body: JSON.stringify(next) }).catch((e: Error) => toast.error(e.message))
+  }
+  const ok = (p: "ntfy" | "email") => connections.find((c) => c.provider === p && c.status === "ok")
+  const connected: Record<NotifyChannel, boolean> = { bell: true, ntfy: !!ok("ntfy"), email: !!ok("email") }
+  const test = async (ch: NotifyChannel) => {
+    setTesting(ch)
+    try {
+      await api("notifications/test", { method: "POST", body: JSON.stringify({ channel: ch }) })
+      toast.success(ch === "bell" ? "Test sent to the bell" : ch === "ntfy" ? "Test push sent" : "Test email sent")
+      if (ch === "bell") void useNotifications.getState().refresh()
+      setErrors((e) => ({ ...e, [ch]: undefined }))
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setTesting(null)
+    }
+  }
+  const zones = (Intl as { supportedValuesOf?: (k: string) => string[] }).supportedValuesOf?.("timeZone") ?? [deviceZone, "UTC"]
+
   return (
     <SettingsPage>
+      <Panel title="Delivery" tool="notifications" command="channels" bodyClassName="divide-y divide-line">
+        {([["bell", "Bell", "The feed in Blackwall's header."], ["ntfy", "Phone (ntfy)", "Push notifications through your ntfy server, even with Blackwall closed."], ["email", "Email", "From your own mail account over SMTP."]] as const).map(([ch, title, desc]) => {
+          const c = ch === "bell" ? undefined : ok(ch)
+          const err = errors[ch]
+          return (
+            <SettingRow key={ch} title={title} description={<>{ch !== "bell" && (c ? <span className="text-green">Connected · {c.account ?? c.label}. </span> : <span>Not set up. </span>)}{desc}{err && <span className="block text-red-text">Last send failed: {err.message}</span>}</>} keywords="notification channel push ntfy email smtp bell">
+              {ch !== "bell" && !c && <Button variant="outline" size="sm" onClick={() => useUi.getState().openSettings("connections", ch)}>Set up</Button>}
+              {(ch === "bell" || c) && <Button variant="outline" size="sm" disabled={testing === ch} onClick={() => void test(ch)}>{testing === ch ? "Sending…" : "Send test"}</Button>}
+            </SettingRow>
+          )
+        })}
+      </Panel>
+      {settings && (
+        <>
+          <Panel title="Daily summary" tool="notifications" command="digest" bodyClassName="divide-y divide-line">
+            <SettingRow title="Send at" description="When the morning summary of due and overdue work goes out." htmlFor="digest-hour" keywords="digest morning summary time">
+              <OptionSelect id="digest-hour" value={String(settings.digestHour)} onChange={(v) => save({ ...settings, digestHour: Number(v) })} options={Array.from({ length: 24 }, (_, h) => ({ value: String(h), label: format(new Date(2000, 0, 1, h), timeFmt()) }))} className="w-32" />
+            </SettingRow>
+            <SettingRow title="Time zone" description={settings.timeZone === deviceZone ? "This device's time zone." : `This device is on ${deviceZone}.`} htmlFor="digest-tz" keywords="time zone timezone">
+              <OptionSelect id="digest-tz" value={settings.timeZone} onChange={(v) => save({ ...settings, timeZone: v })} options={[...new Set([settings.timeZone, deviceZone, ...zones])].map((z) => ({ value: z, label: z.replace(/_/g, " ") }))} className="w-56 max-w-full" />
+            </SettingRow>
+          </Panel>
+          {(Object.keys(NOTIFY_GROUP_LABEL) as NotifyGroup[]).map((g) => (
+            <Panel key={g} title={NOTIFY_GROUP_LABEL[g]} tool="notifications" command={g} bodyClassName="divide-y divide-line">
+              {NOTIFY_EVENTS.filter((e) => e.group === g).map((e) => (
+                <SettingRow key={e.id} title={e.label} description={e.description} keywords={`notification ${e.label} ${NOTIFY_GROUP_LABEL[g]}`}>
+                  <ChannelToggles event={e.label} on={channelsFor(settings, e.id)} connected={connected} onChange={(next) => save({ ...settings, rules: { ...settings.rules, [e.id]: next } })} />
+                </SettingRow>
+              ))}
+            </Panel>
+          ))}
+        </>
+      )}
       <Panel title="Cards" tool="notifications" command="edit" bodyClassName="divide-y divide-line">
         <SettingRow title="Keep cards open" description="Calendar and notification cards stay until you close them." htmlFor="keep-open" inline keywords="auto hide dismiss notification calendar card">
           <Switch id="keep-open" checked={keepOpen} onCheckedChange={(v) => set({ keepCardsOpen: v })} />

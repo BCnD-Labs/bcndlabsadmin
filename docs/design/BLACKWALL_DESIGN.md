@@ -107,6 +107,13 @@ Ordinary dates are unfilled, day buttons stay 32px, and week gaps are 4px. A six
 - Storage (Nextcloud) uses an app password over WebDAV through the server; deletes go to Nextcloud's trash; text files under 2 MB edit in place with etag conflict checks; office files open in Nextcloud.
 - Status dots stay off until Uptime Kuma is connected; nothing pretends to know a service's state.
 
+## Notifications
+
+- The Blackwall server produces notifications (so pushes and emails arrive with Blackwall closed): service down/back (two failed checks in a row), backup failed/overdue, connection started failing, update available, GitHub review requested / CI failed / PR merged, a morning summary of due and overdue work, certification exam in 7 days and 1 day, scheduled post published/failed.
+- First sight of anything is recorded quietly, so a restart never floods you.
+- Channels per event (Settings → Notifications): Bell (the header feed), Phone (ntfy connection: server + topic + optional token) and Email (SMTP connection via nodemailer). Each event has defaults; your choices are stored on the server (`app_state`), along with the feed (last 200) and the engine's memory.
+- The summary goes out at a chosen hour in a chosen time zone (defaults to the device's).
+
 ## Learning
 
 - Learning is general learning, not only school. Five kinds share one record type (`Course` with `kind`): Course, Certification, Self-paced, Skill, Reading. Older records with no kind are courses.

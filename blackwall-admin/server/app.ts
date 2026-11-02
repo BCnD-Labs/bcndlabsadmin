@@ -13,6 +13,7 @@ import { toPublic, type ConnectionStore } from "./store.ts"
 import { validWorkspace } from "../shared/workspace.ts"
 import { serviceIcon } from "./icons.ts"
 import { checkServices, validStatusUrls } from "./service-status.ts"
+import { Notifier } from "./notify.ts"
 import { handleStorage } from "./storage.ts"
 import type { WorkspaceStore } from "./workspace.ts"
 import type { System } from "./system.ts"
@@ -131,6 +132,20 @@ export function createApi(opts: ApiOptions) {
 
   // Scheduled posts: once a minute, publish any whose time has come. A failure is
   // kept (with its error, shown in the CMS) and retried every 10 minutes.
+  const notifier = new Notifier({
+    store: opts.store,
+    readWorkspace: () => opts.workspace.readWorkspace(),
+    checkServices: (urls) => checkServices(urls),
+    githubOverview,
+    readBackups: opts.backupDir ? () => readBackups(opts.backupDir!) : undefined,
+    checkUpdate: opts.system ? () => opts.system!.check(false) : undefined,
+    baseUrl: opts.allowedHosts?.[0] ? `https://${opts.allowedHosts[0]}` : undefined,
+  })
+  // Watch services, backups, connections, GitHub and due work once a minute.
+  const watch = setInterval(() => void notifier.tick().catch(() => {}), 60_000)
+  watch.unref?.()
+  setTimeout(() => void notifier.tick().catch(() => {}), 5_000).unref?.()
+
   const publishDue = async () => {
     const due = (await opts.store.listSchedules()).filter(
       (s) => Date.parse(s.publishAt) <= Date.now() && (!s.triedAt || Date.now() - Date.parse(s.triedAt) > 10 * 60_000),
@@ -142,8 +157,11 @@ export function createApi(opts: ApiOptions) {
         if (!site) throw new Error("Website publishing isn't connected")
         await publishPost(site, { ...s.post, date: s.publishAt })
         await opts.store.deleteSchedule(s.post.slug)
+        await notifier.siteCleared(s.post.slug)
+        await notifier.sitePublished(s.post.title).catch(() => {})
       } catch (e) {
         await opts.store.putSchedule({ ...s, error: (e as Error).message, triedAt: new Date().toISOString() })
+        await notifier.siteFailed(s.post.slug, s.post.title, (e as Error).message).catch(() => {})
       }
     }
   }
@@ -211,6 +229,27 @@ export function createApi(opts: ApiOptions) {
     // --- Mikoshi storage (Nextcloud over WebDAV) --------------------------------
     if (parts[0] === "storage") {
       return handleStorage(store, req, res, url, parts.slice(1).join("/"), method, (status, body) => send(res, status, body), (limit) => readJson(req, limit))
+    }
+
+    // --- notifications ---------------------------------------------------------
+    if (parts[0] === "notifications") {
+      if (!parts[1] && method === "GET") return send(res, 200, { items: await notifier.feed() })
+      if (parts[1] === "read" && method === "POST") {
+        const body = await readJson<{ ids?: unknown; all?: boolean }>(req)
+        const ids = body.all ? "all" : Array.isArray(body.ids) ? body.ids.filter((x): x is string => typeof x === "string").slice(0, 500) : []
+        return send(res, 200, { items: await notifier.markRead(ids) })
+      }
+      if (parts[1] === "settings" && method === "GET") return send(res, 200, { settings: await notifier.settings(), errors: await notifier.deliveryErrors() })
+      if (parts[1] === "settings" && method === "PUT") return send(res, 200, { settings: await notifier.saveSettings(await readJson(req)) })
+      if (parts[1] === "test" && method === "POST") {
+        const { channel } = await readJson<{ channel?: string }>(req)
+        if (channel !== "bell" && channel !== "ntfy" && channel !== "email") return send(res, 400, { error: "Pick bell, ntfy or email" })
+        if (channel !== "bell" && !(await store.firstOk(channel))) return send(res, 409, { error: `${channel === "ntfy" ? "ntfy" : "Email"} isn't connected yet` })
+        const sent = await notifier.emit("test", { title: "Test notification", body: `This is a test from Blackwall (${channel}).`, tags: ["bell"] }, { force: [channel] })
+        if (!sent.includes(channel)) return send(res, 502, { error: (await notifier.deliveryErrors())[channel]?.message ?? "It didn't send" })
+        return send(res, 200, { sent })
+      }
+      return send(res, 405, { error: "Method not allowed" })
     }
 
     // --- service status (Mikoshi launcher tiles) -------------------------------

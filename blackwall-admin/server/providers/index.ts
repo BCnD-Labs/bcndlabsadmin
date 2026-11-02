@@ -5,6 +5,7 @@ import { testAzure } from "./azure.ts"
 import { testCloudflare } from "./cloudflare.ts"
 import { testGitHub } from "./github.ts"
 import { testNextcloud } from "./nextcloud.ts"
+import { testEmail, testNtfy } from "./channels.ts"
 import { testOther } from "./other.ts"
 import { testWebsite } from "./website.ts"
 
@@ -17,6 +18,8 @@ const TESTS: Record<StoredConnection["provider"], (c: StoredConnection) => Promi
   analytics: testAnalytics,
   website: testWebsite,
   nextcloud: testNextcloud,
+  ntfy: testNtfy,
+  email: testEmail,
   other: testOther,
 }
 

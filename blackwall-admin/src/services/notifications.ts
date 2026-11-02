@@ -1,41 +1,52 @@
 import { create } from "zustand"
-import type { Timestamp } from "@/lib/types"
+import type { FeedItem, NotifyGroup } from "@shared/notifications"
+import { api } from "@/services/connector"
 
-export type NotificationKind = "alerts" | "dev" | "site"
-
-export interface BwNotification {
-  id: string
-  kind: NotificationKind
-  title: string
-  body: string
-  /** Where it came from, e.g. "github". */
-  source: string
-  at: Timestamp
-  read: boolean
-}
-
-/**
- * Something that produces notifications (GitHub checks, uptime alerts, site
- * analytics…). None exist yet; a source added here feeds the bell and card.
- */
-export interface NotificationSource {
-  id: string
-  name: string
-  kinds: NotificationKind[]
-  fetch: () => Promise<Omit<BwNotification, "read">[]>
-}
-
-export const NOTIFICATION_SOURCES: NotificationSource[] = []
+export type NotificationKind = NotifyGroup
+export type BwNotification = FeedItem
 
 interface NotificationState {
   items: BwNotification[]
+  /** False until the server answered once (the bell then shows "no notifications" vs. loading). */
+  loaded: boolean
+  error?: string
+  refresh: () => Promise<void>
   markRead: (id: string) => void
   markAllRead: () => void
 }
 
-/** In-memory feed. Stays empty until a source is connected; nothing is invented. */
+/**
+ * The bell's feed, kept by the Blackwall server (which also pushes to ntfy and email per
+ * Settings → Notifications). Refreshed every minute while signed in.
+ */
 export const useNotifications = create<NotificationState>()((set, get) => ({
   items: [],
-  markRead: (id) => set({ items: get().items.map((n) => (n.id === id ? { ...n, read: true } : n)) }),
-  markAllRead: () => set({ items: get().items.map((n) => ({ ...n, read: true })) }),
+  loaded: false,
+  refresh: async () => {
+    try {
+      const r = await api<{ items: FeedItem[] }>("notifications")
+      set({ items: r.items, loaded: true, error: undefined })
+    } catch (e) {
+      set({ loaded: true, error: (e as Error).message })
+    }
+  },
+  markRead: (id) => {
+    set({ items: get().items.map((n) => (n.id === id ? { ...n, read: true } : n)) })
+    void api("notifications/read", { method: "POST", body: JSON.stringify({ ids: [id] }) }).catch(() => {})
+  },
+  markAllRead: () => {
+    set({ items: get().items.map((n) => ({ ...n, read: true })) })
+    void api("notifications/read", { method: "POST", body: JSON.stringify({ all: true }) }).catch(() => {})
+  },
 }))
+
+let timer: number | undefined
+export function startNotifications() {
+  if (timer) return
+  void useNotifications.getState().refresh()
+  timer = window.setInterval(() => document.visibilityState === "visible" && void useNotifications.getState().refresh(), 60_000)
+}
+export function stopNotifications() {
+  window.clearInterval(timer)
+  timer = undefined
+}

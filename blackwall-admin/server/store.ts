@@ -28,6 +28,9 @@ export abstract class ConnectionStore {
   /** Service logos (Mikoshi launcher): an SVG copy kept so tiles work without the CDN. */
   abstract getIcon(slug: string): Promise<string | undefined>
   abstract putIcon(slug: string, svg: string): Promise<void>
+  /** Small server-side state documents (notification settings, feed and memory). */
+  abstract getState<T>(key: string): Promise<T | undefined>
+  abstract putState(key: string, value: unknown): Promise<void>
 
   list() {
     return this.all()
@@ -88,7 +91,7 @@ export abstract class ConnectionStore {
 /** Development backend: `.blackwall/connections.json` next to the app (gitignored, mode 600). */
 export class FileConnectionStore extends ConnectionStore {
   readonly where: string
-  private data: { version: 1; connections: StoredConnection[]; schedules?: ScheduledPost[]; icons?: Record<string, string> }
+  private data: { version: 1; connections: StoredConnection[]; schedules?: ScheduledPost[]; icons?: Record<string, string>; state?: Record<string, unknown> }
 
   constructor(root: string) {
     super()
@@ -140,6 +143,15 @@ export class FileConnectionStore extends ConnectionStore {
 
   async putIcon(slug: string, svg: string) {
     this.data.icons = { ...(this.data.icons ?? {}), [slug]: svg }
+    this.flush()
+  }
+
+  async getState<T>(key: string) {
+    return structuredClone(this.data.state?.[key]) as T | undefined
+  }
+
+  async putState(key: string, value: unknown) {
+    this.data.state = { ...(this.data.state ?? {}), [key]: structuredClone(value) }
     this.flush()
   }
 

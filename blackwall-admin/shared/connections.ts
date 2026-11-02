@@ -3,7 +3,7 @@
  * Secret fields are sent to the connector once and never returned to the browser.
  */
 
-export type ProviderId = "github" | "azure" | "cloudflare" | "analytics" | "website" | "nextcloud" | "other"
+export type ProviderId = "github" | "azure" | "cloudflare" | "analytics" | "website" | "nextcloud" | "ntfy" | "email" | "other"
 
 export interface FieldDef {
   key: string
@@ -140,6 +140,32 @@ export const PROVIDERS: ProviderDef[] = [
       { key: "url", label: "Nextcloud address", type: "url", required: true, placeholder: "https://mikoshi.example.ts.net" },
       { key: "username", label: "Username", required: true, help: "Your Nextcloud login name (shown in Personal settings)." },
       { key: "appPassword", label: "App password", secret: true, required: true, help: "Not your login password: create one under Personal settings → Security → Devices & sessions, so you can revoke it any time." },
+    ],
+  },
+  {
+    id: "ntfy",
+    name: "ntfy push",
+    blurb: "Push notifications to your phone through your ntfy server. Pick which alerts are pushed in Settings → Notifications.",
+    help: { label: "How ntfy topics and tokens work", url: "https://docs.ntfy.sh/publish/" },
+    fields: [
+      { key: "url", label: "ntfy server", type: "url", required: true, placeholder: "https://ntfy.sh or https://mikoshi.example.ts.net:9802" },
+      { key: "topic", label: "Topic", required: true, placeholder: "blackwall-alerts", help: "Subscribe to the same topic in the ntfy app on your phone." },
+      { key: "token", label: "Access token", secret: true, help: "Only if your ntfy server requires sign-in (tk_…)." },
+    ],
+  },
+  {
+    id: "email",
+    name: "Email (SMTP)",
+    blurb: "Email notifications from your own mail account over SMTP. Pick which alerts are emailed in Settings → Notifications.",
+    help: { label: "Gmail: create an app password", url: "https://support.google.com/accounts/answer/185833" },
+    fields: [
+      { key: "host", label: "SMTP host", required: true, placeholder: "smtp.gmail.com" },
+      { key: "port", label: "Port", placeholder: "587" },
+      { key: "security", label: "Security", type: "select", options: [{ value: "starttls", label: "STARTTLS (port 587)" }, { value: "ssl", label: "SSL/TLS (port 465)" }, { value: "none", label: "None (local relay only)" }] },
+      { key: "username", label: "Username", placeholder: "you@example.com" },
+      { key: "password", label: "Password or app password", secret: true },
+      { key: "from", label: "Send from", placeholder: "Defaults to the username" },
+      { key: "to", label: "Send to", required: true, placeholder: "alerts@example.com" },
     ],
   },
   {

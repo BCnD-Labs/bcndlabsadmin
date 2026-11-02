@@ -41,6 +41,11 @@ const MIGRATIONS = [
      svg        text NOT NULL,
      fetched_at timestamptz NOT NULL DEFAULT now()
    )`,
+  `CREATE TABLE IF NOT EXISTS app_state (
+     key        text PRIMARY KEY,
+     value      jsonb NOT NULL,
+     updated_at timestamptz NOT NULL DEFAULT now()
+   )`,
 ]
 
 interface Row {
@@ -177,6 +182,15 @@ export class PostgresConnectionStore extends ConnectionStore {
 
   async putIcon(slug: string, svg: string) {
     await this.pool.query("INSERT INTO icons (slug, svg) VALUES ($1, $2) ON CONFLICT (slug) DO UPDATE SET svg = EXCLUDED.svg, fetched_at = now()", [slug, svg])
+  }
+
+  async getState<T>(key: string) {
+    const { rows } = await this.pool.query<{ value: T }>("SELECT value FROM app_state WHERE key = $1", [key])
+    return rows[0]?.value
+  }
+
+  async putState(key: string, value: unknown) {
+    await this.pool.query("INSERT INTO app_state (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()", [key, JSON.stringify(value)])
   }
 
   private fromRow(r: Row): StoredConnection {

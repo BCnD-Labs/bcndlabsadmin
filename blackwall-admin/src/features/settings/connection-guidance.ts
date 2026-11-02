@@ -30,6 +30,20 @@ export const CONNECTION_GUIDANCE: Record<ProviderId, { category: Category; /** W
     prepare: "You’ll need your Nextcloud address, your username and an app password (not your login password).",
     steps: ["In Nextcloud, open Personal settings → Security.", "Under Devices & sessions, enter a name like “Blackwall” and create a new app password.", "Paste your Nextcloud address, username and that app password in the next step, then test."],
   },
+  ntfy: {
+    feeds: "push notifications on your phone",
+    category: "notifications",
+    outcome: "Get Blackwall alerts as push notifications through ntfy, even when Blackwall is closed. Choose which alerts are pushed in Settings → Notifications.",
+    prepare: "You’ll need your ntfy server address and a topic name. Install the ntfy app on your phone and subscribe to that topic.",
+    steps: ["Pick a topic name that's hard to guess, e.g. blackwall-alerts-7f3k.", "In the ntfy app, subscribe to that topic on your server.", "Enter the server and topic here (plus a token if your server needs sign-in), then test: a push should arrive."],
+  },
+  email: {
+    feeds: "email notifications",
+    category: "notifications",
+    outcome: "Get Blackwall alerts by email. Choose which alerts are emailed in Settings → Notifications.",
+    prepare: "You’ll need your mail provider's SMTP details and, for Gmail or Outlook, an app password.",
+    steps: ["Find your provider's SMTP host and port (Gmail: smtp.gmail.com, 587).", "Create an app password if your account uses two-step sign-in.", "Enter them with the address to send to, then test: an email should arrive."],
+  },
   analytics: {
     feeds: "Website traffic and the Home traffic panel",
     category: "analytics",
