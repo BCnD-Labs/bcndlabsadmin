@@ -17,6 +17,8 @@ import { Header } from "./header"
 import { MobileNav } from "./mobile-nav"
 import { SectionNav } from "./section-nav"
 import { NavRail } from "./nav-rail"
+import { useMobileView } from "./mobile/use-mobile-view"
+import { MobileBoundary, MobileOutlet, MobileTabBar } from "./mobile/mobile-shell"
 
 export function AppShell() {
   const retro = usePrefs((s) => s.retroDetails)
@@ -24,6 +26,7 @@ export function AppShell() {
   const mainRef = useRef<HTMLElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
   const { pathname } = useLocation()
+  const mobileView = useMobileView()
 
   const focusMain = useCallback(() => mainRef.current?.focus({ preventScroll: true }), [])
 
@@ -104,12 +107,15 @@ export function AppShell() {
           <Header />
         </div>
         {/* Fixed on the left; after the header in tab order. */}
-        <NavRail focusMain={focusMain} />
-        <main id="main" ref={mainRef} tabIndex={-1} className="bw-workspace pb-3 outline-none">
+        {!mobileView && <NavRail focusMain={focusMain} />}
+        <main id="main" ref={mainRef} tabIndex={-1} className={cn("bw-workspace outline-none", mobileView ? "pb-[calc(4.5rem+env(safe-area-inset-bottom))]" : "pb-3")} data-layout={mobileView ? "mobile" : "responsive"}>
           <WorkspaceStatus connected={session === "open"} />
-          {workspaceReady && <><SectionNav /><Outlet /></>}
+          {workspaceReady && (mobileView
+            ? <MobileBoundary key={pathname}><SectionNav /><MobileOutlet /></MobileBoundary>
+            : <><SectionNav /><Outlet /></>)}
         </main>
       </div>
+      {mobileView && <MobileTabBar />}
       {workspaceReady && <><FormHost /><SettingsModal /><CommandSearch /></>}
       <Toaster position="bottom-right" />
     </TooltipProvider>

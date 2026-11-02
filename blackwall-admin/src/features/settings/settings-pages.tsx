@@ -123,6 +123,7 @@ export function AppearanceSettings() {
   const uiFont = usePrefs((s) => s.uiFont)
   const accent = usePrefs((s) => s.accent)
   const density = usePrefs((s) => s.density)
+  const layoutMode = usePrefs((s) => s.layoutMode)
   const set = usePrefs((s) => s.set)
 
   return (
@@ -150,6 +151,18 @@ export function AppearanceSettings() {
         </SettingRow>
         <SettingRow title="Density" description="Comfortable gives panels room to breathe; compact fits more on screen." keywords="spacing compact comfortable gap padding">
           <SegmentedTabs label="Density" className="w-full sm:w-52" tabs={[{ value: "comfortable", label: "Comfortable" }, { value: "compact", label: "Compact" }]} value={density} onChange={(v) => set({ density: v })} />
+        </SettingRow>
+        <SettingRow
+          title="Phone layout"
+          description={<>
+            Applies on phone-sized screens only; tablets and computers always use the normal layout.{" "}
+            <strong className="font-medium text-ink-2">Mobile view</strong> is built for phones page by page; pages without a mobile version yet show the responsive page inside it.{" "}
+            <strong className="font-medium text-ink-2">Responsive</strong> is the desktop layout reflowed to fit: it works today, but phones aren't its focus, so some items may not fit or behave perfectly.
+            {" "}If the mobile view ever breaks, switch back here, use the button it shows, or open any address with <code className="font-mono">?layout=responsive</code>.
+          </>}
+          keywords="mobile phone layout responsive view pwa"
+        >
+          <SegmentedTabs label="Phone layout" className="w-full sm:w-56" tabs={[{ value: "responsive", label: "Responsive" }, { value: "mobile", label: "Mobile view" }]} value={layoutMode} onChange={(v) => set({ layoutMode: v })} />
         </SettingRow>
         <SettingRow title="Category colors" description="Distinct icon colors and subtle panel tints identify tasks, learning, GitHub, website content and traffic. Turn off for neutral icons and panels." htmlFor="category-colors" inline>
           <Switch id="category-colors" checked={categoryColors} onCheckedChange={(v) => set({ categoryColors: v })} />

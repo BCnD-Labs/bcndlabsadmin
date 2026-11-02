@@ -10,6 +10,7 @@ export type UiFont = "sans" | "mono"
 export const ACCENTS = ["red", "blue", "violet", "cyan", "orange", "green", "pink"] as const
 export type Accent = (typeof ACCENTS)[number]
 export type Density = "comfortable" | "compact"
+export type LayoutMode = "responsive" | "mobile"
 
 /** Per-browser interface preferences (not workspace data). */
 interface PrefsState {
@@ -43,6 +44,8 @@ interface PrefsState {
   /** Sidebar: your own names for sections (by destination id) and which ones are hidden. */
   navLabels: Record<string, string>
   navHidden: string[]
+  /** On phone-sized screens: the responsive layout (default) or the dedicated mobile view. */
+  layoutMode: LayoutMode
   set: (patch: Partial<Omit<PrefsState, "set" | "setSlot" | "swapSlots" | "reset">>) => void
   /** Show `type` in slot `i`; if it's already in another slot, the two swap. */
   setSlot: (i: number, type: PanelType) => void
@@ -51,7 +54,7 @@ interface PrefsState {
   reset: () => void
 }
 
-type Persisted = Pick<PrefsState, "categoryColors" | "homeSizing" | "showHomeProjects" | "showHomeLog" | "feedConnections" | "retroDetails" | "showSamples" | "workspaceName" | "autoHideSeconds" | "homeSlots" | "navExpanded" | "theme" | "uiFont" | "homeLayout" | "accent" | "density" | "navLabels" | "navHidden">
+type Persisted = Pick<PrefsState, "categoryColors" | "homeSizing" | "showHomeProjects" | "showHomeLog" | "feedConnections" | "retroDetails" | "showSamples" | "workspaceName" | "autoHideSeconds" | "homeSlots" | "navExpanded" | "theme" | "uiFont" | "homeLayout" | "accent" | "density" | "navLabels" | "navHidden" | "layoutMode">
 
 export const PREFS_VERSION = 5
 
@@ -74,6 +77,7 @@ const DEFAULT_PREFS = (): Persisted => ({
   density: "comfortable",
   navLabels: {},
   navHidden: [],
+  layoutMode: "responsive",
 })
 
 export const usePrefs = create<PrefsState>()(
@@ -89,8 +93,8 @@ export const usePrefs = create<PrefsState>()(
       name: "blackwall.prefs",
       version: PREFS_VERSION,
       storage: createJSONStorage(() => safeLocalStorage),
-      partialize: ({ categoryColors, homeSizing, showHomeProjects, showHomeLog, feedConnections, retroDetails, showSamples, workspaceName, autoHideSeconds, homeSlots, navExpanded, theme, uiFont, homeLayout, accent, density, navLabels, navHidden }): Persisted => ({
-        homeLayout, accent, density, navLabels, navHidden,
+      partialize: ({ categoryColors, homeSizing, showHomeProjects, showHomeLog, feedConnections, retroDetails, showSamples, workspaceName, autoHideSeconds, homeSlots, navExpanded, theme, uiFont, homeLayout, accent, density, navLabels, navHidden, layoutMode }): Persisted => ({
+        homeLayout, accent, density, navLabels, navHidden, layoutMode,
         categoryColors, homeSizing, showHomeProjects, showHomeLog, feedConnections,
         retroDetails,
         showSamples,
@@ -132,6 +136,7 @@ export const usePrefs = create<PrefsState>()(
           homeLayout: sanitizeLayout(p.homeLayout),
           accent: (ACCENTS as readonly unknown[]).includes(p.accent) ? (p.accent as Accent) : "red",
           density: p.density === "compact" ? "compact" : "comfortable",
+          layoutMode: p.layoutMode === "mobile" ? "mobile" : "responsive",
           navLabels: sanitizeLabels(p.navLabels),
           navHidden: Array.isArray(p.navHidden) ? p.navHidden.filter((v): v is string => typeof v === "string" && v !== "home").slice(0, 20) : [],
         }
