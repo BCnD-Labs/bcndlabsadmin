@@ -25,8 +25,11 @@ import { useWorkspace } from "@/stores/workspace"
 
 const VALID_DAY = /^\d{4}-\d{2}-\d{2}$/
 
-/** Planner uses the shared workspace units: a two-column writing region,
- * one-column calendar/notes, and two-column tasks. Narrow containers reflow.
+/**
+ * Productivity → Planner. Left: one card with notes (a compact list) beside the
+ * selected day's log. Right: the calendar with tasks under it. Both halves use
+ * the shared grid's two-column, two-row units; with fewer columns they stack,
+ * calendar and tasks first.
  */
 export function PlannerPage() {
   const [params, setParams] = useSearchParams()
@@ -65,36 +68,38 @@ export function PlannerPage() {
         title="Planner"
       />
       <WorkspaceGrid data-testid="planner">
+        {/* Left: one card with the notes list beside the selected day's log (owner-approved arrangement). */}
         <GridItem span={2} rows={2}>
-          <section aria-label="Daily log" className="bw-panel flex min-h-0 flex-1 flex-col overflow-hidden">
+          <section aria-label="Notes and daily log" className="bw-panel grid min-h-0 flex-1 grid-cols-1 overflow-hidden md:grid-cols-[14rem_minmax(0,1fr)]">
+            <NotesColumn />
             <DayColumn key={date} date={date} onDate={onDate} />
           </section>
         </GridItem>
-        <GridItem rows={1}>
-          <section aria-label="Calendar" className="bw-panel flex min-h-0 flex-1 flex-col overflow-hidden">
-            <ColumnHeader category="calendar"><h2 className="min-w-0 text-[13px] font-semibold text-ink">Calendar</h2><span className="ml-auto" /></ColumnHeader>
-            <div className="flex min-h-0 flex-1 flex-col items-center gap-1.5 overflow-y-auto pt-1.5 pb-2.5">
-            <JournalCalendar selected={date} onSelect={onDate} month={month} onMonthChange={setMonth} className="[--cell-size:--spacing(8)]" />
-            <CalendarLegend />
-            </div>
-          </section>
+        {/* Right: calendar with tasks under it. Beside the card at three columns (one column wide); first when the grid has two or fewer. */}
+        <GridItem span={2} rows={2} className="@max-[52.99rem]:order-first @min-[53rem]:@max-[70.99rem]:col-span-1">
+          <div className="flex min-h-0 flex-1 flex-col gap-3">
+            <section aria-label="Calendar" className="bw-panel flex shrink-0 flex-col overflow-hidden">
+              <ColumnHeader category="calendar"><h2 className="min-w-0 text-[13px] font-semibold text-ink">Calendar</h2><span className="ml-auto" /></ColumnHeader>
+              <div className="flex flex-col items-center gap-1.5 pt-1.5 pb-2.5">
+                <JournalCalendar selected={date} onSelect={onDate} month={month} onMonthChange={setMonth} className="[--cell-size:--spacing(8)]" />
+                <CalendarLegend />
+              </div>
+            </section>
+            <TasksCard date={date} />
+          </div>
         </GridItem>
-        <GridItem rows={1}>
-          <section aria-label="Notes" className="bw-panel flex min-h-0 flex-1 flex-col overflow-hidden"><NotesColumn /></section>
-        </GridItem>
-        <GridItem span={2} rows={1}><TasksCard date={date} /></GridItem>
       </WorkspaceGrid>
     </>
   )
 }
 
 /** A column header inside the shared card, the same height as a panel header. */
-function ColumnHeader({ children, className, category }: { children: ReactNode; className?: string; category?: Category }) {
+function ColumnHeader({ children, className, category, windowButtons = true }: { children: ReactNode; className?: string; category?: Category; windowButtons?: boolean }) {
   return (
     <header className={cn("bw-panel-heading flex shrink-0 items-center gap-1.5 border-b border-line-soft text-xs", className)}>
       {category && <CategoryIcon category={category} className="mr-0.5" />}
       {children}
-      <span className="bw-window-buttons" aria-hidden><span /><span /></span>
+      {windowButtons && <span className="bw-window-buttons" aria-hidden><span /><span /></span>}
     </header>
   )
 }
@@ -140,8 +145,8 @@ function NotesColumn() {
   }
 
   return (
-    <div id="notes" className="flex min-h-0 min-w-0 scroll-mt-28 flex-1 flex-col">
-      <ColumnHeader category="notes">
+    <div id="notes" className="flex min-h-0 min-w-0 scroll-mt-28 flex-col border-b border-line md:border-r md:border-b-0">
+      <ColumnHeader category="notes" windowButtons={false}>
         <h2 className="min-w-0 text-[13px] font-semibold text-ink">Notes</h2>
         <span className="ml-auto text-[11px] text-muted-foreground">{notes.length}</span>
         <Button variant="quiet" size="icon-sm" aria-label="Search notes" aria-pressed={searching} onClick={() => (searching ? closeSearch() : setSearching(true))}>
@@ -356,7 +361,7 @@ function TasksCard({ date }: { date: string }) {
       title="Tasks"
       tool="tasks"
       command={tab}
-      className="scroll-mt-28"
+      className="min-h-0 flex-1 scroll-mt-28"
       bodyClassName="flex min-h-0 flex-col"
       actions={
         <>
