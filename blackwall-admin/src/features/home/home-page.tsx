@@ -1,25 +1,23 @@
+import { WorkspaceGrid } from "@/components/common/workspace-grid"
 import { useState } from "react"
 import { SLOT_COUNT } from "@/lib/home-slots"
 import { WorkspaceContext, WorkspaceSummary } from "./workspace-context"
 import { HomeSlot } from "./home-slot"
 
-/**
- * Home overview: four user-chosen, content-sized panels. The layout lives in
- * prefs (`homeSlots`). The older home panels (tasks-panel, calendar-panel,
- * traffic-panel, dev-attention, activity-panel) stay in this folder for the
- * panel types still to come.
+/** Home's saved module choices use shared grid spans; project/log context joins
+ * the same grid. Geometry follows the module role rather than a fixed 2×2.
  */
 export function HomePage() {
   const [dragFrom, setDragFrom] = useState<number | null>(null)
   return (
     <>
       <WorkspaceSummary />
-      <div className="grid grid-cols-1 items-stretch gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]" data-testid="home-grid">
+      <WorkspaceGrid data-testid="home-grid">
         {Array.from({ length: SLOT_COUNT }, (_, i) => (
           <HomeSlot key={i} index={i} dragFrom={dragFrom} onDragFrom={setDragFrom} />
         ))}
-      </div>
-      <WorkspaceContext />
+        <WorkspaceContext />
+      </WorkspaceGrid>
     </>
   )
 }

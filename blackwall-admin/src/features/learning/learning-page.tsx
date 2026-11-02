@@ -1,3 +1,4 @@
+import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
 import { format } from "date-fns"
 import { ChevronDown, Clock, GraduationCap, Plus, UserRound } from "lucide-react"
 import { useState } from "react"
@@ -203,7 +204,7 @@ export function LearningPage() {
         actions={<AddLearning />}
       />
       {courses.length === 0 ? (
-        <Panel title="Courses" tool="learning" command="ls" className="max-w-lg">
+        <WorkspaceGrid><GridItem span={2}><Panel title="Courses" tool="learning" command="ls">
           <EmptyState
             roomy
             icon={GraduationCap}
@@ -216,10 +217,10 @@ export function LearningPage() {
           >
             Add a course with its dates and instructor, then track assignments, exams, milestones and events. They show up in Tasks and on your calendar.
           </EmptyState>
-        </Panel>
+        </Panel></GridItem></WorkspaceGrid>
       ) : (
-        <div className="grid gap-3 lg:max-w-[68rem]">
-          <StatStrip
+        <WorkspaceGrid>
+          <GridItem span="full"><StatStrip
             items={[
               { label: "Courses in progress", value: counts.active, sub: counts.upcoming ? `${counts.upcoming} upcoming` : undefined },
               { label: "Due this week", value: totals.dueSoon },
@@ -227,8 +228,9 @@ export function LearningPage() {
               { label: "Completed", value: `${totals.pct}%`, sub: totals.total ? `${totals.done} of ${totals.total}` : undefined },
             ]}
           />
-          <div className="grid items-start gap-3 lg:grid-cols-3">
-            <section aria-label="Courses" className="grid gap-3 lg:col-span-2">
+          </GridItem>
+          <GridItem span={3}>
+            <section aria-label="Courses" className="bw-grid-region grid gap-3">
               <SegmentedTabs
                 label="Show courses"
                 className="w-full sm:w-auto sm:self-start lg:justify-self-start"
@@ -243,7 +245,7 @@ export function LearningPage() {
                 ]}
               />
               {shown.length ? (
-                <ul className="grid gap-3 sm:grid-cols-2">
+                <ul className="bw-card-grid">
                   {shown.map((c) => (
                     <CourseCard key={c.id} course={c} items={byCourse.get(c.id) ?? []} />
                   ))}
@@ -254,9 +256,9 @@ export function LearningPage() {
                 </Panel>
               )}
             </section>
-            <Upcoming courses={courseMap} />
-          </div>
-        </div>
+          </GridItem>
+          <GridItem><Upcoming courses={courseMap} /></GridItem>
+        </WorkspaceGrid>
       )}
     </>
   )

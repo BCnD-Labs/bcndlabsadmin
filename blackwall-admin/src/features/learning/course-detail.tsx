@@ -1,3 +1,4 @@
+import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
 import { CalendarRange, ChevronDown, Clock, ExternalLink, GraduationCap, Mail, MapPin, NotebookPen, Pencil, Plus, Tag, UserRound } from "lucide-react"
 import { useState, type ReactNode } from "react"
 import { Link, useParams } from "react-router-dom"
@@ -329,15 +330,13 @@ export function CourseDetail() {
           </>
         }
       />
-      <div className="grid items-start gap-3 lg:max-w-[68rem] lg:grid-cols-3">
-        <div className="lg:col-span-2">
+      <WorkspaceGrid>
+        <GridItem span={2}>
           <Coursework course={course} items={items} />
-        </div>
-        <div className="grid gap-3">
-          <CourseInfo course={course} items={items} />
-          <CourseNotes course={course} />
-        </div>
-      </div>
+        </GridItem>
+        <GridItem><CourseInfo course={course} items={items} /></GridItem>
+        <GridItem><CourseNotes course={course} /></GridItem>
+      </WorkspaceGrid>
     </>
   )
 }

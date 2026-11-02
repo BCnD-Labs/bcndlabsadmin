@@ -32,7 +32,7 @@ export function SearchField({
 export function ListRow({ children, className, ...props }: React.ComponentProps<"li">) {
   return (
     <li
-      className={cn("flex min-h-10 items-center gap-2.5 border-b border-line-soft px-3.5 py-1.5 last:border-b-0 hover:bg-raised", className)}
+      className={cn("bw-row flex items-center gap-2.5 border-b border-line-soft px-3.5 py-1.5 last:border-b-0 hover:bg-raised", className)}
       {...props}
     >
       {children}
@@ -87,7 +87,7 @@ export function DataTable<T>({
         {rows.map((r) => (
           <tr key={rowKey(r)} className="border-b border-line-soft last:border-0 hover:bg-raised">
             {columns.map((c) => (
-              <td key={c.key} className={cn("h-10 px-3.5 py-1.5 align-middle break-words", c.align === "right" && "text-right", hide(c), c.className)}>
+              <td key={c.key} className={cn("bw-row px-3.5 py-1.5 align-middle break-words", c.align === "right" && "text-right", hide(c), c.className)}>
                 {c.cell(r)}
               </td>
             ))}

@@ -21,7 +21,7 @@ import { useWorkspace } from "@/stores/workspace"
 
 const Footer = ({ to, children }: { to: string; children: string }) => (
   <div className="mt-auto border-t border-line-soft px-3.5 py-1.5 text-right">
-    <Link to={to} className="text-[11px] text-ink-2 underline-offset-2 hover:underline">{children} →</Link>
+    <Link to={to} className="bw-action-link">{children} →</Link>
   </div>
 )
 

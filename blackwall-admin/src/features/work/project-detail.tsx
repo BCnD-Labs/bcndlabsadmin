@@ -1,3 +1,4 @@
+import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
 import { ExternalLink, FileText, FolderX, GitBranch, Pencil, Plus } from "lucide-react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
@@ -48,7 +49,7 @@ export function ProjectDetail() {
         actions={<Button variant="ghost" onClick={() => openForm({ kind: "project", id })}><Pencil /> Edit</Button>}
       />
 
-      <Panel title="Project workspace" tool="project" command="links" className="lg:max-w-3xl" bodyClassName="grid gap-4 px-3.5 py-3 lg:grid-cols-2">
+      <WorkspaceGrid><GridItem span={3}><Panel title="Project workspace" tool="project" command="links"  bodyClassName="grid gap-4 px-3.5 py-3 lg:grid-cols-2">
         {project.description && <p className="text-[13px] leading-relaxed text-muted-foreground lg:col-span-2">{project.description}</p>}
         <section aria-label="Repositories" className="min-w-0">
           <div className="mb-1 flex items-center justify-between gap-2"><h3 className="bw-label">Repositories · {pRepos.length}</h3><Button size="icon-sm" variant="quiet" aria-label="Link a repository" onClick={newRepo}><Plus /></Button></div>
@@ -88,7 +89,7 @@ export function ProjectDetail() {
             <EmptyState icon={FileText} title="No drafts linked" action={<Button variant="outline" onClick={newDraft}><Plus /> New draft</Button>} />
           )}
         </section>
-      </Panel>
+      </Panel></GridItem></WorkspaceGrid>
     </>
   )
 }

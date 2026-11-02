@@ -1,3 +1,4 @@
+import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
 import { addDays, format, isToday } from "date-fns"
 import { ChevronLeft, ChevronRight, ListChecks, Pin, PinOff, Plus, Search, Star, StickyNote, X } from "lucide-react"
 import { useEffect, useMemo, useState, type ReactNode } from "react"
@@ -23,10 +24,8 @@ import { useWorkspace } from "@/stores/workspace"
 
 const VALID_DAY = /^\d{4}-\d{2}-\d{2}$/
 
-/**
- * Productivity → Planner. Left: one card with notes (a compact list) beside the
- * selected day's log. Right: the calendar with tasks under it. The writing area
- * has a useful starting height and can be resized; lists have their own limits. Narrower screens stack them (calendar and tasks first).
+/** Planner uses the shared workspace units: a two-column writing region,
+ * one-column calendar/notes, and two-column tasks. Narrow containers reflow.
  */
 export function PlannerPage() {
   const [params, setParams] = useSearchParams()
@@ -64,29 +63,30 @@ export function PlannerPage() {
       <PageHeader
         title="Planner"
       />
-      <div
-        className="grid grid-cols-1 items-start gap-3 lg:grid-cols-[minmax(0,1fr)_20rem]"
-        data-testid="planner"
-      >
-        <section aria-label="Notes and daily log" className="bw-panel order-2 grid grid-cols-1 overflow-hidden md:grid-cols-[14rem_minmax(0,1fr)] lg:order-1">
-          <NotesColumn />
-          <DayColumn key={date} date={date} onDate={onDate} />
-        </section>
-        <div className="order-1 flex min-h-0 min-w-0 flex-col gap-3 lg:order-2">
-          <section aria-label="Calendar" className="bw-panel flex shrink-0 flex-col items-center gap-1.5 pt-1.5 pb-2.5">
+      <WorkspaceGrid data-testid="planner">
+        <GridItem span={2} rows={2}>
+          <section aria-label="Daily log" className="bw-panel flex min-h-0 flex-1 flex-col overflow-hidden">
+            <DayColumn key={date} date={date} onDate={onDate} />
+          </section>
+        </GridItem>
+        <GridItem rows={1}>
+          <section aria-label="Calendar" className="bw-panel flex min-h-0 flex-1 flex-col items-center gap-1.5 overflow-y-auto pt-1.5 pb-2.5">
             <JournalCalendar selected={date} onSelect={onDate} month={month} onMonthChange={setMonth} className="[--cell-size:--spacing(8)]" />
             <CalendarLegend />
           </section>
-          <TasksCard date={date} />
-        </div>
-      </div>
+        </GridItem>
+        <GridItem rows={1}>
+          <section aria-label="Notes" className="bw-panel flex min-h-0 flex-1 flex-col overflow-hidden"><NotesColumn /></section>
+        </GridItem>
+        <GridItem span={2} rows={1}><TasksCard date={date} /></GridItem>
+      </WorkspaceGrid>
     </>
   )
 }
 
 /** A column header inside the shared card, the same height as a panel header. */
 function ColumnHeader({ children, className }: { children: ReactNode; className?: string }) {
-  return <header className={cn("flex min-h-9 shrink-0 items-center gap-1.5 border-b border-line-soft pr-2 pl-3.5 text-xs", className)}>{children}</header>
+  return <header className={cn("bw-panel-heading flex shrink-0 items-center gap-1.5 border-b border-line-soft text-xs", className)}>{children}</header>
 }
 
 function SearchBox({ value, onChange, label, onClose }: { value: string; onChange: (v: string) => void; label: string; onClose: () => void }) {
@@ -130,7 +130,7 @@ function NotesColumn() {
   }
 
   return (
-    <div id="notes" className="flex min-h-0 min-w-0 scroll-mt-28 flex-col border-b border-line md:border-r md:border-b-0">
+    <div id="notes" className="flex min-h-0 min-w-0 scroll-mt-28 flex-1 flex-col">
       <ColumnHeader>
         <h2 className="flex min-w-0 items-center gap-2 text-[13px] font-semibold"><span className="font-mono text-red" aria-hidden>❯</span>Notes</h2>
         <span className="ml-auto text-[11px] text-muted-foreground">{notes.length}</span>
@@ -142,7 +142,7 @@ function NotesColumn() {
         </Button>
       </ColumnHeader>
       {searching && <SearchBox value={q} onChange={setQ} label="Search notes" onClose={closeSearch} />}
-      <div className="max-h-52 min-h-0 flex-1 overflow-y-auto py-1.5 md:max-h-96">
+      <div className="max-h-96 min-h-0 flex-1 overflow-y-auto py-1.5">
         {pinned.length + others.length === 0 ? (
           <EmptyState icon={StickyNote} title={q ? "No notes match" : "No notes yet"} className="py-8" action={!q && <Button variant="outline" size="sm" onClick={() => openForm({ kind: "note" })}><Plus /> Add a note</Button>}>
             {q ? "Try a different search." : "Pinned notes also show on Home."}
@@ -230,7 +230,7 @@ function DayColumn({ date, onDate }: { date: string; onDate: (d: string) => void
   const dirty = false
 
   return (
-    <div id="day" className="flex min-w-0 scroll-mt-28 flex-col">
+    <div id="day" className="flex min-h-0 min-w-0 flex-1 scroll-mt-28 flex-col">
       <ColumnHeader className="pl-1.5">
         <Button variant="quiet" size="icon-sm" aria-label="Previous day" onClick={() => onDate(toDateKey(addDays(day, -1)))}>
           <ChevronLeft />
@@ -280,7 +280,7 @@ function DayColumn({ date, onDate }: { date: string; onDate: (d: string) => void
         value={text}
         onChange={(e) => saveJournal(date, e.target.value)}
         placeholder={isToday(day) ? "What happened today? What did you learn? What's next?" : `Write the log for ${format(day, "MMMM d")}…`}
-        className="mx-3 mb-3 h-64 min-h-48 resize-y rounded-[8px] border border-transparent bg-panel px-3 py-2.5 text-base leading-relaxed text-ink outline-none placeholder:text-faint focus:border-rim md:text-[13px]"
+        className="mx-3 mb-3 h-64 min-h-48 flex-1 resize-y rounded-[8px] border border-transparent bg-panel px-3 py-2.5 text-base leading-relaxed text-ink outline-none placeholder:text-faint focus:border-rim md:text-[13px]"
       />
     </div>
   )
@@ -377,7 +377,7 @@ function TasksCard({ date }: { date: string }) {
         />
       </div>
       {searching && <SearchBox value={q} onChange={setQ} label="Search tasks" onClose={closeSearch} />}
-      <div id="planner-tasks-panel" role="tabpanel" aria-labelledby={`planner-tasks-tab-${tab}`} className={cn("max-h-80 min-h-0 overflow-y-auto", searching && "mt-2")}>
+      <div id="planner-tasks-panel" role="tabpanel" aria-labelledby={`planner-tasks-tab-${tab}`} className={cn("max-h-80 min-h-0 flex-1 overflow-y-auto", searching && "mt-2")}>
         {rows.length ? (
           groups.map((g) => (
             <section key={g.name ?? "done"} aria-label={g.name ?? "Completed"}>

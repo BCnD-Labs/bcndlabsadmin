@@ -1,3 +1,4 @@
+import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
 import { Copy, ImageOff, Loader2, RotateCw, Trash2, Upload } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
@@ -65,8 +66,9 @@ export function MediaPage() {
           )
         }
       />
+      <WorkspaceGrid><GridItem span="full">
       {!live ? (
-        <Panel title="Media library" tool="media" command="ls" className="max-w-lg">
+        <Panel title="Media library" tool="media" command="ls" className="bw-surface-width">
           {site.status === "loading" ? (
             <p className="px-3.5 py-3 text-xs text-muted-foreground">Checking your website…</p>
           ) : (
@@ -74,14 +76,14 @@ export function MediaPage() {
           )}
         </Panel>
       ) : error ? (
-        <Panel title="Media library" tool="media" command="ls" className="max-w-lg">
+        <Panel title="Media library" tool="media" command="ls" className="bw-surface-width">
           <p className="px-3.5 py-3 text-xs text-red-text">Couldn't list images: {error}</p>
         </Panel>
       ) : !items ? (
         <p className="text-xs text-muted-foreground">Loading…</p>
       ) : items.length ? (
         <ul
-          className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
+          className="bw-card-grid"
           aria-label="Images"
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
@@ -132,12 +134,13 @@ export function MediaPage() {
           ))}
         </ul>
       ) : (
-        <Panel title="Media library" tool="media" command="ls" className="max-w-lg">
+        <Panel title="Media library" tool="media" command="ls" className="bw-surface-width">
           <EmptyState icon={ImageOff} title="No images yet" action={<Button variant="outline" onClick={() => ref.current?.click()}><Upload /> Upload</Button>}>
             Images you upload here, or as post covers, are added to your site's images folder.
           </EmptyState>
         </Panel>
       )}
+      </GridItem></WorkspaceGrid>
     </>
   )
 }

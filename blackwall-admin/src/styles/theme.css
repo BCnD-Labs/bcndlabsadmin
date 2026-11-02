@@ -1,0 +1,283 @@
+/*
+ * Blackwall shared theme: Dim and Dark palettes, type, control and layout scales.
+ * The --bw-* tokens are the source of truth; shadcn's variables point at them
+ * so ui/ components inherit the look. The `dark` class stays on <html> so
+ * shadcn's dark variants apply.
+ */
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  /* UI text follows the Interface font setting; Mantine's system stack by default. */
+  --font-sans: var(--bw-ui-font);
+  --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-heading: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  /* Logo mark and avatar initials only. */
+  --font-pixel: "Silkscreen", var(--font-mono);
+
+  --ease-bw: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Blackwall tokens as Tailwind colours */
+  --color-ground: var(--bw-ground);
+  --color-panel: var(--bw-panel);
+  --color-raised: var(--bw-raised);
+  --color-selected: var(--bw-selected);
+  --color-well: var(--bw-well);
+  --color-ledge: var(--bw-ledge);
+  --color-ledge-hi: var(--bw-ledge-hi);
+  --color-line: var(--bw-line);
+  --color-line-soft: var(--bw-line-soft);
+  --color-rim: var(--bw-border);
+  --color-red: var(--bw-red);
+  --color-red-ledge: var(--bw-red-ledge);
+  --color-amber: var(--bw-amber);
+  --color-green: var(--bw-green);
+  --color-ink: var(--bw-text);
+  --color-ink-2: var(--bw-text-2);
+  --color-faint: var(--bw-faint);
+  --color-off: var(--bw-off);
+  --color-check: var(--bw-check);
+  --color-blue: var(--bw-blue);
+  --color-red-hover: var(--bw-red-hover);
+  --color-red-soft: var(--bw-red-soft);
+  --color-red-light: var(--bw-red-light);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Error copy: the only red text (the fill red fails contrast as text). */
+  --color-red-text: var(--bw-red-text);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.5);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root,
+.dark {
+  color-scheme: dark;
+  --radius: 0.5rem; /* Mantine radius md */
+
+  /*
+   * §1 colour tokens. Two themes share every component:
+   *  - Dim (default, below): a mid-tone slate between dark and light mode, modelled
+   *    on Mantine's dark scheme (#242424 body / #2e2e2e cards / #424242 borders)
+   *    with a cool tint. Flat 1px-bordered static cards without shadows.
+   *  - Dark (html[data-theme="dark"]): the original near-black terminal look with
+   *    the softened 2px panel ledge.
+   * Surfaces step up: ground → well → panel → raised → selected.
+   */
+  --bw-ground: #1f2228;
+  --bw-grid: rgba(170, 190, 215, 0.015);
+  --bw-panel: #2a2f37;
+  --bw-raised: #323842;
+  --bw-selected: #3a414c;
+  --bw-well: #1c1f25;
+  --bw-ledge: #3b424d;
+  --bw-ledge-hi: #444b57;
+  --bw-line: #373d47;
+  --bw-line-soft: #30353e;
+  --bw-border: #444b57;
+  --bw-edge: #343a44;
+  --bw-red: #c92a2a; /* brand accent (Mantine red.9): fills, markers, icons, ❯. Never small text. */
+  --bw-red-hover: #b52424;
+  --bw-red-ledge: #8f1d1d;
+  /* Mantine "light" variant: a 15% tint of the accent with a light-red label. */
+  --bw-red-soft: rgba(250, 82, 82, 0.15);
+  --bw-red-light: #ff8f8f;
+  --bw-red-text: #ffa8a8;
+  --bw-amber: #e8b85a;
+  --bw-green: #6fd0a0;
+  --bw-blue: #82b1ea;
+  --bw-text: #e7eaee;
+  --bw-text-2: #c8cdd4;
+  --bw-muted: #aab1bc;
+  --bw-faint: #99a1ad; /* lowest allowed for text */
+  --bw-off: #3a404a;
+  --bw-check: #6a7280;
+  --bw-on-paper: #14171c;
+  /* Static surfaces stay flat in Dim; overlays keep elevation. */
+  --bw-shadow: none;
+  --bw-shadow-float: 0 1px 3px rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.28) 0 20px 25px -5px, rgba(0, 0, 0, 0.2) 0 10px 10px -5px;
+  --bw-panel-borders: 1px;
+  --bw-panel-colors: var(--bw-edge);
+  --bw-scanlines: none;
+  /* Settings modal layers. */
+  --bw-settings-bg: #262a31;
+  --bw-settings-side: #22252b;
+  --bw-settings-card: #2e333c;
+  --bw-ui-font: var(--font-system);
+  --bw-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* shadcn variables → tokens */
+  --background: var(--bw-ground);
+  --foreground: var(--bw-text);
+  --card: var(--bw-panel);
+  --card-foreground: var(--bw-text);
+  --popover: var(--bw-raised);
+  --popover-foreground: var(--bw-text);
+  --muted: var(--bw-raised);
+  --muted-foreground: var(--bw-muted);
+  --secondary: var(--bw-raised);
+  --secondary-foreground: var(--bw-text);
+  --accent: var(--bw-raised);
+  --accent-foreground: var(--bw-text);
+  --input: var(--bw-border);
+  --border: var(--bw-line);
+  /* Red only reaches ~2.8:1 on the panel, below the 3:1 a focus outline needs. */
+  --ring: var(--bw-text-2);
+  --primary: var(--bw-red);
+  --primary-foreground: #fff;
+  --destructive: var(--bw-red);
+
+  --chart-1: var(--bw-red);
+  --chart-2: var(--bw-text-2);
+  --chart-3: var(--bw-amber);
+  --chart-4: var(--bw-muted);
+  --chart-5: var(--bw-green);
+
+  --sidebar: var(--bw-panel);
+  --sidebar-foreground: var(--bw-text);
+  --sidebar-primary: var(--bw-red);
+  --sidebar-primary-foreground: #fff;
+  --sidebar-accent: var(--bw-raised);
+  --sidebar-accent-foreground: var(--bw-text);
+  --sidebar-border: var(--bw-ledge);
+  --sidebar-ring: var(--bw-text-2);
+}
+
+/* The original near-black theme (Settings → Appearance → Theme → Dark). */
+html[data-theme="dark"] {
+  --bw-ground: #0b0e14;
+  --bw-grid: rgba(130, 160, 200, 0.045);
+  --bw-panel: #161a22;
+  --bw-raised: #1c212b;
+  --bw-selected: #232935;
+  --bw-well: #0f1218;
+  --bw-ledge: #252b36;
+  --bw-ledge-hi: #2d3441;
+  --bw-line: #232934;
+  --bw-line-soft: #1c2129;
+  --bw-border: #2a303c;
+  --bw-edge: #232a35;
+  --bw-red: #bc1515;
+  --bw-red-hover: #cb2020;
+  --bw-red-ledge: #6e0c0c;
+  --bw-red-soft: rgba(224, 49, 49, 0.16);
+  --bw-red-light: #f08a8a;
+  --bw-red-text: #f08a8a;
+  --bw-amber: #dcaa52;
+  --bw-green: #62d3a2;
+  --bw-blue: #7fa3d6;
+  --bw-text: #e9ecf1;
+  --bw-text-2: #c7cdd6;
+  --bw-muted: #a3abb8;
+  --bw-faint: #838c9a;
+  --bw-off: #2a303b;
+  --bw-check: #4a5261;
+  --bw-shadow: 0 1px 2px rgba(0, 0, 0, 0.18), 0 6px 16px -12px rgba(0, 0, 0, 0.35);
+  --bw-shadow-float: 0 2px 6px rgba(0, 0, 0, 0.3), 0 24px 56px -12px rgba(0, 0, 0, 0.7);
+  --bw-panel-borders: 1px 2px 2px 1px;
+  --bw-panel-colors: var(--bw-edge) var(--bw-ledge) var(--bw-ledge) var(--bw-edge);
+  --bw-scanlines: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.006) 0 1px, transparent 1px 3px);
+  --bw-settings-bg: #12151c;
+  --bw-settings-side: #0f1218;
+  --bw-settings-card: #1a1f28;
+}
+/* Interface font: Settings → Appearance (Sans by default, Mono for the all-terminal look). */
+html[data-font="mono"] {
+  --bw-ui-font: var(--font-mono);
+}
+
+
+/* Change these scales here; components consume roles, not page-specific sizes. */
+:root {
+  --bw-control-h: 2rem;
+  --bw-control-sm: 1.75rem;
+  --bw-control-xs: 1.75rem;
+  --bw-control-lg: 2.5rem;
+  --bw-control-radius: 0.375rem;
+  --bw-panel-radius: 0.5rem;
+  --bw-panel-header-h: 2.25rem;
+  --bw-row-dense: 2rem;
+  --bw-row-regular: 2.5rem;
+  --bw-row-two-line: 3rem;
+  --bw-nav-item: 2.5rem;
+  --bw-nav-row: 2rem;
+  --bw-rail-width: 3.75rem;
+  --bw-tree-width: 13.75rem;
+  --bw-page-max: 90rem;
+  --bw-settings-width: 60rem;
+  --bw-settings-nav: 13rem;
+  --bw-grid-gap: 0.75rem;
+  --bw-panel-pad: 0.75rem;
+  --bw-tile-h: 20rem;
+}
+@media (max-width: 767px) {
+  :root { --bw-control-sm: 2rem; --bw-control-xs: 2rem; }
+}
+
+@layer components {
+  .bw-workspace { width: 100%; max-width: var(--bw-page-max); margin-inline: auto; }
+  .bw-grid-region { container-type: inline-size; min-width: 0; }
+  .bw-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--bw-grid-gap); align-items: start; }
+  .bw-grid-item { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+  .bw-grid-item > .bw-panel { flex: 1; min-height: 0; }
+  .bw-grid-item[data-span="full"] { grid-column: 1 / -1; }
+  .bw-panel-heading { min-height: var(--bw-panel-header-h); padding-block: 0.125rem; padding-inline: var(--bw-panel-pad); }
+  .bw-action-link { display: inline-flex; align-items: center; gap: 0.375rem; min-height: var(--bw-control-h); border-radius: var(--bw-control-radius); font-size: 0.8125rem; color: var(--bw-text-2); }
+  .bw-action-link:hover { color: var(--bw-text); text-decoration: underline; text-underline-offset: 0.2em; }
+  .bw-row { min-height: var(--bw-row-regular); }
+  .bw-row-dense { min-height: var(--bw-row-dense); }
+  .bw-row-two-line { min-height: var(--bw-row-two-line); }
+  .bw-card-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--bw-grid-gap); }
+  .bw-surface-width { width: 100%; max-width: calc((var(--bw-page-max) - 3 * var(--bw-grid-gap)) / 2); }
+
+  @container (min-width: 35rem) {
+    .bw-grid, .bw-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .bw-grid-item:is([data-span="2"], [data-span="3"], [data-span="4"]) { grid-column: span 2; }
+    .bw-grid-item[data-rows="1"] { height: var(--bw-tile-h); }
+    .bw-grid-item[data-rows="2"] { grid-row: span 2; height: calc(2 * var(--bw-tile-h) + var(--bw-grid-gap)); }
+  }
+  @container (min-width: 53rem) {
+    .bw-grid, .bw-card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .bw-grid-item:is([data-span="3"], [data-span="4"]) { grid-column: span 3; }
+  }
+  @container (min-width: 71rem) {
+    .bw-grid, .bw-card-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .bw-grid-item[data-span="4"] { grid-column: span 4; }
+  }
+}

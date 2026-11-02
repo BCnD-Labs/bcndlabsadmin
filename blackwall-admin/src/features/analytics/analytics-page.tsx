@@ -1,3 +1,4 @@
+import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
 import { useState } from "react"
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
@@ -41,7 +42,7 @@ function WebsiteAnalytics() {
 
   if (!hasData(feed)) {
     return (
-      <Panel title="Website traffic" tool="site" command="traffic" badge={badge} className="max-w-lg">
+      <Panel title="Website traffic" tool="site" command="traffic" badge={badge} className="bw-surface-width">
         <FeedFallback feed={feed} provider="analytics" what="visitors, pageviews, top pages and referrers" />
       </Panel>
     )
@@ -56,30 +57,31 @@ function WebsiteAnalytics() {
   const maxRef = Math.max(1, ...referrers.map((r) => r.visitors))
 
   return (
-    <div className="flex flex-col gap-3 lg:max-w-4xl">
+    <WorkspaceGrid>
+      <GridItem span="full">
       <div className="flex flex-wrap items-center gap-2">
         {badge}
         <span className="text-[11px] text-muted-foreground">Last {range} days, ending yesterday</span>
         <RangeToggle value={range} onChange={setRange} className="ml-auto" />
       </div>
-      <StatStrip
+      </GridItem>
+      <GridItem span={2}><StatStrip
         items={[
           { label: "Visitors", value: fmt.format(visitors), sub: `${(visitors / range).toFixed(1)} a day on average` },
           { label: "Pageviews", value: fmt.format(pageviews), sub: visitors ? `${(pageviews / visitors).toFixed(1)} pages per visit` : undefined },
         ]}
       />
-      <details className="bw-panel px-3.5 py-1 lg:max-w-[28rem]">
+      <details className="bw-panel mt-3 px-3.5 py-1">
         <summary className="min-h-8 cursor-pointer content-center text-xs text-ink-2">Details</summary>
         <dl className="grid grid-cols-2 gap-4 py-2 text-xs text-muted-foreground">
           <div><dt>Days with visits</dt><dd className="mt-1 text-ink">{activeDays} / {range}</dd></div>
           <div><dt>Busiest day</dt><dd className="mt-1 text-ink">{busiest.visitors ? `${format(parseKey(busiest.date), "MMM d")} · ${busiest.visitors} visitors` : "—"}</dd></div>
         </dl>
-      </details>
-      <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-        <Panel title="Daily visitors" tool="site" command={`visitors --${range}d`} bodyClassName="px-2 pt-2 pb-1.5">
+      </details></GridItem>
+        <GridItem span={2}><Panel title="Daily visitors" tool="site" command={`visitors --${range}d`} bodyClassName="px-2 pt-2 pb-1.5">
           <DailyBars data={traffic} range={range} className="h-36 w-full" />
-        </Panel>
-        <Panel title="Traffic sources & pages" tool="site" command="breakdown" bodyClassName="space-y-4 px-3.5 py-3">
+        </Panel></GridItem>
+        <GridItem span={2}><Panel title="Traffic sources & pages" tool="site" command="breakdown" bodyClassName="space-y-4 px-3.5 py-3">
           <section aria-label="Top pages">
             <h3 className="bw-label mb-2">Top pages · views</h3>
             {pages.length ? (
@@ -100,9 +102,8 @@ function WebsiteAnalytics() {
               <p className="text-[11px] text-muted-foreground">No referrers in this range.</p>
             )}
           </section>
-        </Panel>
-      </div>
-    </div>
+        </Panel></GridItem>
+    </WorkspaceGrid>
   )
 }
 
@@ -115,7 +116,7 @@ function PersonalAnalytics() {
   const total30 = s.completed.reduce((a, d) => a + d.count, 0)
 
   if (!tasks.length && ![...s.logWords.values()].some(Boolean)) {
-    return <Panel title="Activity insights" tool="activity" command="overview" className="max-w-lg">
+    return <Panel title="Activity insights" tool="activity" command="overview" className="bw-surface-width">
       <EmptyState roomy title="Your activity will take shape here" action={<Button variant="outline" asChild><Link to={plannerHref}>Open Planner</Link></Button>}>
         Add tasks or write a daily log to see your progress and patterns over time.
       </EmptyState>
@@ -123,9 +124,10 @@ function PersonalAnalytics() {
   }
 
   return (
-    <div className="grid gap-3 lg:max-w-5xl lg:grid-cols-12">
+    <WorkspaceGrid>
+      <GridItem span="full">
       <StatStrip
-        className="lg:col-span-12"
+
         items={[
           { label: "Open tasks", value: s.open },
           { label: "Overdue", value: s.overdue, tone: s.overdue ? "warn" : undefined },
@@ -135,10 +137,11 @@ function PersonalAnalytics() {
           { label: "Logs, 30 days", value: `${s.logsLast30} / 30` },
         ]}
       />
-      <Panel title="Completed tasks" tool="tasks" command="completed --30d" meta={`${total30} total`} className="lg:col-span-8" bodyClassName="px-3.5 py-3">
+      </GridItem>
+      <GridItem span={2}><Panel title="Completed tasks" tool="tasks" command="completed --30d" meta={`${total30} total`}  bodyClassName="px-3.5 py-3">
         <CompletedChart data={s.completed} className="h-44 lg:h-36" />
-      </Panel>
-      <Panel title="Open work" tool="tasks" command="open --by-due" meta={open.length} className="lg:col-span-4" bodyClassName="px-3.5 py-3">
+      </Panel></GridItem>
+      <GridItem span={2}><Panel title="Open work" tool="tasks" command="open --by-due" meta={open.length}  bodyClassName="px-3.5 py-3">
         {open.length ? (
           <ul className="space-y-2.5">
             {byGroup.map(({ g, n }) => <BarRow key={g} label={g} value={n} max={maxGroup} tone={g === "Overdue" ? "warn" : undefined} />)}
@@ -146,11 +149,11 @@ function PersonalAnalytics() {
         ) : (
           <p className="text-[11px] text-muted-foreground">No open tasks.</p>
         )}
-      </Panel>
-      <Panel title="Daily log history" tool="log" command="heatmap --52w" meta="Mon–Sun, top to bottom · click a day to open it" className="lg:col-span-12" bodyClassName="min-w-0 px-3.5 py-3">
+      </Panel></GridItem>
+      <GridItem span={3}><Panel title="Daily log history" tool="log" command="heatmap --52w" meta="Mon–Sun, top to bottom · click a day to open it"  bodyClassName="min-w-0 px-3.5 py-3">
         <JournalHeatmap logWords={s.logWords} weeks={52} cell="size-3" />
-      </Panel>
-    </div>
+      </Panel></GridItem>
+    </WorkspaceGrid>
   )
 }
 

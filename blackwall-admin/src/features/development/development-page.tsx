@@ -1,3 +1,4 @@
+import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
 import { addDays, format, isToday, isYesterday, startOfWeek } from "date-fns"
 import { CheckCircle2, CircleDot, ExternalLink, GitBranch, GitCommitHorizontal, GitPullRequest, Globe, Lock, Pencil, Plus, RotateCw, Star, XCircle } from "lucide-react"
 import { useMemo, useState, type ReactNode } from "react"
@@ -87,8 +88,8 @@ export function DevelopmentPage() {
           </>
         }
       />
-      <div className="flex flex-col gap-3 lg:max-w-[70rem]">
-        {repos.length > 0 && <StatStrip compactOnPhone
+      <WorkspaceGrid>
+        {repos.length > 0 && <GridItem span="full" className="max-sm:order-[-2]"><StatStrip compactOnPhone
           items={[
             { label: "Repositories", value: repos.length, icon: <GitBranch className="size-3" aria-hidden /> },
             { label: "Commits, 30 days", value: data?.repos ? commits30 : dash, sub: data?.repos ? `${commits7} this week` : undefined, icon: <GitCommitHorizontal className="size-3" aria-hidden /> },
@@ -96,36 +97,36 @@ export function DevelopmentPage() {
             { label: "Failed runs", value: data ? data.failures.length : dash, tone: data?.failures.length ? "error" : undefined, sub: data && !data.failures.length ? "latest runs passing" : undefined, icon: <XCircle className="size-3" aria-hidden /> },
             { label: "Open issues", value: data ? data.issues.length : dash, icon: <CircleDot className="size-3" aria-hidden /> },
           ]}
-        />}
+        /></GridItem>}
 
-        <div className={cn("grid items-start gap-3", data?.repos && "xl:grid-cols-[minmax(0,1fr)_auto]")}>
+        <div className="contents">
           {repos.length ? (
-            <ul className={cn("grid content-start gap-3", repos.length > 1 && "sm:grid-cols-2")} aria-label="Tracked repositories">
+            <ul className="contents" aria-label="Tracked repositories">
               {repos.map((r) => (
                 <RepoCard key={r.id} repo={r} data={data} summary={data?.repos?.find((s) => s.repo.toLowerCase() === r.fullName.toLowerCase())} />
               ))}
             </ul>
           ) : (
-            <Panel title="Tracked repositories" tool="repos" command="ls" className="max-w-lg">
+            <GridItem span={2}><Panel title="Tracked repositories" tool="repos" command="ls">
               <EmptyState roomy icon={GitBranch} title="No repositories tracked" action={<Button variant="outline" onClick={track}><Plus /> Track repository</Button>}>
                 Add the ones you work on; their commits, status and links show up here.
               </EmptyState>
-            </Panel>
+            </Panel></GridItem>
           )}
-          {repos.length > 0 && data?.repos && <PhoneDisclosure label="History · 26 weeks"><CommitHeatmap days={allDays} /></PhoneDisclosure>}
+          {repos.length > 0 && data?.repos && <GridItem span={2} rows={1}><PhoneDisclosure label="History · 26 weeks"><CommitHeatmap days={allDays} /></PhoneDisclosure></GridItem>}
         </div>
 
         {data ? (
-          <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-            <Attention data={data} single={single} />
-            <PhoneDisclosure label="Recent commits"><Activity data={data} single={single} /></PhoneDisclosure>
-          </div>
+          <>
+            <GridItem span={2} rows={1} className="max-sm:order-[-1]"><Attention data={data} single={single} /></GridItem>
+            <GridItem span={2} rows={1}><PhoneDisclosure label="Recent commits"><Activity data={data} single={single} /></PhoneDisclosure></GridItem>
+          </>
         ) : (
-          repos.length > 0 && <Panel title="GitHub activity" tool="github" command="status" className="max-w-lg">
+          repos.length > 0 && <GridItem span={2}><Panel title="GitHub activity" tool="github" command="status">
             <FeedFallback feed={feed} provider="github" what="commits, pull requests, failed runs and issues" />
-          </Panel>
+          </Panel></GridItem>
         )}
-      </div>
+      </WorkspaceGrid>
     </>
   )
 }
@@ -145,7 +146,7 @@ function sumSince(days: Record<string, number>, n: number) {
 
 function Pill({ href, icon, children }: { href: string; icon: ReactNode; children: ReactNode }) {
   return (
-    <a href={href} target="_blank" rel="noreferrer" className="inline-flex h-6 min-w-0 items-center gap-1.5 rounded-[6px] border border-line bg-well px-2 text-[11px] text-ink-2 hover:border-rim hover:text-ink">
+    <a href={href} target="_blank" rel="noreferrer" className="bw-action-link min-w-0 gap-1.5 rounded-[6px] border border-line bg-well px-2 text-[11px] text-ink-2 hover:border-rim hover:text-ink">
       {icon}
       <span className="truncate">{children}</span>
     </a>
@@ -211,7 +212,7 @@ function RepoCard({ repo, data, summary }: { repo: RepoLink; data?: DevelopmentO
   const status = !data ? "Needs GitHub" : failures.length ? `${failures.length} failed ${failures.length === 1 ? "run" : "runs"}` : "Checks passing"
 
   return (
-    <li className="bw-panel flex flex-col gap-2 p-2.5 sm:gap-3 sm:p-3.5" data-testid="repo-card">
+    <li className="bw-grid-item bw-panel flex flex-col gap-2 overflow-y-auto p-2.5 sm:gap-3 sm:p-3.5" data-span="1" data-rows="1" data-testid="repo-card">
       <div className="flex items-start gap-3">
         <span className="hidden size-9 shrink-0 sm:flex items-center justify-center rounded-[9px] border border-line bg-well font-heading text-sm font-bold text-ink-2 uppercase">
           {(name ?? repo.fullName).slice(0, 2)}
@@ -295,7 +296,7 @@ function CommitHeatmap({ days }: { days: Record<string, number> }) {
   const today = new Date()
 
   return (
-    <Panel className="sm:w-fit sm:max-w-full" title="Commit history" tool="git" command={`log --${weeks}w`} meta={`${total} commits · 26w total`} bodyClassName="flex flex-col gap-3 px-3.5 py-3">
+    <Panel title="Commit history" tool="git" command={`log --${weeks}w`} meta={`${total} commits · 26w total`} bodyClassName="flex flex-col gap-3 px-3.5 py-3">
       <div className="overflow-x-auto">
         {phone && <Button variant="outline" className="mb-2" onClick={() => setExpanded(!expanded)}>{expanded ? "Recent 12 weeks" : "Expand history"}</Button>}
         <p className="sr-only">Showing {weeks} weeks, ending this week</p>
@@ -396,7 +397,7 @@ function Attention({ data, single }: { data: DevelopmentOverview; single: boolea
   const shown = all ? items : items.slice(0, 6)
 
   return (
-    <Panel title="Needs your attention" tool="github" command="needs-you" meta={items.length || undefined} className="self-start">
+    <Panel title="Needs your attention" tool="github" command="needs-you" meta={items.length || undefined} bodyClassName="overflow-y-auto">
       {items.length ? (
         <>
           <ul>
@@ -469,7 +470,7 @@ function Activity({ data, single }: { data: DevelopmentOverview; single: boolean
     else groups.push({ label, items: [a] })
   }
   return (
-    <Panel title="Recent activity" tool="git" command="log" meta={data.activity.length || undefined}>
+    <Panel title="Recent activity" tool="git" command="log" meta={data.activity.length || undefined} bodyClassName="overflow-y-auto">
       {data.activity.length ? (
         <>
           {groups.map((g) => (

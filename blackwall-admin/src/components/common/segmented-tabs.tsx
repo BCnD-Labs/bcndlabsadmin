@@ -42,7 +42,7 @@ export function SegmentedTabs<V extends string>({
   }
 
   return (
-    <div ref={ref} role="tablist" aria-label={label} onKeyDown={onKey} className={cn("flex gap-1 rounded-[8px] border border-line-soft bg-well p-1", className)}>
+    <div ref={ref} role="tablist" aria-label={label} onKeyDown={onKey} className={cn("flex gap-1 rounded-[8px] border border-line-soft bg-well p-0.5", className)}>
       {tabs.map((t) => {
         const on = t.value === value
         return (
@@ -57,7 +57,7 @@ export function SegmentedTabs<V extends string>({
             tabIndex={on ? 0 : -1}
             onClick={() => onChange(t.value)}
             className={cn(
-              "flex h-8 md:h-[22px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[6px] text-xs font-medium whitespace-nowrap transition-[background-color,color,box-shadow] duration-150",
+              "flex h-8 md:h-[calc(var(--bw-control-h)-6px)] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[6px] text-xs font-medium whitespace-nowrap transition-[background-color,color,box-shadow] duration-150",
               on ? "bg-selected text-ink" : "text-muted-foreground hover:text-ink",
               tabClassName,
             )}

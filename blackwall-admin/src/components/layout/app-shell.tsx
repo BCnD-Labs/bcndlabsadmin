@@ -96,8 +96,8 @@ export function AppShell() {
       <MobileNav />
       <div
         className={cn(
-          "px-3 transition-[padding] duration-200 ease-bw motion-reduce:transition-none",
-          navExpanded ? "md:pl-[244px]" : "md:pl-[84px]",
+          "bw-app-shell px-3 transition-[padding] duration-200 ease-bw motion-reduce:transition-none",
+          navExpanded ? "md:pl-[calc(var(--bw-tree-width)+24px)]" : "md:pl-[calc(var(--bw-rail-width)+24px)]",
         )}
       >
         <div ref={headerRef} className="bw-ground sticky top-0 z-30 py-3">
@@ -105,7 +105,7 @@ export function AppShell() {
         </div>
         {/* Fixed on the left; after the header in tab order. */}
         <NavRail focusMain={focusMain} />
-        <main id="main" ref={mainRef} tabIndex={-1} className="mx-auto w-full max-w-[1280px] pb-3 outline-none">
+        <main id="main" ref={mainRef} tabIndex={-1} className="bw-workspace pb-3 outline-none">
           <WorkspaceStatus connected={session === "open"} />
           {workspaceReady && <><SectionNav /><Outlet /></>}
         </main>

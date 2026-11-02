@@ -1,3 +1,4 @@
+import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
 import { useWorkspaceSync } from "@/services/workspace-sync"
 import { format } from "date-fns"
 import { CalendarClock, ExternalLink, FileX, ImagePlus, Loader2, Rocket, Trash2, Undo2, X } from "lucide-react"
@@ -115,7 +116,8 @@ function Editor({ draft }: { draft: Draft }) {
         }
       />
 
-      <div className="grid max-w-[72rem] items-start gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
+      <WorkspaceGrid>
+        <GridItem span={3}>
         <section className="bw-panel flex min-w-0 flex-col overflow-hidden" aria-label="Post">
           {value.kind === "post" && (
             <CoverField
@@ -189,7 +191,8 @@ function Editor({ draft }: { draft: Draft }) {
           </div>
         </section>
 
-        <aside className="flex min-w-0 flex-col gap-3 self-start lg:sticky lg:top-[calc(var(--bw-header-h,92px)+0.25rem)]">
+        </GridItem>
+        <GridItem><aside className="flex min-w-0 flex-col gap-3 self-start lg:sticky lg:top-[calc(var(--bw-header-h,92px)+0.25rem)]">
           {value.kind === "post" ? (
             <PublishPanel draft={current} item={item} site={site} onRemoteSlug={(remoteSlug) => update("drafts", draft.id, { ...value, slug: slugify(value.slug) || "untitled", remoteSlug })} />
           ) : (
@@ -220,8 +223,8 @@ function Editor({ draft }: { draft: Draft }) {
               </Field>
             </div>
           </Panel>
-        </aside>
-      </div>
+        </aside></GridItem>
+      </WorkspaceGrid>
     </>
   )
 }

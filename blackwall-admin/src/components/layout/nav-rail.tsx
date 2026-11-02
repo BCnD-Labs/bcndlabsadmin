@@ -137,7 +137,7 @@ export function NavRail({ focusMain }: { focusMain: () => void }) {
     return (
       <li
         key={d.id}
-        className={cn("relative size-10 shrink-0", open && "z-10")}
+        className={cn("relative size-[var(--bw-nav-item)] shrink-0", open && "z-10")}
         onPointerEnter={() => hoverOpen(d.id)}
         onPointerLeave={hoverClose}
         onBlur={onBlurWithin(d.id)}
@@ -168,20 +168,20 @@ export function NavRail({ focusMain }: { focusMain: () => void }) {
           }}
           onKeyDown={(e) => onItemKey(e, d)}
           className={cn(
-            "absolute top-0 left-0 flex h-[43px] w-10 items-start overflow-hidden rounded-[10px] border-r-[3px] border-b-[3px] border-transparent whitespace-nowrap",
+            "absolute top-0 left-0 flex h-[var(--bw-nav-item)] w-[var(--bw-nav-item)] items-start overflow-hidden rounded-[10px] border border-transparent whitespace-nowrap",
             "transition-none data-[open=true]:transition-[width,background-color,border-color,box-shadow] data-[open=true]:duration-200 data-[open=true]:ease-bw motion-reduce:transition-none",
             current ? "bg-red-soft text-red-light" : "text-faint hover:bg-raised hover:text-ink-2",
-            open && "w-[220px] border-ledge-hi shadow-[0_18px_40px_-10px_rgba(0,0,0,0.65)]",
+            open && "w-[var(--bw-tree-width)] border-ledge-hi shadow-[0_18px_40px_-10px_rgba(0,0,0,0.65)]",
             open && !current && "bg-line text-ink-2",
             open && hasSubs && "rounded-br-none",
           )}
         >
-          <span className="flex size-10 shrink-0 items-center justify-center">
+          <span className="flex size-[var(--bw-nav-item)] shrink-0 items-center justify-center">
             <Icon className="size-[18px]" strokeWidth={1.8} aria-hidden />
           </span>
           <span
             className={cn(
-              "flex h-10 min-w-0 flex-1 items-center justify-between gap-2 pr-3 transition-[opacity,transform] motion-reduce:transition-none",
+              "flex h-[var(--bw-nav-item)] min-w-0 flex-1 items-center justify-between gap-2 pr-3 transition-[opacity,transform] motion-reduce:transition-none",
               open ? "translate-x-0 opacity-100 delay-[40ms] duration-200 ease-bw" : "-translate-x-1.5 opacity-0 duration-0",
             )}
           >
@@ -220,13 +220,13 @@ export function NavRail({ focusMain }: { focusMain: () => void }) {
                       onClick={select(c.to)}
                       onKeyDown={(e) => onSubKey(e, d.id)}
                       className={cn(
-                        "mx-1.5 flex h-[30px] items-center justify-between gap-2 rounded-[6px] px-2 text-[13px] whitespace-nowrap text-muted-foreground outline-none",
+                        "mx-1.5 flex h-[var(--bw-nav-row)] items-center justify-between gap-2 rounded-[6px] px-2 text-[13px] whitespace-nowrap text-muted-foreground outline-none",
                         "hover:bg-line hover:text-white focus-visible:bg-line focus-visible:text-white focus-visible:outline-2 focus-visible:outline-ring",
                         here && "text-white before:mr-1 before:size-1.5 before:shrink-0 before:rounded-[1.5px] before:bg-red before:content-['']",
                       )}
                     >
                       <span className="mr-auto truncate">{c.label}</span>
-                      {count && <span className="text-[10px] text-faint">{count}</span>}
+                      {count && <span className="text-[10px] text-muted-foreground">{count}</span>}
                     </Link>
                   </li>
                 )
@@ -247,7 +247,7 @@ export function NavRail({ focusMain }: { focusMain: () => void }) {
       className={cn(
         "bw-navigation fixed top-3 bottom-3 left-3 z-40 hidden flex-col py-3.5 after:hidden md:flex",
         "transition-[width] duration-200 ease-bw motion-reduce:transition-none",
-        expanded ? "w-[220px] px-2.5" : "w-[60px] items-center gap-2",
+        expanded ? "w-[var(--bw-tree-width)] px-2.5" : "w-[var(--bw-rail-width)] items-center gap-2",
       )}
     >
       <BrandButton expanded={expanded} onToggle={toggleExpanded} />
@@ -307,7 +307,7 @@ function SettingsButton({ expanded }: { expanded: boolean }) {
             aria-haspopup="dialog"
             onClick={() => openSettings()}
             className={cn(
-              "flex size-10 shrink-0 items-center justify-center rounded-[10px] border-r-[3px] border-b-[3px] border-transparent",
+              "flex size-[var(--bw-nav-item)] shrink-0 items-center justify-center rounded-[10px] border border-transparent",
               open ? "bg-red-soft text-red-light" : "text-faint hover:bg-raised hover:text-ink-2",
             )}
           >
@@ -334,7 +334,7 @@ function SettingsButton({ expanded }: { expanded: boolean }) {
 }
 
 const TREE_ROW =
-  "flex h-10 w-full shrink-0 items-center gap-3 rounded-[10px] border-r-[3px] border-b-[3px] border-transparent px-2.5 text-[13px] font-medium transition-colors duration-150"
+  "flex h-[var(--bw-nav-item)] w-full shrink-0 items-center gap-3 rounded-[10px] border border-transparent px-2.5 text-[13px] font-medium transition-colors duration-150"
 const TREE_FILL = "bg-red-soft font-semibold text-ink hover:bg-red-soft"
 
 /**
@@ -418,12 +418,12 @@ function NavTree() {
                         to={c.to}
                         aria-current={here ? "page" : undefined}
                         className={cn(
-                          "flex h-8 items-center gap-2 rounded-[6px] px-2 text-[13px] whitespace-nowrap text-muted-foreground hover:bg-raised hover:text-white",
+                          "flex h-[var(--bw-nav-row)] items-center gap-2 rounded-[var(--bw-control-radius)] px-2 text-[13px] whitespace-nowrap text-muted-foreground hover:bg-raised hover:text-white",
                           here && "bg-line text-white before:size-1.5 before:shrink-0 before:rounded-[1.5px] before:bg-red before:content-['']",
                         )}
                       >
                         <span className="min-w-0 flex-1 truncate">{c.label}</span>
-                        {count && <span className="text-[10px] text-faint">{count}</span>}
+                        {count && <span className="text-[10px] text-muted-foreground">{count}</span>}
                       </Link>
                     </li>
                   )

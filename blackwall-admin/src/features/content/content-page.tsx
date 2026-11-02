@@ -1,3 +1,4 @@
+import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
 import { format } from "date-fns"
 import { CalendarClock, Copy, ExternalLink, FileText, Globe, MoreHorizontal, Pencil, Plus, RotateCw, Search, Trash2, Undo2 } from "lucide-react"
 import { useMemo, useState } from "react"
@@ -79,7 +80,8 @@ export function ContentPage() {
           </>
         }
       />
-      <div className="flex flex-col gap-3 lg:max-w-[70rem]">
+      <WorkspaceGrid>
+        <GridItem span="full">
         <StatStrip
           items={[
             { label: "Published", value: site.overview ? count("published") : <span className="text-faint">—</span> },
@@ -92,7 +94,9 @@ export function ContentPage() {
             },
           ]}
         />
-        <SiteNotice site={site} />
+        </GridItem>
+        <GridItem span="full"><SiteNotice site={site} /></GridItem>
+        <GridItem span="full">
 
         <section className="flex min-w-0 flex-col" aria-label="Content">
           <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-2">
@@ -143,7 +147,7 @@ export function ContentPage() {
 
           {view === "posts" ? (
             shown.length ? (
-              <ul className="grid grid-cols-2 gap-2.5 p-2.5 sm:gap-3 sm:p-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5" aria-label="Posts">
+              <ul className="bw-card-grid py-3" aria-label="Posts">
                 {shown.map((i) => (
                   <PostCard key={i.key} item={i} siteUrl={site.overview?.siteUrl} postsBase={site.overview} />
                 ))}
@@ -156,8 +160,8 @@ export function ContentPage() {
           ) : (
             <PagesGrid pages={pages} drafts={pageDrafts} status={site.status} />
           )}
-        </section>
-      </div>
+        </section></GridItem>
+      </WorkspaceGrid>
     </>
   )
 }
@@ -339,7 +343,7 @@ function PagesGrid({ pages, drafts, status }: { pages: { path: string; title: st
     )
   return (
     <>
-      <ul className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5" aria-label="Pages">
+      <ul className="bw-card-grid py-3" aria-label="Pages">
         {pages.map((p) => (
           <li key={p.path} className="group flex flex-col overflow-hidden rounded-[10px] border border-line bg-raised hover:border-rim" data-testid="page-card">
             {p.url ? <LiveThumb url={p.url} title={p.title} className="aspect-[2/1] w-full border-b border-line" /> : <CoverPlaceholder title={p.title} className="aspect-[2/1] w-full border-b border-line" />}

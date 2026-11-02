@@ -60,7 +60,7 @@ export function Header() {
   const items = crumbs(pathname, search)
 
   return (
-    <header className="bw-app-header mx-auto z-20 flex w-full max-w-[1280px] flex-col gap-2.5 border-b border-line-soft py-2 pr-0 pl-0 md:flex-row md:items-center md:justify-between md:gap-3">
+    <header className="bw-app-header bw-workspace mx-auto z-20 flex w-full  flex-col gap-2.5 border-b border-line-soft py-2 pr-0 pl-0 md:flex-row md:items-center md:justify-between md:gap-3">
       <div className="flex min-w-0 items-center gap-2 md:flex-1">
         {/* Small screens only; desktop has the rail. */}
         <Button

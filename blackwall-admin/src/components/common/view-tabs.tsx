@@ -23,7 +23,7 @@ export function ViewTabs({
           replace
           aria-current={t.active ? "page" : undefined}
           className={cn(
-            "-mb-px flex h-9 items-center border-b-2 border-transparent px-3 text-[13px] font-medium whitespace-nowrap text-muted-foreground transition-colors duration-150 hover:text-ink",
+            "-mb-px flex h-[var(--bw-control-h)] items-center border-b-2 border-transparent px-3 text-[13px] font-medium whitespace-nowrap text-muted-foreground transition-colors duration-150 hover:text-ink",
             t.active && "border-red text-ink",
           )}
         >

@@ -146,7 +146,7 @@ export function Notifications() {
         ) : (
           <>
             <div className="px-3 pt-2.5 pb-1.5">
-              <SegmentedTabs tabs={FILTERS} value={filter} onChange={setFilter} label="Filter notifications" tabClassName="h-[26px] rounded-[6px]" />
+              <SegmentedTabs tabs={FILTERS} value={filter} onChange={setFilter} label="Filter notifications" tabClassName="rounded-[var(--bw-control-radius)]" />
             </div>
             <div className="flex flex-1 flex-col overflow-auto px-1.5 pt-1 pb-2">
               {groups.length === 0 && <p className="px-2 py-6 text-center text-[11px] text-muted-foreground">Nothing here.</p>}

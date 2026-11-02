@@ -1,3 +1,4 @@
+import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
 import { FolderKanban, Plus } from "lucide-react"
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
@@ -25,14 +26,14 @@ export function ProjectsPage() {
         actions={<Button onClick={newProject}><Plus /> New project</Button>}
       />
       {sorted.length ? (
-        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 lg:max-w-[66rem]">
+        <WorkspaceGrid className="items-stretch"><ul className="contents">
           {sorted.map((p) => {
             const counts = [
               [repos.filter((r) => r.projectId === p.id).length, "repos"],
               [drafts.filter((d) => d.projectId === p.id).length, "drafts"],
             ] as const
             return (
-              <li key={p.id} className="flex">
+              <li key={p.id} className="bw-grid-item" data-span="1">
                 <Link
                   to={projectHref(p.id)}
                   className="bw-panel flex flex-1 flex-col gap-2.5 p-3.5 transition-colors duration-150 hover:border-ledge-hi hover:bg-raised"
@@ -56,13 +57,13 @@ export function ProjectsPage() {
               </li>
             )
           })}
-        </ul>
+        </ul></WorkspaceGrid>
       ) : (
-        <Panel title="Projects" tool="projects" command="ls" className="max-w-lg">
+        <WorkspaceGrid><GridItem span={2}><Panel title="Projects" tool="projects" command="ls">
           <EmptyState roomy icon={FolderKanban} title="No projects yet" action={<Button variant="outline" onClick={newProject}><Plus /> Create a project</Button>}>
             A project groups the repositories and drafts that belong together.
           </EmptyState>
-        </Panel>
+        </Panel></GridItem></WorkspaceGrid>
       )}
     </>
   )

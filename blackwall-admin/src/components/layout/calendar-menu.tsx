@@ -75,7 +75,7 @@ function DayButton({ day, modifiers, className: _c, ...props }: DayButtonProps) 
       disabled={outside}
       aria-label={outside ? undefined : `${format(date, "MMMM d")}${parts.length ? `, ${parts.join(", ")}` : ""}, open log`}
       className={cn(
-        "flex h-[30px] w-full flex-col items-center justify-center gap-[2px] rounded-[6px] p-0 text-xs tabular-nums",
+        "flex h-[var(--bw-control-h)] w-full flex-col items-center justify-center gap-[2px] rounded-[6px] p-0 text-xs tabular-nums",
         today ? "bg-red font-semibold text-white" : outside ? "text-faint" : "text-ink-2 hover:bg-raised",
         outside && "cursor-default",
       )}

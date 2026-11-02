@@ -65,13 +65,13 @@ export function SettingsModal() {
       }}
     >
       <DialogContent
-        className="bw-settings flex h-[min(760px,calc(100dvh-2rem))] w-[calc(100%-1.5rem)] max-w-[960px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[960px] md:flex-row"
+        className="bw-settings flex h-[min(760px,calc(100dvh-2rem))] w-[calc(100%-1.5rem)] max-w-[var(--bw-settings-width)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[var(--bw-settings-width)] md:flex-row"
         onOpenAutoFocus={(e) => {
           // Land on the search box on desktop; on phones, don't pop the keyboard.
           if (!window.matchMedia("(min-width: 768px)").matches) e.preventDefault()
         }}
       >
-        <aside className="bw-settings-side flex shrink-0 flex-col gap-3 border-b border-line p-3 pr-12 md:w-[208px] md:border-r md:border-b-0 md:p-4 md:pr-4">
+        <aside className="bw-settings-side flex shrink-0 flex-col gap-3 border-b border-line p-3 pr-12 md:w-[var(--bw-settings-nav)] md:border-r md:border-b-0 md:p-4 md:pr-4">
           <div className="px-1 pt-0.5">
             <DialogTitle className="font-heading text-[17px] font-bold tracking-tight">Settings</DialogTitle>
             <DialogDescription className="sr-only">Preferences for this browser, your connections and the home server.</DialogDescription>
@@ -104,7 +104,7 @@ export function SettingsModal() {
                       onClick={() => go(id)}
                       aria-current={on ? "page" : undefined}
                       className={cn(
-                        "relative flex h-9 w-full items-center gap-2.5 rounded-[8px] px-2.5 text-left text-[13px] text-ink-2 transition-colors duration-150 hover:bg-raised hover:text-ink",
+                        "relative flex h-[var(--bw-nav-row)] w-full items-center gap-2.5 rounded-[8px] px-2.5 text-left text-[13px] text-ink-2 transition-colors duration-150 hover:bg-raised hover:text-ink",
                         on &&
                           "bg-red-soft font-medium text-ink before:absolute before:top-2 before:bottom-2 before:-left-px before:w-[3px] before:rounded-full before:bg-red hover:bg-red-soft",
                       )}
