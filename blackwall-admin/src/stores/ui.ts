@@ -12,6 +12,9 @@ export type FormRequest =
   | { kind: "repo"; id?: string; defaults?: Partial<RepoLink> }
   | { kind: "course"; id?: string; defaults?: Partial<Course> }
   | { kind: "service"; id?: string; defaults?: Partial<Service> }
+  | { kind: "site"; id?: string; defaults?: undefined }
+  | { kind: "sitePage"; id?: string; defaults?: undefined }
+  | { kind: "siteForm"; id?: string; defaults?: undefined }
 
 interface UiState {
   form: FormRequest | null

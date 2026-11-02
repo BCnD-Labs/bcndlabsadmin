@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { EmptyState } from "@/components/common/empty-state"
 import { PageHeader } from "@/components/common/page-header"
+import { publishSite as publishSiteNow } from "@/features/cms/use-cms"
 import { SourceBadge } from "@/components/common/source-badge"
 import { Panel } from "@/components/common/panel"
 import { SegmentedTabs } from "@/components/common/segmented-tabs"
@@ -47,8 +48,8 @@ export function PostEditor() {
   )
 }
 
-type Editable = Pick<Draft, "title" | "slug" | "kind" | "excerpt" | "body" | "projectId" | "tags" | "cover" | "coverAlt">
-const pick = (d: Draft): Editable => ({ title: d.title, slug: d.slug, kind: d.kind, excerpt: d.excerpt, body: d.body, projectId: d.projectId, tags: d.tags ?? [], cover: d.cover, coverAlt: d.coverAlt })
+type Editable = Pick<Draft, "title" | "slug" | "kind" | "excerpt" | "body" | "projectId" | "tags" | "cover" | "coverAlt" | "siteId" | "week" | "course" | "due">
+const pick = (d: Draft): Editable => ({ title: d.title, slug: d.slug, kind: d.kind, excerpt: d.excerpt, body: d.body, projectId: d.projectId, tags: d.tags ?? [], cover: d.cover, coverAlt: d.coverAlt, siteId: d.siteId, week: d.week, course: d.course, due: d.due })
 
 function Editor({ draft }: { draft: Draft }) {
   const update = useWorkspace((s) => s.update)
@@ -193,7 +194,9 @@ function Editor({ draft }: { draft: Draft }) {
 
         </GridItem>
         <GridItem><aside className="flex min-w-0 flex-col gap-3 self-start lg:sticky lg:top-[calc(var(--bw-header-h,92px)+0.25rem)]">
-          {value.kind === "post" ? (
+          {value.kind === "post" && draft.siteId ? (
+            <SitePostPanel draft={draft} />
+          ) : value.kind === "post" ? (
             <PublishPanel draft={current} item={item} site={site} onRemoteSlug={(remoteSlug) => update("drafts", draft.id, { ...value, slug: slugify(value.slug) || "untitled", remoteSlug })} />
           ) : (
             <Panel category="website" title="Page draft" tool="page" command="publish" bodyClassName="px-3.5 py-3 text-xs leading-relaxed text-muted-foreground">
@@ -213,6 +216,20 @@ function Editor({ draft }: { draft: Draft }) {
               <Field label="Cover description" htmlFor="post-cover-alt" hint="For screen readers and when the image can't load.">
                 <Input id="post-cover-alt" value={value.coverAlt ?? ""} onChange={(e) => set({ coverAlt: e.target.value })} />
               </Field>
+            )}
+            {value.kind === "post" && (
+              <>
+                <Field label="Site" htmlFor="post-site" hint={draft.siteId ? "Published with this site from the Website section." : "Pick a Blackwall site to publish this post with it."}>
+                  <SiteSelect id="post-site" value={value.siteId} onChange={(siteId) => set({ siteId })} />
+                </Field>
+                <div className="grid grid-cols-[5rem_minmax(0,1fr)] gap-3">
+                  <Field label="Week" htmlFor="post-week"><Input id="post-week" inputMode="numeric" value={value.week ?? ""} onChange={(e) => set({ week: e.target.value.trim() === "" ? undefined : Math.max(0, Math.min(99, Number(e.target.value) || 0)) })} placeholder="10" /></Field>
+                  <Field label="Course" htmlFor="post-course"><Input id="post-course" value={value.course ?? ""} onChange={(e) => set({ course: e.target.value || undefined })} placeholder="ADD 103" list="post-courses" /></Field>
+                </div>
+                <Field label="Due" htmlFor="post-due" hint="Week, course and due date place it in your course portal.">
+                  <Input id="post-due" type="date" value={value.due ?? ""} onChange={(e) => set({ due: e.target.value || undefined })} />
+                </Field>
+              </>
             )}
             <div className="grid gap-3">
               <Field label="Type" htmlFor="post-kind">
@@ -510,4 +527,48 @@ function PublishPanel({ draft, item, site, onRemoteSlug }: { draft: Draft; item?
 
 function EditorSyncLabel() {
   return useWorkspaceSync((s) => s.message)
+}
+
+function SiteSelect({ id, value, onChange }: { id: string; value?: string; onChange: (v: string | undefined) => void }) {
+  const sites = useWorkspace((s) => s.sites)
+  const courses = useWorkspace((s) => s.courses)
+  return (
+    <>
+      <OptionSelect id={id} value={value ?? "none"} onChange={(v) => onChange(v === "none" ? undefined : v)} options={[{ value: "none", label: sites.length ? "Your connected website (classic)" : "No Blackwall sites yet" }, ...sites.map((x) => ({ value: x.id, label: x.name }))]} className="w-full" />
+      <datalist id="post-courses">{[...new Set(courses.map((c) => c.code).filter(Boolean))].map((c) => <option key={c} value={c} />)}</datalist>
+    </>
+  )
+}
+
+/** Site posts publish with their site: one click marks it live and publishes the site. */
+function SitePostPanel({ draft }: { draft: Draft }) {
+  const site = useWorkspace((s) => s.sites.find((x) => x.id === draft.siteId))
+  const update = useWorkspace((s) => s.update)
+  const [busy, setBusy] = useState(false)
+  if (!site) return null
+  const changed = !!draft.publishedAt && !!site.publishedAt && draft.updatedAt > site.publishedAt
+  const state = !draft.publishedAt ? "draft" : changed || !site.publishedAt || draft.publishedAt > site.publishedAt ? "pending" : "live"
+  const go = async (live: boolean) => {
+    setBusy(true)
+    try {
+      update("drafts", draft.id, { publishedAt: live ? draft.publishedAt ?? new Date().toISOString() : undefined, status: live ? "ready" : draft.status })
+      await publishSiteNow(site)
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <Panel category="website" title="Publishing" subtitle={site.name} bodyClassName="flex flex-col gap-2.5 px-3.5 py-3">
+      <p className="text-xs text-muted-foreground">
+        {state === "draft" ? "A draft: it isn't on the site yet." : state === "pending" ? "Changes not published yet." : `Live at /posts/${draft.slug}/.`}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Button disabled={busy || state === "live"} onClick={() => void go(true)}>{busy ? <Loader2 className="animate-spin" /> : <Rocket />} {state === "draft" ? "Publish" : state === "pending" ? "Publish changes" : "Up to date"}</Button>
+        {draft.publishedAt && <Button variant="quiet" disabled={busy} onClick={() => void go(false)}><Undo2 /> Unpublish</Button>}
+      </div>
+      <p className="text-[11px] text-faint">Publishing rebuilds and commits the whole site, so the course portal and post lists update too.</p>
+    </Panel>
+  )
 }

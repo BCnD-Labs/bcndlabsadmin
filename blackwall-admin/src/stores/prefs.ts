@@ -19,7 +19,7 @@ export const LANDING_PAGES = [
   { value: "/productivity", label: "Planner" },
   { value: "/productivity/learning", label: "Learning" },
   { value: "/development", label: "GitHub activity" },
-  { value: "/cms", label: "Posts & pages" },
+  { value: "/cms", label: "Website" },
 ] as const
 export type LandingPage = (typeof LANDING_PAGES)[number]["value"]
 
@@ -46,6 +46,8 @@ interface PrefsState {
   motion: MotionPref
   /** Mikoshi launcher: compact rows (default) or an icon grid. */
   launcherView: "rows" | "grid"
+  /** CMS: the site the Website section is showing. */
+  cmsSiteId: string
   /** Desktop sidebar: the full tree (true) or the icon strip with hover flyouts (false). */
   navExpanded: boolean
   /** Colour theme: Dim (mid-tone slate, default) or Dark (the original near-black). */
@@ -87,6 +89,7 @@ const DEFAULT_PREFS = (): Persisted => ({
   landingPage: "/",
   motion: "system",
   launcherView: "rows",
+  cmsSiteId: "",
   navExpanded: false,
   theme: "dim",
   uiFont: "sans",
@@ -139,6 +142,7 @@ export const usePrefs = create<PrefsState>()(
           landingPage: LANDING_PAGES.some((l) => l.value === p.landingPage) ? (p.landingPage as LandingPage) : "/",
           motion: p.motion === "reduce" || p.motion === "full" ? p.motion : "system",
           launcherView: p.launcherView === "grid" ? "grid" : "rows",
+          cmsSiteId: typeof p.cmsSiteId === "string" ? p.cmsSiteId.slice(0, 40) : "",
           feedConnections: sanitizeFeedConnections(p.feedConnections),
           navExpanded: p.navExpanded === true,
           theme: p.theme === "dark" ? "dark" : "dim",

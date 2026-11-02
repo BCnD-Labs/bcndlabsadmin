@@ -14,6 +14,7 @@ import { validWorkspace } from "../shared/workspace.ts"
 import { serviceIcon } from "./icons.ts"
 import { checkServices, validStatusUrls } from "./service-status.ts"
 import { Notifier } from "./notify.ts"
+import { publishSite } from "./site-publish.ts"
 import { handleStorage } from "./storage.ts"
 import type { WorkspaceStore } from "./workspace.ts"
 import type { System } from "./system.ts"
@@ -229,6 +230,11 @@ export function createApi(opts: ApiOptions) {
     // --- Mikoshi storage (Nextcloud over WebDAV) --------------------------------
     if (parts[0] === "storage") {
       return handleStorage(store, req, res, url, parts.slice(1).join("/"), method, (status, body) => send(res, status, body), (limit) => readJson(req, limit))
+    }
+
+    // --- CMS sites: build and commit ------------------------------------------
+    if (parts[0] === "sites" && parts[2] === "publish" && method === "POST" && parts[1]) {
+      return send(res, 200, await publishSite(store, (await opts.workspace.readWorkspace()).data, parts[1]))
     }
 
     // --- notifications ---------------------------------------------------------

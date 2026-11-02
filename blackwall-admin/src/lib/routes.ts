@@ -16,8 +16,12 @@ export const projectsHref = `${PRODUCTIVITY}/projects`
 export const learningHref = `${PRODUCTIVITY}/learning`
 export const insightsHref = `${PRODUCTIVITY}/insights`
 
-export const postsHref = CMS
-export const draftsHref = `${CMS}?show=drafts`
+export const cmsPagesHref = CMS
+export const postsHref = `${CMS}/posts`
+export const draftsHref = `${CMS}/posts?show=drafts`
+export const formsHref = `${CMS}/forms`
+export const siteSettingsHref = `${CMS}/settings`
+export const sitePageHref = (id: string) => `${CMS}/pages/${id}`
 export const mediaHref = `${CMS}/media`
 export const siteAnalyticsHref = `${CMS}/analytics`
 

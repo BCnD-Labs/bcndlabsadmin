@@ -26,6 +26,9 @@ const ID_PREFIX: Record<GenericKey, string> = {
   drafts: "drf",
   courses: "crs",
   services: "svc",
+  sites: "sit",
+  pages: "pag",
+  forms: "frm",
 }
 
 interface WorkspaceState extends Collections {
@@ -42,7 +45,7 @@ interface WorkspaceState extends Collections {
   clearAll: () => void
 }
 
-const empty: Collections = { tasks: [], notes: [], journal: [], projects: [], repos: [], drafts: [], courses: [], services: [] }
+const empty: Collections = { tasks: [], notes: [], journal: [], projects: [], repos: [], drafts: [], courses: [], services: [], sites: [], pages: [], forms: [] }
 const now = () => new Date().toISOString()
 
 export const useWorkspace = create<WorkspaceState>()(
@@ -79,6 +82,11 @@ export const useWorkspace = create<WorkspaceState>()(
         if (key === "courses") {
           next.tasks = state.tasks.filter((t) => t.courseId !== id)
           next.notes = state.notes.map((n) => (n.courseId === id ? { ...n, courseId: undefined } : n))
+        }
+        // Deleting a site deletes its pages; its posts stay as unassigned drafts.
+        if (key === "sites") {
+          next.pages = state.pages.filter((p) => p.siteId !== id)
+          next.drafts = state.drafts.map((d) => (d.siteId === id ? { ...d, siteId: undefined } : d))
         }
         set(next)
       },
@@ -136,6 +144,9 @@ export const useWorkspace = create<WorkspaceState>()(
         drafts: s.drafts,
         courses: s.courses,
         services: s.services,
+        sites: s.sites,
+        pages: s.pages,
+        forms: s.forms,
       }),
       migrate: (persisted, version) => migrateWorkspace(persisted as Record<string, unknown[]>, version),
     },

@@ -1,9 +1,13 @@
 import { createBrowserRouter, Navigate, RouterProvider, useLocation, useParams } from "react-router-dom"
 import { AppShell } from "@/components/layout/app-shell"
 import { InsightsPage, SiteAnalyticsPage } from "@/features/analytics/analytics-page"
-import { ContentPage } from "@/features/content/content-page"
 import { PostEditor } from "@/features/content/post-editor"
 import { MediaPage } from "@/features/content/media-page"
+import { CmsPagesPage } from "@/features/cms/pages-tab"
+import { CmsPostsPage } from "@/features/cms/posts-tab"
+import { CmsFormsPage } from "@/features/cms/forms-tab"
+import { CmsSiteSettingsPage } from "@/features/cms/site-settings"
+import { PageEditor } from "@/features/cms/page-editor"
 import { DevelopmentPage } from "@/features/development/development-page"
 import { HomePage } from "@/features/home/home-page"
 import { CourseDetail } from "@/features/learning/course-detail"
@@ -60,10 +64,13 @@ const router = createBrowserRouter([
       { path: "productivity/insights", element: <InsightsPage /> },
       { path: "development", element: <DevelopmentPage /> },
       { path: "development/*", element: <Navigate to="/development" replace /> },
-      { path: "cms", element: <ContentPage /> },
-      { path: "cms/posts", element: <Navigate to="/cms" replace /> },
+      { path: "cms", element: <CmsPagesPage /> },
+      { path: "cms/posts", element: <CmsPostsPage /> },
+      { path: "cms/pages/:id", element: <PageEditor /> },
+      { path: "cms/forms", element: <CmsFormsPage /> },
+      { path: "cms/settings", element: <CmsSiteSettingsPage /> },
       { path: "cms/posts/:id", element: <PostEditor /> },
-      { path: "cms/drafts", element: <Navigate to="/cms?show=drafts" replace /> },
+      { path: "cms/drafts", element: <Navigate to="/cms/posts?show=drafts" replace /> },
       { path: "cms/drafts/:id", element: <Moved from="/cms/drafts" to="/cms/posts" /> },
       { path: "cms/media", element: <MediaPage /> },
       { path: "cms/analytics", element: <SiteAnalyticsPage /> },

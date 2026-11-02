@@ -259,6 +259,9 @@ html[data-font="mono"] {
   .bw-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--bw-grid-gap); align-items: stretch; }
   .bw-grid-item { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
   .bw-grid-item > .bw-panel { flex: 1; min-height: 0; }
+  /* Stacked cards in one column keep their own height; the last one fills what's left. */
+  .bw-grid-item:not([data-rows]) > .bw-panel:not(:only-child) { flex: none; }
+  .bw-grid-item:not([data-rows]) > .bw-panel:not(:only-child):last-child { flex: 1 0 auto; }
   .bw-grid-item[data-span="full"] { grid-column: 1 / -1; }
   /* A grid item whose content rendered nothing (e.g. no notice) takes no row and no gap. */
   .bw-grid-item:empty { display: none; }

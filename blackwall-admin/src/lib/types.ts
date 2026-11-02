@@ -112,6 +112,80 @@ export interface Draft {
    */
   remoteSlug?: string
   projectId?: ID
+  /** CMS: the Blackwall site this post belongs to (rendered and published with it). */
+  siteId?: ID
+  /** Course portal: the week number and course code it's filed under, and when it's due. */
+  week?: number
+  course?: string
+  due?: DateKey
+  /** CMS site posts: when it was published (included in site builds from then on). */
+  publishedAt?: Timestamp
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+
+/** One block on a CMS page (Pagesmith's model): containers (section, row, card) hold `kids`. */
+export interface SiteBlock {
+  id: string
+  type: string
+  kids?: SiteBlock[]
+  /** The section preset it came from, e.g. "hero". */
+  preset?: string
+  [prop: string]: unknown
+}
+
+export interface SitePalette { bg: string; surface: string; text: string; muted: string; border: string; accent: string }
+
+/** A website Blackwall builds and publishes (CMS). */
+export interface Site {
+  id: ID
+  name: string
+  /** e.g. "bcndlabs.dev" (no scheme). */
+  domain: string
+  /** Website-publishing connection (GitHub repo + branch) it publishes to. */
+  connectionId?: string
+  /** Folder in the repo the site is written to; "" = the repository root. */
+  root: string
+  starter: string
+  light: SitePalette
+  dark: SitePalette
+  darkMode: boolean
+  customCss: string
+  footerText: string
+  /** Old address → new address, e.g. /about → /projects. */
+  redirects: { from: string; to: string }[]
+  /** Public form endpoint (the Cloudflare Worker) and its Turnstile site key. */
+  formEndpoint?: string
+  turnstileKey?: string
+  publishedAt?: Timestamp
+  publishedSha?: string
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+
+/** A page of a CMS site. `slug` "" is the home page. */
+export interface SitePage {
+  id: ID
+  siteId: ID
+  title: string
+  slug: string
+  description: string
+  inMenu: boolean
+  order: number
+  sections: SiteBlock[]
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+
+export interface SiteFormField { id: string; label: string; type: "text" | "email" | "textarea" | "select" | "checkbox"; required: boolean; options?: string[] }
+
+/** A reusable form (library) usable on any site's pages. Email is always collected and verified. */
+export interface SiteForm {
+  id: ID
+  name: string
+  fields: SiteFormField[]
+  submitLabel: string
+  successMessage: string
   createdAt: Timestamp
   updatedAt: Timestamp
 }
