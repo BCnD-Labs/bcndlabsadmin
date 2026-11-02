@@ -1,5 +1,4 @@
 import { CategoryIcon, type Category } from "@/components/common/category-icon"
-import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
 import { addDays, format, isToday } from "date-fns"
 import { ChevronLeft, ChevronRight, ListChecks, Pin, PinOff, Plus, Search, Star, StickyNote, X } from "lucide-react"
 import { useEffect, useMemo, useState, type ReactNode } from "react"
@@ -67,17 +66,16 @@ export function PlannerPage() {
       <PageHeader
         title="Planner"
       />
-      <WorkspaceGrid data-testid="planner">
-        {/* Left: one card with the notes list beside the selected day's log (owner-approved arrangement). */}
-        <GridItem span={2} rows={2}>
-          <section aria-label="Notes and daily log" className="bw-panel grid min-h-0 flex-1 grid-cols-1 overflow-hidden md:grid-cols-[14rem_minmax(0,1fr)]">
+      {/* Main + aside (the standard dashboard split). Left: one card with notes beside the
+          selected day's log. Right: calendar with tasks under it. The card matches the aside's
+          height, which comes from its content, never a fixed unit. Narrow: aside first. */}
+      <div className="@container/main mx-auto w-full max-w-[var(--bw-page-max)]">
+        <div className="grid grid-cols-1 gap-3 @4xl/main:grid-cols-[minmax(0,1fr)_23rem] @6xl/main:grid-cols-[minmax(0,1fr)_26rem]" data-testid="planner">
+          <section aria-label="Notes and daily log" className="bw-panel order-2 grid min-h-0 grid-cols-1 overflow-hidden @4xl/main:order-1 md:grid-cols-[14rem_minmax(0,1fr)]">
             <NotesColumn />
             <DayColumn key={date} date={date} onDate={onDate} />
           </section>
-        </GridItem>
-        {/* Right: calendar with tasks under it. Beside the card at three columns (one column wide); first when the grid has two or fewer. */}
-        <GridItem span={2} rows={2} className="@max-[52.99rem]:order-first @min-[53rem]:@max-[70.99rem]:col-span-1">
-          <div className="flex min-h-0 flex-1 flex-col gap-3">
+          <div className="order-1 flex min-w-0 flex-col gap-3 @4xl/main:order-2">
             <section aria-label="Calendar" className="bw-panel flex shrink-0 flex-col overflow-hidden">
               <ColumnHeader category="calendar"><h2 className="min-w-0 text-[13px] font-semibold text-ink">Calendar</h2><span className="ml-auto" /></ColumnHeader>
               <div className="flex flex-col items-center gap-1.5 pt-1.5 pb-2.5">
@@ -87,8 +85,8 @@ export function PlannerPage() {
             </section>
             <TasksCard date={date} />
           </div>
-        </GridItem>
-      </WorkspaceGrid>
+        </div>
+      </div>
     </>
   )
 }

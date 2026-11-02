@@ -39,7 +39,7 @@ const STATUS: Record<ConnectionStatus, { label: string; square: string; classNam
   saved: { label: "Link only", square: "bg-faint", className: "bg-ink-2/8 text-muted-foreground", hint: "A saved link and details. There is no endpoint to test." },
 }
 
-function StatusPill({ status }: { status: ConnectionStatus }) {
+export function ConnectionStatusPill({ status }: { status: ConnectionStatus }) {
   const s = STATUS[status]
   return (
     <span title={s.hint} className={cn("inline-flex h-5 shrink-0 items-center gap-1.5 rounded-full px-2 text-[10px] font-medium", s.className)}>
@@ -93,7 +93,7 @@ export function ConnectionsPage() {
     return (
       <li key={c.id} data-testid="connection-card" className={cn("rounded-[8px] border bg-well/50", c.status === "error" ? "border-red/40" : "border-line")}>
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 py-2 pr-1.5 pl-3">
-          <StatusPill status={c.status} />
+          <ConnectionStatusPill status={c.status} />
           <span className="min-w-0 truncate text-[13px] font-medium text-ink">{c.label}</span>
           {c.account && <span className="min-w-0 truncate font-mono text-[11px] text-muted-foreground">{c.account}</span>}
           <span className="text-[11px] text-faint">{c.checkedAt ? `checked ${timeAgo(c.checkedAt)}` : c.status === "saved" ? "" : "never checked"}</span>

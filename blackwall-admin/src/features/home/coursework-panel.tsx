@@ -10,7 +10,7 @@ import { useCourseMap, useWorkspace } from "@/stores/workspace"
 
 /** Header meta: "N due this week". */
 export function CourseworkMeta() {
-  const n = useWorkspace((s) => s.tasks.filter((t) => t.courseId && !t.done && t.due && daysUntil(t.due) <= 7).length)
+  const n = useWorkspace((s) => s.tasks.filter((t) => { if (!t.courseId || t.done || !t.due) return false; const d = daysUntil(t.due); return d >= 0 && d <= 7 }).length)
   return <>{n} due this week</>
 }
 

@@ -18,7 +18,10 @@ export function SourceBadge({
   hint,
   detail,
   className,
+  focusable = true,
 }: {
+  /** False inside another interactive element (e.g. a card link): no tab stop, native title instead of a tooltip. */
+  focusable?: boolean
   status: SourceStatus
   hint?: string
   /** Appended after the label, e.g. the account name. */
@@ -26,6 +29,15 @@ export function SourceBadge({
   className?: string
 }) {
   const m = META[status]
+  if (!focusable) {
+    return (
+      <span title={hint ?? m.hint} className={cn("inline-flex h-5 max-w-56 shrink-0 items-center gap-1.5 rounded-full px-2 text-[10px] font-medium", m.className, className)}>
+        {status === "loading" ? <Loader2 className="size-3 shrink-0 animate-spin" aria-hidden /> : <span className={cn("size-1.5 shrink-0 rounded-[1.5px]", m.square)} aria-hidden />}
+        <span>{m.label}</span>
+        {detail && <span className="truncate normal-case">· {detail}</span>}
+      </span>
+    )
+  }
   return (
     <Tooltip>
       <TooltipTrigger asChild>

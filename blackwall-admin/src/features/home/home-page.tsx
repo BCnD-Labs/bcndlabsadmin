@@ -1,28 +1,32 @@
 import { SlidersHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useUi } from "@/stores/ui"
-import { usePrefs } from "@/stores/prefs"
-import { WorkspaceGrid } from "@/components/common/workspace-grid"
 import { useState } from "react"
 import { SLOT_COUNT } from "@/lib/home-slots"
-import { WorkspaceContext, WorkspaceSummary } from "./workspace-context"
+import { WorkspaceContext } from "./workspace-context"
 import { HomeSlot } from "./home-slot"
+import { StatCards } from "./stat-cards"
 
-/** Home's saved module choices use shared grid spans; project/log context joins
- * the same grid. Geometry follows the module role rather than a fixed 2×2.
+/**
+ * Home follows shadcn's dashboard-01 structure: a KPI card row, then content-sized
+ * sections. The four chosen modules form a bento (wide + narrow, narrow + wide);
+ * projects, today's log and linked services close it out. Cards in a row share a
+ * height, and long content scrolls inside its card instead of growing the page.
  */
 export function HomePage() {
-  const sizing = usePrefs((s) => s.homeSizing)
   const [dragFrom, setDragFrom] = useState<number | null>(null)
   return (
-    <>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><WorkspaceSummary /><Button variant="outline" size="sm" onClick={() => useUi.getState().openSettings("dashboard")}><SlidersHorizontal /> Customize dashboard</Button></div>
-      <WorkspaceGrid className="bw-home-grid" data-sizing={sizing} data-testid="home-grid">
+    <div className="@container/main mx-auto grid w-full max-w-[var(--bw-page-max)] gap-3">
+      <StatCards />
+      <div className="flex justify-end">
+        <Button variant="quiet" size="sm" onClick={() => useUi.getState().openSettings("dashboard")}><SlidersHorizontal /> Customize dashboard</Button>
+      </div>
+      <div className="grid grid-cols-1 gap-3 @2xl/main:grid-cols-2 @6xl/main:grid-cols-3" data-testid="home-grid">
         {Array.from({ length: SLOT_COUNT }, (_, i) => (
           <HomeSlot key={i} index={i} dragFrom={dragFrom} onDragFrom={setDragFrom} />
         ))}
         <WorkspaceContext />
-      </WorkspaceGrid>
-    </>
+      </div>
+    </div>
   )
 }

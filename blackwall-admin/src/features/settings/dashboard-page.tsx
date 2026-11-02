@@ -5,7 +5,6 @@ import { Switch } from "@/components/ui/switch"
 import { Panel } from "@/components/common/panel"
 import { CategoryIcon } from "@/components/common/category-icon"
 import { OptionSelect } from "@/components/forms/fields"
-import { SegmentedTabs } from "@/components/common/segmented-tabs"
 import { PANEL_TYPES, type PanelType } from "@/lib/home-slots"
 import { PANELS } from "@/features/home/panel-registry"
 import { useConnections } from "@/services/connector"
@@ -14,13 +13,13 @@ import { useUi } from "@/stores/ui"
 import { SettingRow, SettingsPage } from "./settings-pages"
 
 export function DashboardSettings() {
-  const { homeSlots, homeSizing, showHomeProjects, showHomeLog, feedConnections, set, setSlot, swapSlots } = usePrefs()
+  const { homeSlots, showHomeProjects, showHomeLog, feedConnections, set, setSlot, swapSlots } = usePrefs()
   const { list, available, refresh } = useConnections()
   useEffect(() => { void refresh() }, [refresh])
 
   return <SettingsPage>
     <Panel title="Home panels" meta="saved automatically" bodyClassName="divide-y divide-line">
-      <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground">Choose up to four panels. Selecting a panel already shown elsewhere swaps the two positions. Hidden positions take up no space. Projects and Daily log have separate controls below.</p>
+      <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground">Choose up to four panels. Selecting a panel already shown elsewhere swaps the two positions. Positions 1 and 4 are wide; 2 and 3 are narrow. Hidden positions take up no space. Projects and Daily log have separate controls below.</p>
       {homeSlots.map((type, index) => <SettingRow key={index} title={`Position ${index + 1}`} description={type === "empty" ? "Hidden from Home" : PANELS[type].label} htmlFor={`home-panel-${index}`} keywords="dashboard panels widgets layout order hide">
         <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5">
           {PANELS[type].category && <CategoryIcon category={PANELS[type].category!} />}
@@ -29,9 +28,6 @@ export function DashboardSettings() {
           <Button variant="quiet" size="icon-sm" aria-label={`Move position ${index + 1} down`} disabled={index === homeSlots.length - 1} onClick={() => swapSlots(index, index + 1)}><ArrowDown /></Button>
         </div>
       </SettingRow>)}
-      <SettingRow title="Panel height" description="Fit content keeps empty panels short. Equal height aligns panels on wider screens; long content scrolls inside." keywords="size sizing compact height">
-        <SegmentedTabs label="Home panel height" value={homeSizing} tabs={[{ value: "fit", label: "Fit content" }, { value: "uniform", label: "Equal height" }]} onChange={(value) => set({ homeSizing: value })} />
-      </SettingRow>
       <SettingRow title="Projects on Home" description="Show a preview of your active projects." htmlFor="home-projects" inline><Switch id="home-projects" checked={showHomeProjects} onCheckedChange={(value) => set({ showHomeProjects: value })} /></SettingRow>
       <SettingRow title="Daily log on Home" description="Show today’s log and its writing shortcut." htmlFor="home-log" inline><Switch id="home-log" checked={showHomeLog} onCheckedChange={(value) => set({ showHomeLog: value })} /></SettingRow>
     </Panel>

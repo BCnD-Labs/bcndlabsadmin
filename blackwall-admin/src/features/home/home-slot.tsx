@@ -1,4 +1,3 @@
-import { GridItem } from "@/components/common/workspace-grid"
 import { Check, ChevronDown } from "lucide-react"
 import { useState, type DragEvent } from "react"
 import {
@@ -86,8 +85,9 @@ export function HomeSlot({
   const accepts = (e: DragEvent) => target && e.dataTransfer.types.includes(MIME)
 
   return (
-    <GridItem span={type === "productivity" || type === "website" || type === "calendar" || type === "analytics" ? 2 : 1} rows={1}
-      className={cn("relative flex min-w-0 flex-col", dragFrom === index && "opacity-50")}
+    // Bento: positions 1 and 4 are wide, 2 and 3 narrow, so rows always fill (2+1, 1+2).
+    <div
+      className={cn("relative flex min-w-0 flex-col", (index === 0 || index === 3) && "@2xl/main:col-span-2", dragFrom === index && "opacity-50")}
       data-testid={`slot-${index + 1}`}
       data-type={type}
       onDragOver={(e) => {
@@ -117,7 +117,7 @@ export function HomeSlot({
         label={`Slot ${index + 1}: ${def.label}`}
         actions={<SlotMenu index={index} type={type} />}
         className="flex-1"
-        bodyClassName={cn("@container flex flex-col overflow-y-auto", def.bodyClassName)}
+        bodyClassName={cn("@container flex min-h-0 flex-1 flex-col overflow-y-auto @2xl/main:max-h-[24rem]", def.bodyClassName)}
         headerProps={{
           draggable: true,
           title: "Drag onto another square to swap",
@@ -148,6 +148,6 @@ export function HomeSlot({
           )}
         </div>
       )}
-    </GridItem>
+    </div>
   )
 }
