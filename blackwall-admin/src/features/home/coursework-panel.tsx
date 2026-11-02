@@ -21,7 +21,7 @@ export function CourseworkPanel() {
   const items = tasks
     .filter((t) => t.courseId && courses.has(t.courseId) && !t.done && t.due && daysUntil(t.due) <= 14)
     .sort(compareCoursework)
-    .slice(0, 5)
+    .slice(0, 4)
 
   if (!courses.size) {
     return (

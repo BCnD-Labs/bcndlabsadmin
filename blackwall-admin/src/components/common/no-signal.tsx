@@ -27,9 +27,9 @@ export function NoSignal({
   className?: string
 }) {
   return (
-    <div className={cn("flex flex-col items-center justify-center gap-2.5 px-4 py-8 text-center", className)} data-testid="no-signal">
+    <div className={cn("flex flex-col items-start justify-center gap-2.5 px-4 py-5 text-left", className)} data-testid="no-signal">
       {badge && <SourceBadge status="not-connected" />}
-      <p className="font-mono text-[11px] font-semibold tracking-[0.3em] text-ink-2">[ NO SIGNAL ]</p>
+      <p className="font-heading text-sm font-semibold text-ink-2">Connection needed</p>
       <p className="max-w-64 text-[11px] leading-relaxed text-muted-foreground">{message}</p>
       <Button
         variant="outline"

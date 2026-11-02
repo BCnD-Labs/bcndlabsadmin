@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom"
+import { projectHref } from "@/lib/routes"
 import { cn } from "@/lib/utils"
 import type { DraftStatus, Project, ProjectColor, ProjectStatus } from "@/lib/types"
 
@@ -28,20 +30,11 @@ export const PROJECT_DOT: Record<ProjectColor, string> = {
   slate: "bg-muted-foreground",
 }
 
-export function ProjectTag({ project, className }: { project?: Project; className?: string }) {
+export function ProjectTag({ project, className, asLink = false }: { project?: Project; className?: string; asLink?: boolean }) {
   if (!project) return null
-  return (
-    <span
-      className={cn(
-        "inline-flex h-5 max-w-full shrink-0 items-center gap-1.5 rounded-full bg-ink-2/8 px-2 text-[11px] font-medium text-ink-2",
-        className,
-      )}
-      title={project.name}
-    >
-      <span className={cn("size-1.5 shrink-0 rounded-[1.5px]", PROJECT_DOT[project.color])} aria-hidden />
-      {project.code}
-    </span>
-  )
+  const cls = cn("inline-flex h-5 max-w-full shrink-0 items-center gap-1.5 rounded-full bg-ink-2/8 px-2 text-[11px] font-medium text-ink-2", asLink && "hover:bg-selected hover:text-ink", className)
+  const content = <><span className={cn("size-1.5 shrink-0 rounded-[1.5px]", PROJECT_DOT[project.color])} aria-hidden />{project.code}</>
+  return asLink ? <Link to={projectHref(project.id)} className={cls} title={project.name}>{content}</Link> : <span className={cls} title={project.name}>{content}</span>
 }
 
 const PROJECT_TONE: Record<ProjectStatus, Tone> = { active: "ok", planned: "off", paused: "warn", done: "off" }

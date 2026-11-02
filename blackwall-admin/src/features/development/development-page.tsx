@@ -88,7 +88,7 @@ export function DevelopmentPage() {
         }
       />
       <div className="flex flex-col gap-3 lg:max-w-[70rem]">
-        <StatStrip compactOnPhone
+        {repos.length > 0 && <StatStrip compactOnPhone
           items={[
             { label: "Repositories", value: repos.length, icon: <GitBranch className="size-3" aria-hidden /> },
             { label: "Commits, 30 days", value: data?.repos ? commits30 : dash, sub: data?.repos ? `${commits7} this week` : undefined, icon: <GitCommitHorizontal className="size-3" aria-hidden /> },
@@ -96,7 +96,7 @@ export function DevelopmentPage() {
             { label: "Failed runs", value: data ? data.failures.length : dash, tone: data?.failures.length ? "error" : undefined, sub: data && !data.failures.length ? "latest runs passing" : undefined, icon: <XCircle className="size-3" aria-hidden /> },
             { label: "Open issues", value: data ? data.issues.length : dash, icon: <CircleDot className="size-3" aria-hidden /> },
           ]}
-        />
+        />}
 
         <div className={cn("grid gap-3", data?.repos && "xl:grid-cols-[minmax(0,1fr)_auto]")}>
           {repos.length ? (
@@ -106,13 +106,13 @@ export function DevelopmentPage() {
               ))}
             </ul>
           ) : (
-            <Panel tool="repos" command="ls">
+            <Panel title="Tracked repositories" tool="repos" command="ls" className="max-w-lg">
               <EmptyState roomy icon={GitBranch} title="No repositories tracked" action={<Button variant="outline" onClick={track}><Plus /> Track repository</Button>}>
                 Add the ones you work on; their commits, status and links show up here.
               </EmptyState>
             </Panel>
           )}
-          {data?.repos && <PhoneDisclosure label="History · 26 weeks"><CommitHeatmap days={allDays} /></PhoneDisclosure>}
+          {repos.length > 0 && data?.repos && <PhoneDisclosure label="History · 26 weeks"><CommitHeatmap days={allDays} /></PhoneDisclosure>}
         </div>
 
         {data ? (
@@ -121,7 +121,7 @@ export function DevelopmentPage() {
             <PhoneDisclosure label="Recent commits"><Activity data={data} single={single} /></PhoneDisclosure>
           </div>
         ) : (
-          <Panel tool="github" command="status">
+          repos.length > 0 && <Panel title="GitHub activity" tool="github" command="status" className="max-w-lg">
             <FeedFallback feed={feed} provider="github" what="commits, pull requests, failed runs and issues" />
           </Panel>
         )}
@@ -238,7 +238,7 @@ function RepoCard({ repo, data, summary }: { repo: RepoLink; data?: DevelopmentO
           </p>
         </div>
         {phone && <Button variant="quiet" size="sm" aria-expanded={details} aria-label={`Details for ${repo.fullName}`} onClick={() => setDetails(!details)}>Details {details ? "▾" : "▸"}</Button>}
-        <ProjectTag project={repo.projectId ? projects.get(repo.projectId) : undefined} />
+        <ProjectTag asLink project={repo.projectId ? projects.get(repo.projectId) : undefined} />
         <Button variant="quiet" size="icon-xs" aria-label={`Edit ${repo.fullName}`} onClick={() => openForm({ kind: "repo", id: repo.id })}>
           <Pencil />
         </Button>
@@ -295,7 +295,7 @@ function CommitHeatmap({ days }: { days: Record<string, number> }) {
   const today = new Date()
 
   return (
-    <Panel tool="git" command={`log --${weeks}w`} meta={`${total} commits · 26w total`} bodyClassName="flex flex-col gap-3 px-3.5 py-3">
+    <Panel title="Commit history" tool="git" command={`log --${weeks}w`} meta={`${total} commits · 26w total`} bodyClassName="flex flex-col gap-3 px-3.5 py-3">
       <div className="overflow-x-auto">
         {phone && <Button variant="outline" className="mb-2" onClick={() => setExpanded(!expanded)}>{expanded ? "Recent 12 weeks" : "Expand history"}</Button>}
         <p className="sr-only">Showing {weeks} weeks, ending this week</p>
@@ -396,7 +396,7 @@ function Attention({ data, single }: { data: DevelopmentOverview; single: boolea
   const shown = all ? items : items.slice(0, 6)
 
   return (
-    <Panel tool="github" command="needs-you" meta={items.length || undefined} className="self-start">
+    <Panel title="Needs your attention" tool="github" command="needs-you" meta={items.length || undefined} className="self-start">
       {items.length ? (
         <>
           <ul>
@@ -469,7 +469,7 @@ function Activity({ data, single }: { data: DevelopmentOverview; single: boolean
     else groups.push({ label, items: [a] })
   }
   return (
-    <Panel tool="git" command="log" meta={data.activity.length || undefined}>
+    <Panel title="Recent activity" tool="git" command="log" meta={data.activity.length || undefined}>
       {data.activity.length ? (
         <>
           {groups.map((g) => (

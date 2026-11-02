@@ -42,7 +42,8 @@ export function CalendarMeta() {
 export function HomeCalendarPanel() {
   const navigate = useNavigate()
   const today = todayKey()
-  const due = useWorkspace((s) => s.tasks.filter((t) => !t.done && t.due === today)).sort(compareTasks)
+  const tasks = useWorkspace((s) => s.tasks)
+  const due = tasks.filter((t) => !t.done && t.due === today).sort(compareTasks)
   return (
     <div className="grid min-h-0 flex-1 grid-cols-1 sm:grid-cols-[auto_minmax(0,1fr)]">
       <div className="flex flex-col items-center gap-1 border-b border-line px-2 pt-1 pb-2 sm:border-r sm:border-b-0">
@@ -79,7 +80,7 @@ export function HomeDevelopmentPanel() {
         ...data.prs.filter((p) => p.kind === "review-requested").map((p) => ({ id: p.id, icon: <GitPullRequest className="size-3.5 text-faint" aria-hidden />, title: p.title, meta: `${p.repo}#${p.number}`, at: p.updatedAt, url: p.url })),
         ...data.failures.map((f) => ({ id: f.id, icon: <XCircle className="size-3.5 text-red" aria-hidden />, title: `${f.workflow} failed on ${f.branch}`, meta: f.repo, at: f.failedAt, url: f.url })),
         ...data.issues.map((i) => ({ id: i.id, icon: <CircleDot className="size-3.5 text-faint" aria-hidden />, title: i.title, meta: `${i.repo}#${i.number}`, at: i.updatedAt, url: i.url })),
-      ].slice(0, 5)
+      ].slice(0, 3)
     : []
   return (
     <div className="flex min-h-0 flex-1 flex-col">

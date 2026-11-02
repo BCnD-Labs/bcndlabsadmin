@@ -58,7 +58,7 @@ export function ProjectsPage() {
           })}
         </ul>
       ) : (
-        <Panel tool="projects" command="ls">
+        <Panel title="Projects" tool="projects" command="ls" className="max-w-lg">
           <EmptyState roomy icon={FolderKanban} title="No projects yet" action={<Button variant="outline" onClick={newProject}><Plus /> Create a project</Button>}>
             A project groups the repositories and drafts that belong together.
           </EmptyState>

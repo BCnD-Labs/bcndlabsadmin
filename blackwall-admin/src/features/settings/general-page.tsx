@@ -79,7 +79,7 @@ function AboutPanel() {
 
   const dev = info?.mode === "development"
   return (
-    <Panel tool="blackwall" command="about" bodyClassName="divide-y divide-line">
+    <Panel title="Version & updates" tool="blackwall" command="about" bodyClassName="divide-y divide-line">
       {infoError ? (
         <p className="px-3.5 py-3 text-sm text-red-text">Can't reach Blackwall's server: {infoError}</p>
       ) : (
@@ -321,7 +321,7 @@ function DataPanel() {
   }
 
   return (
-    <Panel tool="workspace" command="data" meta="this browser" bodyClassName="divide-y divide-line">
+    <Panel title="Workspace data" tool="workspace" command="data" meta="this browser" bodyClassName="divide-y divide-line">
       <SettingRow title="Export" description="Download your tasks, notes, daily logs and courses as a file. They're saved in this browser only, so keep a copy.">
         <Button variant="outline" onClick={exportData}>
           <Download /> Export
@@ -376,7 +376,7 @@ function ResetPanel() {
   }
 
   return (
-    <Panel tool="blackwall" command="reset" bodyClassName="divide-y divide-line">
+    <Panel title="Reset" tool="blackwall" command="reset" bodyClassName="divide-y divide-line">
       <SettingRow title="Clear cache" description="Reload the page and fetch fresh data from your connections. Nothing you've saved is affected.">
         <Button variant="outline" onClick={clearCache}>Clear cache</Button>
       </SettingRow>

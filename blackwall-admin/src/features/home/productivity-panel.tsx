@@ -9,7 +9,8 @@ import { daysUntil, shortAgo, todayKey } from "@/lib/dates"
 import type { Note, Task } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useUi } from "@/stores/ui"
-import { useWorkspace } from "@/stores/workspace"
+import { CourseTag } from "@/features/learning/coursework"
+import { useCourseMap, useWorkspace } from "@/stores/workspace"
 import { compareTasks } from "@/features/work/task-utils"
 import type { PanelBodyProps } from "./panel-registry"
 import { notesHref } from "@/lib/routes"
@@ -44,6 +45,7 @@ export function ProductivityMeta() {
 
 /** Spec §3 Productivity: tasks on the left (~57%), pinned notes on the right. Local data only. */
 export function ProductivityPanel({ slot }: PanelBodyProps) {
+  const courses = useCourseMap()
   const tasks = useWorkspace((s) => s.tasks)
   const create = useWorkspace((s) => s.create)
   const toggleTask = useWorkspace((s) => s.toggleTask)
@@ -133,6 +135,7 @@ export function ProductivityPanel({ slot }: PanelBodyProps) {
                   >
                     {t.title}
                   </button>
+                  {t.courseId && <CourseTag course={courses.get(t.courseId)} className="hidden lg:inline-flex" />}
                   {t.due && <DueChip due={t.due} done={t.done} />}
                 </li>
               ))}

@@ -39,10 +39,10 @@ export function SettingsPage({ actions, children }: { actions?: ReactNode; child
   const section = SETTINGS_SECTIONS.find((s) => s.id === id) ?? SETTINGS_SECTIONS[0]
   return (
     <div data-settings-section={id} className="grid min-w-0 content-start gap-4">
-      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 border-b border-line pb-4">
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 pb-1">
         <div className="min-w-0">
           <h2 className="font-heading text-xl font-bold tracking-tight">{section.label}</h2>
-          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-ink-2/85">{section.blurb}</p>
+          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-ink-2">{section.blurb}</p>
         </div>
         {actions && <div className="flex items-center gap-2">{actions}</div>}
       </div>
@@ -77,7 +77,7 @@ export function SettingRow({
     <div
       data-setting-row
       data-match={match}
-      className={cn("flex gap-2 px-4 py-3.5 sm:items-center sm:gap-6", inline ? "items-center gap-4" : "flex-col sm:flex-row", className)}
+      className={cn("flex gap-2 px-4 py-3 sm:items-center sm:gap-6", inline ? "items-center gap-4" : "flex-col sm:flex-row", className)}
     >
       <div className="min-w-0 flex-1">
         {htmlFor ? (
@@ -121,7 +121,7 @@ export function AppearanceSettings() {
 
   return (
     <SettingsPage>
-      <Panel tool="appearance" command="edit" meta="this browser" bodyClassName="divide-y divide-line">
+      <Panel title="Preferences" tool="appearance" command="edit" meta="this browser" bodyClassName="divide-y divide-line">
         <SettingRow title="Theme" description="Dim is a softer slate between dark and light. Dark is the original near-black look." keywords="dark mode dim colour color contrast">
           <SegmentedTabs
             label="Theme"
@@ -188,7 +188,7 @@ const SHORTCUTS: Array<{ keys: string[]; or?: string[]; does: string }> = [
 export function ShortcutsSettings() {
   return (
     <SettingsPage>
-      <Panel tool="keyboard" command="shortcuts" bodyClassName="divide-y divide-line">
+      <Panel title="Keyboard shortcuts" tool="keyboard" command="shortcuts" bodyClassName="divide-y divide-line">
         {SHORTCUTS.map(({ keys, or, does }) => (
           <SettingRow key={does} title={does} inline>
             <span className="flex items-center gap-1">

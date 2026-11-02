@@ -64,13 +64,13 @@ export function ServerSettings() {
       }
     >
       {error ? (
-        <Panel tool="server" command="status" bodyClassName="px-3.5 py-3 text-sm">
+        <Panel title="Server status" tool="server" command="status" bodyClassName="px-3.5 py-3 text-sm">
           <p className="text-red-text">Can't reach Blackwall's server: {error}</p>
           <p className="mt-1 text-muted-foreground">The panel still works with the data in this browser.</p>
         </Panel>
       ) : (
         <>
-          <Panel tool="server" command="status" meta={health?.database === "ok" ? "database ok" : undefined} bodyClassName="divide-y divide-line">
+          <Panel title="Server status" tool="server" command="status" meta={health?.database === "ok" ? "database ok" : undefined} bodyClassName="divide-y divide-line">
             <SettingRow
               title="Running on"
               description={onServer ? "Home server. Signing in is required." : "This computer (local development). No sign-in."}
@@ -93,7 +93,7 @@ export function ServerSettings() {
             )}
           </Panel>
 
-          <Panel tool="server" command="backups" meta={backups?.configured ? `${backups.count ?? 0} on the server` : undefined} bodyClassName="divide-y divide-line">
+          <Panel title="Backups" tool="server" command="backups" meta={backups?.configured ? `${backups.count ?? 0} on the server` : undefined} bodyClassName="divide-y divide-line">
             {!backups?.configured ? (
               <SettingRow
                 title="Backups"

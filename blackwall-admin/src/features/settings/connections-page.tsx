@@ -100,6 +100,7 @@ export function ConnectionsPage() {
             return (
               <li key={c.id} data-testid="connection-card">
                 <Panel
+                  title={c.label}
                   tool={providerDef(c.provider).name.toLowerCase()}
                   command={c.label}
                   badge={<StatusPill status={c.status} />}
@@ -168,7 +169,7 @@ export function ConnectionsPage() {
       )}
 
       {available && (
-        <Panel tool="connections" command={list.length ? "add another" : "add"} bodyClassName="divide-y divide-line">
+        <Panel title="Add a connection" tool="connections" command={list.length ? "add another" : "add"} bodyClassName="divide-y divide-line">
           {PROVIDERS.map((p) => {
             const Icon = PROVIDER_ICON[p.id]
             return (

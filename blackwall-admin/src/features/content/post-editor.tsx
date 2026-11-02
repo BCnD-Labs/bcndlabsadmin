@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { EmptyState } from "@/components/common/empty-state"
 import { PageHeader } from "@/components/common/page-header"
+import { SourceBadge } from "@/components/common/source-badge"
 import { Panel } from "@/components/common/panel"
 import { SegmentedTabs } from "@/components/common/segmented-tabs"
 import { Field, OptionSelect, ProjectSelect } from "@/components/forms/fields"
@@ -107,7 +108,7 @@ function Editor({ draft }: { draft: Draft }) {
     <>
       <PageHeader
         back={{ to: postsHref, label: "Posts" }}
-        title={value.title.trim() || "Untitled"}
+        title={value.kind === "page" ? "Page draft" : "Post editor"}
         badge={value.kind === "post" && <PostStateChip state={item?.state ?? "draft"} edited={item?.edited} date={item?.date} />}
         subtitle={
           <span aria-live="polite" data-testid="save-state">
@@ -129,7 +130,7 @@ function Editor({ draft }: { draft: Draft }) {
         }
       />
 
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_19rem]">
+      <div className="grid max-w-[72rem] items-start gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <section className="bw-panel flex min-w-0 flex-col overflow-hidden" aria-label="Post">
           {value.kind === "post" && (
             <CoverField
@@ -155,7 +156,7 @@ function Editor({ draft }: { draft: Draft }) {
               value={value.title}
               onChange={(e) => set({ title: e.target.value })}
               placeholder="Post title"
-              className="w-full bg-transparent font-heading text-2xl leading-tight font-bold text-ink outline-none placeholder:text-faint"
+              className="w-full bg-transparent font-heading text-xl leading-tight font-bold text-ink outline-none placeholder:text-faint"
             />
             <label htmlFor="post-excerpt" className="sr-only">Excerpt</label>
             <textarea
@@ -192,22 +193,26 @@ function Editor({ draft }: { draft: Draft }) {
               value={value.body}
               onChange={(e) => set({ body: e.target.value })}
               placeholder={"Write in Markdown…\n\n## A heading\nSome **bold** text, a [link](https://example.com), and images from the Image button."}
-              className="min-h-[55vh] w-full flex-1 resize-y bg-transparent px-4 py-3 font-mono text-[13px] leading-relaxed text-ink outline-none placeholder:text-faint"
+              className="min-h-[22rem] w-full max-w-[76ch] flex-1 resize-y bg-transparent px-4 py-3 font-mono text-[13px] leading-relaxed text-ink outline-none placeholder:text-faint"
             />
           ) : (
             <Preview draft={current} live={live} date={item?.state !== "draft" ? item?.date : undefined} />
           )}
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-soft px-4 py-2 text-[11px] text-muted-foreground">
+            <span>{words} {words === 1 ? "word" : "words"} · Markdown</span>
+            <span aria-live="polite" data-testid="editor-save-state">{dirty ? "Saving…" : "Saved in this browser"}</span>
+          </div>
         </section>
 
         <aside className="flex min-w-0 flex-col gap-3 self-start lg:sticky lg:top-[calc(var(--bw-header-h,92px)+0.25rem)]">
           {value.kind === "post" ? (
             <PublishPanel draft={current} item={item} site={site} onRemoteSlug={(remoteSlug) => update("drafts", draft.id, { ...value, slug: slugify(value.slug) || "untitled", remoteSlug })} />
           ) : (
-            <Panel tool="page" command="publish" bodyClassName="px-3.5 py-3 text-xs leading-relaxed text-muted-foreground">
+            <Panel title="Page draft" tool="page" command="publish" bodyClassName="px-3.5 py-3 text-xs leading-relaxed text-muted-foreground">
               Blackwall publishes posts. Your site's pages are hand-built HTML; use this draft to write the copy, then paste it into the page.
             </Panel>
           )}
-          <Panel tool="post" command="details" bodyClassName="flex flex-col gap-3 px-3.5 py-3">
+          <Panel title="Post details" tool="post" command="details" bodyClassName="flex flex-col gap-3 px-3.5 py-3">
             <Field label="URL slug" htmlFor="post-slug" hint={item?.state === "published" && item.remote && slugify(value.slug) !== item.remote.slug ? "Changing it moves the post to a new address when you update." : undefined}>
               <Input id="post-slug" className="font-mono text-xs md:text-xs" value={value.slug} onChange={(e) => { setSlugTouched(true); set({ slug: e.target.value }) }} />
             </Field>
@@ -290,7 +295,7 @@ function CoverField({ cover, siteUrl, canUpload, onUpload, onRemove }: { cover?:
   if (cover)
     return (
       <div className="group relative border-b border-line" onDragOver={(e) => { e.preventDefault(); setOver(true) }} onDragLeave={() => setOver(false)} onDrop={drop}>
-        <SiteImage path={cover} siteUrl={siteUrl} className="h-48 w-full sm:h-56" />
+        <SiteImage path={cover} siteUrl={siteUrl} className="h-40 w-full sm:h-44" />
         <div className={cn("absolute inset-x-0 bottom-0 flex justify-end gap-1.5 bg-gradient-to-t from-black/60 to-transparent p-2.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100", (busy || over) && "opacity-100")}>
           <Button variant="ghost" size="sm" disabled={!canUpload || busy} onClick={() => ref.current?.click()}>
             {busy ? <Loader2 className="animate-spin" /> : <ImagePlus />} Replace
@@ -312,12 +317,12 @@ function CoverField({ cover, siteUrl, canUpload, onUpload, onRemove }: { cover?:
         onDragLeave={() => setOver(false)}
         onDrop={drop}
         className={cn(
-          "flex h-20 w-full items-center justify-center gap-2 rounded-[8px] border border-dashed border-ledge-hi bg-well text-xs text-muted-foreground transition-colors hover:border-rim hover:text-ink disabled:hover:border-ledge-hi disabled:hover:text-muted-foreground",
+          "flex min-h-8 w-full items-center justify-start px-3 py-2 gap-2 rounded-[8px] border border-dashed border-ledge-hi bg-well text-xs text-muted-foreground transition-colors hover:border-rim hover:text-ink disabled:hover:border-ledge-hi disabled:hover:text-muted-foreground",
           over && "border-ink-2 text-ink",
         )}
       >
         {busy ? <Loader2 className="size-4 animate-spin" /> : <ImagePlus className="size-4" />}
-        {canUpload ? "Add a cover image: drop it here or click" : "Connect your website to add a cover image"}
+        {canUpload ? "Add a cover image: drop it here or click" : "Cover images require a website connection"}
       </button>
       {input}
     </div>
@@ -381,7 +386,7 @@ function PublishPanel({ draft, item, site, onRemoteSlug }: { draft: Draft; item?
 
   if (site.status !== "live" || !site.overview) {
     return (
-      <Panel tool="post" command="publish" bodyClassName="flex flex-col items-start gap-2 px-3.5 py-3">
+      <Panel title="Publishing" tool="post" command="publish" badge={<SourceBadge status={site.status} />} bodyClassName="flex flex-col items-start gap-2 px-3.5 py-3">
         <p className="text-xs leading-relaxed text-muted-foreground">
           {site.status === "loading"
             ? "Checking your website…"
@@ -434,7 +439,7 @@ function PublishPanel({ draft, item, site, onRemoteSlug }: { draft: Draft; item?
     })
 
   return (
-    <Panel tool="post" command="publish" bodyClassName="flex flex-col gap-2.5 px-3.5 py-3" badge={<PostStateChip state={state} edited={item?.edited} />}>
+    <Panel title="Publishing" tool="post" command="publish" bodyClassName="flex flex-col gap-2.5 px-3.5 py-3" badge={<><SourceBadge status={site.status} /><PostStateChip state={state} edited={item?.edited} /></>}>
       {state === "published" && item?.date && (
         <p className="text-xs leading-relaxed text-muted-foreground">
           Published {format(new Date(item.date), "MMM d, yyyy")}

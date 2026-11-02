@@ -134,6 +134,7 @@ function Upcoming({ courses }: { courses: Map<string, Course> }) {
 
   return (
     <Panel
+      title="Upcoming coursework"
       tool="coursework"
       command="upcoming"
       meta={items.length || undefined}
@@ -202,7 +203,7 @@ export function LearningPage() {
         actions={<AddLearning />}
       />
       {courses.length === 0 ? (
-        <Panel tool="learning" command="ls" className="max-w-2xl">
+        <Panel title="Courses" tool="learning" command="ls" className="max-w-lg">
           <EmptyState
             roomy
             icon={GraduationCap}
@@ -248,7 +249,7 @@ export function LearningPage() {
                   ))}
                 </ul>
               ) : (
-                <Panel tool="learning" command="ls">
+                <Panel title="Courses" tool="learning" command="ls">
                   <EmptyState icon={GraduationCap} title="No courses here" />
                 </Panel>
               )}

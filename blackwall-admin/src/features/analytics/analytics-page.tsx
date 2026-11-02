@@ -37,7 +37,7 @@ function WebsiteAnalytics() {
 
   if (!hasData(feed)) {
     return (
-      <Panel tool="site" command="traffic" badge={badge} className="max-w-3xl">
+      <Panel title="Website traffic" tool="site" command="traffic" badge={badge} className="max-w-lg">
         <FeedFallback feed={feed} provider="analytics" what="visitors, pageviews, top pages and referrers" />
       </Panel>
     )
@@ -72,10 +72,10 @@ function WebsiteAnalytics() {
         </dl>
       </details>
       <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-        <Panel tool="site" command={`visitors --${range}d`} bodyClassName="px-2 pt-2 pb-1.5">
+        <Panel title="Daily visitors" tool="site" command={`visitors --${range}d`} bodyClassName="px-2 pt-2 pb-1.5">
           <DailyBars data={traffic} range={range} className="h-36 w-full" />
         </Panel>
-        <Panel tool="site" command="breakdown" bodyClassName="space-y-4 px-3.5 py-3">
+        <Panel title="Traffic sources & pages" tool="site" command="breakdown" bodyClassName="space-y-4 px-3.5 py-3">
           <section aria-label="Top pages">
             <h3 className="bw-label mb-2">Top pages · views</h3>
             {pages.length ? (
@@ -123,10 +123,10 @@ function PersonalAnalytics() {
           { label: "Logs, 30 days", value: `${s.logsLast30} / 30` },
         ]}
       />
-      <Panel tool="tasks" command="completed --30d" meta={`${total30} total`} className="lg:col-span-8" bodyClassName="px-3.5 py-3">
+      <Panel title="Completed tasks" tool="tasks" command="completed --30d" meta={`${total30} total`} className="lg:col-span-8" bodyClassName="px-3.5 py-3">
         <CompletedChart data={s.completed} className="h-44 lg:h-36" />
       </Panel>
-      <Panel tool="tasks" command="open --by-due" meta={open.length} className="lg:col-span-4" bodyClassName="px-3.5 py-3">
+      <Panel title="Open work" tool="tasks" command="open --by-due" meta={open.length} className="lg:col-span-4" bodyClassName="px-3.5 py-3">
         {open.length ? (
           <ul className="space-y-2.5">
             {byGroup.map(({ g, n }) => <BarRow key={g} label={g} value={n} max={maxGroup} tone={g === "Overdue" ? "warn" : undefined} />)}
@@ -135,7 +135,7 @@ function PersonalAnalytics() {
           <p className="text-[11px] text-muted-foreground">No open tasks.</p>
         )}
       </Panel>
-      <Panel tool="log" command="heatmap --52w" meta="Mon–Sun, top to bottom · click a day to open it" className="lg:col-span-12" bodyClassName="min-w-0 px-3.5 py-3">
+      <Panel title="Daily log history" tool="log" command="heatmap --52w" meta="Mon–Sun, top to bottom · click a day to open it" className="lg:col-span-12" bodyClassName="min-w-0 px-3.5 py-3">
         <JournalHeatmap logWords={s.logWords} weeks={52} cell="size-3" />
       </Panel>
     </div>

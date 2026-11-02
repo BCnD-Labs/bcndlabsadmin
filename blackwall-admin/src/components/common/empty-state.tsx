@@ -24,7 +24,7 @@ export function EmptyState({
   roomy?: boolean
 }) {
   return (
-    <div className={cn("flex flex-col items-center justify-center gap-2 px-6 text-center", roomy ? "py-6" : "py-4", className)} data-testid="empty-state">
+    <div className={cn("flex flex-col justify-center gap-2 px-4", roomy ? "items-start py-5 text-left" : "items-center py-4 text-center", className)} data-testid="empty-state">
       {Icon && <Icon className="mb-1 size-5 text-faint" strokeWidth={1.6} aria-hidden />}
       <p className="text-sm text-ink-2">{title}</p>
       {children && <p className="max-w-sm text-[11px] leading-relaxed text-muted-foreground">{children}</p>}
