@@ -68,7 +68,7 @@ export function MediaPage() {
       />
       <WorkspaceGrid><GridItem span={live && items?.length ? "full" : 2}>
       {!live ? (
-        <Panel title="Media library" tool="media" command="ls">
+        <Panel category="website" title="Media library" tool="media" command="ls">
           {site.status === "loading" ? (
             <p className="px-3.5 py-3 text-xs text-muted-foreground">Checking your website…</p>
           ) : (
@@ -76,7 +76,7 @@ export function MediaPage() {
           )}
         </Panel>
       ) : error ? (
-        <Panel title="Media library" tool="media" command="ls">
+        <Panel category="website" title="Media library" tool="media" command="ls">
           <p className="px-3.5 py-3 text-xs text-red-text">Couldn't list images: {error}</p>
         </Panel>
       ) : !items ? (
@@ -134,7 +134,7 @@ export function MediaPage() {
           ))}
         </ul>
       ) : (
-        <Panel title="Media library" tool="media" command="ls">
+        <Panel category="website" title="Media library" tool="media" command="ls">
           <EmptyState icon={ImageOff} title="No images yet" action={<Button variant="outline" onClick={() => ref.current?.click()}><Upload /> Upload</Button>}>
             Images you upload here, or as post covers, are added to your site's images folder.
           </EmptyState>

@@ -59,7 +59,7 @@ export function ProjectsPage() {
           })}
         </ul></WorkspaceGrid>
       ) : (
-        <WorkspaceGrid><GridItem span={2}><Panel title="Projects" tool="projects" command="ls">
+        <WorkspaceGrid><GridItem span={2}><Panel category="projects" title="Projects" tool="projects" command="ls">
           <EmptyState roomy icon={FolderKanban} title="No projects yet" action={<Button variant="outline" onClick={newProject}><Plus /> Create a project</Button>}>
             A project groups the repositories and drafts that belong together.
           </EmptyState>

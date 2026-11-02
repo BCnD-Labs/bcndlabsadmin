@@ -135,6 +135,7 @@ function Upcoming({ courses }: { courses: Map<string, Course> }) {
 
   return (
     <Panel
+      category="learning"
       title="Upcoming coursework"
       tool="coursework"
       command="upcoming"
@@ -204,7 +205,7 @@ export function LearningPage() {
         actions={<AddLearning />}
       />
       {courses.length === 0 ? (
-        <WorkspaceGrid><GridItem span={2}><Panel title="Courses" tool="learning" command="ls">
+        <WorkspaceGrid><GridItem span={2}><Panel category="learning" title="Courses" tool="learning" command="ls">
           <EmptyState
             roomy
             icon={GraduationCap}
@@ -251,7 +252,7 @@ export function LearningPage() {
                   ))}
                 </ul>
               ) : (
-                <Panel title="Courses" tool="learning" command="ls">
+                <Panel category="learning" title="Courses" tool="learning" command="ls">
                   <EmptyState icon={GraduationCap} title="No courses here" />
                 </Panel>
               )}

@@ -196,11 +196,11 @@ function Editor({ draft }: { draft: Draft }) {
           {value.kind === "post" ? (
             <PublishPanel draft={current} item={item} site={site} onRemoteSlug={(remoteSlug) => update("drafts", draft.id, { ...value, slug: slugify(value.slug) || "untitled", remoteSlug })} />
           ) : (
-            <Panel title="Page draft" tool="page" command="publish" bodyClassName="px-3.5 py-3 text-xs leading-relaxed text-muted-foreground">
+            <Panel category="website" title="Page draft" tool="page" command="publish" bodyClassName="px-3.5 py-3 text-xs leading-relaxed text-muted-foreground">
               Blackwall publishes posts. Your site's pages are hand-built HTML; use this draft to write the copy, then paste it into the page.
             </Panel>
           )}
-          <Panel title="Post details" tool="post" command="details" bodyClassName="flex flex-col gap-3 px-3.5 py-3">
+          <Panel category="website" title="Post details" tool="post" command="details" bodyClassName="flex flex-col gap-3 px-3.5 py-3">
             <Field label="URL slug" htmlFor="post-slug" hint={item?.state === "published" && item.remote && slugify(value.slug) !== item.remote.slug ? "Changing it moves the post to a new address when you update." : undefined}>
               <Input id="post-slug" className="font-mono text-xs md:text-xs" value={value.slug} onChange={(e) => { setSlugTouched(true); set({ slug: e.target.value }) }} />
             </Field>
@@ -374,7 +374,7 @@ function PublishPanel({ draft, item, site, onRemoteSlug }: { draft: Draft; item?
 
   if (site.status !== "live" || !site.overview) {
     return (
-      <Panel title="Publishing" tool="post" command="publish" badge={<SourceBadge status={site.status} />} bodyClassName="flex flex-col items-start gap-2 px-3.5 py-3">
+      <Panel category="website" title="Publishing" tool="post" command="publish" badge={<SourceBadge status={site.status} />} bodyClassName="flex flex-col items-start gap-2 px-3.5 py-3">
         <p className="text-xs leading-relaxed text-muted-foreground">
           {site.status === "loading"
             ? "Checking your website…"
@@ -427,7 +427,7 @@ function PublishPanel({ draft, item, site, onRemoteSlug }: { draft: Draft; item?
     })
 
   return (
-    <Panel title="Publishing" tool="post" command="publish" bodyClassName="flex flex-col gap-2.5 px-3.5 py-3" badge={<><SourceBadge status={site.status} /><PostStateChip state={state} edited={item?.edited} /></>}>
+    <Panel category="website" title="Publishing" tool="post" command="publish" bodyClassName="flex flex-col gap-2.5 px-3.5 py-3" badge={<><SourceBadge status={site.status} /><PostStateChip state={state} edited={item?.edited} /></>}>
       {state === "published" && item?.date && (
         <p className="text-xs leading-relaxed text-muted-foreground">
           Published {format(new Date(item.date), "MMM d, yyyy")}

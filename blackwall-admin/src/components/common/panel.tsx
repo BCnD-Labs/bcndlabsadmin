@@ -86,6 +86,7 @@ export function Panel({
         <div className="ml-auto flex items-center gap-1.5">
           {meta != null && <span className="text-[11px] text-muted-foreground">{meta}</span>}
           {actions}
+          <span className="bw-window-buttons" aria-hidden><span /><span /></span>
         </div>
       </header>
       <div className={cn("min-h-0 flex-1", bodyClassName)}>{children}</div>

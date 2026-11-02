@@ -105,6 +105,8 @@
   --bw-panel: #2a2f37;
   --bw-raised: #323842;
   --bw-selected: #3a414c;
+  /* Panel title bar (the bcndlabs.dev "preview.png" window bar): one clear step above the panel. */
+  --bw-titlebar: #363c46;
   --bw-well: #1c1f25;
   --bw-ledge: #3b424d;
   --bw-ledge-hi: #444b57;
@@ -186,6 +188,7 @@ html[data-theme="dark"] {
   --bw-panel: #161a22;
   --bw-raised: #1c212b;
   --bw-selected: #232935;
+  --bw-titlebar: #1f242e;
   --bw-well: #0f1218;
   --bw-ledge: #252b36;
   --bw-ledge-hi: #2d3441;
@@ -257,7 +260,14 @@ html[data-font="mono"] {
   .bw-grid-item { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
   .bw-grid-item > .bw-panel { flex: 1; min-height: 0; }
   .bw-grid-item[data-span="full"] { grid-column: 1 / -1; }
-  .bw-panel-heading { min-height: var(--bw-panel-header-h); padding-block: 0.125rem; padding-inline: var(--bw-panel-pad); }
+  .bw-panel-heading { min-height: var(--bw-panel-header-h); padding-block: 0.125rem; padding-inline: var(--bw-panel-pad); background: var(--bw-titlebar); border-bottom-color: var(--bw-line); }
+  /* Decorative window buttons (outlined + filled square), as on bcndlabs.dev. */
+  .bw-window-buttons { display: inline-flex; gap: 4px; margin-left: 2px; flex-shrink: 0; }
+  .bw-window-buttons > span { width: 8px; height: 8px; border-radius: 1.5px; border: 1.5px solid var(--bw-faint); opacity: .7; }
+  .bw-window-buttons > span + span { background: var(--bw-faint); }
+  /* Decoration yields first: narrow title bars drop the window buttons instead of wrapping. */
+  .bw-panel-heading { container-type: inline-size; }
+  @container (max-width: 400px) { .bw-window-buttons { display: none; } }
   .bw-action-link { display: inline-flex; align-items: center; gap: 0.375rem; min-height: var(--bw-control-h); border-radius: var(--bw-control-radius); font-size: 0.8125rem; color: var(--bw-text-2); }
   .bw-action-link:hover { color: var(--bw-text); text-decoration: underline; text-underline-offset: 0.2em; }
   .bw-row { min-height: var(--bw-row-regular); }
@@ -284,21 +294,21 @@ html[data-font="mono"] {
 /* Category colors identify content; status labels (green/amber/red) communicate health, so
  * category hues deliberately stay away from those three. Color follows the nav section
  * (Productivity blue, Learning violet, Projects pink, GitHub cyan, Website orange) and the
- * icon says what the thing is. Home is the overview, not a category, so it stays neutral. */
-[data-category] { --bw-category: var(--bw-blue); }
-[data-category="home"], [data-category="service"] { --bw-category: #b8c0cc; }
-[data-category="learning"] { --bw-category: #c2a5f0; }
-[data-category="projects"] { --bw-category: #ec9ec0; }
-[data-category="development"] { --bw-category: #66c3dc; }
-[data-category="website"], [data-category="analytics"], [data-category="cloudflare"] { --bw-category: #ee9f78; }
-[data-category="azure"] { --bw-category: #8fb0ff; }
-/* Identity comes from the icon chip and a faint header wash, not a colored outline. */
-.bw-category-icon { color: var(--bw-category); background: color-mix(in srgb, var(--bw-category) 15%, transparent); }
-.bw-panel[data-category] { border-color: color-mix(in srgb, var(--bw-category) 12%, var(--bw-edge)); }
-.bw-panel[data-category] > .bw-panel-heading { background: color-mix(in srgb, var(--bw-category) 8%, var(--bw-panel)); box-shadow: inset 2px 0 0 color-mix(in srgb, var(--bw-category) 70%, transparent); }
+ * icon says what the thing is. Home is the overview, not a category, so it stays neutral.
+ * The icon chip is the only place the color lives: title bars stay neutral. */
+[data-category] { --bw-category: #4f9dff; }
+[data-category="home"], [data-category="service"] { --bw-category: #c3cad4; }
+[data-category="learning"] { --bw-category: #a57dff; }
+[data-category="projects"] { --bw-category: #f2649f; }
+[data-category="development"] { --bw-category: #1fc8e0; }
+[data-category="website"], [data-category="analytics"], [data-category="cloudflare"] { --bw-category: #ff8a4d; }
+[data-category="azure"] { --bw-category: #5b8cff; }
+.bw-category-icon {
+  color: var(--bw-category);
+  background: color-mix(in srgb, var(--bw-category) 20%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bw-category) 38%, transparent);
+}
 .bw-home-grid[data-sizing="fit"] .bw-grid-item[data-rows="1"] { height: auto; min-height: 0; }
 
 html[data-category-colors="off"] [data-category] { --bw-category: var(--bw-text-2); }
-html[data-category-colors="off"] .bw-category-icon { background: var(--bw-raised); }
-html[data-category-colors="off"] .bw-panel[data-category] { border-color: var(--bw-edge); }
-html[data-category-colors="off"] .bw-panel[data-category] > .bw-panel-heading { background: var(--bw-panel); box-shadow: none; }
+html[data-category-colors="off"] .bw-category-icon { background: var(--bw-raised); box-shadow: none; }

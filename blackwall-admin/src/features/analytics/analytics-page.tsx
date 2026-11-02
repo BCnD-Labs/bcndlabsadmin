@@ -42,7 +42,7 @@ function WebsiteAnalytics() {
 
   if (!hasData(feed)) {
     return (
-      <WorkspaceGrid><GridItem span={2}><Panel title="Website traffic" tool="site" command="traffic" badge={badge}>
+      <WorkspaceGrid><GridItem span={2}><Panel category="analytics" title="Website traffic" tool="site" command="traffic" badge={badge}>
         <FeedFallback feed={feed} provider="analytics" what="visitors, pageviews, top pages and referrers" />
       </Panel></GridItem></WorkspaceGrid>
     )
@@ -78,10 +78,10 @@ function WebsiteAnalytics() {
           <div><dt>Busiest day</dt><dd className="mt-1 text-ink">{busiest.visitors ? `${format(parseKey(busiest.date), "MMM d")} · ${busiest.visitors} visitors` : "—"}</dd></div>
         </dl>
       </details></GridItem>
-        <GridItem span={2}><Panel title="Daily visitors" tool="site" command={`visitors --${range}d`} bodyClassName="px-2 pt-2 pb-1.5">
+        <GridItem span={2}><Panel category="analytics" title="Daily visitors" tool="site" command={`visitors --${range}d`} bodyClassName="px-2 pt-2 pb-1.5">
           <DailyBars data={traffic} range={range} className="h-36 w-full" />
         </Panel></GridItem>
-        <GridItem span={2}><Panel title="Traffic sources & pages" tool="site" command="breakdown" bodyClassName="space-y-4 px-3.5 py-3">
+        <GridItem span={2}><Panel category="analytics" title="Traffic sources & pages" tool="site" command="breakdown" bodyClassName="space-y-4 px-3.5 py-3">
           <section aria-label="Top pages">
             <h3 className="bw-label mb-2">Top pages · views</h3>
             {pages.length ? (
@@ -116,7 +116,7 @@ function PersonalAnalytics() {
   const total30 = s.completed.reduce((a, d) => a + d.count, 0)
 
   if (!tasks.length && ![...s.logWords.values()].some(Boolean)) {
-    return <WorkspaceGrid><GridItem span={2}><Panel title="Activity insights" tool="activity" command="overview">
+    return <WorkspaceGrid><GridItem span={2}><Panel category="tasks" title="Activity insights" tool="activity" command="overview">
       <EmptyState roomy title="Your activity will take shape here" action={<Button variant="outline" asChild><Link to={plannerHref}>Open Planner</Link></Button>}>
         Add tasks or write a daily log to see your progress and patterns over time.
       </EmptyState>
@@ -138,10 +138,10 @@ function PersonalAnalytics() {
         ]}
       />
       </GridItem>
-      <GridItem span={2}><Panel title="Completed tasks" tool="tasks" command="completed --30d" meta={`${total30} total`}  bodyClassName="px-3.5 py-3">
+      <GridItem span={2}><Panel category="tasks" title="Completed tasks" tool="tasks" command="completed --30d" meta={`${total30} total`}  bodyClassName="px-3.5 py-3">
         <CompletedChart data={s.completed} className="h-44 lg:h-36" />
       </Panel></GridItem>
-      <GridItem span={2}><Panel title="Open work" tool="tasks" command="open --by-due" meta={open.length}  bodyClassName="px-3.5 py-3">
+      <GridItem span={2}><Panel category="tasks" title="Open work" tool="tasks" command="open --by-due" meta={open.length}  bodyClassName="px-3.5 py-3">
         {open.length ? (
           <ul className="space-y-2.5">
             {byGroup.map(({ g, n }) => <BarRow key={g} label={g} value={n} max={maxGroup} tone={g === "Overdue" ? "warn" : undefined} />)}
@@ -150,7 +150,7 @@ function PersonalAnalytics() {
           <p className="text-[11px] text-muted-foreground">No open tasks.</p>
         )}
       </Panel></GridItem>
-      <GridItem span={3}><Panel title="Daily log history" tool="log" command="heatmap --52w" meta="Mon–Sun, top to bottom · click a day to open it"  bodyClassName="min-w-0 px-3.5 py-3">
+      <GridItem span={3}><Panel category="journal" title="Daily log history" tool="log" command="heatmap --52w" meta="Mon–Sun, top to bottom · click a day to open it"  bodyClassName="min-w-0 px-3.5 py-3">
         <JournalHeatmap logWords={s.logWords} weeks={52} cell="size-3" />
       </Panel></GridItem>
     </WorkspaceGrid>

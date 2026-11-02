@@ -1,3 +1,4 @@
+import { CategoryIcon, type Category } from "@/components/common/category-icon"
 import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
 import { addDays, format, isToday } from "date-fns"
 import { ChevronLeft, ChevronRight, ListChecks, Pin, PinOff, Plus, Search, Star, StickyNote, X } from "lucide-react"
@@ -70,9 +71,12 @@ export function PlannerPage() {
           </section>
         </GridItem>
         <GridItem rows={1}>
-          <section aria-label="Calendar" className="bw-panel flex min-h-0 flex-1 flex-col items-center gap-1.5 overflow-y-auto pt-1.5 pb-2.5">
+          <section aria-label="Calendar" className="bw-panel flex min-h-0 flex-1 flex-col overflow-hidden">
+            <ColumnHeader category="calendar"><h2 className="min-w-0 text-[13px] font-semibold text-ink">Calendar</h2><span className="ml-auto" /></ColumnHeader>
+            <div className="flex min-h-0 flex-1 flex-col items-center gap-1.5 overflow-y-auto pt-1.5 pb-2.5">
             <JournalCalendar selected={date} onSelect={onDate} month={month} onMonthChange={setMonth} className="[--cell-size:--spacing(8)]" />
             <CalendarLegend />
+            </div>
           </section>
         </GridItem>
         <GridItem rows={1}>
@@ -85,8 +89,14 @@ export function PlannerPage() {
 }
 
 /** A column header inside the shared card, the same height as a panel header. */
-function ColumnHeader({ children, className }: { children: ReactNode; className?: string }) {
-  return <header className={cn("bw-panel-heading flex shrink-0 items-center gap-1.5 border-b border-line-soft text-xs", className)}>{children}</header>
+function ColumnHeader({ children, className, category }: { children: ReactNode; className?: string; category?: Category }) {
+  return (
+    <header className={cn("bw-panel-heading flex shrink-0 items-center gap-1.5 border-b border-line-soft text-xs", className)}>
+      {category && <CategoryIcon category={category} className="mr-0.5" />}
+      {children}
+      <span className="bw-window-buttons" aria-hidden><span /><span /></span>
+    </header>
+  )
 }
 
 function SearchBox({ value, onChange, label, onClose }: { value: string; onChange: (v: string) => void; label: string; onClose: () => void }) {
@@ -131,8 +141,8 @@ function NotesColumn() {
 
   return (
     <div id="notes" className="flex min-h-0 min-w-0 scroll-mt-28 flex-1 flex-col">
-      <ColumnHeader>
-        <h2 className="flex min-w-0 items-center gap-2 text-[13px] font-semibold"><span className="font-mono text-red" aria-hidden>❯</span>Notes</h2>
+      <ColumnHeader category="notes">
+        <h2 className="min-w-0 text-[13px] font-semibold text-ink">Notes</h2>
         <span className="ml-auto text-[11px] text-muted-foreground">{notes.length}</span>
         <Button variant="quiet" size="icon-sm" aria-label="Search notes" aria-pressed={searching} onClick={() => (searching ? closeSearch() : setSearching(true))}>
           <Search />
@@ -231,7 +241,7 @@ function DayColumn({ date, onDate }: { date: string; onDate: (d: string) => void
 
   return (
     <div id="day" className="flex min-h-0 min-w-0 flex-1 scroll-mt-28 flex-col">
-      <ColumnHeader className="pl-1.5">
+      <ColumnHeader category="journal">
         <Button variant="quiet" size="icon-sm" aria-label="Previous day" onClick={() => onDate(toDateKey(addDays(day, -1)))}>
           <ChevronLeft />
         </Button>
@@ -342,6 +352,7 @@ function TasksCard({ date }: { date: string }) {
   return (
     <Panel
       id="tasks"
+      category="tasks"
       title="Tasks"
       tool="tasks"
       command={tab}

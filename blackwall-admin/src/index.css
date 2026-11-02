@@ -166,6 +166,7 @@
     background: transparent;
     border-bottom: 0;
   }
+  .bw-settings-body .bw-window-buttons { display: none; }
   .bw-settings-body .bw-panel > header h2 > span > span:first-child:not(.bw-category-icon) {
     display: none;
   }

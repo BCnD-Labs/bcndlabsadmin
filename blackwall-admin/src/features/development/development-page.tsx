@@ -107,7 +107,7 @@ export function DevelopmentPage() {
               ))}
             </ul>
           ) : (
-            <GridItem span={2}><Panel title="Tracked repositories" tool="repos" command="ls">
+            <GridItem span={2}><Panel category="development" title="Tracked repositories" tool="repos" command="ls">
               <EmptyState roomy icon={GitBranch} title="No repositories tracked" action={<Button variant="outline" onClick={track}><Plus /> Track repository</Button>}>
                 Add the ones you work on; their commits, status and links show up here.
               </EmptyState>
@@ -122,7 +122,7 @@ export function DevelopmentPage() {
             <GridItem span={2} rows={1}><PhoneDisclosure label="Recent commits"><Activity data={data} single={single} /></PhoneDisclosure></GridItem>
           </>
         ) : (
-          repos.length > 0 && <GridItem span={2}><Panel title="GitHub activity" tool="github" command="status">
+          repos.length > 0 && <GridItem span={2}><Panel category="development" title="GitHub activity" tool="github" command="status">
             <FeedFallback feed={feed} provider="github" what="commits, pull requests, failed runs and issues" />
           </Panel></GridItem>
         )}
@@ -296,7 +296,7 @@ function CommitHeatmap({ days }: { days: Record<string, number> }) {
   const today = new Date()
 
   return (
-    <Panel title="Commit history" tool="git" command={`log --${weeks}w`} meta={`${total} commits · 26w total`} bodyClassName="flex flex-col gap-3 px-3.5 py-3">
+    <Panel category="development" title="Commit history" tool="git" command={`log --${weeks}w`} meta={`${total} commits · 26w total`} bodyClassName="flex flex-col gap-3 px-3.5 py-3">
       <div className="overflow-x-auto">
         {phone && <Button variant="outline" className="mb-2" onClick={() => setExpanded(!expanded)}>{expanded ? "Recent 12 weeks" : "Expand history"}</Button>}
         <p className="sr-only">Showing {weeks} weeks, ending this week</p>
@@ -397,7 +397,7 @@ function Attention({ data, single }: { data: DevelopmentOverview; single: boolea
   const shown = all ? items : items.slice(0, 6)
 
   return (
-    <Panel title="Needs your attention" tool="github" command="needs-you" meta={items.length || undefined} bodyClassName="overflow-y-auto">
+    <Panel category="development" title="Needs your attention" tool="github" command="needs-you" meta={items.length || undefined} bodyClassName="overflow-y-auto">
       {items.length ? (
         <>
           <ul>
@@ -470,7 +470,7 @@ function Activity({ data, single }: { data: DevelopmentOverview; single: boolean
     else groups.push({ label, items: [a] })
   }
   return (
-    <Panel title="Recent activity" tool="git" command="log" meta={data.activity.length || undefined} bodyClassName="overflow-y-auto">
+    <Panel category="development" title="Recent activity" tool="git" command="log" meta={data.activity.length || undefined} bodyClassName="overflow-y-auto">
       {data.activity.length ? (
         <>
           {groups.map((g) => (

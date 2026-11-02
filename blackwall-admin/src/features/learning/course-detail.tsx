@@ -85,7 +85,7 @@ function Coursework({ course, items }: { course: Course; items: Task[] }) {
   }
 
   return (
-    <Panel title="Coursework" tool={course.code ? course.code.toLowerCase().replace(/\s+/g, "") : "course"} command="coursework" meta={`${open.length} open · ${done.length} done`}>
+    <Panel category="learning" title="Coursework" tool={course.code ? course.code.toLowerCase().replace(/\s+/g, "") : "course"} command="coursework" meta={`${open.length} open · ${done.length} done`}>
       <div className="flex flex-wrap items-center gap-2 border-b border-line px-3.5 py-2.5">
         <SegmentedTabs
           label="Show coursework"
@@ -154,7 +154,7 @@ function CourseInfo({ course, items }: { course: Course; items: Task[] }) {
   const color = courseColor(course.color)
   const range = dateRange(course)
   return (
-    <Panel title="Course overview" tool="course" command="info" meta={course.credits != null ? `${course.credits} credits` : undefined} bodyClassName="px-3.5 py-3">
+    <Panel category="learning" title="Course overview" tool="course" command="info" meta={course.credits != null ? `${course.credits} credits` : undefined} bodyClassName="px-3.5 py-3">
       <div className="mb-3 grid gap-1.5 border-b border-line-soft pb-3.5">
         <div className="flex items-baseline justify-between">
           <span className="font-heading text-3xl lg:text-2xl leading-none font-bold text-ink tabular-nums">{p.pct}%</span>
@@ -228,6 +228,7 @@ function CourseNotes({ course }: { course: Course }) {
   }
   return (
     <Panel
+      category="learning"
       title="Course notes"
       tool="course"
       command="notes"
