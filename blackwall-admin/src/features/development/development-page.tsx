@@ -72,7 +72,6 @@ export function DevelopmentPage() {
       <PageHeader
         title="Development"
         badge={<SourceBadge status={feed.status} detail={feed.status === "live" ? feed.provider : undefined} />}
-        subtitle="Repositories you track: what changed, what needs you, and where they're deployed."
         actions={
           <>
             {feed.status === "live" && (

@@ -227,6 +227,14 @@ html[data-theme="dark"] {
   --bw-settings-side: #0f1218;
   --bw-settings-card: #1a1f28;
 }
+/*
+ * Height of one Home square. The Planner uses two of them plus the gap, so its
+ * cards end exactly where Home's do.
+ */
+:root {
+  --bw-slot-h: min(22rem, calc((100dvh - var(--bw-header-h, 92px) - 1.5rem) / 2));
+}
+
 /* Interface font: Settings → Appearance (Sans by default, Mono for the all-terminal look). */
 html[data-font="mono"] {
   --bw-ui-font: var(--font-mono);

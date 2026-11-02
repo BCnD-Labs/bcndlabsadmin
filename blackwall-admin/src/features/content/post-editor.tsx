@@ -221,7 +221,7 @@ function Editor({ draft }: { draft: Draft }) {
                 <Input id="post-cover-alt" value={value.coverAlt ?? ""} onChange={(e) => set({ coverAlt: e.target.value })} />
               </Field>
             )}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid gap-3">
               <Field label="Type" htmlFor="post-kind">
                 <OptionSelect id="post-kind" value={value.kind} onChange={(kind) => set({ kind })} options={KINDS} />
               </Field>

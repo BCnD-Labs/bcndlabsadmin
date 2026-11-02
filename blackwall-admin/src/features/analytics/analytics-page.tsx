@@ -139,7 +139,7 @@ function PersonalAnalytics() {
 export function InsightsPage() {
   return (
     <>
-      <PageHeader title="Insights" subtitle="Worked out from your own tasks and daily logs, in this browser." />
+      <PageHeader title="Insights" />
       <PersonalAnalytics />
     </>
   )
@@ -149,7 +149,7 @@ export function InsightsPage() {
 export function SiteAnalyticsPage() {
   return (
     <>
-      <PageHeader title="Site analytics" subtitle="Your website's visitors, pages and referrers, through your analytics connection." />
+      <PageHeader title="Site analytics" />
       <WebsiteAnalytics />
     </>
   )

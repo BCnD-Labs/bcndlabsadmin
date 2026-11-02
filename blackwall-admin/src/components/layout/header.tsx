@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { useNow } from "@/hooks/use-now"
 import { usePrefs } from "@/stores/prefs"
 import { useUi } from "@/stores/ui"
+import { usePageHead } from "@/stores/page-head"
 import { NAV, activeChild, isActive } from "./nav-config"
 import { CalendarMenu } from "./calendar-menu"
 import { Notifications } from "./notifications"
@@ -20,15 +21,16 @@ function crumbs(pathname: string, search: string): { label: string; to?: string 
   const dest = NAV.find((d) => isActive(d, pathname))
   if (!dest) return [{ label: "blackwall" }]
   const child = activeChild(dest, pathname, search)
-  if (!child || dest.children?.length === 1) return [{ label: dest.label }]
-  return [{ label: dest.label, to: dest.to }, { label: child.label }]
+  if (!child || dest.children?.length === 1) return [{ label: dest.label, to: pathname === dest.to ? undefined : dest.to }]
+  // Deeper than the sub-page (a course, a post): the sub-page links back.
+  return [{ label: dest.label, to: dest.to }, { label: child.label, to: pathname + search === child.to ? undefined : child.to }]
 }
 
 /** The page title lives on the page (PageHeader); the header shows where you are. */
 function Breadcrumb({ items }: { items: { label: string; to?: string }[] }) {
   return (
     <nav aria-label="Breadcrumb" className="min-w-0">
-      <ol className="flex min-w-0 items-center gap-[0.6em] font-mono text-[13px] leading-[26px] text-muted-foreground">
+      <ol className="flex min-w-0 items-center gap-[0.55em] font-mono text-[11px] leading-4 text-muted-foreground">
         <li aria-hidden className="font-bold text-red">❯</li>
         {items.map((c, i) => (
           <li key={c.label} className="flex min-w-0 items-center gap-[0.6em]">
@@ -54,6 +56,8 @@ export function Header() {
   const { pathname, search } = useLocation()
   const now = useNow()
   const home = pathname === "/"
+  const head = usePageHead()
+  const items = crumbs(pathname, search)
 
   return (
     <header className="bw-panel z-20 flex flex-col gap-2.5 py-2.5 pr-2.5 pl-3 md:flex-row md:items-center md:justify-between md:gap-3 md:pl-4">
@@ -71,22 +75,32 @@ export function Header() {
           <Menu />
         </Button>
         <div className="flex min-w-0 flex-col gap-[3px]">
-          <time className="bw-label truncate" dateTime={now.toISOString()} data-testid="header-clock">
-            <span className="sm:hidden">{format(now, "EEE · MMM d · h:mm a")}</span>
-            <span className="hidden sm:inline">{format(now, "EEEE · MMM d · h:mm a")}</span>
-          </time>
           {home ? (
-            <h1 className="truncate font-heading text-xl leading-[26px] font-bold sm:text-2xl">
-              {greeting(now)}
-              {workspaceName && `, ${workspaceName}`}
-            </h1>
+            <>
+              <time className="bw-label truncate" dateTime={now.toISOString()} data-testid="header-clock">
+                <span className="sm:hidden">{format(now, "EEE · MMM d · h:mm a")}</span>
+                <span className="hidden sm:inline">{format(now, "EEEE · MMM d · h:mm a")}</span>
+              </time>
+              <h1 className="truncate font-heading text-xl leading-[26px] font-bold sm:text-2xl">
+                {greeting(now)}
+                {workspaceName && `, ${workspaceName}`}
+              </h1>
+            </>
           ) : (
-            <Breadcrumb items={crumbs(pathname, search)} />
+            <>
+              <Breadcrumb items={items} />
+              <div className="flex min-w-0 items-center gap-2.5">
+                <h1 className="min-w-0 truncate font-heading text-xl leading-[26px] font-bold sm:text-2xl">{head.title ?? items.at(-1)?.label}</h1>
+                {head.badge}
+                {head.subtitle && <span className="hidden min-w-0 truncate text-xs text-muted-foreground lg:inline">{head.subtitle}</span>}
+              </div>
+            </>
           )}
         </div>
       </div>
 
       <div className="flex items-center gap-2">
+        {!home && head.actions && <div className="mr-1 hidden items-center gap-2 border-r border-line pr-3 md:flex">{head.actions}</div>}
         <CalendarMenu />
         <button
           type="button"

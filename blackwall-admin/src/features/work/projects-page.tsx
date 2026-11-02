@@ -22,7 +22,6 @@ export function ProjectsPage() {
     <>
       <PageHeader
         title="Projects"
-        subtitle="What you're building, with its repositories and content drafts."
         actions={<Button onClick={newProject}><Plus /> New project</Button>}
       />
       {sorted.length ? (

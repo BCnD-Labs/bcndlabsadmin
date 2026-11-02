@@ -34,7 +34,6 @@ export function PlannerPage() {
   const { hash } = useLocation()
   const navigate = useNavigate()
   const openForm = useUi((s) => s.openForm)
-  const tasks = useWorkspace((s) => s.tasks)
   const date = params.get("date") && VALID_DAY.test(params.get("date")!) ? params.get("date")! : todayKey()
   const day = parseKey(date)
   const [month, setMonth] = useState(day)
@@ -60,22 +59,14 @@ export function PlannerPage() {
     if (hash) document.getElementById(hash.slice(1))?.scrollIntoView({ block: "start" })
   }, [hash])
 
-  const overdue = tasks.filter((t) => !t.done && t.due && daysUntil(t.due) < 0).length
-  const dueToday = tasks.filter((t) => !t.done && t.due === todayKey()).length
 
   return (
     <>
       <PageHeader
         title="Planner"
-        subtitle={
-          <>
-            {format(new Date(), "EEEE, MMMM d")} · {dueToday} due today
-            {overdue > 0 && <span className="text-amber"> · {overdue} overdue</span>}
-          </>
-        }
       />
       <div
-        className="grid grid-cols-1 gap-3 lg:h-[calc(100dvh-var(--bw-header-h,92px)-5rem)] lg:min-h-[36rem] lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]"
+        className="grid grid-cols-1 gap-3 lg:h-[calc(var(--bw-slot-h)*2+0.75rem)] lg:min-h-[34.75rem] lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]"
         data-testid="planner"
       >
         <section aria-label="Notes and daily log" className="bw-panel order-2 grid min-h-[30rem] grid-cols-1 overflow-hidden md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:order-1 lg:min-h-0">

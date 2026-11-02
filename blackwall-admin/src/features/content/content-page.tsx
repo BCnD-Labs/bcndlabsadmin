@@ -64,11 +64,6 @@ export function ContentPage() {
       <PageHeader
         title="Posts & pages"
         badge={<SourceBadge status={site.status} detail={site.status === "live" ? host : undefined} hint={site.status === "live" ? `Publishes to ${site.overview?.repo} (${site.overview?.branch})` : undefined} />}
-        subtitle={
-          site.status === "live" && site.overview
-            ? `Posts publish to ${host} and go live once the site redeploys, usually within a minute or two.`
-            : "Write posts here. Connect your website to publish, schedule and update them from Blackwall."
-        }
         actions={
           <>
             {site.overview?.siteUrl && (

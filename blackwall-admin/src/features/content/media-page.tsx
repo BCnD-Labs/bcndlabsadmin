@@ -53,7 +53,6 @@ export function MediaPage() {
       <PageHeader
         title="Media"
         badge={<SourceBadge status={site.status} />}
-        subtitle="Images in your site's images folder. Use them as post covers or in a post's body."
         actions={
           live && (
             <>

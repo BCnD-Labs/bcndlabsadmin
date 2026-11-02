@@ -199,7 +199,6 @@ export function LearningPage() {
     <>
       <PageHeader
         title="Learning"
-        subtitle="Your courses, with their assignments, exams and events on the same calendar as your tasks."
         actions={<AddLearning />}
       />
       {courses.length === 0 ? (
