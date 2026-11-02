@@ -57,9 +57,28 @@ export function GeneralSettings() {
   return (
     <SettingsPage>
       <AboutPanel />
+      <InstallPanel />
       <DataPanel />
       <ResetPanel />
     </SettingsPage>
+  )
+}
+
+/** How to put Blackwall on a phone's home screen. Same address, same account, same data as the browser. */
+function InstallPanel() {
+  const installed = typeof window !== "undefined" && (window.matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true)
+  return (
+    <Panel title="App" tool="blackwall" command="install" bodyClassName="divide-y divide-line">
+      <SettingRow
+        title={installed ? "Running as an installed app" : "Install on your phone or computer"}
+        description={installed
+          ? "This is the same Blackwall as in your browser: same address, sign-in and data."
+          : "Open this page on the device. iPhone (Safari): Share → Add to Home Screen. Android (Chrome): ⋮ → Install app. Mac (Chrome or Edge): the install icon in the address bar, or Safari: File → Add to Dock. It stays the same Blackwall you use in the browser."}
+        keywords="pwa install home screen app phone iphone android dock"
+      >
+        <span className="text-xs text-muted-foreground">{installed ? "Installed" : window.isSecureContext ? "Ready to install" : "Needs the HTTPS (Tailscale) address"}</span>
+      </SettingRow>
+    </Panel>
   )
 }
 

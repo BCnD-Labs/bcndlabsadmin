@@ -22,6 +22,10 @@ Sidebar: **Home · Productivity** (Planner, Projects, Learning, Activity insight
 
 > **Two ways to run it.** `npm run dev` runs everything on your computer (no sign-in; credentials in a gitignored `.blackwall/` file). The **home-server deployment** (Portainer stack: Postgres + app + backups, behind Tailscale and a password) is the source of truth for connections and credentials. See [deploy/README.md](./deploy/README.md). Workspace records also live in Postgres and sync across all devices that can reach this installation and sign in.
 
+## Install as an app (PWA)
+
+Blackwall is installable from its HTTPS (Tailscale) address and stays the same app as in the browser: same sign-in, same server data. iPhone (Safari): Share → Add to Home Screen. Android (Chrome): ⋮ → Install app. Mac: Chrome/Edge install icon, or Safari → File → Add to Dock. The service worker (`public/sw.js`) never touches `/api/`; page loads are network-first (so in-app updates appear immediately) with the last page kept for offline starts; hashed `/assets/` files are cached. Icons live in `public/icons/`.
+
 ## Run it
 
 ```bash

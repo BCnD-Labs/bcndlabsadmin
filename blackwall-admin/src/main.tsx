@@ -9,3 +9,13 @@ createRoot(document.getElementById("root")!).render(
     <App />
   </StrictMode>,
 )
+
+// Installable app (PWA). Production only: in dev the worker would cache Vite's modules.
+// Service workers need HTTPS, which the Tailscale address provides.
+if (import.meta.env.PROD && "serviceWorker" in navigator && window.isSecureContext) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {
+      /* the app still works as a normal web page */
+    })
+  })
+}
