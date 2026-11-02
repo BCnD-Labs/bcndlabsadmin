@@ -128,7 +128,7 @@ function PersonalAnalytics() {
           <p className="text-[11px] text-muted-foreground">No open tasks.</p>
         )}
       </Panel>
-      <Panel tool="log" command="heatmap --52w" meta="Mon–Sun, top to bottom · click a day to open it" className="lg:col-span-12" bodyClassName="overflow-x-auto px-3.5 py-3">
+      <Panel tool="log" command="heatmap --52w" meta="Mon–Sun, top to bottom · click a day to open it" className="lg:col-span-12" bodyClassName="min-w-0 px-3.5 py-3">
         <JournalHeatmap logWords={s.logWords} weeks={52} cell="size-3" />
       </Panel>
     </div>

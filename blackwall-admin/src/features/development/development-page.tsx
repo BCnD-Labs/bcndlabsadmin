@@ -6,6 +6,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { EmptyState } from "@/components/common/empty-state"
 import { FeedFallback, hasData } from "@/components/common/feed-fallback"
 import { PageHeader } from "@/components/common/page-header"
+import { PhoneDisclosure } from "@/components/common/phone-disclosure"
+import { useMediaQuery } from "@/hooks/use-media-query"
 import { Panel } from "@/components/common/panel"
 import { SourceBadge } from "@/components/common/source-badge"
 import { StatStrip } from "@/components/common/stat-strip"
@@ -86,7 +88,7 @@ export function DevelopmentPage() {
         }
       />
       <div className="flex flex-col gap-3">
-        <StatStrip
+        <StatStrip compactOnPhone
           items={[
             { label: "Repositories", value: repos.length, icon: <GitBranch className="size-3" aria-hidden /> },
             { label: "Commits, 30 days", value: data?.repos ? commits30 : dash, sub: data?.repos ? `${commits7} this week` : undefined, icon: <GitCommitHorizontal className="size-3" aria-hidden /> },
@@ -110,13 +112,13 @@ export function DevelopmentPage() {
               </EmptyState>
             </Panel>
           )}
-          {data?.repos && <CommitHeatmap days={allDays} />}
+          {data?.repos && <PhoneDisclosure label="History · 26 weeks"><CommitHeatmap days={allDays} /></PhoneDisclosure>}
         </div>
 
         {data ? (
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
             <Attention data={data} single={single} />
-            <Activity data={data} single={single} />
+            <PhoneDisclosure label="Recent commits"><Activity data={data} single={single} /></PhoneDisclosure>
           </div>
         ) : (
           <Panel tool="github" command="status">
@@ -196,6 +198,8 @@ function CommitSpark({ days }: { days: Record<string, number> }) {
 }
 
 function RepoCard({ repo, data, summary }: { repo: RepoLink; data?: DevelopmentOverview; summary?: RepoSummary }) {
+  const phone = useMediaQuery("(max-width: 639px)")
+  const [details, setDetails] = useState(false)
   const projects = useProjectMap()
   const openForm = useUi((s) => s.openForm)
   const same = (r: string) => r.toLowerCase() === repo.fullName.toLowerCase()
@@ -207,14 +211,14 @@ function RepoCard({ repo, data, summary }: { repo: RepoLink; data?: DevelopmentO
   const status = !data ? "Needs GitHub" : failures.length ? `${failures.length} failed ${failures.length === 1 ? "run" : "runs"}` : "Checks passing"
 
   return (
-    <li className="bw-panel flex flex-col gap-3 p-3.5" data-testid="repo-card">
+    <li className="bw-panel flex flex-col gap-2 p-2.5 sm:gap-3 sm:p-3.5" data-testid="repo-card">
       <div className="flex items-start gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-[9px] border border-line bg-well font-heading text-sm font-bold text-ink-2 uppercase">
+        <span className="hidden size-9 shrink-0 sm:flex items-center justify-center rounded-[9px] border border-line bg-well font-heading text-sm font-bold text-ink-2 uppercase">
           {(name ?? repo.fullName).slice(0, 2)}
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-            <a href={repo.url} target="_blank" rel="noreferrer" className="group/a inline-flex min-w-0 items-center gap-1 text-sm font-semibold text-ink hover:underline">
+            <a href={repo.url} target="_blank" rel="noreferrer" className="group/a inline-flex min-h-8 min-w-0 items-center sm:min-h-0 gap-1 text-sm font-semibold text-ink hover:underline">
               <span className="truncate">{name ?? repo.fullName}</span>
               <ExternalLink className="size-3 shrink-0 text-faint group-hover/a:text-ink-2" aria-label="opens GitHub" />
             </a>
@@ -233,17 +237,20 @@ function RepoCard({ repo, data, summary }: { repo: RepoLink; data?: DevelopmentO
             )}
           </p>
         </div>
+        {phone && <Button variant="quiet" size="sm" aria-expanded={details} aria-label={`Details for ${repo.fullName}`} onClick={() => setDetails(!details)}>Details {details ? "▾" : "▸"}</Button>}
         <ProjectTag project={repo.projectId ? projects.get(repo.projectId) : undefined} />
         <Button variant="quiet" size="icon-xs" aria-label={`Edit ${repo.fullName}`} onClick={() => openForm({ kind: "repo", id: repo.id })}>
           <Pencil />
         </Button>
       </div>
 
-      {summary?.description && <p className="-mt-1 line-clamp-2 text-xs text-muted-foreground">{summary.description}</p>}
-      {summary && summary.languages.length > 0 && <LanguageBar languages={summary.languages} />}
-      {summary && <CommitSpark days={summary.commitsByDay} />}
+      {(!phone || details) && <>
+        {summary?.description && <p className="-mt-1 line-clamp-2 text-xs text-muted-foreground">{summary.description}</p>}
+        {summary && summary.languages.length > 0 && <LanguageBar languages={summary.languages} />}
+        {summary && <CommitSpark days={summary.commitsByDay} />}
+      </>}
 
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line-soft pt-2.5 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 sm:border-t border-line-soft sm:pt-2.5 text-[11px] text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
           <StatusMarker tone={tone} /> {status}
         </span>
@@ -255,7 +262,7 @@ function RepoCard({ repo, data, summary }: { repo: RepoLink; data?: DevelopmentO
         )}
         {summary?.pushedAt && <span className="ml-auto">pushed {shortAgo(summary.pushedAt)} ago</span>}
       </div>
-      {(repo.productionUrl || repo.previewUrl) && (
+      {(!phone || details) && (repo.productionUrl || repo.previewUrl) && (
         <div className="-mt-1 flex flex-wrap gap-1.5">
           {repo.productionUrl && <Pill href={repo.productionUrl} icon={<Globe className="size-3 shrink-0" aria-hidden />}>{repo.productionUrl.replace(/^https?:\/\//, "")}</Pill>}
           {repo.previewUrl && <Pill href={repo.previewUrl} icon={<span className="text-[9px] font-bold text-faint">PRE</span>}>{repo.previewUrl.replace(/^https?:\/\//, "")}</Pill>}
@@ -269,7 +276,9 @@ function RepoCard({ repo, data, summary }: { repo: RepoLink; data?: DevelopmentO
 
 /** 26 weeks of commits across tracked repos, Sunday to Saturday top to bottom (GitHub's layout). */
 function CommitHeatmap({ days }: { days: Record<string, number> }) {
-  const weeks = 26
+  const phone = useMediaQuery("(max-width: 639px)")
+  const [expanded, setExpanded] = useState(false)
+  const weeks = phone && !expanded ? 12 : 26
   const start = startOfWeek(addDays(new Date(), -(weeks - 1) * 7))
   const cols = Array.from({ length: weeks }, (_, w) => Array.from({ length: 7 }, (_, d) => addDays(start, w * 7 + d)))
   const max = Math.max(1, ...Object.values(days))
@@ -278,7 +287,7 @@ function CommitHeatmap({ days }: { days: Record<string, number> }) {
   // Longest run of consecutive days with a commit.
   let best = 0
   let run = 0
-  for (let i = weeks * 7 - 1; i >= 0; i--) {
+  for (let i = 26 * 7 - 1; i >= 0; i--) {
     const k = toDateKey(addDays(new Date(), -i))
     run = days[k] ? run + 1 : 0
     best = Math.max(best, run)
@@ -286,17 +295,19 @@ function CommitHeatmap({ days }: { days: Record<string, number> }) {
   const today = new Date()
 
   return (
-    <Panel tool="git" command="log --26w" meta={`${total} commits`} bodyClassName="flex flex-col gap-3 px-3.5 py-3">
+    <Panel tool="git" command={`log --${weeks}w`} meta={`${total} commits · 26w total`} bodyClassName="flex flex-col gap-3 px-3.5 py-3">
       <div className="overflow-x-auto">
+        {phone && <Button variant="outline" className="mb-2" onClick={() => setExpanded(!expanded)}>{expanded ? "Recent 12 weeks" : "Expand history"}</Button>}
+        <p className="sr-only">Showing {weeks} weeks, ending this week</p>
         <div className="inline-flex flex-col gap-1">
-          <div className="ml-7 flex gap-[3px] text-[9px] text-faint">
+          <div className={cn("ml-7 flex gap-[3px] text-[9px] text-faint", phone && expanded && "hidden")}>
             {cols.map((c, i) => (
               <span key={i} className="w-[11px] overflow-visible whitespace-nowrap">
                 {c[0].getDate() <= 7 ? format(c[0], "MMM") : ""}
               </span>
             ))}
           </div>
-          <div className="flex gap-[3px]">
+          <div className={cn("flex gap-[3px]", phone && "flex-wrap")}>
             <div className="mr-1 flex w-6 flex-col gap-[3px] text-[9px] leading-[11px] text-faint">
               {["", "Mon", "", "Wed", "", "Fri", ""].map((l, i) => <span key={i} className="h-[11px]">{l}</span>)}
             </div>

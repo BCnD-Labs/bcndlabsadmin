@@ -1,5 +1,7 @@
 import { addDays, format, startOfWeek } from "date-fns"
-import { useEffect, useRef } from "react"
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { useMediaQuery } from "@/hooks/use-media-query"
 import { useNavigate } from "react-router-dom"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart"
@@ -57,55 +59,49 @@ const level = (w: number) => (w === 0 ? 0 : w < 50 ? 1 : w < 200 ? 2 : 3)
 /** Daily log heatmap, one cell per day, darker = more words. Click a day to open its log. */
 export function JournalHeatmap({ logWords, weeks = 16, cell = "size-3" }: { logWords: Map<string, number>; weeks?: number; cell?: string }) {
   const navigate = useNavigate()
-  const scroller = useRef<HTMLDivElement>(null)
-  const start = addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), -(weeks - 1) * 7)
+  const phone = useMediaQuery("(max-width: 639px)")
+  const [expanded, setExpanded] = useState(false)
+  const shownWeeks = phone && !expanded ? Math.min(8, weeks) : weeks
+  const start = addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), -(shownWeeks - 1) * 7)
   const today = toDateKey(new Date())
-  const cols = Array.from({ length: weeks }, (_, w) => Array.from({ length: 7 }, (_, d) => toDateKey(addDays(start, w * 7 + d))))
-
-  // On narrow screens, start scrolled to the most recent weeks.
-  useEffect(() => {
-    const el = scroller.current
-    if (el) el.scrollLeft = el.scrollWidth
-  }, [])
+  const cols = Array.from({ length: shownWeeks }, (_, w) => Array.from({ length: 7 }, (_, d) => toDateKey(addDays(start, w * 7 + d))))
 
   return (
     <div>
-      <div ref={scroller} className="overflow-x-auto pb-1">
-        <div className="inline-grid grid-flow-col gap-[3px]" style={{ gridTemplateRows: "auto repeat(7, auto)" }} role="grid" aria-label="Daily log activity">
+      {phone && <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span>Recent {shownWeeks} weeks · ending this week</span><Button variant="outline" onClick={() => setExpanded(!expanded)}>{expanded ? "Recent 8 weeks" : "Expand history"}</Button></div>}
+      <div className="overflow-x-auto pb-1">
+        <div className={cn("flex gap-[3px]", phone ? "flex-wrap" : "w-max")} role="group" aria-label="Daily log activity">
           {/* weekday labels */}
-          <span />
-          {["Mon", "", "Wed", "", "Fri", "", ""].map((d, i) => (
-            <span key={i} className="pr-1 text-[10px] leading-none text-muted-foreground">{d}</span>
-          ))}
+          {!phone && <div className="flex w-7 shrink-0 flex-col gap-[3px]"><span className="h-3" />{["Mon", "", "Wed", "", "Fri", "", ""].map((d, i) => <span key={i} className="h-3 pr-1 text-[10px] leading-none text-muted-foreground">{d}</span>)}</div>}
           {cols.map((col, i) => {
             const first = parseKey(col[0])
             const showMonth = i === 0 || first.getDate() <= 7
-            return [
-              <span key={`m${i}`} className="h-3 text-[10px] leading-none whitespace-nowrap text-muted-foreground">
+            return <div key={col[0]} className="flex flex-col gap-[3px]">
+              <span className="h-3 text-[10px] leading-none whitespace-nowrap text-muted-foreground">
                 {showMonth ? format(first, "MMM") : ""}
-              </span>,
-              ...col.map((d) => {
+              </span>
+              {col.map((d) => {
                 const w = logWords.get(d) ?? 0
                 const future = d > today
                 return (
                   <button
                     key={d}
                     type="button"
-                    role="gridcell"
+
                     disabled={future}
                     onClick={() => navigate(logHref(d))}
                     title={`${format(parseKey(d), "EEE, MMM d")}: ${w ? `${w} words` : "no log"}`}
                     aria-label={`${format(parseKey(d), "MMMM d")}: ${w ? `${w} words` : "no log"}`}
                     className={cn(
-                      cell,
+                      phone ? "size-8" : cell,
                       "rounded-[2px]",
                       future ? "bg-transparent" : LEVELS[level(w)],
                       d === today && "ring-1 ring-ink-2",
                     )}
                   />
                 )
-              }),
-            ]
+              })}
+            </div>
           })}
         </div>
       </div>
