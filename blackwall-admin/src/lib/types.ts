@@ -15,6 +15,13 @@ export interface DocLink {
 
 export interface Task {
   id: ID
+  /** Planner additions are optional so older workspaces retain their meaning. */
+  focusDate?: DateKey
+  scheduledDate?: DateKey
+  scheduledTime?: string
+  durationMinutes?: number
+  reflection?: TaskReflection
+  recordLinks?: RecordLink[]
   /** Linked documents (open in their own app). */
   links?: DocLink[]
   title: string
@@ -33,6 +40,20 @@ export interface Task {
   createdAt: Timestamp
   updatedAt: Timestamp
 }
+
+export interface RecordLink {
+  kind: "note" | "task" | "log"
+  id: string
+}
+
+export interface TaskReflection {
+  text: string
+  /** Only fields explicitly added by the writer are stored. */
+  items: Partial<Record<ReflectionItem, string>>
+  updatedAt: Timestamp
+}
+
+export type ReflectionItem = "difficulty" | "timeSpent" | "help" | "outcome" | "nextTime" | "learned" | "blocker"
 
 export type NoteColor = "plain" | "amber" | "teal" | "rose" | "blue"
 
@@ -292,3 +313,4 @@ export interface Course {
   createdAt: Timestamp
   updatedAt: Timestamp
 }
+

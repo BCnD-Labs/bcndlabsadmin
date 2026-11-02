@@ -148,3 +148,15 @@ See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md). In short: shadcn/ui comp
 Workspace and source-selection tests: `node --test tests/workspace.test.ts tests/feed-connections.test.ts` (Node 24; uses disposable files and a loopback API).
 
 The shared visual rules live in `src/styles/theme.css`: colors, text roles, 32px controls, 28px desktop compact controls, 40px navigation, 36px panel headers, 12px gutters, and 320px preview units. `WorkspaceGrid` / `GridItem` give every section the same responsive columns. Full collections and editors grow with content. See [the design system](../docs/design/BLACKWALL_DESIGN.md).
+
+
+
+### Planner: calendar, focus and optional reflection
+
+Planner uses the approved calendar-over-notes/log canvas, with a selected-task inspector to the right. Day, Week and Month show existing deadlines and optional separate scheduled slots; choose **Tasks** to retain Today/Next/All/Done filtering, stars and search. Select a task and use **Details → Focus on [date]** to put it in that day's focus strip.
+
+Completing a task in Planner opens **Reflection** without requiring an entry. **How did it go?** accepts ordinary text; **+ Add reflection item** optionally reveals difficulty, time spent, help used, outcome, next time, what I learned, or what got in the way. Picklists also offer **Write my own**. Added fields can be removed. Drafts use the existing browser outbox and authenticated server sync; server/offline/conflict status remains in the shared rail indicator. No new external service is used.
+
+**Linked records** connects existing notes, task/calendar items and dated daily logs. **Add to daily log** explicitly copies the reflection to the selected day's log and links it; repeated clicks cannot duplicate an identical entry. There is no separate event collection: timed tasks/coursework are the existing calendar items. Reflections and scheduling fields are optional extensions on Task records, validated on imports and API writes; no existing records are converted or removed.
+
+Validation: `npm run check` and `node --test tests/*.test.ts`. PostgreSQL integration requires `TEST_DATABASE_URL`.

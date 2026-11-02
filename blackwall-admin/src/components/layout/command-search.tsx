@@ -25,7 +25,8 @@ import { CATEGORIES } from "@/components/common/category-icon"
 import { courseLabel } from "@/features/learning/learning-utils"
 import { DRAFT_STATUS_LABEL } from "@/components/common/tags"
 import { useCreateDraft } from "@/features/content/use-create-draft"
-import { logHref } from "@/lib/routes"
+import { reflectionSummary } from "@/features/productivity/planner-utils"
+import { logHref, plannerHref } from "@/lib/routes"
 import { noteTitle } from "@/features/notes/note-colors"
 import { format } from "date-fns"
 import { parseKey, todayKey } from "@/lib/dates"
@@ -104,8 +105,8 @@ export function CommandSearch() {
               <CommandItem
                 key={t.id}
                 value={`task-${t.id}`}
-                keywords={[t.title, t.details ?? "", ...(t.courseId ? [courseCodes.get(t.courseId) ?? ""] : [])]}
-                onSelect={() => run(() => openForm({ kind: "task", id: t.id }))}
+                keywords={[t.title, t.details ?? "", reflectionSummary(t), ...(t.courseId ? [courseCodes.get(t.courseId) ?? ""] : [])]}
+                onSelect={() => run(() => navigate(`${plannerHref}?task=${encodeURIComponent(t.id)}`))}
               >
                 {t.done ? <CheckCircle2 className="text-muted-foreground" /> : <Circle />}
                 <span className={t.done ? "text-muted-foreground line-through" : ""}>{t.title}</span>
@@ -235,3 +236,4 @@ export function CommandSearch() {
     </CommandDialog>
   )
 }
+

@@ -13,6 +13,7 @@ import { isOverdue } from "./task-utils"
 export function TaskRow({
   task,
   onToggle,
+  onSelect,
   showDetails,
   dense,
   hideDate,
@@ -23,6 +24,7 @@ export function TaskRow({
   wrap?: boolean
   task: Task
   onToggle?: (task: Task) => void
+  onSelect?: (task: Task) => void
   showDetails?: boolean
   /** 34px rows for side-by-side cards (Planner). */
   dense?: boolean
@@ -56,9 +58,9 @@ export function TaskRow({
       />
       <button
         type="button"
-        onClick={() => openForm({ kind: "task", id: task.id })}
+        onClick={() => onSelect ? onSelect(task) : openForm({ kind: "task", id: task.id })}
         className="min-w-0 flex-1 rounded-[4px] py-0.5 text-left"
-        title={course ? `Edit ${learningType(task.learningType, course?.kind).label.toLowerCase()}` : "Edit task"}
+        title={onSelect ? "View task" : course ? `Edit ${learningType(task.learningType, course?.kind).label.toLowerCase()}` : "Edit task"}
       >
         <span className={cn("flex min-w-0 items-center gap-1.5 text-ink", wrap ? "text-sm" : "text-[13px]", task.done && "text-faint line-through")}>
           {TypeIcon && <TypeIcon className="size-3.5 shrink-0 text-muted-foreground" aria-label={learningType(task.learningType, course?.kind).label} />}
@@ -99,3 +101,4 @@ export function TaskRow({
     </li>
   )
 }
+

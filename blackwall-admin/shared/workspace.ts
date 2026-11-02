@@ -1,4 +1,5 @@
 import type { Course, Draft, JournalEntry, Note, Project, RepoLink, Service, Site, SiteForm, SitePage, SocialAccount, SocialPost, Task } from "../src/lib/types.ts"
+import { validPlannerFields } from "./planner.ts"
 
 export interface Collections {
   tasks: Task[]
@@ -63,6 +64,7 @@ export function validWorkspace(value: unknown): value is Collections {
       if (["credits", "score", "pagesRead", "pagesTotal", "week", "order"].some((field) => row[field] != null && (typeof row[field] !== "number" || !Number.isFinite(row[field])))) return false
       if (key === "courses" && row.kind != null && !["course", "certification", "selfpaced", "skill", "reading"].includes(row.kind)) return false
       if (key === "tasks" && (typeof row.done !== "boolean" || typeof row.starred !== "boolean")) return false
+      if (key === "tasks" && !validPlannerFields(row)) return false
       if ((key === "notes" || key === "services") && typeof row.pinned !== "boolean") return false
       // An uploaded tile logo is a small image data URL (resized in the browser before saving).
       if (key === "services" && row.customLogo != null && (row.customLogo.length > 200_000 || !/^data:image\/(png|webp|jpeg|svg\+xml)[;,]/.test(row.customLogo))) return false
@@ -111,3 +113,4 @@ const PALETTE_KEYS = ["bg", "surface", "text", "muted", "border", "accent"]
 function isPalette(p: unknown): boolean {
   return !!p && typeof p === "object" && PALETTE_KEYS.every((k) => typeof (p as Record<string, unknown>)[k] === "string")
 }
+
