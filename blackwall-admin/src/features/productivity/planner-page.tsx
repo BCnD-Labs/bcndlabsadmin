@@ -2,7 +2,7 @@ import { DocLinksMenu } from "@/components/common/doc-links"
 import { CategoryIcon, type Category } from "@/components/common/category-icon"
 import { addDays, format, isToday } from "date-fns"
 import { ChevronLeft, ChevronRight, ListChecks, Pin, PinOff, Plus, Search, Star, StickyNote, X } from "lucide-react"
-import { useEffect, useMemo, useState, type ReactNode } from "react"
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -39,6 +39,23 @@ export function PlannerPage() {
   const date = params.get("date") && VALID_DAY.test(params.get("date")!) ? params.get("date")! : todayKey()
   const day = parseKey(date)
   const [month, setMonth] = useState(day)
+  // The notes + log card may grow with its content, but only to the bottom of the Tasks card
+  // (when the two columns sit side by side). Measured live so typing and resizing both follow.
+  const gridRef = useRef<HTMLDivElement>(null)
+  const cardRef = useRef<HTMLElement>(null)
+  const asideRef = useRef<HTMLDivElement>(null)
+  const [cap, setCap] = useState<number | undefined>(undefined)
+  useLayoutEffect(() => {
+    const aside = asideRef.current
+    const card = cardRef.current
+    if (!aside || !card) return
+    const measure = () => setCap(aside.offsetTop === card.offsetTop ? aside.offsetHeight : undefined)
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(aside)
+    if (gridRef.current) ro.observe(gridRef.current)
+    return () => ro.disconnect()
+  }, [])
   const [shown, setShown] = useState(date)
   if (shown !== date) {
     setShown(date)
@@ -71,14 +88,18 @@ export function PlannerPage() {
           selected day's log. Right: calendar with tasks under it. The card matches the aside's
           height, which comes from its content, never a fixed unit. Narrow: aside first. */}
       <div className="@container/main mx-auto w-full max-w-[var(--bw-page-max)]">
-        <div className="grid grid-cols-1 gap-4 @4xl/main:grid-cols-[minmax(0,1fr)_380px]" data-testid="planner">
-          {/* One card, one title bar: the selected day with ‹ Today › (Ant Design Card title + extra). */}
-          <section aria-label="Notes and daily log" className="bw-panel order-2 grid min-h-0 grid-cols-1 content-start overflow-hidden @4xl/main:order-1 md:grid-cols-[240px_minmax(0,1fr)] md:gap-x-4 md:px-6 md:pb-6 [&>header]:md:-mx-6">
+        <div ref={gridRef} className="grid grid-cols-1 items-start gap-4 @4xl/main:grid-cols-[minmax(0,1fr)_380px]" data-testid="planner">
+          {/* One card, one title bar: the selected day with ‹ Today › (Ant Design Card title + extra).
+              Height = the longer of the notes list and the log, capped at the bottom of the Tasks card
+              when side by side; past that, the notes list and the log box scroll on their own. */}
+          <section ref={cardRef} aria-label="Notes and daily log" style={{ maxHeight: cap }} className="bw-panel order-2 flex min-h-0 flex-col overflow-hidden @4xl/main:order-1">
             <DayHeader date={date} onDate={onDate} />
-            <NotesColumn />
-            <DayColumn key={date} date={date} />
+            <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[240px_minmax(0,1fr)] md:gap-x-4 md:px-6 md:pb-6">
+              <NotesColumn />
+              <DayColumn key={date} date={date} />
+            </div>
           </section>
-          <div className="order-1 flex min-w-0 flex-col gap-4 @4xl/main:order-2">
+          <div ref={asideRef} className="order-1 flex min-w-0 flex-col gap-4 @4xl/main:order-2">
             <section aria-label="Calendar" className="bw-panel flex shrink-0 flex-col overflow-hidden">
               <ColumnHeader category="calendar" windowButtons={false}><h2 className="min-w-0 text-sm font-semibold text-ink">Calendar</h2><span className="ml-auto" /><CalendarSelectors month={month} onMonth={setMonth} /></ColumnHeader>
               <PlannerCalendar selected={date} month={month} onSelect={onDate} />
@@ -155,7 +176,7 @@ function NotesColumn() {
         </Button>
       </div>
       {searching && <SearchBox value={q} onChange={setQ} label="Search notes" onClose={closeSearch} />}
-      <div className="max-h-[28rem] min-h-0 overflow-y-auto">
+      <div className="min-h-0 overflow-y-auto">
         {pinned.length + others.length === 0 ? (
           <EmptyState icon={StickyNote} title={q ? "No notes match" : "No notes yet"} className="py-8" action={!q && <Button variant="outline" size="sm" onClick={() => openForm({ kind: "note" })}><Plus /> Add a note</Button>}>
             {q ? "Try a different search." : "Pinned notes also show on Home."}
@@ -287,13 +308,12 @@ function DayColumn({ date }: { date: string }) {
         </div>
       )}
       <label htmlFor="planner-log" className="bw-label px-3 pt-3 pb-2 md:px-0">Daily log</label>
-      <textarea
+      <AutoGrowTextarea
         id="planner-log"
         value={text}
-        onChange={(e) => saveJournal(date, e.target.value)}
+        onChange={(v) => saveJournal(date, v)}
         placeholder={isToday(day) ? "What happened today? What did you learn? What's next?" : `Write the log for ${format(day, "MMMM d")}…`}
-        rows={10}
-        className="mx-3 mb-4 min-h-32 resize-y rounded-[8px] border border-line bg-well px-3 py-2 text-base leading-relaxed text-ink outline-none placeholder:text-faint focus:border-rim md:mx-0 md:mb-0 md:text-sm"
+        className="mx-3 mb-4 rounded-[8px] border border-line bg-well px-3 py-2 text-base leading-relaxed text-ink outline-none placeholder:text-faint focus:border-rim md:mx-0 md:mb-0 md:text-sm"
       />
     </div>
   )
@@ -418,5 +438,37 @@ function TasksCard({ date }: { date: string }) {
         )}
       </div>
     </Panel>
+  )
+}
+
+/**
+ * The log box: starts at 10 rows and grows as you type. Its height is its content, but it may
+ * shrink (and scroll) when the card has reached its cap, so it never pushes past the Tasks card.
+ */
+function AutoGrowTextarea({ value, onChange, className, ...rest }: { value: string; onChange: (v: string) => void; className?: string; id: string; placeholder: string }) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+  const [h, setH] = useState<number>()
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    // Measure the content alone: clear the current height and flex basis first, or the old
+    // size feeds back into scrollHeight and the box never shrinks when text is removed.
+    el.style.height = "auto"
+    el.style.flexBasis = "auto"
+    const next = el.scrollHeight + 2
+    el.style.height = ""
+    el.style.flexBasis = ""
+    setH(next)
+  }, [value])
+  return (
+    <textarea
+      ref={ref}
+      rows={10}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      style={{ height: h, flexBasis: h }}
+      className={cn("min-h-32 shrink resize-none overflow-y-auto", className)}
+      {...rest}
+    />
   )
 }
