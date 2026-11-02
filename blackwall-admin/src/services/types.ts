@@ -7,6 +7,7 @@ export type {
   PullRequestSummary,
   ReferrerStat,
   RepoActivity,
+  RepoSummary,
   TrafficPoint,
 } from "@shared/connections"
 

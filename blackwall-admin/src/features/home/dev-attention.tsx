@@ -1,4 +1,4 @@
-import { CircleDot, ExternalLink, GitMerge, GitPullRequest, Rocket, Upload, XCircle } from "lucide-react"
+import { CircleDot, ExternalLink, GitCommitHorizontal, GitMerge, GitPullRequest, Rocket, Upload, XCircle } from "lucide-react"
 import type { ReactNode } from "react"
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
@@ -31,6 +31,7 @@ export const CHECK_TONE: Record<PullRequestSummary["checks"], Tone> = {
 }
 
 export const ACTIVITY_ICON: Record<RepoActivity["kind"], typeof Upload> = {
+  commit: GitCommitHorizontal,
   push: Upload,
   merge: GitMerge,
   release: Rocket,

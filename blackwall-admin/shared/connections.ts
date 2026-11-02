@@ -40,7 +40,7 @@ export const PROVIDERS: ProviderDef[] = [
         secret: true,
         required: true,
         placeholder: "github_pat_…",
-        help: "Fine-grained token with read access to Metadata, Pull requests, Issues and Actions on the repos you track.",
+        help: "Fine-grained token, read-only, on the repos you track: Actions, Checks, Contents, Issues and Pull requests (Metadata is added automatically).",
       },
     ],
   },
@@ -249,14 +249,34 @@ export interface IssueSummary {
 export interface RepoActivity {
   id: string
   repo: string
-  kind: "push" | "merge" | "release" | "issue"
+  /** "commit" = one commit (message as the summary); "push" is the older event-based form. */
+  kind: "commit" | "push" | "merge" | "release" | "issue"
   summary: string
   actor: string
   at: string
+  /** Short commit hash, for commits. */
+  sha?: string
+  url?: string
+  /** The author's GitHub avatar. */
+  avatar?: string
+}
+/** Facts about one tracked repository, for its card. */
+export interface RepoSummary {
+  repo: string
+  description?: string
+  private: boolean
+  defaultBranch: string
+  stars: number
+  pushedAt?: string
+  /** Bytes per language, largest first (GitHub's language breakdown). */
+  languages: { name: string; bytes: number }[]
+  /** Commits on the default branch per day (`yyyy-MM-dd`), last 26 weeks. */
+  commitsByDay: Record<string, number>
 }
 export interface DevelopmentOverview {
   prs: PullRequestSummary[]
   failures: CheckFailure[]
   issues: IssueSummary[]
   activity: RepoActivity[]
+  repos?: RepoSummary[]
 }

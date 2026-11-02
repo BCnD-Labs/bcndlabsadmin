@@ -16,6 +16,7 @@ export function TaskRow({
   showDetails,
   dense,
   hideDate,
+  hideCourse,
 }: {
   task: Task
   onToggle?: (task: Task) => void
@@ -24,6 +25,8 @@ export function TaskRow({
   dense?: boolean
   /** Lists already grouped by day show only the time. */
   hideDate?: boolean
+  /** Narrow columns: no course chip (the type icon still shows it's coursework). */
+  hideCourse?: boolean
 }) {
   const toggleTask = useWorkspace((s) => s.toggleTask)
   const toggleStar = useWorkspace((s) => s.toggleStar)
@@ -60,7 +63,7 @@ export function TaskRow({
         </span>
         {showDetails && task.details && <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{task.details}</span>}
       </button>
-      {course && !hideDate && <CourseTag course={course} className="hidden sm:inline-flex" />}
+      {course && !hideDate && !hideCourse && <CourseTag course={course} className="hidden sm:inline-flex" />}
       {task.done && task.completedAt ? (
         <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums" title={task.due ? `Was due ${task.due}` : undefined}>
           Done {format(new Date(task.completedAt), "EEE MMM d")}

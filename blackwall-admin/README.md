@@ -4,7 +4,7 @@ A personal workspace for keeping track: simple to-dos, a course planner, a calen
 
 ## The pieces
 
-- **Planner (Productivity):** one page with three columns: **tasks** (Today / Upcoming / All / Done, quick add, search, starred filter), the **calendar** with the selected day's agenda and its **daily log** (saves as you type), and **notes** (pinned first, quick add, search). On wide screens it fits the window and each column scrolls on its own; narrower screens stack them. The old Tasks, Notes and Calendar addresses open the Planner.
+- **Planner (Productivity):** one page. Left, one card with **notes** as a compact list (pinned first, search, **+ Note**) beside the selected day: step through days, see what's due, and write its **daily log** (saves as you type). Right, the **calendar** with **tasks** under it (Today / Next / All / Done, search, starred filter, **+ Task** opens the task form due on the selected day). On wide screens it fits the window and each part scrolls on its own; narrower screens stack them. The old Tasks, Notes and Calendar addresses open the Planner.
 - **Tasks:** Google Tasks style. Title, optional details, optional due date, star, done. No priorities, tags, links or dependencies.
 - **Header calendar:** the calendar button (left of search) opens a month card while you hover it and closes when you move away; click it to pin it open, and then it auto-hides a few seconds after you leave. Click a day to open that day's log in a dialog. Day dots: red = open tasks due, amber = overdue, grey = a saved log.
 - **Home:** a 2×2 grid of panels you choose from each panel's header menu: Productivity, Coursework, Calendar, Development, Website, or Empty. Drag a panel by its header onto another square to swap them, or use "Move to slot N" in the menu.
@@ -13,7 +13,7 @@ A personal workspace for keeping track: simple to-dos, a course planner, a calen
 - **Notes:** quick notes in the Planner. Type, pick a colour, pin the ones you want on Home; click a note to edit it.
 - **Learning (Productivity → Learning):** a simple course planner. **Add learning → Course** stores a course's code, instructor, term, start and end dates, schedule, location, link, credits, tags and colour. Each course holds **assignments, exams, milestones and events**. These are ordinary tasks with a course link, so they also show in Tasks (with the course chip), on the calendar, in search and in Home's optional **Coursework** square. Notes can be linked to a course and show on its page. Local only: no LMS connection. Deleting a course deletes its coursework and unlinks its notes.
 - **Insights (Productivity → Insights):** charts computed from your tasks and logs (tasks completed per day, open tasks by due date, a log heatmap, streaks).
-- **Development:** one page: counts (repos, open PRs, failed runs, issues), a card per tracked repository (status, PRs, issues, last activity, production/preview links), what needs you (review requests first) and an activity timeline.
+- **Development:** one page: counts (repos, commits in 30 days, open PRs, failed runs, issues); a card per tracked repository (public/private, branch, stars, GitHub's language bar, a 30-day commit sparkline, check status, PRs, issues, production/preview links); a 26-week commit heatmap across tracked repos; what needs you (review requests first, tracked repos only); and recent commits with avatars, grouped by day.
 - **CMS → Posts & pages:** posts as cards with their cover images (Published / Scheduled / Drafts), and the site's pages with a live, scaled-down preview of each. The editor has a cover image, Markdown with a **Preview** that renders the post with your site's own header and styles, tags, and a publish panel: **Publish now**, **Schedule…**, **Update post**, **Unpublish**. See *Website publishing* below.
 - **CMS → Media:** the images in your site's images folder; upload, copy Markdown, delete.
 - **CMS → Site analytics:** sized for a small site: visitors, pageviews, days with visits, busiest day, daily visitor bars, top pages and referrers.
@@ -49,7 +49,7 @@ Settings → Connections is where you add, edit, test and remove accounts. Nothi
 
 | Type | What you enter | What it feeds |
 | --- | --- | --- |
-| GitHub | Fine-grained personal access token | Development panel, Reviews & issues, repository activity (for repos you track) |
+| GitHub | Fine-grained token, read-only: Actions, Checks, Contents, Issues, Pull requests | Development page and Home panel (for repos you track) |
 | Azure | Tenant ID, client ID, client secret (service principal), optional subscription | Subscription, resource group and resource counts on the connection card |
 | Cloudflare | API token, optional account ID | Zones and their status on the connection card |
 | Website analytics | Plausible, Umami or Cloudflare Web Analytics, plus site ID and API key | Home traffic chart, CMS → Site analytics |
