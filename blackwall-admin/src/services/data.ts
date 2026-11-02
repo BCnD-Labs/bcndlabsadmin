@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react"
 import { usePrefs } from "@/stores/prefs"
 import { useWorkspace } from "@/stores/workspace"
 import { sampleAnalytics } from "./analytics-demo"
-import { api, useConnectionFor } from "./connector"
+import { api, useConnections, useConnectionFor } from "./connector"
 import { sampleDevelopment } from "./github-demo"
 import type { AnalyticsReport, DevelopmentOverview, SourceStatus, TrafficRange } from "./types"
 
@@ -57,33 +57,42 @@ function useLive<T>(path: string | null, ttlMs: number) {
 export function useDevelopment(): Feed<DevelopmentOverview> {
   const repos = useWorkspace((s) => s.repos).map((r) => r.fullName)
   const conn = useConnectionFor("github")
+  const selected = usePrefs((s) => s.feedConnections.github)
+  const available = useConnections((s) => s.available)
   const samples = usePrefs((s) => s.showSamples)
   const usable = conn && conn.status === "ok"
-  const live = useLive<DevelopmentOverview>(usable ? `github/overview?repos=${encodeURIComponent(repos.join(","))}` : null, 120_000)
+  const live = useLive<DevelopmentOverview>(usable ? `github/overview?repos=${encodeURIComponent(repos.join(","))}&connection=${encodeURIComponent(conn.id)}` : null, 120_000)
 
+  const refresh = () => { void useConnections.getState().refresh(); live.refresh() }
+  if (selected && !conn) return { status: available === null ? "loading" : "error", error: available === false ? "Blackwall’s server is unavailable. Reconnect and retry." : "Your selected GitHub connection is unavailable. Choose a data source in Settings → Dashboard.", refresh }
+  const source = conn ? `${conn.label}${conn.account ? ` · ${conn.account}` : ""}` : undefined
   if (usable) {
-    if (live.error) return { status: "error", error: live.error, provider: conn.account, refresh: live.refresh }
-    return { status: live.loading ? "loading" : "live", data: live.data, provider: conn.account, refresh: live.refresh }
+    if (live.error) return { status: "error", error: live.error, provider: source, refresh }
+    return { status: live.loading ? "loading" : "live", data: live.data, provider: source, refresh }
   }
-  if (conn?.status === "error") return { status: "error", error: conn.message, refresh: live.refresh }
-  if (samples) return { status: "sample", data: sampleDevelopment(repos), refresh: live.refresh }
-  return { status: "not-connected", refresh: live.refresh }
+  if (conn?.status === "error") return { status: "error", error: conn.message, refresh }
+  if (samples) return { status: "sample", data: sampleDevelopment(repos), refresh }
+  return { status: "not-connected", refresh }
 }
 
 const ANALYTICS_NAME: Record<string, string> = { plausible: "Plausible", umami: "Umami", cloudflare: "Cloudflare" }
 
 export function useAnalytics(range: TrafficRange): Feed<AnalyticsReport> {
   const conn = useConnectionFor("analytics")
+  const selected = usePrefs((s) => s.feedConnections.analytics)
+  const available = useConnections((s) => s.available)
   const samples = usePrefs((s) => s.showSamples)
   const usable = conn && conn.status === "ok"
-  const live = useLive<AnalyticsReport>(usable ? `analytics/report?days=${range}` : null, 300_000)
-  const provider = conn ? ANALYTICS_NAME[conn.config.provider] ?? conn.label : undefined
+  const live = useLive<AnalyticsReport>(usable ? `analytics/report?days=${range}&connection=${encodeURIComponent(conn.id)}` : null, 300_000)
+  const provider = conn ? `${conn.label} · ${ANALYTICS_NAME[conn.config.provider] ?? "Analytics"}${conn.config.siteId ? ` · ${conn.config.siteId}` : ""}` : undefined
+  const refresh = () => { void useConnections.getState().refresh(); live.refresh() }
+  if (selected && !conn) return { status: available === null ? "loading" : "error", error: available === false ? "Blackwall’s server is unavailable. Reconnect and retry." : "Your selected analytics connection is unavailable. Choose a data source in Settings → Dashboard.", refresh }
 
   if (usable) {
-    if (live.error) return { status: "error", error: live.error, provider, refresh: live.refresh }
-    return { status: live.loading ? "loading" : "live", data: live.data, provider, refresh: live.refresh }
+    if (live.error) return { status: "error", error: live.error, provider, refresh }
+    return { status: live.loading ? "loading" : "live", data: live.data, provider, refresh }
   }
-  if (conn?.status === "error") return { status: "error", error: conn.message, provider, refresh: live.refresh }
-  if (samples) return { status: "sample", data: sampleAnalytics(range), refresh: live.refresh }
-  return { status: "not-connected", refresh: live.refresh }
+  if (conn?.status === "error") return { status: "error", error: conn.message, provider, refresh }
+  if (samples) return { status: "sample", data: sampleAnalytics(range), refresh }
+  return { status: "not-connected", refresh }
 }

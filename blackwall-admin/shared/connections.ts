@@ -10,6 +10,7 @@ export interface FieldDef {
   label: string
   secret?: boolean
   required?: boolean
+  advanced?: boolean
   placeholder?: string
   help?: string
   type?: "text" | "url" | "select"
@@ -47,7 +48,7 @@ export const PROVIDERS: ProviderDef[] = [
   {
     id: "azure",
     name: "Azure",
-    blurb: "Subscriptions, resource groups and resource counts via a service principal.",
+    blurb: "View subscription, resource group and resource counts on the connection card.",
     help: { label: "Register an app in Microsoft Entra ID", url: "https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" },
     fields: [
       { key: "tenantId", label: "Tenant (directory) ID", required: true, placeholder: "00000000-0000-…" },
@@ -64,7 +65,7 @@ export const PROVIDERS: ProviderDef[] = [
   {
     id: "cloudflare",
     name: "Cloudflare",
-    blurb: "Zones and their status for your domains.",
+    blurb: "View your domains (zones) and their status on the connection card.",
     help: { label: "Create an API token", url: "https://dash.cloudflare.com/profile/api-tokens" },
     fields: [
       {
@@ -110,11 +111,12 @@ export const PROVIDERS: ProviderDef[] = [
     fields: [
       { key: "repo", label: "Site repository", required: true, placeholder: "owner/website", help: "The GitHub repository your site deploys from." },
       { key: "siteUrl", label: "Site URL", type: "url", required: true, placeholder: "https://www.example.com" },
-      { key: "branch", label: "Branch", placeholder: "main", help: "The branch your deploy builds from." },
-      { key: "postsDir", label: "Posts folder", placeholder: "pages/blog/posts" },
-      { key: "imagesDir", label: "Images folder", placeholder: "assets/blog_images" },
+      { key: "branch", advanced: true, label: "Branch", placeholder: "main", help: "The branch your deploy builds from." },
+      { key: "postsDir", advanced: true, label: "Posts folder", placeholder: "pages/blog/posts" },
+      { key: "imagesDir", advanced: true, label: "Images folder", placeholder: "assets/blog_images" },
       {
         key: "blogIndex",
+        advanced: true,
         label: "Blog index page",
         placeholder: "pages/blog/blog.html",
         help: "Posts are listed between <!-- blackwall:posts --> and <!-- /blackwall:posts --> in this file. Without those two comments the file is left alone.",
@@ -131,13 +133,13 @@ export const PROVIDERS: ProviderDef[] = [
   },
   {
     id: "other",
-    name: "Any service",
-    blurb: "Any other account: URL, login details, your own extra fields, and an optional check that it's reachable.",
+    name: "Custom service",
+    blurb: "Save a service link and optional account details, or test an HTTP endpoint. This does not add a metrics integration or automatic monitoring.",
     fields: [
       { key: "url", label: "Service URL", type: "url", placeholder: "https://" },
       { key: "username", label: "Account / username" },
       { key: "secret", label: "Password, API key or token", secret: true, help: "Optional. Stored by the connector and never shown again." },
-      { key: "healthUrl", label: "Check URL", type: "url", placeholder: "Optional: an endpoint to GET when testing" },
+      { key: "healthUrl", label: "HTTP endpoint to test", type: "url", placeholder: "Optional: an endpoint to GET when testing" },
       {
         key: "auth",
         label: "Send credentials with the check",

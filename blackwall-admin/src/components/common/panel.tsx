@@ -1,5 +1,6 @@
 import { useId, type HTMLAttributes, type ReactNode } from "react"
 import { cn } from "@/lib/utils"
+import { CategoryIcon, type Category } from "./category-icon"
 
 /** The `❯ tool $ command` terminal prompt used in panel and card headers. */
 export function Prompt({ tool, command, children }: { tool?: ReactNode; command?: ReactNode; children?: ReactNode }) {
@@ -39,6 +40,7 @@ export function Panel({
   headerProps,
   id,
   label,
+  category,
 }: {
   tool?: ReactNode
   command?: ReactNode
@@ -57,6 +59,7 @@ export function Panel({
   id?: string
   /** Accessible name when the header has no text title. */
   label?: string
+  category?: Category
 }) {
   const generatedId = useId()
   const headingId = id ? `${id}-title` : generatedId
@@ -65,6 +68,7 @@ export function Panel({
       id={id}
       aria-labelledby={label ? undefined : headingId}
       aria-label={label}
+      data-category={category}
       className={cn("bw-panel flex flex-col overflow-hidden text-card-foreground", className)}
     >
       <header
@@ -76,7 +80,7 @@ export function Panel({
         )}
       >
         <h2 id={headingId} title={title ? [tool, command].filter((v) => typeof v === "string").join(" $ ") : undefined} className="min-w-0">
-          {title ? <span className="flex min-w-0 items-center gap-2 text-[13px] font-semibold text-ink"><span className="font-mono text-red" aria-hidden>❯</span><span className="truncate">{title}</span></span> : <Prompt tool={tool} command={command} />}
+          {title ? <span className="flex min-w-0 items-center gap-2 text-[13px] font-semibold text-ink">{category ? <CategoryIcon category={category} /> : <span className="font-mono text-red" aria-hidden>❯</span>}<span className="truncate">{title}</span></span> : <Prompt tool={tool} command={command} />}
         </h2>
         {badge}
         <div className="ml-auto flex items-center gap-1.5">

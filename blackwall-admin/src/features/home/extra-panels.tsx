@@ -5,8 +5,8 @@ import { Link, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { SourceBadge } from "@/components/common/source-badge"
 import { StatusMarker } from "@/components/common/tags"
-import { hasData } from "@/components/common/feed-fallback"
-import { DailyBars } from "@/features/analytics/traffic-chart"
+import { FeedFallback, hasData } from "@/components/common/feed-fallback"
+import { DailyBars, TrafficSummary } from "@/features/analytics/traffic-chart"
 import { PostStateChip } from "@/features/content/content-page"
 import { CoverPlaceholder, SiteImage } from "@/features/content/site-image"
 import { CalendarLegend, JournalCalendar } from "@/features/journal/journal-calendar"
@@ -27,7 +27,7 @@ const Footer = ({ to, children }: { to: string; children: string }) => (
 
 const Mini = ({ label, value, tone }: { label: string; value: React.ReactNode; tone?: "error" }) => (
   <div className="flex min-w-0 flex-1 flex-col px-3 py-2">
-    <span className="truncate text-[10px] text-muted-foreground">{label}</span>
+    <span className="min-h-7 text-[10px] leading-tight text-muted-foreground">{label}</span>
     <span className={tone === "error" ? "font-heading text-lg leading-tight font-bold text-red-text" : "font-heading text-lg leading-tight font-bold"}>{value}</span>
   </div>
 )
@@ -67,7 +67,7 @@ export function HomeCalendarPanel() {
 
 export function DevelopmentMeta() {
   const feed = useDevelopment()
-  return <SourceBadge status={feed.status} />
+  return <SourceBadge status={feed.status} detail={feed.status === "live" ? feed.provider : undefined} />
 }
 
 export function HomeDevelopmentPanel() {
@@ -84,10 +84,10 @@ export function HomeDevelopmentPanel() {
     : []
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex divide-x divide-line border-b border-line">
+      <div className="flex divide-x divide-line border-b border-line" aria-label="Tracked repositories; pull requests you authored or were asked to review; failed Actions runs; issues">
         <Mini label="Repos" value={repos.length} />
-        <Mini label="Open PRs" value={data ? data.prs.length : dash} />
-        <Mini label="Failed runs" value={data ? data.failures.length : dash} tone={data?.failures.length ? "error" : undefined} />
+        <Mini label="Pull requests" value={data ? data.prs.length : dash} />
+        <Mini label="Failed Actions" value={data ? data.failures.length : dash} tone={data?.failures.length ? "error" : undefined} />
         <Mini label="Issues" value={data ? data.issues.length : dash} />
       </div>
       {data ? (
@@ -116,11 +116,13 @@ export function HomeDevelopmentPanel() {
               </li>
             ))}
           </ul>
-          <p className="text-[11px] text-muted-foreground">Connect GitHub for review requests, failed runs and issues.</p>
-          <Button variant="outline" size="sm" className="self-start" onClick={() => useUi.getState().openSettings("connections", "github")}>Connect GitHub</Button>
+          {feed.status === "error" || feed.status === "loading" ? <FeedFallback feed={feed} provider="github" what="GitHub activity" /> : <>
+            <p className="text-[11px] text-muted-foreground">Connect GitHub for review requests, failed Actions runs and issues.</p>
+            <Button variant="outline" size="sm" className="self-start" onClick={() => useUi.getState().openSettings("connections", "github")}>Connect GitHub</Button>
+          </>}
         </div>
       )}
-      <Footer to={DEVELOPMENT}>Development</Footer>
+      <Footer to={DEVELOPMENT}>Open GitHub activity</Footer>
     </div>
   )
 }
@@ -136,9 +138,7 @@ export function WebsiteMeta() {
 export function HomeWebsitePanel() {
   const site = useSite()
   const drafts = useWorkspace((s) => s.drafts)
-  const traffic = useAnalytics(30)
   const items = useMemo(() => mergePosts(drafts, site.overview).slice(0, 4), [drafts, site.overview])
-  const visitors = traffic.data?.traffic.reduce((a, p) => a + p.visitors, 0)
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {items.length ? (
@@ -159,19 +159,33 @@ export function HomeWebsitePanel() {
           ))}
         </ul>
       ) : (
-        <p className="px-3 py-3 text-xs text-muted-foreground">No posts yet.</p>
-      )}
-      <div className="flex items-end gap-3 border-t border-line px-3 pt-2 pb-1.5">
-        <div className="shrink-0">
-          <Link to={siteAnalyticsHref} className="block text-[10px] text-muted-foreground hover:text-ink">Visitors · 30d</Link>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-heading text-lg leading-tight font-bold">{visitors ?? <span className="text-faint">—</span>}</span>
-            <SourceBadge status={traffic.status} hint={traffic.status === "sample" ? "Sample analytics; website content has its own connection status above." : undefined} />
-          </div>
+        <div className="space-y-2 px-3 py-3">
+          <p className="text-xs text-muted-foreground">{site.status === "not-connected" ? "Connect your website repository to manage posts and pages." : site.status === "loading" ? "Loading website content…" : site.status === "error" ? "Website content could not be loaded. Check the publishing connection." : "No posts yet. Create a draft in Posts & pages."}</p>
+          {site.status === "not-connected" && <Button variant="outline" size="sm" onClick={() => useUi.getState().openSettings("connections", "website")}>Set up publishing</Button>}
+          {site.status === "error" && <p className="text-xs text-red-text">{site.error}</p>}
         </div>
-        {traffic.data && <DailyBars data={traffic.data.traffic} range={30} bare className="h-10 min-w-0 flex-1" />}
-      </div>
+      )}
       <Footer to={postsHref}>Posts & pages</Footer>
     </div>
   )
+}
+
+/** Traffic has its own source; connecting publishing never implies analytics access. */
+export function TrafficMeta() {
+  const feed = useAnalytics(30)
+  return <SourceBadge status={feed.status} detail={feed.status === "live" ? feed.provider : undefined} />
+}
+
+export function HomeTrafficPanel() {
+  const feed = useAnalytics(30)
+  return <div className="flex flex-1 flex-col">
+    <div className="space-y-2 px-3 py-3">
+      {hasData(feed) ? <>
+        <TrafficSummary data={feed.data.traffic} />
+        <DailyBars data={feed.data.traffic} range={30} className="h-36" />
+        <p className="text-xs text-muted-foreground">Daily visitors · last 30 days, ending yesterday.</p>
+      </> : <FeedFallback feed={feed} provider="analytics" what="website visitors and pageviews" />}
+    </div>
+    <Footer to={siteAnalyticsHref}>View website traffic</Footer>
+  </div>
 }

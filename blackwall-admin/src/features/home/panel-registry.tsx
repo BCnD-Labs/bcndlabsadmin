@@ -1,3 +1,5 @@
+import type { Category } from "@/components/common/category-icon"
+import { HomeTrafficPanel, TrafficMeta } from "./extra-panels"
 import type { ComponentType } from "react"
 import { Button } from "@/components/ui/button"
 import { PANEL_TYPES, type PanelType } from "@/lib/home-slots"
@@ -17,6 +19,7 @@ export interface PanelBodyProps {
  */
 export interface PanelDef {
   label: string
+  category?: Category
   /** Header prompt: `❯ tool $ command`. */
   tool: string
   command: string
@@ -26,7 +29,7 @@ export interface PanelDef {
   bodyClassName?: string
 }
 
-/** An unassigned square: "[ EMPTY ]" and a picker. Deliberately unlike NoSignal (not connected). */
+/** An unassigned square: "Choose a panel" and a picker. Deliberately unlike NoSignal (not connected). */
 function EmptySlot({ slot }: PanelBodyProps) {
   const slots = usePrefs((s) => s.homeSlots)
   const setSlot = usePrefs((s) => s.setSlot)
@@ -34,15 +37,15 @@ function EmptySlot({ slot }: PanelBodyProps) {
   return (
     <div className="flex h-full p-3">
       <div className="flex flex-1 flex-col items-center justify-center gap-2.5 rounded-[10px] border border-dashed border-ledge-hi px-4 py-5 text-center" data-testid="empty-slot">
-        <p className="font-mono text-[11px] font-semibold tracking-[0.3em] text-faint">[ EMPTY ]</p>
-        <p className="text-[11px] text-muted-foreground">Choose what this square shows.</p>
+        <p className="font-mono text-[11px] font-semibold tracking-[0.3em] text-faint">No panel selected</p>
+        <p className="text-[11px] text-muted-foreground">Choose what to show in this position.</p>
         <div className="flex flex-wrap justify-center gap-1.5">
           {options.map((t) => {
             const from = slots.indexOf(t)
             return (
               <Button key={t} variant="ghost" size="sm" onClick={() => setSlot(slot, t)}>
                 + {PANELS[t].label}
-                {from >= 0 && <span className="text-faint">· from slot {from + 1}</span>}
+                {from >= 0 && <span className="text-faint">· moves from position {from + 1}</span>}
               </Button>
             )
           })}
@@ -53,10 +56,11 @@ function EmptySlot({ slot }: PanelBodyProps) {
 }
 
 export const PANELS: Record<PanelType, PanelDef> = {
-  productivity: { label: "Productivity", tool: "productivity", command: "today", Meta: ProductivityMeta, Body: ProductivityPanel },
-  coursework: { label: "Coursework", tool: "learning", command: "upcoming", Meta: CourseworkMeta, Body: CourseworkPanel },
-  calendar: { label: "Calendar", tool: "calendar", command: "today", Meta: CalendarMeta, Body: HomeCalendarPanel },
-  development: { label: "Development", tool: "github", command: "status", Meta: DevelopmentMeta, Body: HomeDevelopmentPanel },
-  website: { label: "Website", tool: "site", command: "posts", Meta: WebsiteMeta, Body: HomeWebsitePanel },
-  empty: { label: "Empty", tool: "slot", command: "empty", Body: EmptySlot },
+  productivity: { label: "Tasks & notes", category: "tasks", tool: "productivity", command: "today", Meta: ProductivityMeta, Body: ProductivityPanel },
+  coursework: { label: "Assignments & exams", category: "learning", tool: "learning", command: "upcoming", Meta: CourseworkMeta, Body: CourseworkPanel },
+  calendar: { label: "Calendar & agenda", category: "calendar", tool: "calendar", command: "today", Meta: CalendarMeta, Body: HomeCalendarPanel },
+  development: { label: "GitHub activity", category: "development", tool: "github", command: "status", Meta: DevelopmentMeta, Body: HomeDevelopmentPanel },
+  website: { label: "Website content", category: "website", tool: "site", command: "posts", Meta: WebsiteMeta, Body: HomeWebsitePanel },
+  analytics: { label: "Website traffic", category: "analytics", tool: "analytics", command: "traffic", Meta: TrafficMeta, Body: HomeTrafficPanel },
+  empty: { label: "Hidden", tool: "slot", command: "empty", Body: EmptySlot },
 }

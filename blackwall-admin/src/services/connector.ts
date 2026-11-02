@@ -1,3 +1,4 @@
+import { usePrefs } from "@/stores/prefs"
 import { create } from "zustand"
 import type { ConnectionInput, ProviderId, PublicConnection } from "@shared/connections"
 
@@ -132,8 +133,8 @@ export const useConnections = create<ConnectionsState>()((set, get) => {
 
 /** The connection a data panel should use for a provider, if any. */
 export function useConnectionFor(provider: ProviderId) {
-  return useConnections((s) => {
-    const all = s.list.filter((c) => c.provider === provider)
-    return all.find((c) => c.status === "ok") ?? all[0]
-  })
+  const selected = usePrefs((s) => provider === "github" || provider === "analytics" ? s.feedConnections[provider] : undefined)
+  const list = useConnections((s) => s.list)
+  const all = list.filter((c) => c.provider === provider)
+  return selected ? all.find((c) => c.id === selected) : all.find((c) => c.status === "ok") ?? all[0]
 }

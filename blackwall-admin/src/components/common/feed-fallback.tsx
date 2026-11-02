@@ -23,9 +23,10 @@ export function FeedFallback({ feed, provider, what }: { feed: Feed<unknown>; pr
       <div className="flex flex-col items-start gap-2 px-3.5 py-3">
         <p className="text-[13px] text-red-text">Couldn't load {what}.</p>
         {feed.error && <p className="font-mono text-[11px] break-all text-muted-foreground">{feed.error}</p>}
-        <div className="mt-1 flex gap-2">
+        <div className="mt-1 flex flex-wrap gap-2">
           <Button variant="outline" onClick={feed.refresh}><RotateCw /> Retry</Button>
           <Button variant="quiet" onClick={() => useUi.getState().openSettings("connections")}>Connection settings</Button>
+          {(provider === "github" || provider === "analytics") && <Button variant="outline" onClick={() => useUi.getState().openSettings("dashboard")}>Choose data source</Button>}
         </div>
       </div>
     )

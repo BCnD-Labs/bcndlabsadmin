@@ -161,7 +161,7 @@ function PersonalAnalytics() {
 export function InsightsPage() {
   return (
     <>
-      <PageHeader title="Insights" />
+      <PageHeader title="Task & journal insights" />
       <PersonalAnalytics />
     </>
   )
@@ -171,7 +171,7 @@ export function InsightsPage() {
 export function SiteAnalyticsPage() {
   return (
     <>
-      <PageHeader title="Site analytics" />
+      <PageHeader title="Website traffic" />
       <WebsiteAnalytics />
     </>
   )

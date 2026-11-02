@@ -1,5 +1,9 @@
-import { BarChart3, Cloud, GitBranch, Globe, Loader2, Pencil, Plug, Plus, RotateCw, Shield, Trash2, X, type LucideIcon } from "lucide-react"
-import { useEffect, useState, type FormEvent } from "react"
+import { useNavigate } from "react-router-dom"
+import { CategoryIcon } from "@/components/common/category-icon"
+import { DEVELOPMENT, postsHref, siteAnalyticsHref } from "@/lib/routes"
+import { CONNECTION_GUIDANCE } from "./connection-guidance"
+import { Loader2, Pencil, Plus, RotateCw, Trash2, X } from "lucide-react"
+import { useEffect, useRef, useState, type FormEvent } from "react"
 import { useUi } from "@/stores/ui"
 import { toast } from "sonner"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -17,20 +21,12 @@ import {
   providerDef,
   visibleFields,
   type ConnectionStatus,
+  type FieldDef,
   type ProviderId,
   type PublicConnection,
 } from "@shared/connections"
 import { Panel } from "@/components/common/panel"
 import { SettingRow, SettingsPage } from "./settings-pages"
-
-export const PROVIDER_ICON: Record<ProviderId, LucideIcon> = {
-  github: GitBranch,
-  azure: Cloud,
-  cloudflare: Shield,
-  analytics: BarChart3,
-  website: Globe,
-  other: Plug,
-}
 
 /** Same shape as SourceBadge: a small square marker and a caps label (spec §6: green = healthy, red = failed). */
 const STATUS: Record<ConnectionStatus, { label: string; square: string; text: string }> = {
@@ -84,8 +80,7 @@ export function ConnectionsPage() {
       {available === false && (
         <Alert className="border-amber/50">
           <AlertDescription className="text-foreground">
-            The local connector isn't responding. It runs inside <code className="font-mono text-xs">npm run dev</code> and{" "}
-            <code className="font-mono text-xs">npm run preview</code>; a static build has no connector.
+            Blackwall’s server is unavailable. Check that your installation is running, then retry. Connections require the server; a standalone static page cannot connect to services.
             <Button variant="outline" className="ml-2" onClick={refresh}>
               <RotateCw /> Retry
             </Button>
@@ -101,6 +96,7 @@ export function ConnectionsPage() {
               <li key={c.id} data-testid="connection-card">
                 <Panel
                   title={c.label}
+                  category={CONNECTION_GUIDANCE[c.provider].category}
                   tool={providerDef(c.provider).name.toLowerCase()}
                   command={c.label}
                   badge={<StatusPill status={c.status} />}
@@ -120,6 +116,7 @@ export function ConnectionsPage() {
                   bodyClassName="divide-y divide-line"
                 >
                   <div className="space-y-1.5 px-3.5 py-3 text-sm">
+                    <p className="text-xs text-muted-foreground">{CONNECTION_GUIDANCE[c.provider].outcome}</p>
                     {c.account && (
                       <p>
                         <span className="text-muted-foreground">Account </span>
@@ -171,20 +168,19 @@ export function ConnectionsPage() {
       {available && (
         <Panel title="Add a connection" tool="connections" command={list.length ? "add another" : "add"} bodyClassName="divide-y divide-line">
           {PROVIDERS.map((p) => {
-            const Icon = PROVIDER_ICON[p.id]
             return (
               <SettingRow
                 key={p.id}
                 title={
                   <span className="flex items-center gap-2">
-                    <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                    <CategoryIcon category={CONNECTION_GUIDANCE[p.id].category} />
                     {p.name}
                   </span>
                 }
                 description={p.blurb}
               >
-                <Button variant="outline" onClick={() => setDialog({ provider: p.id })} aria-label={`Connect ${p.name}`}>
-                  <Plus /> Connect
+                <Button variant="outline" onClick={() => setDialog({ provider: p.id })} aria-label={`Set up ${p.name}`}>
+                  <Plus /> Set up
                 </Button>
               </SettingRow>
             )
@@ -264,7 +260,6 @@ function ConnectionForm({
         <DialogDescription className="mb-3">Pick the kind of service.</DialogDescription>
         <ul className="grid gap-2">
           {PROVIDERS.map((p) => {
-            const Icon = PROVIDER_ICON[p.id]
             return (
               <li key={p.id}>
                 <button
@@ -272,7 +267,7 @@ function ConnectionForm({
                   onClick={() => onPick(p.id)}
                   className="flex w-full items-start gap-3 rounded-[8px] border border-rim p-3 text-left hover:border-ledge-hi hover:bg-raised"
                 >
-                  <Icon className="mt-0.5 size-4 shrink-0 text-faint" strokeWidth={1.8} aria-hidden />
+                  <CategoryIcon category={CONNECTION_GUIDANCE[p.id].category} />
                   <span>
                     <span className="block text-[13px] font-semibold">{p.name}</span>
                     <span className="mt-0.5 block text-[11px] leading-relaxed text-muted-foreground">{p.blurb}</span>
@@ -305,6 +300,14 @@ function ProviderForm({
   saving: boolean
 }) {
   const def = providerDef(provider)
+  const guide = CONNECTION_GUIDANCE[provider]
+  const navigate = useNavigate()
+  const [preparing, setPreparing] = useState(!initial)
+  const [complete, setComplete] = useState<PublicConnection | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const stepHeading = useRef<HTMLHeadingElement>(null)
+  useEffect(() => { stepHeading.current?.focus() }, [preparing, complete])
+  const working = saving || submitting
   // Becomes the saved record after the first save, so retries update instead of duplicating.
   const [existing, setExisting] = useState(initial)
   const [label, setLabel] = useState(existing?.label ?? def.name)
@@ -333,6 +336,8 @@ function ProviderForm({
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
+    if (working) return
+    if (!initial && provider === "other" && !config.url?.trim() && !config.healthUrl?.trim()) return setError("Enter a service URL or an HTTP endpoint so this service has something to open or test.")
     if (missing.length) return setError(`Fill in: ${missing.map((f) => f.label).join(", ")}`)
     const visibleKeys = new Set(fields.map((f) => f.key))
     const outConfig: Record<string, string> = {}
@@ -358,6 +363,8 @@ function ProviderForm({
       if (k.startsWith(CUSTOM_PREFIX) && !keptCustomSecrets.has(k)) outSecrets[k] = null
     }
 
+    setSubmitting(true)
+    setError(null)
     try {
       const result = existing
         ? await update(existing.id, { label, config: outConfig, secrets: outSecrets })
@@ -366,21 +373,128 @@ function ProviderForm({
       setSecrets({})
       setCleared(new Set())
       if (result.status === "error") {
-        setError(result.message ?? "The connection test failed.")
+        setError(`Details saved, but the test failed. ${result.message ?? "Check the details below and try Save & test again."}`)
         toast.error(`Saved, but the test failed`)
         return
       }
       toast.success(result.status === "ok" ? `${result.label} connected` : `${result.label} saved`)
-      onDone()
+      setComplete(result)
     } catch (err) {
       setError((err as Error).message)
+    } finally {
+      setSubmitting(false)
     }
   }
+
+  const renderField = (f: FieldDef) => {
+    const id = `conn-${f.key}`
+    if (f.type === "select" && f.options) {
+      return (
+        <Field key={f.key} label={f.label} htmlFor={id} hint={f.help}>
+          <OptionSelect id={id} value={config[f.key] ?? f.options[0].value} onChange={(v) => setConfig({ ...config, [f.key]: v })} options={f.options} />
+        </Field>
+      )
+    }
+    if (f.secret) {
+      const saved = secretSaved(f.key)
+      const hint = existing?.secrets[f.key]?.hint
+      return (
+        <Field
+          key={f.key}
+          label={f.label + (f.required ? "" : " (optional)")}
+          htmlFor={id}
+          hint={
+            <>
+              {saved && (
+                <span className="mr-1 text-ink-2">
+                  Saved{hint ? ` (${hint})` : ""}.
+                  {!f.required && (
+                    <button type="button" className="ml-1 text-red-text hover:underline" onClick={() => setCleared(new Set(cleared).add(f.key))}>
+                      Remove
+                    </button>
+                  )}
+                </span>
+              )}
+              {f.help}
+            </>
+          }
+        >
+          <Input
+            id={id}
+            type="password"
+            autoComplete="off"
+            spellCheck={false}
+            className="font-mono"
+            placeholder={saved ? "Leave blank to keep the saved value" : f.placeholder}
+            value={secrets[f.key] ?? ""}
+            onChange={(e) => setSecrets({ ...secrets, [f.key]: e.target.value })}
+          />
+        </Field>
+      )
+    }
+    return (
+      <Field key={f.key} label={f.label + (f.required ? "" : " (optional)")} htmlFor={id} hint={f.help}>
+        <Input
+          id={id}
+          type={f.type === "url" ? "url" : "text"}
+          spellCheck={false}
+          placeholder={f.placeholder}
+          value={config[f.key] ?? ""}
+          onChange={(e) => setConfig({ ...config, [f.key]: e.target.value })}
+        />
+      </Field>
+    )
+
+  }
+
+  const openDestination = (to: string) => {
+    onDone()
+    useUi.getState().closeSettings()
+    navigate(to)
+  }
+
+  if (preparing) return <div className="flex max-h-[85dvh] flex-col">
+    <div className="border-b border-line px-4 py-4 pr-12">
+      <div className="mb-2 flex items-center gap-2"><CategoryIcon category={guide.category} /><span className="text-xs text-muted-foreground">Step 1 of 3 · Prepare</span></div>
+      <DialogTitle ref={stepHeading} tabIndex={-1} className="font-heading text-lg font-bold outline-none">Set up {def.name}</DialogTitle>
+      <DialogDescription className="mt-2 text-sm leading-relaxed">{guide.outcome}</DialogDescription>
+    </div>
+    <div className="space-y-4 overflow-y-auto p-4 text-sm">
+      <p className="text-ink-2">{guide.prepare}</p>
+      <ol className="list-decimal space-y-2 pl-5 text-xs leading-relaxed text-muted-foreground">{guide.steps.map((step) => <li key={step}>{step}</li>)}</ol>
+      {def.help && <a href={def.help.url} target="_blank" rel="noreferrer" className="bw-action-link underline underline-offset-2">{def.help.label} ↗</a>}
+    </div>
+    <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-line p-3">
+      <Button variant="quiet" onClick={onDone}>Cancel</Button>
+      <Button onClick={() => setPreparing(false)}>Continue to connection details</Button>
+    </div>
+  </div>
+
+  if (complete) return <div className="flex max-h-[85dvh] flex-col">
+    <div className="border-b border-line px-4 py-4 pr-12">
+      <div className="mb-2 flex items-center gap-2"><CategoryIcon category={guide.category} /><span className="text-xs text-green">{!initial && "Step 3 of 3 · "}{complete.status === "ok" ? "Test passed" : "Saved without an endpoint test"}</span></div>
+      <DialogTitle ref={stepHeading} tabIndex={-1} className="font-heading text-lg font-bold outline-none">{complete.label} {complete.status === "ok" ? "connected" : "saved"}</DialogTitle>
+      <DialogDescription className="mt-2 text-sm leading-relaxed">{guide.outcome}</DialogDescription>
+    </div>
+    <div className="space-y-3 overflow-y-auto p-4 text-sm">
+      {complete.account && <p>Account: <strong>{complete.account}</strong></p>}
+      {complete.message && <p className="text-muted-foreground">{complete.message}</p>}
+      {complete.summary?.map((item) => <p key={item.label}><span className="text-muted-foreground">{item.label}: </span>{item.value}</p>)}
+      {provider === "github" && <p className="text-xs text-muted-foreground">Next, add the repositories you want to track. Connecting an account does not automatically track all repositories.</p>}
+    </div>
+    <div className="flex flex-wrap justify-end gap-2 border-t border-line p-3">
+      <Button variant="outline" onClick={onDone}>Done</Button>
+      {provider === "github" && <Button onClick={() => { onDone(); useUi.getState().closeSettings(); navigate(DEVELOPMENT); useUi.getState().openForm({ kind: "repo" }) }}>Track a repository</Button>}
+      {provider === "website" && <Button onClick={() => openDestination(postsHref)}>Open posts & pages</Button>}
+      {provider === "analytics" && <Button onClick={() => openDestination(siteAnalyticsHref)}>View website traffic</Button>}
+    </div>
+  </div>
 
   return (
     <form onSubmit={submit} className="flex max-h-[85dvh] flex-col">
       <div className="border-b border-line py-3 pr-12 pl-4">
-        <DialogTitle className="font-heading text-base font-bold">{existing ? `Edit ${existing.label}` : `Connect ${def.name}`}</DialogTitle>
+        {!initial && <p className="mb-2 text-xs text-muted-foreground">Step 2 of 3 · Enter details & test</p>}
+        <DialogTitle ref={stepHeading} tabIndex={-1} className="font-heading text-base font-bold outline-none">{initial ? `Edit ${initial.label}` : `${def.name} connection details`}</DialogTitle>
         <DialogDescription className="mt-1 text-[11px] leading-relaxed">
           {def.blurb}
           {def.help && (
@@ -393,69 +507,16 @@ function ProviderForm({
           )}
         </DialogDescription>
       </div>
-      <div className="grid gap-3.5 overflow-y-auto px-4 py-4">
-        <Field label="Name" htmlFor="conn-label" hint="How it appears in Blackwall, e.g. “Work GitHub” or “School VPN”.">
+      <fieldset disabled={working} className="grid min-h-0 min-w-0 gap-3.5 overflow-y-auto px-4 py-4">
+        <Field label="Display name" htmlFor="conn-label" hint="How it appears in Blackwall, e.g. “Work GitHub” or “School VPN”.">
           <Input id="conn-label" value={label} onChange={(e) => setLabel(e.target.value)} autoFocus />
         </Field>
-        {fields.map((f) => {
-          const id = `conn-${f.key}`
-          if (f.type === "select" && f.options) {
-            return (
-              <Field key={f.key} label={f.label} htmlFor={id} hint={f.help}>
-                <OptionSelect id={id} value={config[f.key] ?? f.options[0].value} onChange={(v) => setConfig({ ...config, [f.key]: v })} options={f.options} />
-              </Field>
-            )
-          }
-          if (f.secret) {
-            const saved = secretSaved(f.key)
-            const hint = existing?.secrets[f.key]?.hint
-            return (
-              <Field
-                key={f.key}
-                label={f.label + (f.required ? "" : " (optional)")}
-                htmlFor={id}
-                hint={
-                  <>
-                    {saved && (
-                      <span className="mr-1 text-ink-2">
-                        Saved{hint ? ` (${hint})` : ""}.
-                        {!f.required && (
-                          <button type="button" className="ml-1 text-red-text hover:underline" onClick={() => setCleared(new Set(cleared).add(f.key))}>
-                            Remove
-                          </button>
-                        )}
-                      </span>
-                    )}
-                    {f.help}
-                  </>
-                }
-              >
-                <Input
-                  id={id}
-                  type="password"
-                  autoComplete="off"
-                  spellCheck={false}
-                  className="font-mono"
-                  placeholder={saved ? "Leave blank to keep the saved value" : f.placeholder}
-                  value={secrets[f.key] ?? ""}
-                  onChange={(e) => setSecrets({ ...secrets, [f.key]: e.target.value })}
-                />
-              </Field>
-            )
-          }
-          return (
-            <Field key={f.key} label={f.label + (f.required ? "" : " (optional)")} htmlFor={id} hint={f.help}>
-              <Input
-                id={id}
-                type={f.type === "url" ? "url" : "text"}
-                spellCheck={false}
-                placeholder={f.placeholder}
-                value={config[f.key] ?? ""}
-                onChange={(e) => setConfig({ ...config, [f.key]: e.target.value })}
-              />
-            </Field>
-          )
-        })}
+        {fields.filter((f) => !f.advanced).map(renderField)}
+        {fields.some((f) => f.advanced) && <details className="rounded-lg border border-line p-3">
+          <summary className="cursor-pointer text-sm font-medium">Advanced settings · branch & folders</summary>
+          <p className="mt-2 text-xs text-muted-foreground">Defaults work for the standard Blackwall website layout. Change these to match your repository.</p>
+          <div className="mt-3 grid gap-3.5">{fields.filter((f) => f.advanced).map(renderField)}</div>
+        </details>}
 
         {provider === "other" && (
           <div className="grid gap-2">
@@ -466,7 +527,7 @@ function ProviderForm({
               </Button>
             </div>
             {custom.map((row, i) => (
-              <div key={i} className="grid grid-cols-[1fr_1.4fr_auto_auto] items-center gap-2">
+              <div key={i} className="grid grid-cols-2 items-center gap-2 sm:grid-cols-[1fr_1.4fr_auto_auto]">
                 <Input
                   aria-label="Field name"
                   placeholder="Name, e.g. Region"
@@ -503,16 +564,17 @@ function ProviderForm({
             {error}
           </p>
         )}
-      </div>
+      </fieldset>
       <div className="flex flex-wrap items-center gap-2 border-t border-line bg-well/60 px-4 py-3">
-        <span className="text-[11px] text-muted-foreground">Saving runs a connection test.</span>
+        <span className="text-[11px] text-muted-foreground">{provider === "other" && !config.healthUrl ? "Saves details without an endpoint test." : "Saves details, then tests access."}</span>
         <div className="ml-auto flex gap-2">
-          <Button type="button" variant="quiet" size="lg" onClick={onDone}>
+          {!initial && <Button type="button" variant="quiet" disabled={working} onClick={() => setPreparing(true)}>Back</Button>}
+          <Button type="button" variant="quiet" size="lg" disabled={working} onClick={onDone}>
             {error && existing ? "Close" : "Cancel"}
           </Button>
-          <Button type="submit" size="lg" disabled={saving}>
-            {saving && <Loader2 className="animate-spin" />}
-            {existing ? "Save" : "Connect"}
+          <Button type="submit" size="lg" disabled={working}>
+            {working && <Loader2 className="animate-spin" />}
+            {working ? "Testing…" : provider === "other" && !config.healthUrl ? "Save service" : "Save & test"}
           </Button>
         </div>
       </div>

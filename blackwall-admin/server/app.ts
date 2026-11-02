@@ -92,6 +92,15 @@ function validInput(body: Partial<ConnectionInput>, partial = false): Connection
   }
 }
 
+/** An explicit read-only feed source must never silently fall back to another account. */
+async function feedConnection(store: ConnectionStore, provider: "github" | "analytics", id: string | null) {
+  if (!id) return store.firstOk(provider)
+  const connection = await store.get(id)
+  if (!connection || connection.provider !== provider) throw new ProviderError("The selected data source is unavailable. Choose another in Settings → Dashboard.", 409)
+  if (connection.status !== "ok") throw new ProviderError("The selected data source needs attention. Test it in Settings → Connections.", 409)
+  return connection
+}
+
 /** Recent backup files plus the backup job's last status file, if present. */
 function readBackups(dir: string) {
   if (!existsSync(dir)) return { configured: false as const }
@@ -242,7 +251,7 @@ export function createApi(opts: ApiOptions) {
 
     // GET /api/github/overview?repos=owner/a,owner/b
     if (parts[0] === "github" && parts[1] === "overview") {
-      const c = await store.firstOk("github")
+      const c = await feedConnection(store, "github", url.searchParams.get("connection"))
       if (!c) return send(res, 409, { error: "GitHub is not connected" })
       const repos = (url.searchParams.get("repos") ?? "").split(",").filter(Boolean)
       return send(res, 200, await githubOverview(c, repos))
@@ -250,7 +259,7 @@ export function createApi(opts: ApiOptions) {
 
     // GET /api/analytics/report?days=30
     if (parts[0] === "analytics" && parts[1] === "report") {
-      const c = await store.firstOk("analytics")
+      const c = await feedConnection(store, "analytics", url.searchParams.get("connection"))
       if (!c) return send(res, 409, { error: "Analytics is not connected" })
       const days = Math.min(Math.max(Number(url.searchParams.get("days")) || 30, 1), 365)
       return send(res, 200, await analyticsReport(c, days))

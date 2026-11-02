@@ -1,5 +1,5 @@
 import { createContext, isValidElement, useContext, useState, type ReactNode } from "react"
-import { Keyboard, Palette, Plug, Server, SlidersHorizontal, type LucideIcon } from "lucide-react"
+import { Keyboard, LayoutDashboard, Palette, Plug, Server, SlidersHorizontal, type LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Kbd } from "@/components/ui/kbd"
@@ -13,8 +13,9 @@ import type { SettingsSection } from "@/stores/ui"
 
 export const SETTINGS_SECTIONS: { id: SettingsSection; label: string; icon: LucideIcon; blurb: string }[] = [
   { id: "general", label: "General", icon: SlidersHorizontal, blurb: "Version and updates, plus your shared workspace data." },
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, blurb: "Choose your Home panels and data sources. These choices are saved automatically in this browser." },
   { id: "appearance", label: "Appearance", icon: Palette, blurb: "How Blackwall looks and behaves in this browser." },
-  { id: "connections", label: "Connections", icon: Plug, blurb: "Accounts Blackwall reads from. Tokens and passwords are stored encrypted on the server and never sent back to the browser." },
+  { id: "connections", label: "Connections", icon: Plug, blurb: "Accounts Blackwall reads from or publishes to, plus saved custom services. Credentials stay on your Blackwall server and are never returned to the browser." },
   { id: "server", label: "Server & backups", icon: Server, blurb: "Where server-side data lives, your session, and whether backups are running." },
   { id: "shortcuts", label: "Shortcuts", icon: Keyboard, blurb: "Keys that work anywhere in Blackwall." },
 ]
@@ -111,6 +112,8 @@ export function ConfirmButton({ children, confirmLabel, onConfirm, danger }: { c
 }
 
 export function AppearanceSettings() {
+  const categoryColors = usePrefs((s) => s.categoryColors)
+  const expanded = usePrefs((s) => s.navExpanded)
   const retro = usePrefs((s) => s.retroDetails)
   const samples = usePrefs((s) => s.showSamples)
   const workspaceName = usePrefs((s) => s.workspaceName)
@@ -133,6 +136,12 @@ export function AppearanceSettings() {
             value={theme}
             onChange={(v) => set({ theme: v })}
           />
+        </SettingRow>
+        <SettingRow title="Category colors" description="Distinct icon colors and subtle panel tints identify tasks, learning, GitHub, content and traffic. Turn off for neutral icons and panels." htmlFor="category-colors" inline>
+          <Switch id="category-colors" checked={categoryColors} onCheckedChange={(v) => set({ categoryColors: v })} />
+        </SettingRow>
+        <SettingRow title="Show sidebar labels" description="Keep the full navigation visible on desktop, instead of showing labels only on hover." htmlFor="sidebar-labels" inline>
+          <Switch id="sidebar-labels" checked={expanded} onCheckedChange={(v) => set({ navExpanded: v })} />
         </SettingRow>
         <SettingRow title="Interface font" description="Sans for everyday text with mono kept for prompts and numbers, or mono everywhere." keywords="typeface font monospace">
           <SegmentedTabs

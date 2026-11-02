@@ -1,4 +1,5 @@
 import { Code2, FileText, Home, ListChecks, type LucideIcon } from "lucide-react"
+import type { Category } from "@/components/common/category-icon"
 import { CMS, DEVELOPMENT, PRODUCTIVITY, insightsHref, learningHref, mediaHref, plannerHref, postsHref, projectsHref, siteAnalyticsHref } from "@/lib/routes"
 
 export interface NavChild {
@@ -10,6 +11,7 @@ export interface NavDestination {
   id: string
   label: string
   icon: LucideIcon
+  category: Category
   /** Where selecting the destination itself navigates. */
   to: string
   /** Route prefix that marks this destination active. */
@@ -18,37 +20,37 @@ export interface NavDestination {
 }
 
 export const NAV: NavDestination[] = [
-  { id: "home", label: "Home", icon: Home, to: "/", match: "/" },
+  { id: "home", label: "Home", icon: Home, category: "home", to: "/", match: "/" },
   {
     id: "productivity",
     label: "Productivity",
-    icon: ListChecks,
+    icon: ListChecks, category: "tasks",
     to: plannerHref,
     match: PRODUCTIVITY,
     children: [
       { label: "Planner", to: plannerHref },
       { label: "Projects", to: projectsHref },
       { label: "Learning", to: learningHref },
-      { label: "Insights", to: insightsHref },
+      { label: "Activity insights", to: insightsHref },
     ],
   },
   {
     id: "development",
-    label: "Development",
-    icon: Code2,
+    label: "GitHub activity",
+    icon: Code2, category: "development",
     to: DEVELOPMENT,
     match: DEVELOPMENT,
   },
   {
     id: "cms",
-    label: "CMS",
-    icon: FileText,
+    label: "Website",
+    icon: FileText, category: "website",
     to: postsHref,
     match: CMS,
     children: [
       { label: "Posts & pages", to: postsHref },
-      { label: "Media", to: mediaHref },
-      { label: "Site analytics", to: siteAnalyticsHref },
+      { label: "Media library", to: mediaHref },
+      { label: "Website traffic", to: siteAnalyticsHref },
     ],
   },
 ]

@@ -1,3 +1,4 @@
+import type { ProviderId } from "@shared/connections"
 import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
 import { DEFAULT_SLOTS, OLD_DEFAULT_SLOTS, assignSlot, sanitizeSlots, swapSlots, type PanelType } from "@/lib/home-slots"
@@ -8,6 +9,12 @@ export type UiFont = "sans" | "mono"
 
 /** Per-browser interface preferences (not workspace data). */
 interface PrefsState {
+  categoryColors: boolean
+  homeSizing: "fit" | "uniform"
+  showHomeProjects: boolean
+  showHomeLog: boolean
+  /** Explicit read-only feed choices; publishing remains installation-wide. */
+  feedConnections: Partial<Record<"github" | "analytics", string>>
   retroDetails: boolean
   /** Fill unconnected panels with sample data (clearly labelled) to preview layouts. */
   showSamples: boolean
@@ -31,11 +38,16 @@ interface PrefsState {
   reset: () => void
 }
 
-type Persisted = Pick<PrefsState, "retroDetails" | "showSamples" | "workspaceName" | "autoHideSeconds" | "homeSlots" | "navExpanded" | "theme" | "uiFont">
+type Persisted = Pick<PrefsState, "categoryColors" | "homeSizing" | "showHomeProjects" | "showHomeLog" | "feedConnections" | "retroDetails" | "showSamples" | "workspaceName" | "autoHideSeconds" | "homeSlots" | "navExpanded" | "theme" | "uiFont">
 
-export const PREFS_VERSION = 3
+export const PREFS_VERSION = 4
 
 const DEFAULT_PREFS = (): Persisted => ({
+  categoryColors: true,
+  homeSizing: "fit",
+  showHomeProjects: true,
+  showHomeLog: true,
+  feedConnections: {},
   retroDetails: true,
   showSamples: false,
   workspaceName: "",
@@ -59,7 +71,8 @@ export const usePrefs = create<PrefsState>()(
       name: "blackwall.prefs",
       version: PREFS_VERSION,
       storage: createJSONStorage(() => safeLocalStorage),
-      partialize: ({ retroDetails, showSamples, workspaceName, autoHideSeconds, homeSlots, navExpanded, theme, uiFont }): Persisted => ({
+      partialize: ({ categoryColors, homeSizing, showHomeProjects, showHomeLog, feedConnections, retroDetails, showSamples, workspaceName, autoHideSeconds, homeSlots, navExpanded, theme, uiFont }): Persisted => ({
+        categoryColors, homeSizing, showHomeProjects, showHomeLog, feedConnections,
         retroDetails,
         showSamples,
         workspaceName,
@@ -87,6 +100,11 @@ export const usePrefs = create<PrefsState>()(
           ...p,
           autoHideSeconds: Number.isFinite(secs) ? Math.min(15, Math.max(2, Math.round(secs))) : current.autoHideSeconds,
           homeSlots: sanitizeSlots(p.homeSlots),
+          categoryColors: p.categoryColors !== false,
+          homeSizing: p.homeSizing === "uniform" ? "uniform" : "fit",
+          showHomeProjects: p.showHomeProjects !== false,
+          showHomeLog: p.showHomeLog !== false,
+          feedConnections: sanitizeFeedConnections(p.feedConnections),
           navExpanded: p.navExpanded === true,
           theme: p.theme === "dark" ? "dark" : "dim",
           uiFont: p.uiFont === "mono" ? "mono" : "sans",
@@ -96,11 +114,18 @@ export const usePrefs = create<PrefsState>()(
   ),
 )
 
+function sanitizeFeedConnections(raw: unknown): Persisted["feedConnections"] {
+  if (!raw || typeof raw !== "object") return {}
+  const input = raw as Partial<Record<ProviderId, unknown>>
+  return Object.fromEntries((["github", "analytics"] as const).flatMap((key) => typeof input[key] === "string" && input[key].length <= 80 ? [[key, input[key]]] : []))
+}
+
 /** Theme and font live on <html> so every screen (sign-in included) follows them. */
-function applyLook({ theme, uiFont }: Pick<PrefsState, "theme" | "uiFont">) {
+function applyLook({ theme, uiFont, categoryColors }: Pick<PrefsState, "theme" | "uiFont" | "categoryColors">) {
   if (typeof document === "undefined") return
   document.documentElement.dataset.theme = theme
   document.documentElement.dataset.font = uiFont
+  document.documentElement.dataset.categoryColors = categoryColors ? "on" : "off"
 }
 applyLook(usePrefs.getState())
 usePrefs.subscribe(applyLook)

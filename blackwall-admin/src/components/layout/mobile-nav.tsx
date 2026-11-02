@@ -1,3 +1,4 @@
+import { CategoryIcon } from "@/components/common/category-icon"
 import { Settings } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import {
@@ -31,7 +32,6 @@ export function MobileNav() {
         <nav aria-label="Main navigation" className="flex-1 overflow-y-auto p-2">
           <ul className="flex flex-col gap-0.5">
             {NAV.map((d) => {
-              const Icon = d.icon
               const current = isActive(d, pathname)
               return (
                 <li key={d.id}>
@@ -45,7 +45,7 @@ export function MobileNav() {
                     )}
                     aria-current={current && !d.children ? "page" : undefined}
                   >
-                    <Icon className="size-4" aria-hidden />
+                    <CategoryIcon category={d.category} />
                     {d.label}
                   </NavLink>
                   {d.children && d.children.length > 1 && (

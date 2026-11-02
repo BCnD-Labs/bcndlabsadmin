@@ -5,7 +5,7 @@ import type { SourceStatus } from "@/services/types"
 
 /** Status markers are small squares (spec §1); red only marks failures. */
 const META: Record<SourceStatus, { label: string; square: string; className: string; hint: string }> = {
-  live: { label: "Live", square: "bg-green", className: "bg-green/12 text-green", hint: "Fetched through your connection." },
+  live: { label: "Connected", square: "bg-green", className: "bg-green/12 text-green", hint: "Data fetched through your connection. This does not indicate continuous monitoring." },
   sample: { label: "Sample data", square: "bg-amber", className: "bg-amber/12 text-amber", hint: "Made-up data for previewing the layout. Turn it off in Settings → Appearance." },
   "not-connected": { label: "Not connected", square: "bg-faint", className: "bg-ink-2/8 text-muted-foreground", hint: "Add a connection in Settings → Connections." },
   error: { label: "Error", square: "bg-red-light", className: "bg-red-soft text-red-light", hint: "The connection failed. See Settings → Connections." },
@@ -46,7 +46,7 @@ export function SourceBadge({
           {detail && <span className="truncate normal-case">· {detail}</span>}
         </span>
       </TooltipTrigger>
-      <TooltipContent className="max-w-72">{hint ?? m.hint}</TooltipContent>
+      <TooltipContent className="max-w-72">{hint ?? `${m.hint}${detail ? ` Source: ${detail}.` : ""}`}</TooltipContent>
     </Tooltip>
   )
 }

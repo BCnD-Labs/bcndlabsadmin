@@ -1,3 +1,4 @@
+import { DashboardSettings } from "./dashboard-page"
 import { Search, SearchX } from "lucide-react"
 import { useState, type ComponentType } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
@@ -14,6 +15,7 @@ const BUILD = __BLACKWALL_BUILD__
 
 const BODY: Record<SettingsSection, ComponentType> = {
   general: GeneralSettings,
+  dashboard: DashboardSettings,
   appearance: AppearanceSettings,
   connections: ConnectionsPage,
   server: ServerSettings,

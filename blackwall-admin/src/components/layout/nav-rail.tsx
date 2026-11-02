@@ -1,3 +1,4 @@
+import { CategoryIcon } from "@/components/common/category-icon"
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { ChevronRight, PanelLeftClose, Settings } from "lucide-react"
@@ -129,7 +130,6 @@ export function NavRail({ focusMain }: { focusMain: () => void }) {
   }
 
   const renderItem = (d: NavDestination) => {
-    const Icon = d.icon
     const current = isActive(d, pathname)
     const open = openId === d.id
     const h = hints[d.id]
@@ -177,7 +177,7 @@ export function NavRail({ focusMain }: { focusMain: () => void }) {
           )}
         >
           <span className="flex size-[var(--bw-nav-item)] shrink-0 items-center justify-center">
-            <Icon className="size-[18px]" strokeWidth={1.8} aria-hidden />
+            <CategoryIcon category={d.category} />
           </span>
           <span
             className={cn(
@@ -362,14 +362,13 @@ function NavTree() {
   return (
     <ul className="mt-4 -mr-1 flex min-h-0 flex-col gap-1 overflow-y-auto pr-1" aria-label="Destinations">
       {NAV.map((d) => {
-        const Icon = d.icon
         const current = isActive(d, pathname)
         const h = hints[d.id]
         if (!d.children?.length) {
           return (
             <li key={d.id}>
               <Link to={d.to} aria-current={current ? "page" : undefined} className={cn(TREE_ROW, current ? TREE_FILL : "text-ink-2 hover:bg-raised")}>
-                <Icon className={cn("size-[18px] shrink-0", current ? "text-red-light" : "text-faint")} strokeWidth={1.8} aria-hidden />
+                <CategoryIcon category={d.category} />
                 <span className="min-w-0 flex-1 truncate">{d.label}</span>
                 {h?.hint && <span className={cn("font-mono text-[10px] font-normal", current ? "text-red-light" : "text-faint")}>{h.hint}</span>}
               </Link>
@@ -393,7 +392,7 @@ function NavTree() {
               }}
               className={cn(TREE_ROW, fill ? TREE_FILL : current ? "text-ink hover:bg-raised" : "text-ink-2 hover:bg-raised")}
             >
-              <Icon className={cn("size-[18px] shrink-0", fill ? "text-red-light" : current ? "text-red-light" : "text-faint")} strokeWidth={1.8} aria-hidden />
+              <CategoryIcon category={d.category} />
               {/* Counts sit on the pages below, so the label gets the room. */}
               <span className="min-w-0 flex-1 truncate text-left">{d.label}</span>
               <ChevronRight

@@ -25,9 +25,9 @@ function SlotMenu({ index, type }: { index: number; type: PanelType }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        aria-label={`Slot ${index + 1}: choose what to show`}
+        aria-label={`Customize ${PANELS[type].label} panel`}
         title="Choose or move this panel"
-        className="flex size-7 items-center justify-center rounded-[6px] text-ink-2 hover:bg-raised aria-expanded:bg-selected"
+        className="flex size-8 items-center justify-center rounded-[6px] text-ink-2 hover:bg-raised aria-expanded:bg-selected"
         // Don't start a header drag from the menu button.
         draggable={false}
         onDragStart={(e) => e.preventDefault()}
@@ -35,15 +35,14 @@ function SlotMenu({ index, type }: { index: number; type: PanelType }) {
         <span className="sr-only">{PANELS[type].label}</span>
         <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56 text-[13px]">
+      <DropdownMenuContent align="end" className="w-[min(20rem,calc(100vw-2rem))] text-[13px]">
         <DropdownMenuLabel className="bw-label">Show</DropdownMenuLabel>
         {PANEL_TYPES.map((t) => {
           const at = slots.indexOf(t)
           return (
             <DropdownMenuItem key={t} onSelect={() => setSlot(index, t)} aria-checked={t === type} role="menuitemradio">
               <Check className={cn("size-3.5", t !== type && "invisible")} aria-hidden />
-              {PANELS[t].label}
-              {t !== "empty" && at >= 0 && at !== index && <span className="ml-auto text-[10px] text-faint">swap w/ {at + 1}</span>}
+              <span className="min-w-0 whitespace-normal">{PANELS[t].label}{t !== "empty" && at >= 0 && at !== index && <span className="block text-[10px] text-faint">Moves from position {at + 1}</span>}</span>
             </DropdownMenuItem>
           )
         })}
@@ -52,7 +51,7 @@ function SlotMenu({ index, type }: { index: number; type: PanelType }) {
         {Array.from({ length: SLOT_COUNT }, (_, k) => (
           <DropdownMenuItem key={k} disabled={k === index} onSelect={() => swap(index, k)}>
             <span className="size-3.5" aria-hidden />
-            Move to slot {k + 1}
+            Move to position {k + 1}
             {k === index && <span className="ml-auto text-[10px] text-faint">here</span>}
           </DropdownMenuItem>
         ))}
@@ -82,10 +81,12 @@ export function HomeSlot({
   const { Body, Meta } = def
   const target = dragFrom !== null && dragFrom !== index
 
+  if (type === "empty") return null
+
   const accepts = (e: DragEvent) => target && e.dataTransfer.types.includes(MIME)
 
   return (
-    <GridItem span={type === "productivity" || type === "website" || type === "calendar" ? 2 : 1} rows={1}
+    <GridItem span={type === "productivity" || type === "website" || type === "calendar" || type === "analytics" ? 2 : 1} rows={1}
       className={cn("relative flex min-w-0 flex-col", dragFrom === index && "opacity-50")}
       data-testid={`slot-${index + 1}`}
       data-type={type}
@@ -110,7 +111,8 @@ export function HomeSlot({
       <Panel
         tool={def.tool}
         command={def.command}
-        title={{ productivity: "Today's work", coursework: "Upcoming coursework", calendar: "Calendar & agenda", development: "Development", website: "Website", empty: "Choose a panel" }[type]}
+        title={def.label}
+        category={def.category}
         meta={Meta && <Meta />}
         label={`Slot ${index + 1}: ${def.label}`}
         actions={<SlotMenu index={index} type={type} />}

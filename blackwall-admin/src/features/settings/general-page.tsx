@@ -379,7 +379,7 @@ function ResetPanel() {
       <SettingRow title="Clear cache" description="Reload the page and fetch fresh data from your connections. Nothing you've saved is affected.">
         <Button variant="outline" onClick={clearCache}>Clear cache</Button>
       </SettingRow>
-      <SettingRow title="Reset preferences" description="Put appearance, card timing, the sidebar and the Home layout back to their defaults in this browser.">
+      <SettingRow title="Reset preferences" description="Put appearance, card timing, the sidebar, Home layout and selected data sources back to their defaults in this browser.">
         <ConfirmButton confirmLabel="Reset" onConfirm={() => (resetPrefs(), toast.success("Preferences reset"))}>Reset</ConfirmButton>
       </SettingRow>
       <SettingRow title="Clear workspace" description="Delete all shared workspace records on every signed-in device. Export first if you want to keep them.">

@@ -73,7 +73,7 @@ export function DevelopmentPage() {
   return (
     <>
       <PageHeader
-        title="Development"
+        title="GitHub activity"
         badge={<SourceBadge status={feed.status} detail={feed.status === "live" ? feed.provider : undefined} />}
         actions={
           <>
@@ -94,7 +94,7 @@ export function DevelopmentPage() {
             { label: "Repositories", value: repos.length, icon: <GitBranch className="size-3" aria-hidden /> },
             { label: "Commits, 30 days", value: data?.repos ? commits30 : dash, sub: data?.repos ? `${commits7} this week` : undefined, icon: <GitCommitHorizontal className="size-3" aria-hidden /> },
             { label: "Open pull requests", value: data ? data.prs.length : dash, sub: data ? (reviews ? `${reviews} waiting on your review` : "none waiting on you") : undefined, icon: <GitPullRequest className="size-3" aria-hidden /> },
-            { label: "Failed runs", value: data ? data.failures.length : dash, tone: data?.failures.length ? "error" : undefined, sub: data && !data.failures.length ? "latest runs passing" : undefined, icon: <XCircle className="size-3" aria-hidden /> },
+            { label: "Failed Actions runs", value: data ? data.failures.length : dash, tone: data?.failures.length ? "error" : undefined, sub: data && !data.failures.length ? "latest runs passing" : undefined, icon: <XCircle className="size-3" aria-hidden /> },
             { label: "Open issues", value: data ? data.issues.length : dash, icon: <CircleDot className="size-3" aria-hidden /> },
           ]}
         /></GridItem>}
