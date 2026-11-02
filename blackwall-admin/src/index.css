@@ -105,9 +105,9 @@
    * §1 colour tokens. Two themes share every component:
    *  - Dim (default, below): a mid-tone slate between dark and light mode, modelled
    *    on Mantine's dark scheme (#242424 body / #2e2e2e cards / #424242 borders)
-   *    with a cool tint. Flat 1px-bordered cards with soft shadows.
+   *    with a cool tint. Flat 1px-bordered static cards without shadows.
    *  - Dark (html[data-theme="dark"]): the original near-black terminal look with
-   *    the 4px panel ledge.
+   *    the softened 2px panel ledge.
    * Surfaces step up: ground → well → panel → raised → selected.
    */
   --bw-ground: #1f2228;
@@ -139,7 +139,7 @@
   --bw-off: #3a404a;
   --bw-check: #6a7280;
   --bw-on-paper: #14171c;
-  /* Mantine shadow sm / md. */
+  /* Static surfaces stay flat in Dim; overlays keep elevation. */
   --bw-shadow: none;
   --bw-shadow-float: 0 1px 3px rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.28) 0 20px 25px -5px, rgba(0, 0, 0, 0.2) 0 10px 10px -5px;
   --bw-panel-borders: 1px;
@@ -302,7 +302,7 @@ html[data-font="mono"] {
     background-attachment: fixed;
   }
 
-  /* §2 panel: charcoal surface, 4px ledge right + bottom, scanlines. */
+  /* Theme panel: flat Dim; subtle hardware ledge and scanlines in Dark. */
   .bw-panel {
     position: relative;
     background: var(--bw-panel);

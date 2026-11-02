@@ -9,14 +9,14 @@ A personal workspace for keeping track: simple to-dos, a course planner, a calen
 - **Header calendar:** the calendar button (left of search) opens a month card while you hover it and closes when you move away; click it to pin it open, and then it auto-hides a few seconds after you leave. Click a day to open that day's log in a dialog. Day dots: red = open tasks due, amber = overdue, grey = a saved log.
 - **Home:** a 2×2 grid of panels you choose from each panel's header menu: Productivity, Coursework, Calendar, Development, Website, or Empty. Drag a panel by its header onto another square to swap them, or use "Move to slot N" in the menu.
 - **Settings:** a modal with General (version, Check for updates, and an Update button when one is found; export, import, clear cache, reset), Appearance, Connections, Server & backups, Shortcuts. Sections and a search box on the left (a menu on phones), then one column of panels with a row per setting.
-- **Notifications:** the bell opens a card that slides in from the right, below the header. No notification sources exist yet, so it shows **[ NO SIGNAL ]**.
+- **Notifications:** the bell opens a card that slides in from the right, below the header. No notification sources exist yet, so it shows a content-sized **[ NO SIGNAL ]** card.
 - **Notes:** quick notes in the Planner. Type, pick a colour, pin the ones you want on Home; click a note to edit it.
 - **Learning (Productivity → Learning):** a simple course planner. **Add learning → Course** stores a course's code, instructor, term, start and end dates, schedule, location, link, credits, tags and colour. Each course holds **assignments, exams, milestones and events**. These are ordinary tasks with a course link, so they also show in Tasks (with the course chip), on the calendar, in search and in Home's optional **Coursework** square. Notes can be linked to a course and show on its page. Local only: no LMS connection. Deleting a course deletes its coursework and unlinks its notes.
-- **Insights (Productivity → Insights):** charts computed from your tasks and logs (tasks completed per day, open tasks by due date, a log heatmap, streaks).
-- **Development:** one page: counts (repos, commits in 30 days, open PRs, failed runs, issues); a card per tracked repository (public/private, branch, stars, GitHub's language bar, a 30-day commit sparkline, check status, PRs, issues, production/preview links); a 26-week commit heatmap across tracked repos; what needs you (review requests first, tracked repos only); and recent commits with avatars, grouped by day.
+- **Insights (Productivity → Insights):** charts computed from your tasks and logs (tasks completed per day, open tasks by due date, a log heatmap, streaks). On phones the heatmap shows eight recent weeks with 32px day targets; **Expand history** reveals the full year without sideways scrolling.
+- **Development:** one page: counts (repos, commits in 30 days, open PRs, failed runs, issues); a card per tracked repository (public/private, branch, stars, GitHub's language bar, a 30-day commit sparkline, check status, PRs, issues, production/preview links); a 26-week commit heatmap across tracked repos; what needs you (review requests first, tracked repos only); and recent commits with avatars, grouped by day. Below 640px, compact stats and repo summaries bring **needs you** near the first screen; **Details**, **History** and **Recent commits** reveal the rest. Tablet and desktop keep full cards. Phone history starts with 12 weeks; **Expand history** reveals all 26 weeks.
 - **CMS → Posts & pages:** posts as cards with their cover images (Published / Scheduled / Drafts), and the site's pages with a live, scaled-down preview of each. The editor has a cover image, Markdown with a **Preview** that renders the post with your site's own header and styles, tags, and a publish panel: **Publish now**, **Schedule…**, **Update post**, **Unpublish**. See *Website publishing* below.
 - **CMS → Media:** the images in your site's images folder; upload, copy Markdown, delete.
-- **CMS → Site analytics:** sized for a small site: visitors, pageviews, days with visits, busiest day, daily visitor bars, top pages and referrers.
+- **CMS → Site analytics:** sized for a small site: Visitors and Pageviews lead, days with visits and busiest day are under **Details**, daily visitor bars stay compact, and top pages/referrers share one panel. Source and date-range labels stay attached to the data.
 
 Sidebar: **Home · Productivity** (Planner, Projects, Learning, Insights) **· Development · CMS** (Posts & pages, Media, Site analytics). Old `/work`, `/content`, `/notes`, `/analytics`, `/productivity/tasks|notes|calendar` and `/development/*` links redirect to the new places.
 
@@ -95,13 +95,15 @@ Images go to the images folder (default `assets/blog_images`) as soon as you upl
 
 ## Theme
 
-**Home C** (spec: [`docs/design/BLACKWALL_DESIGN.md`](../docs/design/BLACKWALL_DESIGN.md)). Dark only. The `--bw-*` tokens in `src/index.css` are the source of truth, and shadcn's variables point at them so `ui/` components follow.
+Design system: [`docs/design/BLACKWALL_DESIGN.md`](../docs/design/BLACKWALL_DESIGN.md). The `--bw-*` tokens in `src/index.css` are the source of truth, and shadcn variables point at them so `ui/` components follow.
 
-- **Panels:** charcoal `#161719`, 12px radius, a 4px ledge on the right and bottom instead of shadows, faint scanlines, and a 40px terminal-prompt header (`❯ tool $ command`). Floating cards (calendar, notifications, menus, dialogs) are the only things with a drop shadow.
-- **One accent:** red `#BC1515` for fills, markers, icons and the `❯` glyph, never for text. Red means brand and attention (failures, errors, unread); amber means overdue or degraded; healthy is a small green square, never green text. Status markers are small squares.
-- **Type:** JetBrains Mono for all UI text, Space Grotesk for titles and numbers, Silkscreen for the BW mark and initials.
-- **Text contrast:** nothing darker than `#7C818B`. The only red text is `#F08A8A`, for error copy. The focus ring is `#C9CDD3`, because red only reaches about 2.8:1 on panels.
-- **Page patterns:** every page uses the shared pieces in `src/components/common/` (page header, field, list row, table, empty state). The app header shows a breadcrumb; the page's own header holds the title. See §7 of the spec.
+- **Dim (default):** cool slate, flat static panels, a quiet 1px edge and subtle grid. **Dark:** near-black hardware character, softened 2px right/bottom ledges and scanlines. Both use 10px panel corners; overlays keep stronger shadows.
+- **One accent:** red for fills, markers and the `❯` glyph; readable light-red tokens handle error text. Square status markers and sentence-case source labels keep Live, Sample data, Not connected and Error explicit. Home labels website content and visitor analytics separately.
+- **Type:** system sans for UI by default, with optional Mono; JetBrains Mono remains for prompts, breadcrumbs and code, Space Grotesk for titles/numbers, Silkscreen for the BW mark.
+- **Density:** 32px dense desktop bands, 40px regular rows, 48px or more for two-line content. Phone buttons have a 32px minimum target; compact empty subsections retain roomier first-use variants.
+- **Hierarchy:** major panels have a prompt; internal sections use plain labels; selected filters have no shadow and neutral counts. CMS cards share a shorter 2:1 cover area, including real images/previews.
+- **Headers:** `PageHeader` feeds the app header's title/badge/actions. Search contracts and optional metadata hides before titles truncate at constrained widths; phone page actions sit below the header. Global + New becomes ghost on pages with actions.
+- **Alignment:** Home's four chosen slots and Planner share `--bw-slot-h`. Planner retains notes/log on the left and calendar above tasks on the right. Six-week months grow the calendar and leave remaining height to tasks.
 
 The background grid and scanlines can be turned off in Settings → Appearance (Retro details), and motion respects `prefers-reduced-motion`.
 
