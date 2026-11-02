@@ -1,5 +1,6 @@
 import { Star } from "lucide-react"
 import { useState } from "react"
+import { DocLinksField, cleanLinks } from "@/components/common/doc-links"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -25,6 +26,7 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
     learningType: base?.learningType ?? ("assignment" as LearningItemType),
     starred: base?.starred ?? false,
     done: base?.done ?? false,
+    links: base?.links ?? [],
   })
   const set = (patch: Partial<typeof draft>) => setDraft((d) => ({ ...d, ...patch }))
 
@@ -42,6 +44,7 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
       learningType: draft.courseId ? draft.learningType : undefined,
       starred: draft.starred,
       done: draft.done,
+      links: cleanLinks(draft.links),
     }
     if (existing) {
       const completedAt = values.done ? (existing.completedAt ?? new Date().toISOString()) : undefined
@@ -115,6 +118,9 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
           </div>
         )}
       </div>
+      <Field label="Linked documents" htmlFor="task-links" hint="Notes, specs or files that live elsewhere. They open in their own app.">
+        <DocLinksField value={draft.links} onChange={(links) => set({ links })} />
+      </Field>
     </FormFrame>
   )
 }

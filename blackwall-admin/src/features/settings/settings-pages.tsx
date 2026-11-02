@@ -8,7 +8,8 @@ import { Switch } from "@/components/ui/switch"
 import { Panel } from "@/components/common/panel"
 import { SegmentedTabs } from "@/components/common/segmented-tabs"
 import { cn } from "@/lib/utils"
-import { usePrefs } from "@/stores/prefs"
+import { ACCENTS, usePrefs, type Accent } from "@/stores/prefs"
+import { NAV } from "@/components/layout/nav-config"
 import type { SettingsSection } from "@/stores/ui"
 
 export const SETTINGS_SECTIONS: { id: SettingsSection; label: string; icon: LucideIcon; blurb: string }[] = [
@@ -120,6 +121,8 @@ export function AppearanceSettings() {
   const autoHide = usePrefs((s) => s.autoHideSeconds)
   const theme = usePrefs((s) => s.theme)
   const uiFont = usePrefs((s) => s.uiFont)
+  const accent = usePrefs((s) => s.accent)
+  const density = usePrefs((s) => s.density)
   const set = usePrefs((s) => s.set)
 
   return (
@@ -136,6 +139,17 @@ export function AppearanceSettings() {
             value={theme}
             onChange={(v) => set({ theme: v })}
           />
+        </SettingRow>
+        <SettingRow title="Accent color" description="Buttons, the BW logo and active markers. Error colors always stay red." keywords="accent brand color colour primary">
+          <div role="radiogroup" aria-label="Accent color" className="flex flex-wrap gap-1.5">
+            {ACCENTS.map((a) => (
+              <button key={a} type="button" role="radio" aria-checked={accent === a} aria-label={a} title={a[0].toUpperCase() + a.slice(1)} onClick={() => set({ accent: a })}
+                className={cn("size-7 rounded-full outline-offset-2", accent === a && "outline-2 outline-ink")} style={{ background: ACCENT_SWATCH[a] }} />
+            ))}
+          </div>
+        </SettingRow>
+        <SettingRow title="Density" description="Comfortable gives panels room to breathe; compact fits more on screen." keywords="spacing compact comfortable gap padding">
+          <SegmentedTabs label="Density" className="w-full sm:w-52" tabs={[{ value: "comfortable", label: "Comfortable" }, { value: "compact", label: "Compact" }]} value={density} onChange={(v) => set({ density: v })} />
         </SettingRow>
         <SettingRow title="Category colors" description="Distinct icon colors and subtle panel tints identify tasks, learning, GitHub, website content and traffic. Turn off for neutral icons and panels." htmlFor="category-colors" inline>
           <Switch id="category-colors" checked={categoryColors} onCheckedChange={(v) => set({ categoryColors: v })} />
@@ -179,6 +193,7 @@ export function AppearanceSettings() {
           <Switch id="samples" checked={samples} onCheckedChange={(v) => set({ showSamples: v })} />
         </SettingRow>
       </Panel>
+      <SidebarPanel />
     </SettingsPage>
   )
 }
@@ -210,5 +225,29 @@ export function ShortcutsSettings() {
       </Panel>
       <p className="px-1 text-[11px] text-muted-foreground">On a phone, the ☰ button in the header opens the full menu.</p>
     </SettingsPage>
+  )
+}
+
+const ACCENT_SWATCH: Record<Accent, string> = { red: "#c92a2a", blue: "#3b78e7", violet: "#8e44e0", cyan: "#0f9fb8", orange: "#e8710a", green: "#1e8e3e", pink: "#d6337f" }
+
+/** Rename or hide sidebar sections (Home always stays). Pages stay reachable by link and search. */
+function SidebarPanel() {
+  const labels = usePrefs((s) => s.navLabels)
+  const hidden = usePrefs((s) => s.navHidden)
+  const set = usePrefs((s) => s.set)
+  return (
+    <Panel title="Sidebar" tool="appearance" command="nav" meta="this browser" bodyClassName="divide-y divide-line">
+      {NAV.map((d) => (
+        <SettingRow key={d.id} title={d.label} description={d.id === "home" ? "Always shown." : hidden.includes(d.id) ? "Hidden from the sidebar" : "Shown"} htmlFor={`nav-label-${d.id}`} keywords="sidebar navigation rename hide section">
+          <div className="flex w-full min-w-0 items-center gap-2">
+            <Input id={`nav-label-${d.id}`} aria-label={`Name for ${d.label}`} placeholder={d.label} value={labels[d.id] ?? ""} maxLength={32}
+              onChange={(e) => set({ navLabels: { ...labels, [d.id]: e.target.value } })} className="w-44" />
+            {d.id !== "home" && (
+              <Switch aria-label={`Show ${d.label} in the sidebar`} checked={!hidden.includes(d.id)} onCheckedChange={(on) => set({ navHidden: on ? hidden.filter((x) => x !== d.id) : [...hidden, d.id] })} />
+            )}
+          </div>
+        </SettingRow>
+      ))}
+    </Panel>
   )
 }

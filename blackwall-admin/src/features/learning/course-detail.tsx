@@ -1,3 +1,4 @@
+import { DocLinksList } from "@/components/common/doc-links"
 import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
 import { CalendarRange, ChevronDown, Clock, ExternalLink, GraduationCap, Mail, MapPin, Pencil, Plus, StickyNote as NoteIcon, Tag, UserRound } from "lucide-react"
 import { useState, type ReactNode } from "react"
@@ -212,6 +213,7 @@ function CourseInfo({ course, items }: { course: Course; items: Task[] }) {
         )}
       </dl>
       {course.description && <p className="mt-2.5 border-t border-line-soft pt-2.5 text-xs leading-relaxed whitespace-pre-line text-ink-2">{course.description}</p>}
+      {!!course.links?.length && <div className="mt-2.5 border-t border-line-soft pt-2.5"><p className="bw-label mb-1.5">Linked documents</p><DocLinksList links={course.links} /></div>}
     </Panel>
   )
 }

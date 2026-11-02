@@ -5,31 +5,39 @@ import { Switch } from "@/components/ui/switch"
 import { Panel } from "@/components/common/panel"
 import { CategoryIcon } from "@/components/common/category-icon"
 import { OptionSelect } from "@/components/forms/fields"
-import { PANEL_TYPES, type PanelType } from "@/lib/home-slots"
-import { PANELS } from "@/features/home/panel-registry"
+import { BLOCK_LABELS, BLOCK_WIDTHS, DEFAULT_LAYOUT, patchBlock, stepBlock, type BlockId, type BlockWidth, type LayoutItem } from "@/lib/home-layout"
+import type { Category } from "@/components/common/category-icon"
+
+const WIDTH_TEXT: Record<BlockWidth, string> = { narrow: "Narrow", wide: "Wide", full: "Full width" }
+const BLOCK_CATEGORY: Record<BlockId, Category> = { prs: "development", week: "calendar", repos: "development", productivity: "tasks", coursework: "learning", calendar: "calendar", development: "development", website: "website", analytics: "analytics", projects: "projects", log: "journal", services: "service" }
 import { useConnections } from "@/services/connector"
 import { usePrefs } from "@/stores/prefs"
 import { useUi } from "@/stores/ui"
 import { SettingRow, SettingsPage } from "./settings-pages"
 
 export function DashboardSettings() {
-  const { homeSlots, showHomeProjects, showHomeLog, feedConnections, set, setSlot, swapSlots } = usePrefs()
+  const { homeLayout, feedConnections, set } = usePrefs()
+  const saveLayout = (next: LayoutItem[]) => set({ homeLayout: next })
   const { list, available, refresh } = useConnections()
   useEffect(() => { void refresh() }, [refresh])
 
   return <SettingsPage>
-    <Panel title="Home panels" meta="saved automatically" bodyClassName="divide-y divide-line">
-      <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground">Choose up to four panels. Selecting a panel already shown elsewhere swaps the two positions. Positions 1 and 4 are wide; 2 and 3 are narrow. Hidden positions take up no space. Projects and Daily log have separate controls below.</p>
-      {homeSlots.map((type, index) => <SettingRow key={index} title={`Position ${index + 1}`} description={type === "empty" ? "Hidden from Home" : PANELS[type].label} htmlFor={`home-panel-${index}`} keywords="dashboard panels widgets layout order hide">
-        <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5">
-          {PANELS[type].category && <CategoryIcon category={PANELS[type].category!} />}
-          <OptionSelect id={`home-panel-${index}`} value={type} onChange={(value) => setSlot(index, value as PanelType)} options={PANEL_TYPES.map((value) => ({ value, label: PANELS[value].label }))} className="w-40 max-w-full sm:w-52" />
-          <Button variant="quiet" size="icon-sm" aria-label={`Move position ${index + 1} up`} disabled={index === 0} onClick={() => swapSlots(index, index - 1)}><ArrowUp /></Button>
-          <Button variant="quiet" size="icon-sm" aria-label={`Move position ${index + 1} down`} disabled={index === homeSlots.length - 1} onClick={() => swapSlots(index, index + 1)}><ArrowDown /></Button>
-        </div>
-      </SettingRow>)}
-      <SettingRow title="Projects on Home" description="Show a preview of your active projects." htmlFor="home-projects" inline><Switch id="home-projects" checked={showHomeProjects} onCheckedChange={(value) => set({ showHomeProjects: value })} /></SettingRow>
-      <SettingRow title="Daily log on Home" description="Show today’s log and its writing shortcut." htmlFor="home-log" inline><Switch id="home-log" checked={showHomeLog} onCheckedChange={(value) => set({ showHomeLog: value })} /></SettingRow>
+    <Panel title="Home layout" meta="saved automatically" bodyClassName="divide-y divide-line">
+      <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground">Every panel Home can show, in order. Narrow takes one column, Wide two, Full the whole row (phones stack everything). You can also use Customize on Home to drag panels around.</p>
+      {homeLayout.map((b, index) => {
+        const category = BLOCK_CATEGORY[b.id]
+        return <SettingRow key={b.id} title={<span className="flex items-center gap-2"><CategoryIcon category={category} />{BLOCK_LABELS[b.id]}</span>} description={b.visible ? `${WIDTH_TEXT[b.width]} · position ${homeLayout.filter((x) => x.visible).findIndex((x) => x.id === b.id) + 1}` : "Hidden from Home"} htmlFor={`home-block-${b.id}`} keywords="dashboard panels widgets layout order hide width">
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5">
+            <Switch id={`home-block-${b.id}`} aria-label={`Show ${BLOCK_LABELS[b.id]} on Home`} checked={b.visible} onCheckedChange={(visible) => saveLayout(patchBlock(homeLayout, b.id, { visible }))} />
+            <OptionSelect label={`${BLOCK_LABELS[b.id]} width`} value={b.width} onChange={(width) => saveLayout(patchBlock(homeLayout, b.id, { width }))} options={BLOCK_WIDTHS.map((value) => ({ value, label: WIDTH_TEXT[value] }))} className="w-28" />
+            <Button variant="quiet" size="icon-sm" aria-label={`Move ${BLOCK_LABELS[b.id]} up`} disabled={index === 0} onClick={() => saveLayout(stepBlock(homeLayout, b.id, -1))}><ArrowUp /></Button>
+            <Button variant="quiet" size="icon-sm" aria-label={`Move ${BLOCK_LABELS[b.id]} down`} disabled={index === homeLayout.length - 1} onClick={() => saveLayout(stepBlock(homeLayout, b.id, 1))}><ArrowDown /></Button>
+          </div>
+        </SettingRow>
+      })}
+      <SettingRow title="Reset layout" description="Back to the default panels, order and widths.">
+        <Button variant="outline" onClick={() => saveLayout(DEFAULT_LAYOUT.map((b) => ({ ...b })))}>Reset</Button>
+      </SettingRow>
     </Panel>
     <Panel title="Data sources" bodyClassName="divide-y divide-line">
       <p className="px-4 py-3 text-xs leading-relaxed text-muted-foreground">Choose which account supplies each feed throughout Blackwall in this browser. Automatic uses the first working connection. Selecting an account keeps that choice even if its connection fails.</p>

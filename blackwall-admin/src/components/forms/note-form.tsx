@@ -1,3 +1,4 @@
+import { DocLinksField, cleanLinks } from "@/components/common/doc-links"
 import { useState } from "react"
 import { toast } from "sonner"
 import { Label } from "@/components/ui/label"
@@ -18,14 +19,15 @@ export function NoteForm({ id, defaults, onDone }: { id?: string; defaults?: Par
   const [color, setColor] = useState<NoteColor>(base?.color ?? "amber")
   const [pinned, setPinned] = useState(base?.pinned ?? false)
   const [courseId, setCourseId] = useState(base?.courseId)
+  const [links, setLinks] = useState(base?.links ?? [])
   const hasCourses = useWorkspace((s) => s.courses.length > 0)
 
   const save = () => {
     if (existing) {
-      update("notes", existing.id, { text, color, pinned, courseId })
+      update("notes", existing.id, { text, color, pinned, courseId, links: cleanLinks(links) })
       toast.success("Note saved")
     } else {
-      create("notes", { text, color, pinned, courseId })
+      create("notes", { text, color, pinned, courseId, links: cleanLinks(links) })
       toast.success("Note added")
     }
     onDone()
@@ -54,6 +56,9 @@ export function NoteForm({ id, defaults, onDone }: { id?: string; defaults?: Par
           <CourseSelect id="note-course" value={courseId} onChange={setCourseId} />
         </Field>
       )}
+      <Field label="Linked documents" htmlFor="note-links">
+        <DocLinksField value={links} onChange={setLinks} />
+      </Field>
       <div className="flex flex-wrap items-center gap-4">
         <ColorPicker value={color} onChange={setColor} />
         <div className="ml-auto flex items-center gap-2">

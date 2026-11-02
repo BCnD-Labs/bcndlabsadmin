@@ -1,4 +1,6 @@
+import { useMemo } from "react"
 import type { Category } from "@/components/common/category-icon"
+import { usePrefs } from "@/stores/prefs"
 import { CMS, DEVELOPMENT, PRODUCTIVITY, insightsHref, learningHref, mediaHref, plannerHref, postsHref, projectsHref, siteAnalyticsHref } from "@/lib/routes"
 
 export interface NavChild {
@@ -64,5 +66,15 @@ export function activeChild(dest: NavDestination, pathname: string, search = "")
     dest.children
       ?.filter((c) => !c.to.includes("?") && (pathname === c.to || pathname.startsWith(c.to + "/")))
       .sort((a, b) => b.to.length - a.to.length)[0]
+  )
+}
+
+/** NAV with your own section names (Settings → Appearance → Sidebar); hidden sections are left out unless asked for. */
+export function useNav(includeHidden = false): NavDestination[] {
+  const labels = usePrefs((s) => s.navLabels)
+  const hidden = usePrefs((s) => s.navHidden)
+  return useMemo(
+    () => NAV.map((d) => ({ ...d, label: labels[d.id] || d.label })).filter((d) => includeHidden || d.id === "home" || !hidden.includes(d.id)),
+    [labels, hidden, includeHidden],
   )
 }

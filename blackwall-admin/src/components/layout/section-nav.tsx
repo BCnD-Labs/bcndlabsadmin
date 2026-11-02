@@ -1,9 +1,10 @@
 import { Link, useLocation } from "react-router-dom"
-import { NAV, activeChild, isActive } from "./nav-config"
+import { useNav, activeChild, isActive } from "./nav-config"
 import { cn } from "@/lib/utils"
 
 /** Sibling destinations stay visible without opening a rail flyout. */
 export function SectionNav() {
+  const NAV = useNav(true)
   const { pathname, search } = useLocation()
   const destination = NAV.find((d) => isActive(d, pathname))
   if (!destination?.children?.length) return null

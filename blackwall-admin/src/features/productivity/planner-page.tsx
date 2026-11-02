@@ -1,3 +1,4 @@
+import { DocLinksMenu } from "@/components/common/doc-links"
 import { CategoryIcon, type Category } from "@/components/common/category-icon"
 import { addDays, format, isToday } from "date-fns"
 import { ChevronLeft, ChevronRight, ListChecks, Pin, PinOff, Plus, Search, Star, StickyNote, X } from "lucide-react"
@@ -198,7 +199,7 @@ function NoteLine({ note }: { note: Note }) {
       <button
         type="button"
         onClick={() => openForm({ kind: "note", id: note.id })}
-        className="flex h-8 w-full items-center gap-2.5 pr-9 pl-3.5 text-left hover:bg-raised"
+        className={cn("flex h-8 w-full items-center gap-2.5 pl-3.5 text-left hover:bg-raised", note.links?.length ? "pr-[4.5rem]" : "pr-9")}
         title={note.text.trim().slice(0, 300)}
       >
         <span className={cn("size-2 shrink-0 rounded-full", noteColor(note.color).swatch)} aria-hidden />
@@ -209,6 +210,7 @@ function NoteLine({ note }: { note: Note }) {
         {course && <CourseTag course={course} asLink={false} className="hidden h-4 px-1.5 text-[10px] xl:inline-flex" />}
         <span className="shrink-0 text-[10px] text-faint tabular-nums">{shortAgo(note.updatedAt)}</span>
       </button>
+      <DocLinksMenu links={note.links} className="absolute top-1 right-9" />
       <button
         type="button"
         aria-label={note.pinned ? `Unpin "${title}"` : `Pin "${title}"`}

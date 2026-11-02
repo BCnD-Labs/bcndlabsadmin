@@ -10,10 +10,11 @@ import {
 } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { useUi } from "@/stores/ui"
-import { NAV, isActive, activeChild } from "./nav-config"
+import { useNav, isActive, activeChild } from "./nav-config"
 
 /** Small screens: conventional menu button + sheet with the full tree. */
 export function MobileNav() {
+  const NAV = useNav()
   const open = useUi((s) => s.mobileNavOpen)
   const setOpen = useUi((s) => s.setMobileNavOpen)
   const openSettings = useUi((s) => s.openSettings)

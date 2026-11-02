@@ -31,7 +31,7 @@ import { format } from "date-fns"
 import { parseKey, todayKey } from "@/lib/dates"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
-import { NAV } from "./nav-config"
+import { useNav } from "./nav-config"
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 
@@ -52,6 +52,7 @@ function rank(_value: string, search: string, keywords?: string[]): number {
 
 /** Global search over local records plus navigation and create actions. */
 export function CommandSearch() {
+  const NAV = useNav()
   const open = useUi((s) => s.searchOpen)
   const setOpen = useUi((s) => s.setSearchOpen)
   const openForm = useUi((s) => s.openForm)

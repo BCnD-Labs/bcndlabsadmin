@@ -7,8 +7,16 @@ export type DateKey = string
 export type Timestamp = string
 
 /** A to-do, Google Tasks style: no priorities or dependencies. */
+/** A link to a document or page that lives elsewhere (Drive, Nextcloud, Obsidian, OneNote…). Opens outside Blackwall. */
+export interface DocLink {
+  label: string
+  url: string
+}
+
 export interface Task {
   id: ID
+  /** Linked documents (open in their own app). */
+  links?: DocLink[]
   title: string
   details?: string
   due?: DateKey
@@ -29,6 +37,8 @@ export type NoteColor = "plain" | "amber" | "teal" | "rose" | "blue"
 /** A sticky / quick note. */
 export interface Note {
   id: ID
+  /** Linked documents (open in their own app). */
+  links?: DocLink[]
   text: string
   color: NoteColor
   /** Pinned notes show on Home. */
@@ -112,6 +122,8 @@ export type CourseColor = "red" | "amber" | "teal" | "blue" | "violet" | "green"
 /** A college course (Productivity → Learning). Workspace record; no LMS connection. */
 export interface Course {
   id: ID
+  /** Linked documents (open in their own app). */
+  links?: DocLink[]
   title: string
   /** e.g. `CS 2110` */
   code: string

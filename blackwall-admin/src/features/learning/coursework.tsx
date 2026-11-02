@@ -1,3 +1,4 @@
+import { DocLinksMenu } from "@/components/common/doc-links"
 import { CalendarClock } from "lucide-react"
 import { Link } from "react-router-dom"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -79,6 +80,7 @@ export function CourseworkRow({ task, course, showCourse }: { task: Task; course
           task.details && <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{task.details}</span>
         )}
       </button>
+      <DocLinksMenu links={task.links} />
       <span
         className={cn(
           "inline-flex shrink-0 items-center justify-end gap-1 text-[11px] tabular-nums",

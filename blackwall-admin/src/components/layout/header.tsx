@@ -6,7 +6,7 @@ import { useNow } from "@/hooks/use-now"
 import { usePrefs } from "@/stores/prefs"
 import { useUi } from "@/stores/ui"
 import { usePageHead } from "@/stores/page-head"
-import { NAV, activeChild, isActive } from "./nav-config"
+import { useNav, activeChild, isActive, type NavDestination } from "./nav-config"
 import { CalendarMenu } from "./calendar-menu"
 import { Notifications } from "./notifications"
 import { QuickCreate } from "./quick-create"
@@ -17,7 +17,7 @@ function greeting(d: Date) {
 }
 
 /** Where you are, from the nav tree: the destination and, if any, its matching sub-page. */
-function crumbs(pathname: string, search: string): { label: string; to?: string }[] {
+function crumbs(NAV: NavDestination[], pathname: string, search: string): { label: string; to?: string }[] {
   const dest = NAV.find((d) => isActive(d, pathname))
   if (!dest) return [{ label: "blackwall" }]
   const child = activeChild(dest, pathname, search)
@@ -57,7 +57,8 @@ export function Header() {
   const now = useNow()
   const home = pathname === "/"
   const head = usePageHead()
-  const items = crumbs(pathname, search)
+  const nav = useNav(true)
+  const items = crumbs(nav, pathname, search)
 
   return (
     <header className="bw-app-header bw-workspace mx-auto z-20 flex w-full  flex-col gap-2.5 border-b border-line-soft py-2 pr-0 pl-0 md:flex-row md:items-center md:justify-between md:gap-3">

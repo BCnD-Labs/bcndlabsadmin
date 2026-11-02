@@ -19,6 +19,8 @@
         var p = JSON.parse(localStorage.getItem("blackwall.prefs") || "{}").state || {}
         document.documentElement.dataset.theme = p.theme === "dark" ? "dark" : "dim"
         document.documentElement.dataset.font = p.uiFont === "mono" ? "mono" : "sans"
+        document.documentElement.dataset.accent = p.accent || "red"
+        document.documentElement.dataset.density = p.density === "compact" ? "compact" : "comfortable"
       } catch (e) {}
     </script>
   </head>

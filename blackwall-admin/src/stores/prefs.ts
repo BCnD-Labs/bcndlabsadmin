@@ -3,9 +3,13 @@ import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
 import { DEFAULT_SLOTS, OLD_DEFAULT_SLOTS, assignSlot, sanitizeSlots, swapSlots, type PanelType } from "@/lib/home-slots"
 import { safeLocalStorage } from "./storage"
+import { DEFAULT_LAYOUT, layoutFromSlots, sanitizeLayout, type LayoutItem } from "@/lib/home-layout"
 
 export type Theme = "dim" | "dark"
 export type UiFont = "sans" | "mono"
+export const ACCENTS = ["red", "blue", "violet", "cyan", "orange", "green", "pink"] as const
+export type Accent = (typeof ACCENTS)[number]
+export type Density = "comfortable" | "compact"
 
 /** Per-browser interface preferences (not workspace data). */
 interface PrefsState {
@@ -30,6 +34,15 @@ interface PrefsState {
   theme: Theme
   /** Interface text: the system sans (default) or JetBrains Mono everywhere. */
   uiFont: UiFont
+  /** Home: every block in order, with visibility and width (replaces homeSlots from v5). */
+  homeLayout: LayoutItem[]
+  /** Brand/action color for buttons, the logo and active markers. */
+  accent: Accent
+  /** Spacing between and inside panels. */
+  density: Density
+  /** Sidebar: your own names for sections (by destination id) and which ones are hidden. */
+  navLabels: Record<string, string>
+  navHidden: string[]
   set: (patch: Partial<Omit<PrefsState, "set" | "setSlot" | "swapSlots" | "reset">>) => void
   /** Show `type` in slot `i`; if it's already in another slot, the two swap. */
   setSlot: (i: number, type: PanelType) => void
@@ -38,9 +51,9 @@ interface PrefsState {
   reset: () => void
 }
 
-type Persisted = Pick<PrefsState, "categoryColors" | "homeSizing" | "showHomeProjects" | "showHomeLog" | "feedConnections" | "retroDetails" | "showSamples" | "workspaceName" | "autoHideSeconds" | "homeSlots" | "navExpanded" | "theme" | "uiFont">
+type Persisted = Pick<PrefsState, "categoryColors" | "homeSizing" | "showHomeProjects" | "showHomeLog" | "feedConnections" | "retroDetails" | "showSamples" | "workspaceName" | "autoHideSeconds" | "homeSlots" | "navExpanded" | "theme" | "uiFont" | "homeLayout" | "accent" | "density" | "navLabels" | "navHidden">
 
-export const PREFS_VERSION = 4
+export const PREFS_VERSION = 5
 
 const DEFAULT_PREFS = (): Persisted => ({
   categoryColors: true,
@@ -56,6 +69,11 @@ const DEFAULT_PREFS = (): Persisted => ({
   navExpanded: false,
   theme: "dim",
   uiFont: "sans",
+  homeLayout: DEFAULT_LAYOUT.map((b) => ({ ...b })),
+  accent: "red",
+  density: "comfortable",
+  navLabels: {},
+  navHidden: [],
 })
 
 export const usePrefs = create<PrefsState>()(
@@ -71,7 +89,8 @@ export const usePrefs = create<PrefsState>()(
       name: "blackwall.prefs",
       version: PREFS_VERSION,
       storage: createJSONStorage(() => safeLocalStorage),
-      partialize: ({ categoryColors, homeSizing, showHomeProjects, showHomeLog, feedConnections, retroDetails, showSamples, workspaceName, autoHideSeconds, homeSlots, navExpanded, theme, uiFont }): Persisted => ({
+      partialize: ({ categoryColors, homeSizing, showHomeProjects, showHomeLog, feedConnections, retroDetails, showSamples, workspaceName, autoHideSeconds, homeSlots, navExpanded, theme, uiFont, homeLayout, accent, density, navLabels, navHidden }): Persisted => ({
+        homeLayout, accent, density, navLabels, navHidden,
         categoryColors, homeSizing, showHomeProjects, showHomeLog, feedConnections,
         retroDetails,
         showSamples,
@@ -89,6 +108,8 @@ export const usePrefs = create<PrefsState>()(
         // (autoHideSeconds may already be there: it was saved under v1 before the bump.)
         if (version < 2) p = { ...p, autoHideSeconds: p.autoHideSeconds ?? 5, homeSlots: p.homeSlots ?? [...OLD_DEFAULT_SLOTS] }
         if (version < 3 && JSON.stringify(p.homeSlots) === JSON.stringify(OLD_DEFAULT_SLOTS)) p = { ...p, homeSlots: [...DEFAULT_SLOTS] }
+        // v4 → v5: the four slots become the full Home layout, keeping your chosen panels and their order.
+        if (version < 5) p = { ...p, homeLayout: layoutFromSlots(p.homeSlots, p.showHomeProjects !== false, p.showHomeLog !== false) }
         return p
       },
       // Never trust stored values blindly: unknown panel types or bad numbers fall back to defaults.
@@ -108,11 +129,21 @@ export const usePrefs = create<PrefsState>()(
           navExpanded: p.navExpanded === true,
           theme: p.theme === "dark" ? "dark" : "dim",
           uiFont: p.uiFont === "mono" ? "mono" : "sans",
+          homeLayout: sanitizeLayout(p.homeLayout),
+          accent: (ACCENTS as readonly unknown[]).includes(p.accent) ? (p.accent as Accent) : "red",
+          density: p.density === "compact" ? "compact" : "comfortable",
+          navLabels: sanitizeLabels(p.navLabels),
+          navHidden: Array.isArray(p.navHidden) ? p.navHidden.filter((v): v is string => typeof v === "string" && v !== "home").slice(0, 20) : [],
         }
       },
     },
   ),
 )
+
+function sanitizeLabels(raw: unknown): Record<string, string> {
+  if (!raw || typeof raw !== "object") return {}
+  return Object.fromEntries(Object.entries(raw).flatMap(([k, v]) => (typeof v === "string" && v.trim() && k.length <= 40 ? [[k, v.trim().slice(0, 32)]] : [])))
+}
 
 function sanitizeFeedConnections(raw: unknown): Persisted["feedConnections"] {
   if (!raw || typeof raw !== "object") return {}
@@ -121,8 +152,10 @@ function sanitizeFeedConnections(raw: unknown): Persisted["feedConnections"] {
 }
 
 /** Theme and font live on <html> so every screen (sign-in included) follows them. */
-function applyLook({ theme, uiFont, categoryColors }: Pick<PrefsState, "theme" | "uiFont" | "categoryColors">) {
+function applyLook({ theme, uiFont, categoryColors, accent, density }: Pick<PrefsState, "theme" | "uiFont" | "categoryColors" | "accent" | "density">) {
   if (typeof document === "undefined") return
+  document.documentElement.dataset.accent = accent
+  document.documentElement.dataset.density = density
   document.documentElement.dataset.theme = theme
   document.documentElement.dataset.font = uiFont
   document.documentElement.dataset.categoryColors = categoryColors ? "on" : "off"

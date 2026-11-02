@@ -103,7 +103,7 @@ export function PullRequestsPanel() {
           {allFailed ? (
             <p className="px-5 py-5 text-sm text-muted-foreground">Pull requests couldn’t be loaded from any account. Check the connections in Settings.</p>
           ) : shown.length ? (
-            <ul className="grid gap-1 px-2 py-3">
+            <ul className="grid grid-cols-[minmax(0,1fr)] gap-1 px-2 py-3">
               {shown.map((p) => {
                 const [tone, label] = prStatus(p)
                 return (
@@ -168,7 +168,7 @@ export function ThisWeekPanel() {
       {/* Filter tabs sit under the title bar, as in the Fluent 2 card this panel follows. */}
       <SegmentedTabs className="mx-5 mt-4 self-start rounded-full border-0" tabClassName="flex-none rounded-full px-3" label="This week filter" value={filter} onChange={setFilter} tabs={[{ value: "all", label: "All" }, { value: "course", label: "Coursework" }, { value: "tasks", label: "Tasks" }]} />
       {shown.length ? (
-        <ul className="grid gap-1 px-2 py-3">
+        <ul className="grid grid-cols-[minmax(0,1fr)] gap-1 px-2 py-3">
           {shown.map((t) => <WeekRow key={t.id} task={t} course={t.courseId ? courses.get(t.courseId) : undefined} today={today} />)}
         </ul>
       ) : (

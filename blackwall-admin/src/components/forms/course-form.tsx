@@ -1,3 +1,4 @@
+import { DocLinksField, cleanLinks } from "@/components/common/doc-links"
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
@@ -33,6 +34,7 @@ export function CourseForm({ id, defaults, onDone }: { id?: string; defaults?: P
     color: base?.color ?? ("blue" as CourseColor),
     tags: (base?.tags ?? []).join(", "),
     description: base?.description ?? "",
+    links: base?.links ?? [],
   })
   const set = (patch: Partial<typeof d>) => setD((x) => ({ ...x, ...patch }))
   const datesBackwards = !!d.startDate && !!d.endDate && d.endDate < d.startDate
@@ -57,6 +59,7 @@ export function CourseForm({ id, defaults, onDone }: { id?: string; defaults?: P
       color: d.color,
       tags: parseTags(d.tags),
       description: d.description.trim(),
+      links: cleanLinks(d.links),
     }
     if (existing) {
       update("courses", existing.id, values)
@@ -123,6 +126,9 @@ export function CourseForm({ id, defaults, onDone }: { id?: string; defaults?: P
       </div>
       <Field label="Course link" htmlFor="course-url" hint="The course site or LMS page, to open it from here." error={urlBad ? "Start with http:// or https://" : undefined}>
         <Input id="course-url" type="url" value={d.url} onChange={(e) => set({ url: e.target.value })} placeholder="https://" />
+      </Field>
+      <Field label="Linked documents" htmlFor="course-links" hint="Syllabus, shared drives, notebooks. They open in their own app.">
+        <DocLinksField value={d.links} onChange={(links) => set({ links })} />
       </Field>
       <Field label="Tags" htmlFor="course-tags" hint="Separate with commas, e.g. major, online, lab.">
         <Input id="course-tags" value={d.tags} onChange={(e) => set({ tags: e.target.value })} />

@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils"
 import { useUi } from "@/stores/ui"
 import { usePrefs } from "@/stores/prefs"
-import { NAV, isActive, type NavDestination, activeChild } from "./nav-config"
+import { useNav, isActive, type NavDestination, activeChild } from "./nav-config"
 import { useNavHints } from "./nav-hints"
 
 /** Hover-intent timings (ms). */
@@ -24,6 +24,7 @@ const CLOSE_DELAY = 220 // leaving the expanded item
  * click instead of hover. Settings sits at the bottom and opens the settings modal.
  */
 export function NavRail({ focusMain }: { focusMain: () => void }) {
+  const NAV = useNav()
   const { pathname, search } = useLocation()
   const navigate = useNavigate()
   const expanded = usePrefs((s) => s.navExpanded)
@@ -342,6 +343,7 @@ const TREE_FILL = "bg-red-soft font-semibold text-ink hover:bg-red-soft"
  * on click like folders (→ / ← too); the one you're in starts open.
  */
 function NavTree() {
+  const NAV = useNav()
   const { pathname, search } = useLocation()
   const hints = useNavHints()
   const activeId = NAV.find((d) => isActive(d, pathname))?.id

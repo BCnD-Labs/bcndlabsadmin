@@ -322,3 +322,14 @@ html[data-theme="dark"] :is([data-category="home"], [data-category="service"]) {
 
 html[data-category-colors="off"] [data-category][data-category] { --bw-category: var(--bw-text-2); } /* doubled attribute outranks the per-theme hues */
 html[data-category-colors="off"] .bw-category-icon { background: var(--bw-raised); box-shadow: none; }
+
+/* Accent (Settings → Appearance). Only the brand/action color changes; error colors stay red. */
+html[data-accent="blue"] { --bw-red: #3b78e7; --bw-red-hover: #3369d0; --bw-red-ledge: #2550a3; }
+html[data-accent="violet"] { --bw-red: #8e44e0; --bw-red-hover: #7c39c7; --bw-red-ledge: #5d2a99; }
+html[data-accent="cyan"] { --bw-red: #0f9fb8; --bw-red-hover: #0d8ca2; --bw-red-ledge: #0a6a7b; }
+html[data-accent="orange"] { --bw-red: #e8710a; --bw-red-hover: #cf6409; --bw-red-ledge: #9e4c07; }
+html[data-accent="green"] { --bw-red: #1e8e3e; --bw-red-hover: #1a7c36; --bw-red-ledge: #135c28; }
+html[data-accent="pink"] { --bw-red: #d6337f; --bw-red-hover: #be2b70; --bw-red-ledge: #8f2054; }
+
+/* Density (Settings → Appearance). Compact halves the gaps and trims the title bar. */
+html[data-density="compact"] { --bw-grid-gap: 0.75rem; --bw-panel-header-h: 2.25rem; }
