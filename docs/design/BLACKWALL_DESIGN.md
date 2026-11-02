@@ -209,7 +209,7 @@ Sticky notes use muted paper colours (low chroma, mid-light: plain `#BCC2CC`, ye
 pink `#C9A2B3`, blue `#9EAECB`) with `#14171C` ink, ≥ 8:1 on each.
 
 ### Learning (Productivity → Learning)
-Navigation: Home · Productivity (Tasks, Projects, Learning, Calendar & daily log, Notes, Insights) · Development · CMS
+Navigation: Home · Productivity (Planner = tasks + calendar/daily log + notes, Projects, Learning, Insights) · Development (one page) · CMS (Posts & pages, Media, Site analytics)
 (Pages & posts, Drafts, Media, Site analytics).
 
 - **Overview:** a summary panel (in progress, due this week, overdue, % complete across active courses), course cards

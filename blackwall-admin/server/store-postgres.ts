@@ -1,5 +1,6 @@
 import pg from "pg"
 import { seal, unseal } from "./crypto.ts"
+import type { ScheduledPost } from "../shared/site.ts"
 import { ConnectionStore, type StoredConnection } from "./store.ts"
 
 /**
@@ -20,6 +21,11 @@ const MIGRATIONS = [
      checked_at  timestamptz,
      created_at  timestamptz NOT NULL DEFAULT now(),
      updated_at  timestamptz NOT NULL DEFAULT now()
+   )`,
+  `CREATE TABLE IF NOT EXISTS scheduled_posts (
+     slug        text PRIMARY KEY,
+     publish_at  timestamptz NOT NULL,
+     data        jsonb NOT NULL
    )`,
 ]
 
@@ -110,6 +116,24 @@ export class PostgresConnectionStore extends ConnectionStore {
 
   protected async delete(id: string) {
     const r = await this.pool.query("DELETE FROM connections WHERE id = $1", [id])
+    return (r.rowCount ?? 0) > 0
+  }
+
+  async listSchedules() {
+    const { rows } = await this.pool.query<{ data: ScheduledPost }>("SELECT data FROM scheduled_posts ORDER BY publish_at")
+    return rows.map((r) => r.data)
+  }
+
+  async putSchedule(s: ScheduledPost) {
+    await this.pool.query(
+      `INSERT INTO scheduled_posts (slug, publish_at, data) VALUES ($1, $2, $3)
+       ON CONFLICT (slug) DO UPDATE SET publish_at = EXCLUDED.publish_at, data = EXCLUDED.data`,
+      [s.post.slug, s.publishAt, JSON.stringify(s)],
+    )
+  }
+
+  async deleteSchedule(slug: string) {
+    const r = await this.pool.query("DELETE FROM scheduled_posts WHERE slug = $1", [slug])
     return (r.rowCount ?? 0) > 0
   }
 

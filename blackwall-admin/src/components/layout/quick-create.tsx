@@ -19,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useCreateDraft } from "@/features/content/use-create-draft"
-import { logHref } from "@/features/journal/daily-log-page"
+import { logHref } from "@/lib/routes"
 import { todayKey } from "@/lib/dates"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"

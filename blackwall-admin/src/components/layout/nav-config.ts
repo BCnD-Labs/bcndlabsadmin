@@ -1,5 +1,5 @@
 import { Code2, FileText, Home, ListChecks, type LucideIcon } from "lucide-react"
-import { CMS, PRODUCTIVITY, calendarHref, draftsHref, insightsHref, learningHref, notesHref, projectsHref, siteAnalyticsHref, tasksHref } from "@/lib/routes"
+import { CMS, DEVELOPMENT, PRODUCTIVITY, insightsHref, learningHref, mediaHref, plannerHref, postsHref, projectsHref, siteAnalyticsHref } from "@/lib/routes"
 
 export interface NavChild {
   label: string
@@ -23,14 +23,12 @@ export const NAV: NavDestination[] = [
     id: "productivity",
     label: "Productivity",
     icon: ListChecks,
-    to: tasksHref,
+    to: plannerHref,
     match: PRODUCTIVITY,
     children: [
-      { label: "Tasks", to: tasksHref },
+      { label: "Planner", to: plannerHref },
       { label: "Projects", to: projectsHref },
       { label: "Learning", to: learningHref },
-      { label: "Calendar & daily log", to: calendarHref },
-      { label: "Notes", to: notesHref },
       { label: "Insights", to: insightsHref },
     ],
   },
@@ -38,24 +36,18 @@ export const NAV: NavDestination[] = [
     id: "development",
     label: "Development",
     icon: Code2,
-    to: "/development/repositories",
-    match: "/development",
-    children: [
-      { label: "Repositories", to: "/development/repositories" },
-      { label: "Reviews & issues", to: "/development/reviews" },
-      { label: "Deployment links", to: "/development/deployments" },
-    ],
+    to: DEVELOPMENT,
+    match: DEVELOPMENT,
   },
   {
     id: "cms",
     label: "CMS",
     icon: FileText,
-    to: `${CMS}/posts`,
+    to: postsHref,
     match: CMS,
     children: [
-      { label: "Pages & posts", to: `${CMS}/posts` },
-      { label: "Drafts", to: draftsHref },
-      { label: "Media", to: `${CMS}/media` },
+      { label: "Posts & pages", to: postsHref },
+      { label: "Media", to: mediaHref },
       { label: "Site analytics", to: siteAnalyticsHref },
     ],
   },
@@ -63,4 +55,14 @@ export const NAV: NavDestination[] = [
 
 export function isActive(dest: NavDestination, pathname: string) {
   return dest.match === "/" ? pathname === "/" : pathname.startsWith(dest.match)
+}
+
+/** The sub-page you're on: an exact match, else the longest prefix (so /productivity/projects isn't the Planner at /productivity). */
+export function activeChild(dest: NavDestination, pathname: string, search = ""): NavChild | undefined {
+  return (
+    dest.children?.find((c) => pathname + search === c.to) ??
+    dest.children
+      ?.filter((c) => !c.to.includes("?") && (pathname === c.to || pathname.startsWith(c.to + "/")))
+      .sort((a, b) => b.to.length - a.to.length)[0]
+  )
 }

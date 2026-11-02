@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto"
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import type { ConnectionInput, PublicConnection } from "../shared/connections.ts"
+import type { ScheduledPost } from "../shared/site.ts"
 
 /** A connection as the server holds it, secrets in the clear (in memory only). */
 export interface StoredConnection extends Omit<PublicConnection, "secrets"> {
@@ -20,6 +21,10 @@ export abstract class ConnectionStore {
   protected abstract all(): Promise<StoredConnection[]>
   protected abstract save(c: StoredConnection): Promise<void>
   protected abstract delete(id: string): Promise<boolean>
+  /** Posts waiting to be published at a set time (CMS → Schedule). Keyed by slug. */
+  abstract listSchedules(): Promise<ScheduledPost[]>
+  abstract putSchedule(s: ScheduledPost): Promise<void>
+  abstract deleteSchedule(slug: string): Promise<boolean>
 
   list() {
     return this.all()
@@ -80,7 +85,7 @@ export abstract class ConnectionStore {
 /** Development backend: `.blackwall/connections.json` next to the app (gitignored, mode 600). */
 export class FileConnectionStore extends ConnectionStore {
   readonly where: string
-  private data: { version: 1; connections: StoredConnection[] }
+  private data: { version: 1; connections: StoredConnection[]; schedules?: ScheduledPost[] }
 
   constructor(root: string) {
     super()
@@ -105,6 +110,23 @@ export class FileConnectionStore extends ConnectionStore {
     const before = this.data.connections.length
     this.data.connections = this.data.connections.filter((c) => c.id !== id)
     if (this.data.connections.length === before) return false
+    this.flush()
+    return true
+  }
+
+  async listSchedules() {
+    return [...(this.data.schedules ?? [])]
+  }
+
+  async putSchedule(s: ScheduledPost) {
+    this.data.schedules = [...(this.data.schedules ?? []).filter((x) => x.post.slug !== s.post.slug), s]
+    this.flush()
+  }
+
+  async deleteSchedule(slug: string) {
+    const before = this.data.schedules?.length ?? 0
+    this.data.schedules = (this.data.schedules ?? []).filter((x) => x.post.slug !== slug)
+    if (this.data.schedules.length === before) return false
     this.flush()
     return true
   }

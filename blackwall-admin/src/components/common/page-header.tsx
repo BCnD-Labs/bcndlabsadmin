@@ -25,7 +25,7 @@ export function PageHeader({
   className?: string
 }) {
   return (
-    <div className={cn("mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between", className)}>
+    <div className={cn("mb-3 flex flex-col gap-2.5 sm:flex-row sm:items-end sm:justify-between", className)}>
       <div className="min-w-0">
         {back && (
           <Link
@@ -37,10 +37,10 @@ export function PageHeader({
           </Link>
         )}
         <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
-          <h1 className="min-w-0 font-heading text-2xl leading-tight font-bold tracking-tight break-words">{title}</h1>
+          <h1 className="min-w-0 font-heading text-[22px] leading-tight font-bold tracking-tight break-words">{title}</h1>
           {badge}
         </div>
-        {subtitle && <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">{subtitle}</p>}
+        {subtitle && <p className="mt-0.5 max-w-2xl text-xs leading-relaxed text-muted-foreground">{subtitle}</p>}
       </div>
       {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
     </div>

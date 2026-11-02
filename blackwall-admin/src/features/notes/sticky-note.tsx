@@ -1,13 +1,7 @@
-import { Pin, PinOff, Plus, StickyNote as StickyNoteIcon, Trash2 } from "lucide-react"
-import { useEffect, useMemo, useRef, useState } from "react"
-import { useSearchParams } from "react-router-dom"
+import { Pin, PinOff, Trash2 } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { EmptyState } from "@/components/common/empty-state"
-import { SearchField } from "@/components/common/list"
-import { PageHeader } from "@/components/common/page-header"
-import { Panel } from "@/components/common/panel"
 import { timeAgo } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import type { Note, NoteColor } from "@/lib/types"
@@ -147,87 +141,5 @@ export function StickyNote({ note, autoFocus, compact }: { note: Note; autoFocus
         )}
       </div>
     </li>
-  )
-}
-
-export function NotesPage() {
-  const notes = useWorkspace((s) => s.notes)
-  const create = useWorkspace((s) => s.create)
-  const [params, setParams] = useSearchParams()
-  const [q, setQ] = useState("")
-  const [quick, setQuick] = useState("")
-  const [color, setColor] = useState<NoteColor>("amber")
-  const [fresh] = useState<string | null>(params.get("id"))
-
-  useEffect(() => {
-    if (params.get("id")) setParams({}, { replace: true })
-  }, [params, setParams])
-
-  const list = useMemo(() => {
-    const needle = q.trim().toLowerCase()
-    return notes
-      .filter((n) => !needle || n.text.toLowerCase().includes(needle))
-      .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt.localeCompare(a.updatedAt))
-  }, [notes, q])
-
-  const add = () => {
-    const text = quick.trim()
-    if (!text) return
-    create("notes", { text, color, pinned: false })
-    setQuick("")
-  }
-
-  return (
-    <>
-      <PageHeader
-        title="Notes"
-        subtitle="Quick notes. They save as you type; pinned ones also show on Home."
-        actions={<SearchField value={q} onChange={setQ} label="Search notes" />}
-      />
-      <Panel tool="notes" command="new" className="mb-4 max-w-2xl">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            add()
-          }}
-          className="flex flex-col gap-3 px-3.5 py-3"
-        >
-          <label htmlFor="quick-note" className="sr-only">New note</label>
-          <Textarea
-            id="quick-note"
-            rows={2}
-            value={quick}
-            onChange={(e) => setQuick(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                e.preventDefault()
-                add()
-              }
-            }}
-            placeholder="Take a note…"
-          />
-          <div className="flex flex-wrap items-center gap-3">
-            <ColorPicker value={color} onChange={setColor} />
-            <span className="ml-auto hidden text-[11px] text-faint sm:inline">⌘/Ctrl + Enter</span>
-            <Button type="submit" disabled={!quick.trim()} className="ml-auto sm:ml-0">
-              <Plus /> Add note
-            </Button>
-          </div>
-        </form>
-      </Panel>
-      {list.length ? (
-        <ul className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4" aria-label="Notes">
-          {list.map((n) => (
-            <StickyNote key={n.id} note={n} autoFocus={n.id === fresh} />
-          ))}
-        </ul>
-      ) : (
-        <Panel tool="notes" command="ls" className="max-w-2xl">
-          <EmptyState icon={StickyNoteIcon} title={q ? "No notes match" : "No notes yet"}>
-            {q ? "Try a different search." : "Write one above. Pin it to see it on Home."}
-          </EmptyState>
-        </Panel>
-      )}
-    </>
   )
 }

@@ -23,7 +23,7 @@ export function ProjectsPage() {
       <PageHeader
         title="Projects"
         subtitle="What you're building, with its repositories and content drafts."
-        actions={<Button size="lg" onClick={newProject}><Plus /> New project</Button>}
+        actions={<Button onClick={newProject}><Plus /> New project</Button>}
       />
       {sorted.length ? (
         <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

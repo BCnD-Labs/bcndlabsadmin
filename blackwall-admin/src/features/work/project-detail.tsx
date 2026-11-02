@@ -45,7 +45,7 @@ export function ProjectDetail() {
         title={project.name}
         badge={<><ProjectTag project={project} /><ProjectStatusLabel status={project.status} /></>}
         subtitle={<>{project.description || "No description."} <span className="text-faint">· Updated {timeAgo(project.updatedAt)}</span></>}
-        actions={<Button variant="outline" size="lg" onClick={() => openForm({ kind: "project", id })}><Pencil /> Edit</Button>}
+        actions={<Button variant="ghost" onClick={() => openForm({ kind: "project", id })}><Pencil /> Edit</Button>}
       />
 
       <div className="grid gap-3 lg:grid-cols-2">

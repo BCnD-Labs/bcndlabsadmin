@@ -16,7 +16,7 @@ import { ListGroupLabel } from "@/components/common/list"
 import { PageHeader } from "@/components/common/page-header"
 import { Panel } from "@/components/common/panel"
 import { SegmentedTabs } from "@/components/common/segmented-tabs"
-import { StickyNote } from "@/features/notes/notes-page"
+import { StickyNote } from "@/features/notes/sticky-note"
 import { daysUntil } from "@/lib/dates"
 import { parseQuickAdd } from "@/lib/quick-add"
 import { learningHref, notesHref } from "@/lib/routes"
@@ -36,7 +36,7 @@ function AddItem({ course }: { course: Course }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button size="lg">
+        <Button>
           <Plus /> Add <ChevronDown className="opacity-80" />
         </Button>
       </DropdownMenuTrigger>
@@ -321,7 +321,7 @@ export function CourseDetail() {
         subtitle={sub || undefined}
         actions={
           <>
-            <Button variant="outline" size="lg" onClick={() => openForm({ kind: "course", id: course.id })}>
+            <Button variant="ghost" onClick={() => openForm({ kind: "course", id: course.id })}>
               <Pencil /> Edit
             </Button>
             <AddItem course={course} />

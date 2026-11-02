@@ -6,7 +6,7 @@ import { Panel } from "@/components/common/panel"
 import { todayKey } from "@/lib/dates"
 import { useWorkspace } from "@/stores/workspace"
 import { CalendarLegend, JournalCalendar } from "@/features/journal/journal-calendar"
-import { logHref } from "@/features/journal/daily-log-page"
+import { logHref } from "@/lib/routes"
 
 /** Mini calendar; clicking a day opens that day's log. */
 export function CalendarPanel({ className }: { className?: string }) {

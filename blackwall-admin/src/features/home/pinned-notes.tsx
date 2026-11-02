@@ -3,7 +3,7 @@ import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/common/empty-state"
 import { Panel } from "@/components/common/panel"
-import { StickyNote } from "@/features/notes/notes-page"
+import { StickyNote } from "@/features/notes/sticky-note"
 import { useWorkspace } from "@/stores/workspace"
 import { notesHref } from "@/lib/routes"
 

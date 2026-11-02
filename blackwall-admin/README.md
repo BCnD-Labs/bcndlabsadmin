@@ -4,17 +4,21 @@ A personal workspace for keeping track: simple to-dos, a course planner, a calen
 
 ## The pieces
 
-- **Tasks:** Google Tasks style. Title, optional details, optional due date, star, done. No priorities, tags, links or dependencies. "Today" shows overdue, due-today and starred tasks; the Tasks page groups everything by when it's due.
-- **Calendar & daily log:** internal only. The header's calendar button (left of search) opens a month card while you hover it and closes when you move away; click it to pin the card open, and then it auto-hides a few seconds after you leave. Click a day to open that day's log in a dialog (tasks due that day, quick prompts, Save). Productivity → Calendar is the full-page version that saves as you type. Day dots: red = open tasks due, amber = overdue, grey = a saved log.
-- **Home:** a 2×2 grid of panels you choose from each panel's header menu (Productivity or Empty for now). Drag a panel by its header onto another square to swap them, or use "Move to slot N" in the menu.
+- **Planner (Productivity):** one page with three columns: **tasks** (Today / Upcoming / All / Done, quick add, search, starred filter), the **calendar** with the selected day's agenda and its **daily log** (saves as you type), and **notes** (pinned first, quick add, search). On wide screens it fits the window and each column scrolls on its own; narrower screens stack them. The old Tasks, Notes and Calendar addresses open the Planner.
+- **Tasks:** Google Tasks style. Title, optional details, optional due date, star, done. No priorities, tags, links or dependencies.
+- **Header calendar:** the calendar button (left of search) opens a month card while you hover it and closes when you move away; click it to pin it open, and then it auto-hides a few seconds after you leave. Click a day to open that day's log in a dialog. Day dots: red = open tasks due, amber = overdue, grey = a saved log.
+- **Home:** a 2×2 grid of panels you choose from each panel's header menu: Productivity, Coursework, Calendar, Development, Website, or Empty. Drag a panel by its header onto another square to swap them, or use "Move to slot N" in the menu.
 - **Settings:** a modal with General (version, Check for updates, and an Update button when one is found; export, import, clear cache, reset), Appearance, Connections, Server & backups, Shortcuts. Sections and a search box on the left (a menu on phones), then one column of panels with a row per setting.
 - **Notifications:** the bell opens a card that slides in from the right, below the header. No notification sources exist yet, so it shows **[ NO SIGNAL ]**.
-- **Notes:** sticky notes. Type, pick a colour, pin the ones you want on Home. They save as you type; an emptied note is removed.
+- **Notes:** quick notes in the Planner. Type, pick a colour, pin the ones you want on Home; click a note to edit it.
 - **Learning (Productivity → Learning):** a simple course planner. **Add learning → Course** stores a course's code, instructor, term, start and end dates, schedule, location, link, credits, tags and colour. Each course holds **assignments, exams, milestones and events**. These are ordinary tasks with a course link, so they also show in Tasks (with the course chip), on the calendar, in search and in Home's optional **Coursework** square. Notes can be linked to a course and show on its page. Local only: no LMS connection. Deleting a course deletes its coursework and unlinks its notes.
 - **Insights (Productivity → Insights):** charts computed from your tasks and logs (tasks completed per day, open tasks by due date, a log heatmap, streaks).
-- **Development, CMS:** repository and deployment links; content drafts, media, and **Site analytics** (your analytics provider once connected).
+- **Development:** one page: counts (repos, open PRs, failed runs, issues), a card per tracked repository (status, PRs, issues, last activity, production/preview links), what needs you (review requests first) and an activity timeline.
+- **CMS → Posts & pages:** posts as cards with their cover images (Published / Scheduled / Drafts), and the site's pages with a live, scaled-down preview of each. The editor has a cover image, Markdown with a **Preview** that renders the post with your site's own header and styles, tags, and a publish panel: **Publish now**, **Schedule…**, **Update post**, **Unpublish**. See *Website publishing* below.
+- **CMS → Media:** the images in your site's images folder; upload, copy Markdown, delete.
+- **CMS → Site analytics:** sized for a small site: visitors, pageviews, days with visits, busiest day, daily visitor bars, top pages and referrers.
 
-Sidebar: **Home · Productivity** (Tasks, Projects, Learning, Calendar & daily log, Notes, Insights) **· Development · CMS** (Pages & posts, Drafts, Media, Site analytics). Old `/work`, `/content`, `/notes` and `/analytics` links redirect to the new places.
+Sidebar: **Home · Productivity** (Planner, Projects, Learning, Insights) **· Development · CMS** (Posts & pages, Media, Site analytics). Old `/work`, `/content`, `/notes`, `/analytics`, `/productivity/tasks|notes|calendar` and `/development/*` links redirect to the new places.
 
 > **Two ways to run it.** `npm run dev` runs everything on your computer (no sign-in; credentials in a gitignored `.blackwall/` file). The **home-server deployment** (Portainer stack: Postgres + app + backups, behind Tailscale and a password) is the source of truth for connections and credentials. See [deploy/README.md](./deploy/README.md). Tasks, notes and logs are still saved per browser for now.
 
@@ -49,9 +53,18 @@ Settings → Connections is where you add, edit, test and remove accounts. Nothi
 | Azure | Tenant ID, client ID, client secret (service principal), optional subscription | Subscription, resource group and resource counts on the connection card |
 | Cloudflare | API token, optional account ID | Zones and their status on the connection card |
 | Website analytics | Plausible, Umami or Cloudflare Web Analytics, plus site ID and API key | Home traffic chart, CMS → Site analytics |
+| Website publishing | The site's GitHub repository, site URL, and a fine-grained token with **Contents: Read and write** on that repository only (optional: branch, posts folder, images folder, blog index page) | CMS: publish, schedule, update and remove posts; upload images |
 | Any service | URL, username, password/key, your own extra fields, optional check URL (with Bearer, Basic or custom-header auth) | A reachability check on the connection card |
 
 Saving a connection runs a live test against the provider and shows the result (account name, counts, or the provider's error message). You can add several of each type.
+
+**Website publishing.** For a static site deployed from GitHub (e.g. Azure Static Web Apps, which rebuilds on every push). Publishing makes one commit to the repository with:
+
+- `<posts folder>/<slug>.html`: the post page, built from your blog page's own `<head>` links, header and footer, so it looks like the rest of the site (default folder `pages/blog/posts`);
+- `<posts folder>/index.json`: the list of published posts, including each post's Markdown so it can be edited again from any browser;
+- your blog index page (default `pages/blog/blog.html`), but **only** the part between `<!-- blackwall:posts -->` and `<!-- /blackwall:posts -->`, which becomes one card per post in the same markup as your hand-written cards. Without those two comments the page isn't touched.
+
+Images go to the images folder (default `assets/blog_images`) as soon as you upload them. Scheduled posts are kept by Blackwall's server (Postgres on the home server) and published by it once a minute when due, so the browser can be closed; failures are shown in the CMS and retried every 10 minutes. Unpublishing removes the page, the index entry and the card in one commit; your draft stays in the browser. Posts go live when the site finishes redeploying. Pages (your hand-built HTML) are listed with live previews but not edited.
 
 **How credentials are handled.** The browser sends secrets once to Blackwall's server (`server/`), which makes all provider calls itself. On the home server they're encrypted with AES-256-GCM (key from `BLACKWALL_SECRET_KEY`, never stored in the database) before going into Postgres. In local development they're in `.blackwall/connections.json` (gitignored, mode 600). The home server requires a password (scrypt hash, signed HttpOnly SameSite cookie, rate-limited login). The API only returns redacted records ("saved, ends in …a1b2"), only answers requests from a loopback host, and requires an `X-Blackwall` header, which other websites can't send without a CORS preflight it never approves. A static `vite build` deployed elsewhere has no connector, and the UI says so.
 
@@ -62,7 +75,7 @@ Saving a connection runs a live test against the provider and shows the result (
 | Area | Source |
 | --- | --- |
 | Tasks, coursework, courses, daily logs, notes, projects, repository links, drafts, search, your activity charts | Saved in this browser |
-| Website traffic, development data | Your connections, labelled **Live**, **Error** or **Not connected** |
+| Website traffic, development data, published and scheduled posts, site pages and images | Your connections, labelled **Live**, **Error** or **Not connected** |
 | Sample data | Off by default. Settings → Appearance → *Sample data* fills unconnected panels with made-up data labelled **Sample data**, for previewing layouts |
 
 ## Your data

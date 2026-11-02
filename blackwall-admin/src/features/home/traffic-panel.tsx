@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Panel } from "@/components/common/panel"
 import { FeedFallback, hasData } from "@/components/common/feed-fallback"
 import { SourceBadge } from "@/components/common/source-badge"
-import { RangeToggle, TrafficChart, TrafficSummary } from "@/features/analytics/traffic-chart"
+import { DailyBars, RangeToggle, TrafficSummary } from "@/features/analytics/traffic-chart"
 import { useAnalytics } from "@/services/data"
 import type { TrafficRange } from "@/services/types"
 import { siteAnalyticsHref } from "@/lib/routes"
@@ -32,7 +32,7 @@ export function TrafficPanel({ className }: { className?: string }) {
       {hasData(feed) ? (
         <>
           <TrafficSummary data={feed.data.traffic} />
-          <TrafficChart data={feed.data.traffic} range={range} className="h-60 sm:h-64 lg:h-auto lg:min-h-72 lg:flex-1" />
+          <DailyBars data={feed.data.traffic} range={range} className="h-40 lg:h-auto lg:min-h-40 lg:flex-1" />
           <p className="text-xs text-muted-foreground">Daily counts for the last {range} days, ending yesterday.</p>
         </>
       ) : (

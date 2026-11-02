@@ -1,6 +1,6 @@
 import { format } from "date-fns"
 import { useMemo } from "react"
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import {
   ChartContainer,
   ChartTooltip,
@@ -168,6 +168,39 @@ export function TrafficChart({
             isAnimationActive={false}
           />
         </AreaChart>
+      </ChartContainer>
+    </figure>
+  )
+}
+
+/**
+ * Daily visitors as thin bars with whole-number ticks: readable when a day has
+ * 0–5 visitors, where a smoothed area chart would invent curves between days.
+ */
+export function DailyBars({ data, range, className, bare }: { data: TrafficPoint[]; range: TrafficRange; className?: string; /** No axes or grid (sparkline). */ bare?: boolean }) {
+  const tickEvery = range === 7 ? 1 : range === 30 ? 7 : 21
+  const ticks = data.filter((_, i) => (data.length - 1 - i) % tickEvery === 0).map((d) => d.date)
+  const max = Math.max(1, ...data.map((d) => d.visitors))
+  return (
+    <figure className={cn("relative", className)}>
+      <figcaption className="sr-only">Visitors per day over the last {range} days.</figcaption>
+      <ChartContainer config={trafficConfig} className="aspect-auto h-full w-full">
+        <BarChart data={data} margin={bare ? { top: 2, right: 0, bottom: 0, left: 0 } : { top: 6, right: 4, bottom: 0, left: 0 }} barCategoryGap={range === 7 ? "30%" : "18%"} accessibilityLayer>
+          {!bare && <CartesianGrid vertical={false} stroke="var(--bw-line)" strokeDasharray="2 4" />}
+          <XAxis
+            hide={bare}
+            dataKey="date"
+            ticks={ticks}
+            tickLine={false}
+            axisLine={{ stroke: "var(--border)" }}
+            tickMargin={6}
+            tick={{ fill: "var(--muted-foreground)", fontSize: 10 }}
+            tickFormatter={(d: string) => format(parseKey(d), range === 7 ? "EEE" : "MMM d")}
+          />
+          <YAxis hide={bare} width={24} allowDecimals={false} domain={[0, Math.max(2, Math.ceil(max * 1.15))]} tickLine={false} axisLine={false} tick={{ fill: "var(--muted-foreground)", fontSize: 10 }} />
+          <ChartTooltip cursor={{ fill: "var(--bw-raised)" }} content={<TrafficTooltip />} />
+          <Bar dataKey="visitors" fill="var(--color-visitors)" radius={[3, 3, 0, 0]} minPointSize={0} isAnimationActive={false} />
+        </BarChart>
       </ChartContainer>
     </figure>
   )

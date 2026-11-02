@@ -1,21 +1,17 @@
-import { createBrowserRouter, Navigate, RouterProvider, useLocation } from "react-router-dom"
+import { createBrowserRouter, Navigate, RouterProvider, useLocation, useParams } from "react-router-dom"
 import { AppShell } from "@/components/layout/app-shell"
 import { InsightsPage, SiteAnalyticsPage } from "@/features/analytics/analytics-page"
-import { ContentList } from "@/features/content/content-list"
-import { DraftEditor } from "@/features/content/draft-editor"
+import { ContentPage } from "@/features/content/content-page"
+import { PostEditor } from "@/features/content/post-editor"
 import { MediaPage } from "@/features/content/media-page"
-import { DeploymentsPage } from "@/features/development/deployments-page"
-import { ReposPage } from "@/features/development/repos-page"
-import { ReviewsPage } from "@/features/development/reviews-page"
+import { DevelopmentPage } from "@/features/development/development-page"
 import { HomePage } from "@/features/home/home-page"
-import { DailyLogPage } from "@/features/journal/daily-log-page"
 import { CourseDetail } from "@/features/learning/course-detail"
 import { LearningPage } from "@/features/learning/learning-page"
-import { NotesPage } from "@/features/notes/notes-page"
 import { SettingsRoute } from "@/features/settings/settings-route"
 import { ProjectDetail } from "@/features/work/project-detail"
 import { ProjectsPage } from "@/features/work/projects-page"
-import { TasksPage } from "@/features/work/tasks-page"
+import { PlannerPage } from "@/features/productivity/planner-page"
 import { NotFound } from "@/components/layout/not-found"
 import { RouteError } from "@/components/layout/route-error"
 
@@ -23,6 +19,18 @@ import { RouteError } from "@/components/layout/route-error"
 function Moved({ from, to }: { from: string; to: string }) {
   const { pathname, search } = useLocation()
   return <Navigate to={to + pathname.slice(from.length) + search} replace />
+}
+
+/** The old Tasks, Notes and Calendar pages are the Planner now; a day or note in the old URL carries over. */
+function ToPlanner({ section }: { section?: "notes" | "day" }) {
+  const { search } = useLocation()
+  const { date } = useParams()
+  const old = new URLSearchParams(search)
+  const next = new URLSearchParams()
+  if (date) next.set("date", date)
+  if (old.get("id")) next.set("note", old.get("id")!)
+  const q = next.toString()
+  return <Navigate to={`/productivity${q ? `?${q}` : ""}${section ? `#${section}` : ""}`} replace />
 }
 
 /** /analytics?view=website was the website tab; everything else was the personal view. */
@@ -37,32 +45,31 @@ const router = createBrowserRouter([
     errorElement: <RouteError />,
     children: [
       { index: true, element: <HomePage /> },
-      { path: "productivity", element: <Navigate to="/productivity/tasks" replace /> },
-      { path: "productivity/tasks", element: <TasksPage /> },
+      { path: "productivity", element: <PlannerPage /> },
+      { path: "productivity/tasks", element: <ToPlanner /> },
       { path: "productivity/projects", element: <ProjectsPage /> },
       { path: "productivity/projects/:id", element: <ProjectDetail /> },
       { path: "productivity/learning", element: <LearningPage /> },
       { path: "productivity/learning/:id", element: <CourseDetail /> },
-      { path: "productivity/calendar", element: <DailyLogPage /> },
-      { path: "productivity/calendar/:date", element: <DailyLogPage /> },
-      { path: "productivity/notes", element: <NotesPage /> },
+      { path: "productivity/calendar", element: <ToPlanner section="day" /> },
+      { path: "productivity/calendar/:date", element: <ToPlanner section="day" /> },
+      { path: "productivity/notes", element: <ToPlanner section="notes" /> },
       { path: "productivity/insights", element: <InsightsPage /> },
-      { path: "development", element: <Navigate to="/development/repositories" replace /> },
-      { path: "development/repositories", element: <ReposPage /> },
-      { path: "development/reviews", element: <ReviewsPage /> },
-      { path: "development/deployments", element: <DeploymentsPage /> },
-      { path: "cms", element: <Navigate to="/cms/posts" replace /> },
-      { path: "cms/posts", element: <ContentList mode="all" /> },
-      { path: "cms/drafts", element: <ContentList mode="drafts" /> },
-      { path: "cms/drafts/:id", element: <DraftEditor /> },
+      { path: "development", element: <DevelopmentPage /> },
+      { path: "development/*", element: <Navigate to="/development" replace /> },
+      { path: "cms", element: <ContentPage /> },
+      { path: "cms/posts", element: <Navigate to="/cms" replace /> },
+      { path: "cms/posts/:id", element: <PostEditor /> },
+      { path: "cms/drafts", element: <Navigate to="/cms?show=drafts" replace /> },
+      { path: "cms/drafts/:id", element: <Moved from="/cms/drafts" to="/cms/posts" /> },
       { path: "cms/media", element: <MediaPage /> },
       { path: "cms/analytics", element: <SiteAnalyticsPage /> },
       // Old addresses (bookmarks, links in notes).
       { path: "work/*", element: <Moved from="/work" to="/productivity" /> },
-      { path: "work", element: <Navigate to="/productivity/tasks" replace /> },
+      { path: "work", element: <Navigate to="/productivity" replace /> },
       { path: "content/*", element: <Moved from="/content" to="/cms" /> },
-      { path: "notes", element: <Moved from="/notes" to="/productivity/notes" /> },
-      { path: "knowledge/*", element: <Navigate to="/productivity/notes" replace /> },
+      { path: "notes", element: <ToPlanner section="notes" /> },
+      { path: "knowledge/*", element: <ToPlanner section="notes" /> },
       { path: "analytics", element: <MovedAnalytics /> },
       { path: "settings", element: <SettingsRoute /> },
       { path: "settings/:section", element: <SettingsRoute /> },

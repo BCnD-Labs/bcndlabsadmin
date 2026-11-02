@@ -1,25 +1,27 @@
 import { useState } from "react"
 import { useWorkspace } from "@/stores/workspace"
 import { GROUP_ORDER, groupOf } from "@/features/work/task-utils"
-import { CompletedChart, JournalHeatmap, Stat } from "./personal-charts"
+import { CompletedChart, JournalHeatmap } from "./personal-charts"
 import { usePersonalStats } from "./personal-stats"
 import { FeedFallback, hasData } from "@/components/common/feed-fallback"
-import { DataTable } from "@/components/common/list"
 import { PageHeader } from "@/components/common/page-header"
 import { Panel } from "@/components/common/panel"
 import { SourceBadge } from "@/components/common/source-badge"
 import { cn } from "@/lib/utils"
 import { useAnalytics } from "@/services/data"
 import type { TrafficRange } from "@/services/types"
-import { RangeToggle, TrafficChart, TrafficSummary } from "./traffic-chart"
+import { DailyBars, RangeToggle } from "./traffic-chart"
+import { StatStrip } from "@/components/common/stat-strip"
+import { format } from "date-fns"
+import { parseKey } from "@/lib/dates"
 
 const fmt = new Intl.NumberFormat("en")
 
 /** A labelled horizontal bar for small breakdowns (referrers, open tasks by due date). */
-function BarRow({ label, value, max, tone }: { label: string; value: number; max: number; tone?: "warn" }) {
+function BarRow({ label, value, max, tone, mono }: { label: string; value: number; max: number; tone?: "warn"; mono?: boolean }) {
   return (
-    <li className="grid grid-cols-[minmax(0,7rem)_1fr_3rem] items-center gap-3 text-xs">
-      <span className={cn("truncate", tone === "warn" && value ? "text-amber" : "text-muted-foreground")} title={label}>{label}</span>
+    <li className={cn("grid items-center gap-3 text-xs", mono ? "grid-cols-[minmax(0,1fr)_5rem_2rem]" : "grid-cols-[minmax(0,7rem)_1fr_3rem]")}>
+      <span className={cn("truncate", mono && "font-mono text-[11px] text-ink-2", tone === "warn" && value ? "text-amber" : !mono && "text-muted-foreground")} title={label}>{label}</span>
       <span className="h-2 rounded-[2px] bg-off">
         <span className={cn("block h-full rounded-[2px]", tone === "warn" ? "bg-amber" : "bg-chart-1")} style={{ width: `${(value / max) * 100}%` }} />
       </span>
@@ -35,49 +37,60 @@ function WebsiteAnalytics() {
 
   if (!hasData(feed)) {
     return (
-      <Panel tool="site" command="traffic" badge={badge}>
+      <Panel tool="site" command="traffic" badge={badge} className="max-w-3xl">
         <FeedFallback feed={feed} provider="analytics" what="visitors, pageviews, top pages and referrers" />
       </Panel>
     )
   }
 
   const { traffic, pages, referrers } = feed.data
+  const visitors = traffic.reduce((a, p) => a + p.visitors, 0)
+  const pageviews = traffic.reduce((a, p) => a + p.pageviews, 0)
+  const busiest = traffic.reduce((best, p) => (p.visitors > best.visitors ? p : best), traffic[0] ?? { date: "", visitors: 0, pageviews: 0 })
+  const activeDays = traffic.filter((p) => p.visitors > 0).length
+  const maxPage = Math.max(1, ...pages.map((p) => p.pageviews))
   const maxRef = Math.max(1, ...referrers.map((r) => r.visitors))
-  const showVisitors = pages.some((p) => p.visitors > 0)
 
   return (
-    <div className="grid gap-3 lg:grid-cols-12">
-      <Panel tool="site" command={`traffic --${range}d`} badge={badge} actions={<RangeToggle value={range} onChange={setRange} />} className="lg:col-span-12" bodyClassName="flex flex-col gap-3 px-3.5 py-3">
-        <TrafficSummary data={traffic} />
-        <TrafficChart data={traffic} range={range} className="h-80" />
-      </Panel>
-      <Panel tool="site" command="top-pages" className="lg:col-span-7">
-        {pages.length ? (
-          <DataTable
-            label="Top pages"
-            rows={pages}
-            rowKey={(p) => p.path}
-            columns={[
-              { key: "path", header: "Path", cell: (p) => <span className="font-mono break-all">{p.path}</span> },
-              { key: "views", header: "Pageviews", align: "right", cell: (p) => <span className="font-mono tabular-nums">{fmt.format(p.pageviews)}</span> },
-              ...(showVisitors
-                ? [{ key: "visitors", header: "Visitors", align: "right" as const, optional: true, cell: (p: (typeof pages)[number]) => <span className="font-mono tabular-nums">{fmt.format(p.visitors)}</span> }]
-                : []),
-            ]}
-          />
-        ) : (
-          <p className="px-3.5 py-3 text-[11px] text-muted-foreground">No page data for this range.</p>
-        )}
-      </Panel>
-      <Panel tool="site" command="referrers" meta="visitors" className="lg:col-span-5" bodyClassName="px-3.5 py-3">
-        {referrers.length ? (
-          <ul className="space-y-2.5">
-            {referrers.map((r) => <BarRow key={r.source} label={r.source} value={r.visitors} max={maxRef} />)}
-          </ul>
-        ) : (
-          <p className="text-[11px] text-muted-foreground">No referrer data for this range.</p>
-        )}
-      </Panel>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        {badge}
+        <span className="text-[11px] text-muted-foreground">Last {range} days, ending yesterday</span>
+        <RangeToggle value={range} onChange={setRange} className="ml-auto" />
+      </div>
+      <StatStrip
+        items={[
+          { label: "Visitors", value: fmt.format(visitors), sub: `${(visitors / range).toFixed(1)} a day on average` },
+          { label: "Pageviews", value: fmt.format(pageviews), sub: visitors ? `${(pageviews / visitors).toFixed(1)} pages per visit` : undefined },
+          { label: "Days with visits", value: `${activeDays} / ${range}` },
+          { label: "Busiest day", value: busiest.visitors ? format(parseKey(busiest.date), "MMM d") : "—", sub: busiest.visitors ? `${busiest.visitors} ${busiest.visitors === 1 ? "visitor" : "visitors"}` : undefined },
+        ]}
+      />
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+        <Panel tool="site" command={`visitors --${range}d`} bodyClassName="flex px-2 pt-2 pb-1.5">
+          <DailyBars data={traffic} range={range} className="h-44 w-full lg:h-full lg:min-h-44" />
+        </Panel>
+        <div className="flex min-w-0 flex-col gap-3">
+          <Panel tool="site" command="top-pages" meta="views" bodyClassName="px-3.5 py-2.5">
+            {pages.length ? (
+              <ul className="space-y-2">
+                {pages.slice(0, 6).map((p) => <BarRow key={p.path} label={p.path} value={p.pageviews} max={maxPage} mono />)}
+              </ul>
+            ) : (
+              <p className="text-[11px] text-muted-foreground">No page views in this range.</p>
+            )}
+          </Panel>
+          <Panel tool="site" command="referrers" meta="visitors" bodyClassName="px-3.5 py-2.5">
+            {referrers.length ? (
+              <ul className="space-y-2">
+                {referrers.slice(0, 5).map((r) => <BarRow key={r.source} label={r.source} value={r.visitors} max={maxRef} />)}
+              </ul>
+            ) : (
+              <p className="text-[11px] text-muted-foreground">No referrers in this range.</p>
+            )}
+          </Panel>
+        </div>
+      </div>
     </div>
   )
 }
@@ -92,18 +105,19 @@ function PersonalAnalytics() {
 
   return (
     <div className="grid gap-3 lg:grid-cols-12">
-      <Panel tool="you" command="stats" meta="this browser" className="lg:col-span-12">
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-5 px-3.5 py-4 sm:grid-cols-3 lg:grid-cols-6">
-          <Stat label="Open tasks" value={s.open} />
-          <Stat label="Overdue" value={s.overdue} tone={s.overdue ? "warn" : undefined} />
-          <Stat label="Done this week" value={s.thisWeek} sub={`last week ${s.lastWeek}`} />
-          <Stat label="Task streak" value={s.doneStreak} sub="days" />
-          <Stat label="Log streak" value={s.logStreak} sub="days" />
-          <Stat label="Logs, 30 days" value={s.logsLast30} sub="/ 30" />
-        </dl>
-      </Panel>
+      <StatStrip
+        className="lg:col-span-12"
+        items={[
+          { label: "Open tasks", value: s.open },
+          { label: "Overdue", value: s.overdue, tone: s.overdue ? "warn" : undefined },
+          { label: "Done this week", value: s.thisWeek, sub: `last week ${s.lastWeek}` },
+          { label: "Task streak", value: s.doneStreak, sub: "days in a row" },
+          { label: "Log streak", value: s.logStreak, sub: "days in a row" },
+          { label: "Logs, 30 days", value: `${s.logsLast30} / 30` },
+        ]}
+      />
       <Panel tool="tasks" command="completed --30d" meta={`${total30} total`} className="lg:col-span-8" bodyClassName="px-3.5 py-3">
-        <CompletedChart data={s.completed} className="h-64" />
+        <CompletedChart data={s.completed} className="h-44" />
       </Panel>
       <Panel tool="tasks" command="open --by-due" meta={open.length} className="lg:col-span-4" bodyClassName="px-3.5 py-3">
         {open.length ? (
@@ -114,9 +128,8 @@ function PersonalAnalytics() {
           <p className="text-[11px] text-muted-foreground">No open tasks.</p>
         )}
       </Panel>
-      <Panel tool="log" command="heatmap --26w" className="lg:col-span-12" bodyClassName="px-3.5 py-3">
-        <p className="mb-3 text-[11px] text-muted-foreground">Monday to Sunday, top to bottom. Click a day to open its log.</p>
-        <JournalHeatmap logWords={s.logWords} weeks={26} cell="size-4" />
+      <Panel tool="log" command="heatmap --52w" meta="Mon–Sun, top to bottom · click a day to open it" className="lg:col-span-12" bodyClassName="overflow-x-auto px-3.5 py-3">
+        <JournalHeatmap logWords={s.logWords} weeks={52} cell="size-3" />
       </Panel>
     </div>
   )

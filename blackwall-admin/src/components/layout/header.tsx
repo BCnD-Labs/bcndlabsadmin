@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { useNow } from "@/hooks/use-now"
 import { usePrefs } from "@/stores/prefs"
 import { useUi } from "@/stores/ui"
-import { NAV, isActive } from "./nav-config"
+import { NAV, activeChild, isActive } from "./nav-config"
 import { CalendarMenu } from "./calendar-menu"
 import { Notifications } from "./notifications"
 import { QuickCreate } from "./quick-create"
@@ -19,9 +19,7 @@ function greeting(d: Date) {
 function crumbs(pathname: string, search: string): { label: string; to?: string }[] {
   const dest = NAV.find((d) => isActive(d, pathname))
   if (!dest) return [{ label: "blackwall" }]
-  const child =
-    dest.children?.find((c) => pathname + search === c.to) ??
-    dest.children?.find((c) => !c.to.includes("?") && (pathname === c.to || pathname.startsWith(c.to + "/")))
+  const child = activeChild(dest, pathname, search)
   if (!child || dest.children?.length === 1) return [{ label: dest.label }]
   return [{ label: dest.label, to: dest.to }, { label: child.label }]
 }

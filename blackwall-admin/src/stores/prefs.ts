@@ -1,6 +1,6 @@
 import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
-import { DEFAULT_SLOTS, assignSlot, sanitizeSlots, swapSlots, type PanelType } from "@/lib/home-slots"
+import { DEFAULT_SLOTS, OLD_DEFAULT_SLOTS, assignSlot, sanitizeSlots, swapSlots, type PanelType } from "@/lib/home-slots"
 import { safeLocalStorage } from "./storage"
 
 export type Theme = "dim" | "dark"
@@ -33,7 +33,7 @@ interface PrefsState {
 
 type Persisted = Pick<PrefsState, "retroDetails" | "showSamples" | "workspaceName" | "autoHideSeconds" | "homeSlots" | "navExpanded" | "theme" | "uiFont">
 
-export const PREFS_VERSION = 2
+export const PREFS_VERSION = 3
 
 const DEFAULT_PREFS = (): Persisted => ({
   retroDetails: true,
@@ -70,10 +70,12 @@ export const usePrefs = create<PrefsState>()(
         uiFont,
       }),
       // v1 → v2: adds autoHideSeconds and the Home slot layout.
+      // v2 → v3: new panel types; a Home still on the old default (one panel, three empty) gets the new default.
       migrate: (persisted, version) => {
-        const p = (persisted ?? {}) as Partial<Persisted>
+        let p = (persisted ?? {}) as Partial<Persisted>
         // (autoHideSeconds may already be there: it was saved under v1 before the bump.)
-        if (version < 2) return { ...p, autoHideSeconds: p.autoHideSeconds ?? 5, homeSlots: p.homeSlots ?? [...DEFAULT_SLOTS] }
+        if (version < 2) p = { ...p, autoHideSeconds: p.autoHideSeconds ?? 5, homeSlots: p.homeSlots ?? [...OLD_DEFAULT_SLOTS] }
+        if (version < 3 && JSON.stringify(p.homeSlots) === JSON.stringify(OLD_DEFAULT_SLOTS)) p = { ...p, homeSlots: [...DEFAULT_SLOTS] }
         return p
       },
       // Never trust stored values blindly: unknown panel types or bad numbers fall back to defaults.

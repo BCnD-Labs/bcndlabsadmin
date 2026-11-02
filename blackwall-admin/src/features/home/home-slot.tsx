@@ -84,7 +84,7 @@ export function HomeSlot({
 
   return (
     <div
-      className={cn("relative flex min-w-0 flex-col md:min-h-[340px]", type !== "empty" && "min-h-[340px]", dragFrom === index && "opacity-50")}
+      className={cn("relative flex min-w-0 flex-col md:h-[min(22rem,calc((100dvh-var(--bw-header-h,92px)-1.5rem)/2))] md:min-h-[17rem]", type !== "empty" && "min-h-[17rem]", dragFrom === index && "opacity-50")}
       data-testid={`slot-${index + 1}`}
       data-type={type}
       onDragOver={(e) => {

@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { useUi } from "@/stores/ui"
-import { NAV, isActive } from "./nav-config"
+import { NAV, isActive, activeChild } from "./nav-config"
 
 /** Small screens: conventional menu button + sheet with the full tree. */
 export function MobileNav() {
@@ -57,7 +57,7 @@ export function MobileNav() {
                             onClick={() => setOpen(false)}
                             className={cn(
                               "flex h-10 items-center gap-2 rounded-[6px] px-3 text-[13px] text-muted-foreground hover:bg-raised hover:text-white",
-                              (pathname + search === c.to || pathname.startsWith(c.to + "/")) &&
+                              activeChild(d, pathname, search) === c &&
                                 "text-white before:size-1.5 before:rounded-[1.5px] before:bg-red before:content-['']",
                             )}
                           >

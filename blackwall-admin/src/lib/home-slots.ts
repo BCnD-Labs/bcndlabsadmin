@@ -1,10 +1,12 @@
 /** Home grid slots: which panel type each of the four squares shows. */
 
-export const PANEL_TYPES = ["productivity", "coursework", "empty"] as const
+export const PANEL_TYPES = ["productivity", "coursework", "calendar", "development", "website", "empty"] as const
 export type PanelType = (typeof PANEL_TYPES)[number]
 
 export const SLOT_COUNT = 4
-export const DEFAULT_SLOTS: PanelType[] = ["productivity", "empty", "empty", "empty"]
+export const DEFAULT_SLOTS: PanelType[] = ["productivity", "coursework", "development", "website"]
+/** The default before the Calendar, Development and Website panels existed (prefs v2). */
+export const OLD_DEFAULT_SLOTS: PanelType[] = ["productivity", "empty", "empty", "empty"]
 
 const isPanelType = (v: unknown): v is PanelType => (PANEL_TYPES as readonly unknown[]).includes(v)
 

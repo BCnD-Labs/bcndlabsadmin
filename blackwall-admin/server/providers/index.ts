@@ -5,6 +5,7 @@ import { testAzure } from "./azure.ts"
 import { testCloudflare } from "./cloudflare.ts"
 import { testGitHub } from "./github.ts"
 import { testOther } from "./other.ts"
+import { testWebsite } from "./website.ts"
 
 export type TestResult = Pick<StoredConnection, "status" | "account" | "message" | "summary">
 
@@ -13,6 +14,7 @@ const TESTS: Record<StoredConnection["provider"], (c: StoredConnection) => Promi
   azure: testAzure,
   cloudflare: testCloudflare,
   analytics: testAnalytics,
+  website: testWebsite,
   other: testOther,
 }
 
@@ -25,6 +27,10 @@ function explain(provider: StoredConnection["provider"], message: string): strin
     return `GitHub rejected the token. Check it's pasted fully and hasn't expired. (${message})`
   if (provider === "github" && m.includes("http 403"))
     return `GitHub accepted the token but denied access. Give it read access to the repos you track. (${message})`
+  if (provider === "website" && m.includes("http 404"))
+    return `GitHub couldn't find that repository or branch. Check the name, and that the token has access to it. (${message})`
+  if (provider === "website" && (m.includes("http 401") || m.includes("http 403")))
+    return `GitHub rejected the token. It needs Contents: Read and write on the site repository. (${message})`
   if (provider === "azure" && m.includes("aadsts7000215"))
     return `Azure rejected the client secret. Use the secret's Value, not its ID. (${message})`
   if (m.includes("fetch failed") || m.includes("enotfound") || m.includes("timeout"))

@@ -1,17 +1,4 @@
-import {
-  BarChart3,
-  Cloud,
-  GitBranch,
-  Loader2,
-  Pencil,
-  Plug,
-  Plus,
-  RotateCw,
-  Shield,
-  Trash2,
-  X,
-  type LucideIcon,
-} from "lucide-react"
+import { BarChart3, Cloud, GitBranch, Globe, Loader2, Pencil, Plug, Plus, RotateCw, Shield, Trash2, X, type LucideIcon } from "lucide-react"
 import { useEffect, useState, type FormEvent } from "react"
 import { useUi } from "@/stores/ui"
 import { toast } from "sonner"
@@ -41,6 +28,7 @@ export const PROVIDER_ICON: Record<ProviderId, LucideIcon> = {
   azure: Cloud,
   cloudflare: Shield,
   analytics: BarChart3,
+  website: Globe,
   other: Plug,
 }
 

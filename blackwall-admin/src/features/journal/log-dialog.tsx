@@ -9,7 +9,7 @@ import type { DateKey } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useWorkspace } from "@/stores/workspace"
 import { compareTasks } from "@/features/work/task-utils"
-import { logHref } from "./daily-log-page"
+import { logHref } from "@/lib/routes"
 import { LOG_PROMPTS, appendPrompt, logCommand, logTitle } from "./log-helpers"
 
 /** The day's log as a dialog (spec §4): tasks due that day, quick prompts, the entry, Save. */

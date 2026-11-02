@@ -5,7 +5,9 @@ import type { AnalyticsReport, TrafficPoint, TrafficRange } from "./types"
 
 /**
  * Sample analytics, shown only when "Show sample data" is on and no analytics
- * provider is connected. Deterministic so it's stable across reloads.
+ * provider is connected. Deterministic so it's stable across reloads. Sized
+ * like a new personal site (roughly 10–25 visitors a month), so the layout is
+ * previewed with the numbers it will actually show.
  */
 function buildSeries(): TrafficPoint[] {
   const rand = mulberry32(20261029)
@@ -14,17 +16,14 @@ function buildSeries(): TrafficPoint[] {
   for (let i = 89; i >= 0; i--) {
     const day = addDays(end, -i)
     const dow = getDay(day)
-    const weekday = dow === 0 || dow === 6 ? 0.72 : 1
-    const trend = 1 + (89 - i) * 0.006
-    const spike = i === 23 ? 2.4 : i === 22 ? 1.5 : 1
-    const noise = 0.85 + rand() * 0.3
-    const visitors = Math.round(118 * weekday * trend * spike * noise)
-    const depth = 1.6 + rand() * 0.7
-    points.push({
-      date: toDateKey(day),
-      visitors,
-      pageviews: Math.round(visitors * depth),
-    })
+    const weekday = dow === 0 || dow === 6 ? 0.6 : 1
+    const trend = 1 + (89 - i) * 0.008
+    // A post shared somewhere, 23 days ago.
+    const spike = i === 23 ? 4 : 1
+    const chance = 0.42 * weekday * trend * spike
+    const visitors = Math.floor(chance) + (rand() < chance % 1 ? 1 : 0)
+    const depth = visitors ? 1 + Math.floor(rand() * 3) : 0
+    points.push({ date: toDateKey(day), visitors, pageviews: visitors * depth })
   }
   return points
 }
@@ -32,12 +31,10 @@ function buildSeries(): TrafficPoint[] {
 const series = buildSeries()
 
 const pages: Array<[string, number]> = [
-  ["/", 0.34],
-  ["/projects", 0.18],
-  ["/blog/first-post", 0.12],
-  ["/about", 0.1],
-  ["/projects/example", 0.07],
-  ["/contact", 0.05],
+  ["/", 0.4],
+  ["/pages/blog/blog.html", 0.25],
+  ["/pages/about/about.html", 0.15],
+  ["/pages/contact/contact.html", 0.08],
 ]
 
 const referrers: Array<[string, number]> = [
@@ -54,7 +51,7 @@ export function sampleAnalytics(range: TrafficRange): AnalyticsReport {
   const v = traffic.reduce((a, p) => a + p.visitors, 0)
   return {
     traffic,
-    pages: pages.map(([path, share]) => ({ path, pageviews: Math.round(pv * share), visitors: Math.round(v * share * 0.9) })),
-    referrers: referrers.map(([source, share]) => ({ source, visitors: Math.round(v * share) })),
+    pages: pages.map(([path, share]) => ({ path, pageviews: Math.round(pv * share), visitors: Math.round(v * share * 0.9) })).filter((p) => p.pageviews > 0),
+    referrers: referrers.map(([source, share]) => ({ source, visitors: Math.round(v * share) })).filter((r) => r.visitors > 0),
   }
 }

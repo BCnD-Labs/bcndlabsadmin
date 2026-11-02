@@ -87,6 +87,16 @@ export interface Draft {
   status: DraftStatus
   excerpt: string
   body: string
+  /** Chips on the post and its blog card, e.g. "Week 11". */
+  tags?: string[]
+  /** Site-root path of the cover image (uploaded to the site's images folder). */
+  cover?: string
+  coverAlt?: string
+  /**
+   * Slug of the post on the site this draft publishes to, once it's been published
+   * or scheduled. If the slug changes afterwards, the next update renames the post.
+   */
+  remoteSlug?: string
   projectId?: ID
   createdAt: Timestamp
   updatedAt: Timestamp

@@ -6,6 +6,8 @@ import { LoginLimiter, Sessions, verifyPassword } from "./auth.ts"
 import { ProviderError } from "./http.ts"
 import { analyticsReport } from "./providers/analytics.ts"
 import { githubOverview } from "./providers/github.ts"
+import { deleteImage, publishPost, siteChrome, siteMedia, siteOverview, siteRaw, unpublishPost, uploadImage } from "./providers/website.ts"
+import { SLUG_RE, cleanPost, type ScheduledPost, type SitePost } from "../shared/site.ts"
 import { testConnection } from "./providers/index.ts"
 import { toPublic, type ConnectionStore } from "./store.ts"
 import type { System } from "./system.ts"
@@ -59,12 +61,12 @@ function send(res: ServerResponse, status: number, body: unknown, headers: Recor
   res.end(status === 204 ? undefined : JSON.stringify(body))
 }
 
-async function readJson<T>(req: IncomingMessage): Promise<T> {
+async function readJson<T>(req: IncomingMessage, limit = 64 * 1024): Promise<T> {
   const chunks: Buffer[] = []
   let size = 0
   for await (const chunk of req) {
     size += chunk.length
-    if (size > 64 * 1024) throw new ProviderError("Request too large", 413)
+    if (size > limit) throw new ProviderError("Request too large", 413)
     chunks.push(chunk)
   }
   try {
@@ -111,6 +113,28 @@ export function createApi(opts: ApiOptions) {
   // 10 failed logins per device per 15 minutes, and 30 in total across all devices.
   const limiter = new LoginLimiter(10)
   const everyone = new LoginLimiter(30)
+
+  // Scheduled posts: once a minute, publish any whose time has come. A failure is
+  // kept (with its error, shown in the CMS) and retried every 10 minutes.
+  const publishDue = async () => {
+    const due = (await opts.store.listSchedules()).filter(
+      (s) => Date.parse(s.publishAt) <= Date.now() && (!s.triedAt || Date.now() - Date.parse(s.triedAt) > 10 * 60_000),
+    )
+    if (!due.length) return
+    const site = await opts.store.firstOk("website")
+    for (const s of due) {
+      try {
+        if (!site) throw new Error("Website publishing isn't connected")
+        await publishPost(site, { ...s.post, date: s.publishAt })
+        await opts.store.deleteSchedule(s.post.slug)
+      } catch (e) {
+        await opts.store.putSchedule({ ...s, error: (e as Error).message, triedAt: new Date().toISOString() })
+      }
+    }
+  }
+  const timer = setInterval(() => void publishDue().catch(() => {}), 60_000)
+  timer.unref?.()
+  void publishDue().catch(() => {})
 
   return async function handle(req: IncomingMessage, res: ServerResponse) {
     try {
@@ -213,6 +237,68 @@ export function createApi(opts: ApiOptions) {
       if (!c) return send(res, 409, { error: "Analytics is not connected" })
       const days = Math.min(Math.max(Number(url.searchParams.get("days")) || 30, 1), 365)
       return send(res, 200, await analyticsReport(c, days))
+    }
+
+    // --- website publishing (CMS) ----------------------------------------------
+    if (parts[0] === "site") {
+      const site = await store.firstOk("website")
+      if (!site) return send(res, 409, { error: "Website publishing is not connected" })
+      const what = parts[1]
+      const slug = parts[2]
+      if (what === "overview" && method === "GET") return send(res, 200, await siteOverview(site, await store.listSchedules()))
+      if (what === "chrome" && method === "GET") return send(res, 200, await siteChrome(site))
+      // PUT /api/site/posts/:slug  { post, previousSlug? }   DELETE /api/site/posts/:slug
+      if (what === "posts" && slug && method === "PUT") {
+        const body = await readJson<{ post?: Partial<SitePost>; previousSlug?: string }>(req, 2 * 1024 * 1024)
+        const result = await publishPost(site, { ...body.post, slug }, body.previousSlug)
+        await store.deleteSchedule(slug)
+        return send(res, 200, result)
+      }
+      if (what === "posts" && slug && method === "DELETE") return send(res, 200, await unpublishPost(site, slug))
+      // PUT /api/site/schedule/:slug  { post, publishAt }   DELETE /api/site/schedule/:slug
+      if (what === "schedule" && slug && method === "PUT") {
+        const body = await readJson<{ post?: Partial<SitePost>; publishAt?: string }>(req, 2 * 1024 * 1024)
+        let post: SitePost
+        try {
+          post = cleanPost({ ...body.post, slug })
+        } catch (e) {
+          throw new ProviderError((e as Error).message, 400)
+        }
+        const at = Date.parse(body.publishAt ?? "")
+        if (!Number.isFinite(at)) throw new ProviderError("Pick a date and time to publish", 400)
+        if (at < Date.now() - 60_000) throw new ProviderError("That time has already passed. Publish now instead.", 400)
+        const scheduled: ScheduledPost = { post: { ...post, date: new Date(at).toISOString() }, publishAt: new Date(at).toISOString(), createdAt: new Date().toISOString() }
+        await store.putSchedule(scheduled)
+        return send(res, 200, scheduled)
+      }
+      if (what === "schedule" && slug && method === "DELETE") {
+        if (!SLUG_RE.test(slug)) throw new ProviderError("Bad slug", 400)
+        await store.deleteSchedule(slug)
+        return send(res, 204, null)
+      }
+      if (what === "media" && method === "GET") return send(res, 200, await siteMedia(site))
+      if (what === "media" && method === "POST") {
+        const body = await readJson<{ name?: string; data?: string }>(req, 12 * 1024 * 1024)
+        if (typeof body.name !== "string" || typeof body.data !== "string") throw new ProviderError("Send a file name and its data", 400)
+        return send(res, 201, await uploadImage(site, body.name, body.data))
+      }
+      if (what === "media" && method === "DELETE") {
+        await deleteImage(site, url.searchParams.get("path") ?? "")
+        return send(res, 204, null)
+      }
+      // GET /api/site/raw?path=/assets/blog_images/x.png  (image bytes, for previews before the site redeploys)
+      if (what === "raw" && method === "GET") {
+        const file = await siteRaw(site, url.searchParams.get("path") ?? "")
+        if (!file) return send(res, 404, { error: "Not found" })
+        const name = (url.searchParams.get("path") ?? "").toLowerCase()
+        const type = name.endsWith(".svg") ? "image/svg+xml" : name.endsWith(".png") ? "image/png" : /\.jpe?g$/.test(name) ? "image/jpeg" : name.endsWith(".gif") ? "image/gif" : name.endsWith(".webp") ? "image/webp" : name.endsWith(".avif") ? "image/avif" : "application/octet-stream"
+        res.statusCode = 200
+        res.setHeader("Content-Type", type)
+        res.setHeader("Cache-Control", "private, max-age=300")
+        res.setHeader("X-Content-Type-Options", "nosniff")
+        res.setHeader("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
+        return res.end(file.body)
+      }
     }
 
     send(res, 404, { error: "Not found" })

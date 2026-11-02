@@ -10,7 +10,21 @@ import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
 import { isOverdue } from "./task-utils"
 
-export function TaskRow({ task, onToggle, showDetails }: { task: Task; onToggle?: (task: Task) => void; showDetails?: boolean }) {
+export function TaskRow({
+  task,
+  onToggle,
+  showDetails,
+  dense,
+  hideDate,
+}: {
+  task: Task
+  onToggle?: (task: Task) => void
+  showDetails?: boolean
+  /** 34px rows for side-by-side cards (Planner). */
+  dense?: boolean
+  /** Lists already grouped by day show only the time. */
+  hideDate?: boolean
+}) {
   const toggleTask = useWorkspace((s) => s.toggleTask)
   const toggleStar = useWorkspace((s) => s.toggleStar)
   const openForm = useUi((s) => s.openForm)
@@ -19,7 +33,13 @@ export function TaskRow({ task, onToggle, showDetails }: { task: Task; onToggle?
   const TypeIcon = course ? learningType(task.learningType).icon : null
 
   return (
-    <li className="group flex min-h-10 items-center gap-2.5 border-b border-line-soft px-3.5 py-1.5 last:border-b-0 hover:bg-raised" data-testid="task-row">
+    <li
+      className={cn(
+        "group flex items-center gap-2.5 border-b border-line-soft last:border-b-0 hover:bg-raised",
+        dense ? "min-h-[34px] px-3 py-1" : "min-h-10 px-3.5 py-1.5",
+      )}
+      data-testid="task-row"
+    >
       <Checkbox
         checked={task.done}
         onCheckedChange={() => {
@@ -40,7 +60,7 @@ export function TaskRow({ task, onToggle, showDetails }: { task: Task; onToggle?
         </span>
         {showDetails && task.details && <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{task.details}</span>}
       </button>
-      {course && <CourseTag course={course} className="hidden sm:inline-flex" />}
+      {course && !hideDate && <CourseTag course={course} className="hidden sm:inline-flex" />}
       {task.done && task.completedAt ? (
         <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums" title={task.due ? `Was due ${task.due}` : undefined}>
           Done {format(new Date(task.completedAt), "EEE MMM d")}
@@ -53,8 +73,8 @@ export function TaskRow({ task, onToggle, showDetails }: { task: Task; onToggle?
           )}
         >
           {overdue && <CalendarClock className="size-3" aria-hidden />}
-          {relativeDue(task.due)}
-          {task.time && <span className="text-faint">· {formatTime(task.time)}</span>}
+          {hideDate ? (task.time ? formatTime(task.time) : null) : relativeDue(task.due)}
+          {!hideDate && task.time && <span className="text-faint">· {formatTime(task.time)}</span>}
         </span>
       )}
       <button
@@ -63,7 +83,8 @@ export function TaskRow({ task, onToggle, showDetails }: { task: Task; onToggle?
         aria-pressed={task.starred}
         aria-label={task.starred ? `Unstar "${task.title}"` : `Star "${task.title}"`}
         className={cn(
-          "flex size-7 shrink-0 items-center justify-center rounded-[6px] hover:bg-selected",
+          "flex shrink-0 items-center justify-center rounded-[6px] hover:bg-selected",
+          dense ? "size-6" : "size-7",
           task.starred ? "text-amber" : "text-faint opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100",
         )}
       >

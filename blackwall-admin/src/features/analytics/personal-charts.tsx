@@ -5,7 +5,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart"
 import { parseKey, toDateKey } from "@/lib/dates"
 import { cn } from "@/lib/utils"
-import { logHref } from "@/features/journal/daily-log-page"
+import { logHref } from "@/lib/routes"
 import type { DayCount } from "./personal-stats"
 
 const config = { count: { label: "Tasks completed", color: "var(--chart-1)" } } satisfies ChartConfig

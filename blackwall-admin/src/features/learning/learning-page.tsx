@@ -15,7 +15,7 @@ import { ListGroupLabel } from "@/components/common/list"
 import { PageHeader } from "@/components/common/page-header"
 import { Panel } from "@/components/common/panel"
 import { SegmentedTabs } from "@/components/common/segmented-tabs"
-import { Stat } from "@/features/analytics/personal-charts"
+import { StatStrip } from "@/components/common/stat-strip"
 import { daysUntil, parseKey } from "@/lib/dates"
 import { courseHref } from "@/lib/routes"
 import type { Course, Task } from "@/lib/types"
@@ -33,7 +33,7 @@ function AddLearning() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button size="lg">
+        <Button>
           <Plus /> Add learning <ChevronDown className="opacity-80" />
         </Button>
       </DropdownMenuTrigger>
@@ -218,14 +218,14 @@ export function LearningPage() {
         </Panel>
       ) : (
         <div className="grid gap-3">
-          <Panel tool="learning" command="summary" meta="courses in progress" bodyClassName="px-3.5 py-3.5">
-            <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <Stat label="In progress" value={counts.active} sub={counts.upcoming ? `${counts.upcoming} upcoming` : undefined} />
-              <Stat label="Due this week" value={totals.dueSoon} />
-              <Stat label="Overdue" value={totals.overdue} tone={totals.overdue ? "warn" : undefined} />
-              <Stat label="Completed" value={`${totals.pct}%`} sub={totals.total ? `${totals.done} of ${totals.total}` : undefined} />
-            </dl>
-          </Panel>
+          <StatStrip
+            items={[
+              { label: "Courses in progress", value: counts.active, sub: counts.upcoming ? `${counts.upcoming} upcoming` : undefined },
+              { label: "Due this week", value: totals.dueSoon },
+              { label: "Overdue", value: totals.overdue, tone: totals.overdue ? "warn" : undefined },
+              { label: "Completed", value: `${totals.pct}%`, sub: totals.total ? `${totals.done} of ${totals.total}` : undefined },
+            ]}
+          />
           <div className="grid items-start gap-3 lg:grid-cols-3">
             <section aria-label="Courses" className="grid gap-3 lg:col-span-2">
               <SegmentedTabs

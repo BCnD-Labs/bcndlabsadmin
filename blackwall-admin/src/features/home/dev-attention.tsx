@@ -145,7 +145,7 @@ export function DevAttention({ className }: { className?: string }) {
       className={className}
       actions={
         <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
-          <Link to="/development/reviews">Reviews & issues</Link>
+          <Link to="/development">Development</Link>
         </Button>
       }
     >

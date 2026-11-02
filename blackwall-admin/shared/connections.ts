@@ -3,7 +3,7 @@
  * Secret fields are sent to the connector once and never returned to the browser.
  */
 
-export type ProviderId = "github" | "azure" | "cloudflare" | "analytics" | "other"
+export type ProviderId = "github" | "azure" | "cloudflare" | "analytics" | "website" | "other"
 
 export interface FieldDef {
   key: string
@@ -100,6 +100,33 @@ export const PROVIDERS: ProviderDef[] = [
       { key: "accountId", label: "Account ID", required: true, showWhen: { key: "provider", values: ["cloudflare"] } },
       { key: "siteTag", label: "Site tag", required: true, showWhen: { key: "provider", values: ["cloudflare"] } },
       { key: "apiKey", label: "API key / token", secret: true, required: true },
+    ],
+  },
+  {
+    id: "website",
+    name: "Website publishing",
+    blurb: "Publish, schedule, update and remove blog posts on a static site deployed from a GitHub repository (e.g. Azure Static Web Apps).",
+    help: { label: "Create a fine-grained token for that repository", url: "https://github.com/settings/personal-access-tokens/new" },
+    fields: [
+      { key: "repo", label: "Site repository", required: true, placeholder: "owner/website", help: "The GitHub repository your site deploys from." },
+      { key: "siteUrl", label: "Site URL", type: "url", required: true, placeholder: "https://www.example.com" },
+      { key: "branch", label: "Branch", placeholder: "main", help: "The branch your deploy builds from." },
+      { key: "postsDir", label: "Posts folder", placeholder: "pages/blog/posts" },
+      { key: "imagesDir", label: "Images folder", placeholder: "assets/blog_images" },
+      {
+        key: "blogIndex",
+        label: "Blog index page",
+        placeholder: "pages/blog/blog.html",
+        help: "Posts are listed between <!-- blackwall:posts --> and <!-- /blackwall:posts --> in this file. Without those two comments the file is left alone.",
+      },
+      {
+        key: "token",
+        label: "GitHub token",
+        secret: true,
+        required: true,
+        placeholder: "github_pat_…",
+        help: "Fine-grained token for only this repository, with Contents: Read and write. Kept separate from your read-only GitHub connection.",
+      },
     ],
   },
   {

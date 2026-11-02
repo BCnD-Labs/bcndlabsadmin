@@ -5,7 +5,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils"
 import { useUi } from "@/stores/ui"
 import { usePrefs } from "@/stores/prefs"
-import { NAV, isActive, type NavDestination } from "./nav-config"
+import { NAV, isActive, type NavDestination, activeChild } from "./nav-config"
 import { useNavHints } from "./nav-hints"
 
 /** Hover-intent timings (ms). */
@@ -207,7 +207,7 @@ export function NavRail({ focusMain }: { focusMain: () => void }) {
           >
             <ul role="menu" aria-label={`${d.label} pages`} className="min-h-0 overflow-hidden py-1.5">
               {d.children!.map((c) => {
-                const here = pathname + search === c.to || pathname.startsWith(c.to + "/")
+                const here = activeChild(d, pathname, search) === c
                 const count = h?.subs?.[c.to]
                 return (
                   <li key={c.to} role="none">
@@ -410,7 +410,7 @@ function NavTree() {
             >
               <ul className="ml-[19px] min-h-0 overflow-hidden border-l border-line pl-2" aria-label={`${d.label} pages`}>
                 {d.children.map((c, i) => {
-                  const here = pathname + search === c.to || pathname.startsWith(c.to + "/")
+                  const here = activeChild(d, pathname, search) === c
                   const count = h?.subs?.[c.to]
                   return (
                     <li key={c.to} className={cn(i === 0 && "pt-1", i === d.children!.length - 1 && "pb-1")}>
