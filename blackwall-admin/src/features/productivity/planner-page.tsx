@@ -66,15 +66,16 @@ export function PlannerPage() {
         title="Planner"
       />
       <div
-        className="grid grid-cols-1 gap-3 lg:h-[calc(var(--bw-slot-h)*2+0.75rem)] lg:min-h-[34.75rem] lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]"
+        className="grid grid-cols-1 gap-3 xl:h-[calc(var(--bw-slot-h)*2+0.75rem)] xl:min-h-[34.75rem] xl:grid-cols-[minmax(0,1fr)_22rem]"
         data-testid="planner"
       >
-        <section aria-label="Notes and daily log" className="bw-panel order-2 grid min-h-[30rem] grid-cols-1 overflow-hidden md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:order-1 lg:min-h-0">
+        <section aria-label="Notes and daily log" className="bw-panel order-2 grid min-h-[30rem] grid-cols-1 overflow-hidden md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] xl:order-1 xl:min-h-0">
           <NotesColumn />
           <DayColumn key={date} date={date} onDate={onDate} />
         </section>
-        <div className="order-1 flex min-h-0 min-w-0 flex-col gap-3 lg:order-2">
-          <section aria-label="Calendar" className="bw-panel flex shrink-0 flex-col items-center gap-1.5 pt-1.5 pb-2.5">
+        {/* Tablet and small laptops: calendar and tasks side by side (tasks as tall as the calendar). Wide screens: stacked in the right column. */}
+        <div className="order-1 flex min-h-0 min-w-0 flex-col gap-3 md:flex-row xl:order-2 xl:flex-col">
+          <section aria-label="Calendar" className="bw-panel flex shrink-0 flex-col items-center gap-1.5 px-2 pt-1.5 pb-2.5">
             <JournalCalendar selected={date} onSelect={onDate} month={month} onMonthChange={setMonth} className="[--cell-size:--spacing(8)]" />
             <CalendarLegend />
           </section>
@@ -359,7 +360,7 @@ function TasksCard({ date }: { date: string }) {
       id="tasks"
       tool="tasks"
       command={tab}
-      className="min-h-[22rem] scroll-mt-28 lg:min-h-0 lg:flex-1"
+      className="min-h-[22rem] scroll-mt-28 md:min-h-0 md:min-w-0 md:flex-1 md:[contain:size] xl:[contain:none]"
       bodyClassName="flex min-h-0 flex-col"
       actions={
         <>
