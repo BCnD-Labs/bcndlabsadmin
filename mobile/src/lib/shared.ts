@@ -6,6 +6,7 @@ export { validWorkspace, emptyWorkspace, mergeWorkspace, same, COLLECTION_KEYS }
 export type { Collections, WorkspaceSnapshot } from "../../../blackwall-admin/shared/workspace.ts"
 export { validPlannerFields, validDateKey, REFLECTION_ITEMS } from "../../../blackwall-admin/shared/planner.ts"
 export { toggleTask, createTask, updateTask, removeTask, toggleStar } from "../../../blackwall-admin/shared/records.ts"
+export type { NewTask } from "../../../blackwall-admin/shared/records.ts"
 export { GROUP_ORDER, TASK_TABS, compareTasks, groupOf, inTab, isOverdue, matchesSearch, normalizeSearch, taskGroups, taskRows, parseQuickAdd } from "../../../blackwall-admin/shared/task-rules.ts"
 export type { TaskGroup, TaskTab } from "../../../blackwall-admin/shared/task-rules.ts"
 export { addDaysToKey, dayNumber, daysBetween, weekdayOfKey } from "../../../blackwall-admin/shared/date-keys.ts"

@@ -21,8 +21,12 @@ export interface WorkspaceValue {
   refreshing: boolean
   conflict: ConflictInfo | null
   refresh: () => Promise<void>
-  /** Applies a shared record rule to the workspace and saves it. `keys` must list every collection `fn` changes. */
-  mutate: (keys: readonly Key[], fn: (data: Collections) => Collections) => Promise<void>
+  /**
+   * Applies a shared record rule to the workspace and saves it. `keys` must list every collection `fn` changes.
+   * Resolves true once the edit is on the phone (saved, or queued to send later) and false when it was
+   * refused, with the reason in `message`. It resolves after the save attempt, which can take a while offline.
+   */
+  mutate: (keys: readonly Key[], fn: (data: Collections) => Collections) => Promise<boolean>
   resolveConflict: (choice: "mine" | "theirs") => Promise<void>
 }
 
@@ -114,11 +118,19 @@ export function WorkspaceProvider({ address, children }: { address: string; chil
 
   const mutate = useCallback<WorkspaceValue["mutate"]>(
     async (keys, fn) => {
+      // While a conflict is open the client refuses new edits without throwing.
+      const blocked = client.getState().status === "conflict"
       try {
         await client.mutate(keys, fn)
+        if (blocked) {
+          if (alive.current) setNotice("Choose which edits to keep first.")
+          return false
+        }
         if (alive.current) setNotice(undefined)
+        return true
       } catch (error) {
         if (alive.current) setNotice(error instanceof Error ? error.message : "That change couldn't be saved.")
+        return false
       }
     },
     [client],

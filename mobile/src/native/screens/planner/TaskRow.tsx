@@ -1,16 +1,19 @@
-import { StyleSheet, Text, View } from "react-native"
+import { Pressable, StyleSheet, Text, View } from "react-native"
 import { color } from "../../../theme.ts"
 import { Icon, tone } from "../../ui.tsx"
 import { TaskCheck } from "./TaskCheck.tsx"
 import type { PlannerRow } from "./rows.ts"
 
-/** One task in the Planner list: checkbox, title, then due text, time and course. */
-export function TaskRow({ row, onToggle }: { row: PlannerRow; onToggle: () => void }) {
+/**
+ * One task in the Planner list: checkbox (completes), the title and details (opens the editor),
+ * and a star (toggles it, as on the web row).
+ */
+export function TaskRow({ row, onToggle, onOpen, onStar }: { row: PlannerRow; onToggle: () => void; onOpen: () => void; onStar: () => void }) {
   const sub = [row.time, row.course].filter(Boolean).join(" · ")
   return (
     <View style={styles.row}>
       <TaskCheck checked={row.done} onPress={onToggle} label={`${row.done ? "Reopen" : "Complete"} ${row.title}`} />
-      <View style={styles.body}>
+      <Pressable onPress={onOpen} style={styles.body} accessibilityRole="button" accessibilityLabel={`Edit ${row.title}`}>
         <Text style={[styles.title, row.done && styles.done]} numberOfLines={2}>
           {row.title}
         </Text>
@@ -18,21 +21,20 @@ export function TaskRow({ row, onToggle }: { row: PlannerRow; onToggle: () => vo
           <Text style={row.overdue ? styles.overdue : undefined}>{row.dueText}</Text>
           {sub ? ` · ${sub}` : ""}
         </Text>
-      </View>
-      {row.starred ? (
-        <View accessibilityLabel="Starred">
-          <Icon name="star" size={16} tint={tone.amber} />
-        </View>
-      ) : null}
+      </Pressable>
+      <Pressable onPress={onStar} style={styles.star} accessibilityRole="button" accessibilityLabel={`${row.starred ? "Unstar" : "Star"} ${row.title}`} accessibilityState={{ selected: row.starred }}>
+        <Icon name={row.starred ? "star" : "star-outline"} size={18} tint={row.starred ? tone.amber : color.faint} />
+      </Pressable>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center", gap: 8, minHeight: 48, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: color.line },
-  body: { flex: 1, gap: 3 },
+  row: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 48, borderBottomWidth: 1, borderBottomColor: color.line },
+  body: { flex: 1, gap: 3, minHeight: 44, justifyContent: "center", paddingVertical: 6 },
   title: { color: color.text, fontSize: 15, fontWeight: "600" },
   done: { color: color.faint, textDecorationLine: "line-through" },
   sub: { color: color.muted, fontSize: 12 },
   overdue: { color: tone.red, fontWeight: "700" },
+  star: { width: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
 })
