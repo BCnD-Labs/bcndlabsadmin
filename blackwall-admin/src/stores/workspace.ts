@@ -2,6 +2,7 @@ import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
 import { newId } from "@/lib/ids"
 import type { JournalEntry, Note, Task } from "@/lib/types"
+import { createNote, createTask, moveJournal, removeCourseRecords, removeNote, removeTask, saveJournal, toggleStar, togglePin, toggleTask, updateNote, updateTask } from "@shared/records"
 import { V1_EXAMPLE_IDS } from "./seed"
 import { safeLocalStorage } from "./storage"
 
@@ -49,6 +50,8 @@ interface WorkspaceState extends Collections {
 
 const empty: Collections = { tasks: [], notes: [], journal: [], projects: [], repos: [], drafts: [], courses: [], services: [], sites: [], pages: [], forms: [], socialAccounts: [], socialPosts: [] }
 const now = () => new Date().toISOString()
+/** The pure record rules in shared/records.ts use the web's own id generator. */
+const RULES = { makeId: newId }
 
 export const useWorkspace = create<WorkspaceState>()(
   persist(
@@ -56,6 +59,16 @@ export const useWorkspace = create<WorkspaceState>()(
       ...empty,
 
       create: (key, input) => {
+        if (key === "tasks") {
+          const made = createTask({ tasks: get().tasks }, input as NewItem<"tasks">, RULES)
+          set(made.data)
+          return made.record as Item<typeof key>
+        }
+        if (key === "notes") {
+          const made = createNote({ notes: get().notes }, input as NewItem<"notes">, RULES)
+          set(made.data)
+          return made.record as Item<typeof key>
+        }
         const t = now()
         const item = { ...input, id: newId(ID_PREFIX[key]), createdAt: t, updatedAt: t } as Item<typeof key>
         set({ [key]: [item, ...get()[key]] } as Partial<Collections>)
@@ -63,6 +76,8 @@ export const useWorkspace = create<WorkspaceState>()(
       },
 
       update: (key, id, patch) => {
+        if (key === "tasks") return set(updateTask({ tasks: get().tasks }, id, patch as Partial<NewItem<"tasks">>, RULES))
+        if (key === "notes") return set(updateNote({ notes: get().notes }, id, patch as Partial<NewItem<"notes">>, RULES))
         const t = now()
         set({
           [key]: (get()[key] as Item<typeof key>[]).map((it) => (it.id === id ? { ...it, ...patch, updatedAt: t } : it)),
@@ -71,9 +86,10 @@ export const useWorkspace = create<WorkspaceState>()(
 
       remove: (key, id) => {
         const state = get()
-        const next: Partial<Collections> = {
-          [key]: (state[key] as { id: string }[]).filter((it) => it.id !== id),
-        }
+        const next: Partial<Collections> =
+          key === "tasks" ? removeTask({ tasks: state.tasks }, id)
+          : key === "notes" ? removeNote({ notes: state.notes }, id)
+          : { [key]: (state[key] as { id: string }[]).filter((it) => it.id !== id) }
         // Deleting a project unlinks, rather than deletes, its repos and drafts.
         if (key === "projects") {
           next.repos = state.repos.map((r) => (r.projectId === id ? { ...r, projectId: undefined } : r))
@@ -82,8 +98,7 @@ export const useWorkspace = create<WorkspaceState>()(
         // Deleting a course deletes its coursework (it only means something with the course)
         // and unlinks, rather than deletes, its notes.
         if (key === "courses") {
-          next.tasks = state.tasks.filter((t) => t.courseId !== id)
-          next.notes = state.notes.map((n) => (n.courseId === id ? { ...n, courseId: undefined } : n))
+          Object.assign(next, removeCourseRecords({ tasks: state.tasks, notes: state.notes }, id))
         }
         // Deleting a site deletes its pages; its posts stay as unassigned drafts.
         if (key === "sites") {
@@ -97,43 +112,15 @@ export const useWorkspace = create<WorkspaceState>()(
         set(next)
       },
 
-      toggleTask: (id) => {
-        const t = now()
-        set({
-          tasks: get().tasks.map((task) =>
-            task.id === id
-              ? { ...task, done: !task.done, completedAt: task.done ? undefined : t, updatedAt: t }
-              : task,
-          ),
-        })
-      },
+      toggleTask: (id) => set(toggleTask({ tasks: get().tasks }, id)),
 
-      toggleStar: (id) =>
-        set({ tasks: get().tasks.map((t) => (t.id === id ? { ...t, starred: !t.starred, updatedAt: now() } : t)) }),
+      toggleStar: (id) => set(toggleStar({ tasks: get().tasks }, id)),
 
-      togglePin: (id) =>
-        set({ notes: get().notes.map((n) => (n.id === id ? { ...n, pinned: !n.pinned, updatedAt: now() } : n)) }),
+      togglePin: (id) => set(togglePin({ notes: get().notes }, id)),
 
-      saveJournal: (date, text) => {
-        const t = now()
-        const existing = get().journal.find((j) => j.id === date)
-        if (!text.trim()) {
-          set({ journal: get().journal.filter((j) => j.id !== date) })
-        } else if (existing) {
-          set({ journal: get().journal.map((j) => (j.id === date ? { ...j, text, updatedAt: t } : j)) })
-        } else {
-          set({ journal: [...get().journal, { id: date, text, createdAt: t, updatedAt: t }] })
-        }
-      },
+      saveJournal: (date, text) => set(saveJournal({ journal: get().journal }, date, text)),
 
-      moveJournal: (from, to) => {
-        if (from === to) return
-        const src = get().journal.find((j) => j.id === from)
-        if (!src) return
-        const dest = get().journal.find((j) => j.id === to)
-        get().saveJournal(to, dest ? `${dest.text}\n\n${src.text}` : src.text)
-        get().saveJournal(from, "")
-      },
+      moveJournal: (from, to) => set(moveJournal({ journal: get().journal }, from, to)),
 
       clearAll: () => set(empty),
     }),
