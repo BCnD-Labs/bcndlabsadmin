@@ -1,6 +1,6 @@
 /* Planner-only geometry. Existing shared theme, shell and mobile pages are retained. */
 .planner-workspace { width: 100%; max-width: var(--bw-page-max); margin-inline: auto; container-type: inline-size; }
-.planner-focus { display: flex; align-items: center; gap: 12px; padding: 8px 12px; margin-bottom: 12px; border: 1px solid var(--bw-line); border-radius: 12px; background: var(--bw-panel); }
+.planner-focus { display: flex; align-items: center; gap: 12px; padding: 8px 12px; margin-bottom: 12px; border: 1px solid var(--bw-line); border-radius: var(--bw-panel-radius); background: var(--bw-panel); }
 .planner-focus-items { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; }
 .planner-focus-item { display: flex; align-items: center; gap: 7px; min-height: 28px; max-width: 100%; }
 .planner-focus-item button { overflow-wrap: anywhere; }
@@ -10,6 +10,8 @@
 .planner-notes { overflow: hidden; max-height: 400px; }
 .planner-notes #notes { max-height: 400px; }
 .planner-inspector { grid-area: auto; }
+/* Nothing selected: the inspector sizes to its hint instead of stretching beside the whole canvas. */
+.planner-inspector.is-empty { align-self: start; }
 .planner-inspector .bw-panel-title { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
 .planner-daily-log { grid-area: auto; }
 @container (min-width: 960px) {
@@ -99,8 +101,10 @@
 }
 .planner-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 12px; color: var(--bw-text-2); }
 .planner-field input, .planner-field select, .planner-search { min-width: 0; width: 100%; height: 32px; padding: 4px 8px; border: 1px solid var(--bw-border); border-radius: 6px; background: var(--bw-well); color: var(--bw-text); font-size: 13px; }
-.planner-reflection-text, .planner-log-text { width: 100%; resize: vertical; min-height: 160px; border: 1px solid var(--bw-border); border-radius: 7px; padding: 10px; background: var(--bw-well); color: var(--bw-text); font-size: 13px; line-height: 1.6; }
+.planner-reflection-text, .planner-log-text { width: 100%; resize: vertical; min-height: 160px; field-sizing: content; max-height: 60vh; border: 1px solid var(--bw-border); border-radius: var(--bw-control-radius); padding: 10px; background: var(--bw-well); color: var(--bw-text); font-size: 13px; line-height: 1.6; }
 .planner-reflection-text { min-height: 220px; }
+/* The log starts at about four lines and grows with what's written (field-sizing), up to 60vh. */
+.planner-log-text { min-height: 104px; }
 .planner-remove { display: flex; justify-content: center; align-items: center; min-width: 24px; min-height: 24px; border-radius: 4px; }
 .planner-remove:hover { background: var(--bw-raised); }
 @media (max-width: 639px) {

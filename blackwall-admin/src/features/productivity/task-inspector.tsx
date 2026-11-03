@@ -28,7 +28,7 @@ export function TaskInspector({ task, date, tab, onTab, onDate, onSelect }: {
   const toggleTask = useWorkspace((s) => s.toggleTask)
   const toggleStar = useWorkspace((s) => s.toggleStar)
   const course = useWorkspace((s) => s.courses.find((c) => c.id === task?.courseId))
-  return <Panel title={task?.title ?? "Selected task"} category="tasks" className="planner-inspector" bodyClassName="flex flex-col" actions={task && <>
+  return <Panel title={task?.title ?? "Selected task"} category="tasks" className={task ? "planner-inspector" : "planner-inspector is-empty"} bodyClassName="flex flex-col" actions={task && <>
     <Button variant="quiet" size="icon-sm" aria-label={task.starred ? "Unstar task" : "Star task"} aria-pressed={task.starred} onClick={() => toggleStar(task.id)}><Star className={cn(task.starred && "fill-current text-amber")} /></Button>
     <Button variant="quiet" size="sm" onClick={() => useUi.getState().openForm({ kind: "task", id: task.id })}><Pencil /> Edit</Button>
   </>}>
