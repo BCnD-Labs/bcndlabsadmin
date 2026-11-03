@@ -308,8 +308,8 @@ export function LearningPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <SegmentedTabs
                   label="Show kind"
-                  className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none]"
-                  tabClassName="flex-none px-2.5 sm:flex-1 sm:px-3"
+                  className="min-w-0 max-w-full overflow-x-auto [scrollbar-width:none]"
+                  tabClassName="flex-none px-2.5 sm:px-3"
                   value={effectiveKind}
                   onChange={setKind}
                   tabs={[{ value: "all" as KindFilter, label: "All", count: inStatus.length }, ...kindTabs.map((k) => ({ value: k.value as KindFilter, label: k.plural, count: kindCounts.get(k.value) }))]}

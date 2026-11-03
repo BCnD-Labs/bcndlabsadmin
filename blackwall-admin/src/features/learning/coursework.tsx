@@ -79,7 +79,7 @@ export function CourseworkRow({ task, course, showCourse }: { task: Task; course
         <span className="sr-only">{type.label}</span>
       </span>
       <button type="button" onClick={() => openForm({ kind: "task", id: task.id })} className="min-w-0 flex-1 rounded-[4px] py-0.5 text-left" title={`Edit ${type.label.toLowerCase()}`}>
-        <span className={cn("block truncate text-[13px] text-ink", task.done && "text-faint line-through")}>{task.title}</span>
+        <span className={cn("line-clamp-2 text-[13px] leading-snug break-words text-ink", task.done && "text-faint line-through")} title={task.title}>{task.title}</span>
         {showCourse && course ? (
           // Across courses, the course goes under the title so narrow columns keep the title readable.
           <span className="mt-1 flex min-w-0 items-center gap-1.5">
