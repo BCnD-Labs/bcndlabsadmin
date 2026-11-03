@@ -11,7 +11,7 @@ import { buildNewNote, buildNotePatch, draftFromNote, emptyNoteDraft, noteDirty,
 import { NOTE_COLORS, colorOf } from "./note-rules.ts"
 
 /** What the sheet is doing: a new note, or an existing note by id. */
-export type NoteEditor = { mode: "create" } | { mode: "edit"; id: string }
+export type NoteEditor = { mode: "create"; courseId?: string } | { mode: "edit"; id: string }
 
 /**
  * The note editor: a bottom sheet with the web note form's fields (text, colour, pinned, course) and
@@ -23,7 +23,7 @@ export function NoteSheet({ editor, data, onClose }: { editor: NoteEditor; data:
   const { mutate, message } = useWorkspace()
   const note = editor.mode === "edit" ? data.notes.find((n) => n.id === editor.id) : undefined
   const [opened] = useState(() => !!note)
-  const [start] = useState<NoteDraft>(() => (note ? draftFromNote(note) : emptyNoteDraft()))
+  const [start] = useState<NoteDraft>(() => (note ? draftFromNote(note) : { ...emptyNoteDraft(), ...(editor.mode === "create" && editor.courseId && { courseId: editor.courseId }) }))
   const [draft, setDraft] = useState(start)
   const [showErrors, setShowErrors] = useState(false)
   const [confirming, setConfirming] = useState(false)

@@ -1,114 +1,47 @@
 import { useState } from "react"
-import { StyleSheet, Text, View } from "react-native"
+import { Pressable, StyleSheet, Text, View } from "react-native"
+import { toggleTask } from "../../lib/shared.ts"
 import { color } from "../../theme.ts"
-import { Badge, Card, Empty, Icon, ListRow, SampleBadge, Screen, TYPE_ICON, TYPE_LABEL, TYPE_TONE, tone } from "../ui.tsx"
-import { SAMPLE_COURSES, SAMPLE_COURSEWORK, SAMPLE_EVENTS, SAMPLE_INSIGHTS, SAMPLE_REPOS, SAMPLE_TASKS, SAMPLE_TODAY, type SampleTask } from "../sample.ts"
-import { TaskCheck } from "./planner/TaskCheck.tsx"
-import { formatDay, weekDays } from "./planner/dates.ts"
+import { useWorkspace } from "../data/WorkspaceProvider.tsx"
+import { todayKey } from "../data/sync-view.ts"
+import { Badge, Button, Card, Checkbox, Empty, Icon, ListRow, Screen, tone } from "../ui.tsx"
+import { TaskSheet, type Editor } from "./planner/TaskSheet.tsx"
+import { formatDay } from "./planner/dates.ts"
 
-const WEEK = weekDays(SAMPLE_TODAY)
-const WEEK_START = WEEK[0]
-const WEEK_END = WEEK[6]
-
-/** Open tasks due today or overdue, in sample order. Fixed at load; the checkboxes change local state only. */
-const TODAY_TASKS = SAMPLE_TASKS.filter((t) => !t.done && !!t.due && t.due <= SAMPLE_TODAY)
-
-/** The next five open coursework items, soonest first. */
-const COMING_UP = SAMPLE_COURSEWORK.filter((w) => !w.done)
-  .sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : 0))
-  .slice(0, 5)
-
-/** Events in the week that contains today, by date then start time. */
-const WEEK_EVENTS = SAMPLE_EVENTS.filter((e) => e.date >= WEEK_START && e.date <= WEEK_END).sort((a, b) => {
-  const keyA = `${a.date} ${a.start}`
-  const keyB = `${b.date} ${b.start}`
-  return keyA < keyB ? -1 : keyA > keyB ? 1 : 0
-})
-
-const STATS = [
-  { label: "Completed", value: SAMPLE_INSIGHTS.completedThisWeek, tint: undefined },
-  { label: "Day streak", value: SAMPLE_INSIGHTS.streakDays, tint: undefined },
-  { label: "Open", value: SAMPLE_INSIGHTS.openTasks, tint: undefined },
-  { label: "Overdue", value: SAMPLE_INSIGHTS.overdue, tint: SAMPLE_INSIGHTS.overdue > 0 ? tone.red : undefined },
-]
-
-/** Home skeleton: a stack of cards, all derived from the sample data. Cards are not tappable. */
-export function HomeScreen(_props: { onOpenSettings: () => void }) {
-  const [overrides, setOverrides] = useState<Record<string, boolean>>({})
-  const isDone = (t: SampleTask) => (t.id in overrides ? overrides[t.id] : t.done)
-  const toggle = (t: SampleTask) => setOverrides((o) => ({ ...o, [t.id]: !isDone(t) }))
-  const openToday = TODAY_TASKS.filter((t) => !isDone(t)).length
-
-  return (
-    <Screen title="Home" right={<SampleBadge />}>
-      <Card
-        title="Today"
-        right={<Badge label={`${openToday} open`} tint={openToday > 0 ? tone.amber : tone.green} />}
-      >
-        {TODAY_TASKS.length === 0 ? <Empty>Nothing due today.</Empty> : null}
-        {TODAY_TASKS.slice(0, 3).map((t) => (
-          <ListRow
-            key={t.id}
-            title={t.title}
-            done={isDone(t)}
-            subtitle={t.due && t.due < SAMPLE_TODAY ? `Overdue · ${formatDay(t.due)}` : "Due today"}
-            left={<TaskCheck checked={isDone(t)} onPress={() => toggle(t)} label={`${isDone(t) ? "Reopen" : "Complete"} ${t.title}`} />}
-          />
-        ))}
+/** A live overview of the shared workspace, with no fabricated activity or counters. */
+export function HomeScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
+  const { data, status, message, refreshing, refresh, mutate } = useWorkspace()
+  const [editor, setEditor] = useState<Editor | null>(null)
+  const [notice, setNotice] = useState<string>()
+  const today = todayKey()
+  const blocked = status === "conflict"
+  const tasks = data?.tasks.filter(t => t.kind !== "event") ?? []
+  const due = tasks.filter(t => !t.done && t.due && t.due <= today).sort((a, b) => (a.due ?? "").localeCompare(b.due ?? ""))
+  const upcoming = tasks.filter(t => !t.done && t.courseId && (!t.due || t.due > today)).sort((a, b) => (a.due ?? "9999").localeCompare(b.due ?? "9999")).slice(0, 5)
+  const events = (data?.tasks ?? []).filter(t => t.kind === "event" && t.scheduledDate && t.scheduledDate >= today).sort((a, b) => (a.scheduledDate ?? "").localeCompare(b.scheduledDate ?? "")).slice(0, 4)
+  const pinned = (data?.notes ?? []).filter(n => n.pinned).slice(0, 3)
+  async function complete(id: string) {
+    if (blocked) return setNotice("Resolve the sync conflict before editing.")
+    if (!await mutate(["tasks"], d => toggleTask(d, id))) setNotice(message ?? "Could not save this task.")
+  }
+  const add = <Pressable onPress={() => data && !blocked ? setEditor({ mode: "create" }) : setNotice(blocked ? "Resolve the sync conflict before editing." : "Load your workspace first.")} accessibilityRole="button" accessibilityLabel="Add task" style={styles.add}><Icon name="add" tint={color.text} /></Pressable>
+  return <Screen title="Home" subtitle={data ? formatDay(today) : undefined} right={add} onRefresh={() => void refresh()} refreshing={refreshing}>
+    {!data ? <Card title={status === "signed-out" ? "Sign in to use Blackwall" : "Loading your workspace"}><Text style={styles.meta}>{status === "signed-out" ? "Your records will appear here after sign-in." : message ?? "Pull down to try again."}</Text>{status === "signed-out" ? <Button label="Sign in" onPress={onOpenSettings} /> : null}</Card> : null}
+    {notice || (data && status !== "ok" && message) ? <Text style={styles.meta}>{notice ?? message}</Text> : null}
+    {data ? <>
+      <Card title="Today" right={<Badge label={`${due.length} open`} tint={due.length ? tone.amber : tone.green} />}>
+        {due.length ? due.slice(0, 5).map(t => <ListRow key={t.id} title={t.title} subtitle={t.due && t.due < today ? `Overdue · ${formatDay(t.due)}` : "Due today"} left={<Checkbox checked={t.done} onPress={() => void complete(t.id)} label={`Complete ${t.title}`} />} onPress={() => setEditor({ mode: "edit", id: t.id })} />) : <Empty>Nothing due today.</Empty>}
       </Card>
-
-      <Card title="Coming up">
-        {COMING_UP.length === 0 ? <Empty>No open coursework.</Empty> : null}
-        {COMING_UP.map((w) => {
-          const course = SAMPLE_COURSES.find((c) => c.id === w.courseId)
-          return (
-            <ListRow
-              key={w.id}
-              title={w.title}
-              subtitle={`${course?.code ?? "No course"} · due ${formatDay(w.due)}`}
-              left={<Icon name={TYPE_ICON[w.type]} tint={TYPE_TONE[w.type]} />}
-              right={<Badge label={TYPE_LABEL[w.type]} tint={TYPE_TONE[w.type]} />}
-            />
-          )
-        })}
+      <Card title="Learning next">
+        {upcoming.length ? upcoming.map(t => <ListRow key={t.id} title={t.title} subtitle={[data.courses.find(c => c.id === t.courseId)?.title, t.due ? formatDay(t.due) : ""].filter(Boolean).join(" · ")} left={<Checkbox checked={t.done} onPress={() => void complete(t.id)} label={`Complete ${t.title}`} />} onPress={() => setEditor({ mode: "edit", id: t.id })} />) : <Empty>No upcoming learning tasks.</Empty>}
       </Card>
-
-      <Card title="This week">
-        {WEEK_EVENTS.length === 0 ? <Empty>No events this week.</Empty> : null}
-        {WEEK_EVENTS.map((e) => (
-          <ListRow key={e.id} title={e.title} subtitle={formatDay(e.date)} right={<Text style={styles.time}>{`${e.start}–${e.end}`}</Text>} />
-        ))}
+      <Card title="Upcoming events">
+        {events.length ? events.map(t => <ListRow key={t.id} title={t.title} subtitle={[t.scheduledDate ? formatDay(t.scheduledDate) : "", t.scheduledTime].filter(Boolean).join(" · ")} onPress={() => setEditor({ mode: "edit", id: t.id })} />) : <Empty>No upcoming events.</Empty>}
       </Card>
-
-      <Card title="Projects">
-        {SAMPLE_REPOS.map((r) => (
-          <ListRow
-            key={r.id}
-            title={r.name}
-            subtitle={`${r.openPrs} open PRs · ${r.issues} issues · pushed ${r.lastPush}`}
-            right={<Badge label={r.status === "passing" ? "Passing" : "Failing"} tint={r.status === "passing" ? tone.green : tone.red} />}
-          />
-        ))}
-      </Card>
-
-      <Card title="This week in numbers">
-        <View style={styles.stats}>
-          {STATS.map((s) => (
-            <View key={s.label} style={styles.stat} accessibilityLabel={`${s.label}: ${s.value}`}>
-              <Text style={[styles.statValue, s.tint ? { color: s.tint } : null]}>{s.value}</Text>
-              <Text style={styles.statLabel}>{s.label}</Text>
-            </View>
-          ))}
-        </View>
-      </Card>
-    </Screen>
-  )
+      {pinned.length ? <Card title="Pinned notes">{pinned.map(n => <Text key={n.id} style={styles.note} numberOfLines={3}>{n.text}</Text>)}</Card> : null}
+      <Card title="Workspace"><View style={styles.counts}><Text style={styles.meta}>{`${tasks.filter(t => !t.done).length} open tasks`}</Text><Text style={styles.meta}>{`${data.courses.length} learning items`}</Text><Text style={styles.meta}>{`${data.projects.length} projects`}</Text></View></Card>
+    </> : null}
+    {data && editor ? <TaskSheet key={editor.mode === "edit" ? editor.id : "new"} editor={editor} data={data} today={today} onClose={() => setEditor(null)} /> : null}
+  </Screen>
 }
-
-const styles = StyleSheet.create({
-  time: { color: color.muted, fontSize: 12, fontWeight: "600" },
-  stats: { flexDirection: "row", gap: 8 },
-  stat: { flex: 1, backgroundColor: color.well, borderRadius: 12, paddingVertical: 10, alignItems: "center" },
-  statValue: { color: color.text, fontSize: 22, fontWeight: "700" },
-  statLabel: { color: color.muted, fontSize: 11, marginTop: 2 },
-})
+const styles = StyleSheet.create({ add: { width: 36, height: 36, alignItems: "center", justifyContent: "center", borderRadius: 18, backgroundColor: color.panel }, meta: { color: color.muted, fontSize: 13, lineHeight: 19 }, note: { color: color.text2, fontSize: 14, paddingVertical: 7 }, counts: { flexDirection: "row", justifyContent: "space-between", flexWrap: "wrap", gap: 10 } })
