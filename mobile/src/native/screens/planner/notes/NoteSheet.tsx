@@ -9,6 +9,7 @@ import { CoursePicker } from "./CoursePicker.tsx"
 import { SheetFrame } from "./SheetFrame.tsx"
 import { buildNewNote, buildNotePatch, draftFromNote, emptyNoteDraft, noteDirty, noteErrors, type NoteDraft } from "./note-form.ts"
 import { NOTE_COLORS, colorOf } from "./note-rules.ts"
+import { plannerColor as c } from "../../../planner-theme.ts"
 
 /** What the sheet is doing: a new note, or an existing note by id. */
 export type NoteEditor = { mode: "create"; courseId?: string } | { mode: "edit"; id: string }
@@ -19,7 +20,7 @@ export type NoteEditor = { mode: "create"; courseId?: string } | { mode: "edit";
  * rules. If the save is refused the sheet stays open with everything still typed and shows the reason.
  * Links are listed read-only. Mount it only while open (it takes its starting values when it mounts).
  */
-export function NoteSheet({ editor, data, onClose }: { editor: NoteEditor; data: Collections; onClose: () => void }) {
+export function NoteSheet({ editor, data, onClose, compact = false }: { editor: NoteEditor; data: Collections; onClose: () => void; compact?: boolean }) {
   const { mutate, message } = useWorkspace()
   const note = editor.mode === "edit" ? data.notes.find((n) => n.id === editor.id) : undefined
   const [opened] = useState(() => !!note)
@@ -29,6 +30,7 @@ export function NoteSheet({ editor, data, onClose }: { editor: NoteEditor; data:
   const [confirming, setConfirming] = useState(false)
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
+  const [more, setMore] = useState(false)
   const set = (patch: Partial<NoteDraft>) => (setDraft((d) => ({ ...d, ...patch })), setFailed(false))
   const errors = showErrors ? noteErrors(draft) : {}
   const missing = editor.mode === "edit" && !opened
@@ -54,7 +56,7 @@ export function NoteSheet({ editor, data, onClose }: { editor: NoteEditor; data:
   }
 
   return (
-    <SheetFrame title={editor.mode === "edit" ? "Edit note" : "New note"} onClose={onClose} onBackdrop={() => !dirty && onClose()}>
+    <SheetFrame title={editor.mode === "edit" ? "Edit note" : "New note"} onClose={onClose} onBackdrop={() => !dirty && onClose()} compact={compact}>
       {missing ? (
         <>
           <Text style={styles.lead}>This note no longer exists. It may have been deleted on another device.</Text>
@@ -63,9 +65,11 @@ export function NoteSheet({ editor, data, onClose }: { editor: NoteEditor; data:
       ) : (
         <>
           <Text style={styles.label}>Note</Text>
-          <TextInput value={draft.text} onChangeText={(text) => set({ text })} placeholder="Jot something down…" placeholderTextColor={color.faint} accessibilityLabel="Note" autoFocus={editor.mode === "create"} multiline textAlignVertical="top" style={[styles.input, styles.multi]} />
+          <TextInput value={draft.text} onChangeText={(text) => set({ text })} placeholder="Jot something down…" placeholderTextColor={color.faint} accessibilityLabel="Note" autoFocus={editor.mode === "create"} multiline textAlignVertical="top" style={[styles.input, compact ? styles.compactMulti : styles.multi]} />
           {errors.text ? <Text style={styles.error}>{errors.text}</Text> : null}
 
+          {compact ? <Pressable onPress={() => setMore(v => !v)} style={styles.more} accessibilityRole="button" accessibilityLabel={more ? "Fewer note properties" : "More note properties"} accessibilityState={{ expanded: more }}><Text style={styles.moreText}>{more ? "− Fewer properties" : "+ More properties"}</Text></Pressable> : null}
+          {!compact || more ? <>
           <Text style={styles.label}>Colour</Text>
           <View style={styles.swatches}>
             {NOTE_COLORS.map((c) => {
@@ -87,7 +91,7 @@ export function NoteSheet({ editor, data, onClose }: { editor: NoteEditor; data:
 
           <View style={styles.toggle}>
             <Text style={styles.value}>Pin to Home</Text>
-            <Switch value={draft.pinned} onValueChange={(pinned) => set({ pinned })} accessibilityLabel="Pin to Home" trackColor={{ false: color.border, true: color.red }} thumbColor={color.text} />
+            <Switch value={draft.pinned} onValueChange={(pinned) => set({ pinned })} accessibilityLabel="Pin to Home" trackColor={{ false: color.border, true: compact ? c.action : color.red }} thumbColor={color.text} />
           </View>
 
           {note?.links?.length ? (
@@ -104,11 +108,12 @@ export function NoteSheet({ editor, data, onClose }: { editor: NoteEditor; data:
               <Text style={styles.hint}>Links open from the web app.</Text>
             </>
           ) : null}
+          </> : null}
 
           {gone ? <Text style={styles.error}>This note was deleted on another device, so it can't be saved. Close to discard your changes.</Text> : null}
           {failed ? <Text style={styles.error}>{message ?? "That couldn't be saved. Your changes are still here."}</Text> : null}
-          <Button label={busy ? "Saving…" : editor.mode === "edit" ? "Save changes" : "Add note"} primary onPress={save} />
-          {note && !confirming ? (
+          {compact ? <Pressable onPress={save} disabled={busy || gone} style={[styles.compactSave, (busy || gone) && styles.disabled]} accessibilityRole="button" accessibilityLabel={editor.mode === "edit" ? "Save changes" : "Add note"}><Icon name="checkmark" size={14} tint="#fff" /><Text style={styles.compactSaveText}>{busy ? "Saving…" : editor.mode === "edit" ? "Save changes" : "Add note"}</Text></Pressable> : <Button label={busy ? "Saving…" : editor.mode === "edit" ? "Save changes" : "Add note"} primary onPress={save} />}
+          {note && (!compact || more) && !confirming ? (
             <Pressable onPress={() => setConfirming(true)} style={styles.delete} accessibilityRole="button" accessibilityLabel="Delete note">
               <Text style={styles.deleteText}>Delete note</Text>
             </Pressable>
@@ -132,6 +137,8 @@ const styles = StyleSheet.create({
   label: { color: color.muted, fontSize: 12, fontWeight: "700", marginTop: 4 },
   input: { minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: color.border, backgroundColor: color.well, color: color.text, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15 },
   multi: { minHeight: 140 },
+  compactMulti: { minHeight: 88, maxHeight: 180, borderRadius: 0, borderWidth: 0, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.line, backgroundColor: c.panel, paddingHorizontal: 2, paddingTop: 8, fontSize: 13, lineHeight: 19 },
+  more: { minHeight: 28, alignSelf: "flex-start", justifyContent: "center", paddingHorizontal: 4 }, moreText: { color: c.accent, fontSize: 12 }, compactSave: { minHeight: 29, borderRadius: 15, backgroundColor: c.action, alignSelf: "flex-end", paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 5 }, compactSaveText: { color: "#fff", fontSize: 12, fontWeight: "600" }, disabled: { opacity: 0.45 },
   swatches: { flexDirection: "row", gap: 10 },
   swatchHit: { width: 48, height: 48, borderRadius: 24, borderWidth: 2, borderColor: "transparent", alignItems: "center", justifyContent: "center" },
   swatchOn: { borderColor: color.text },
