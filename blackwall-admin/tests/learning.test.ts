@@ -1,9 +1,7 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import {
-  ITEM_TYPES, STATUS_HUES, TYPE_TONE, addDaysKey, coursePanelsFor, courseworkGroups, nextItem, normalizeCoursePanels,
-  toggleCoursePanel, typeCounts, typeOptions, viewItems, type TypeLabel,
-} from "../src/features/learning/coursework-view.ts"
+import { ITEM_TYPES, STATUS_HUES, TYPE_TONE, addDaysKey, courseworkGroups, nextItem, typeCounts, typeOptions, viewItems, type TypeLabel } from "../src/features/learning/coursework-view.ts"
+import { coursePanelsFor, normalizeCoursePanels, toggleCoursePanel } from "../src/lib/course-panels.ts"
 import type { LearningItemType, Task } from "../src/lib/types.ts"
 
 const ts = "2026-11-02T12:00:00Z"

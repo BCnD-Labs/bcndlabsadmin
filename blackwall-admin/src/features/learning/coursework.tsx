@@ -83,7 +83,7 @@ export function CourseworkRow({ task, course, showCourse, next }: { task: Task; 
   const soon = !task.done && !!task.due && daysUntil(task.due) >= 0 && daysUntil(task.due) <= 2
 
   return (
-    <li className={cn("bw-coursework-row group flex min-h-11 items-center gap-2.5 border-b border-line-soft px-3.5 py-1.5 last:border-b-0 hover:bg-raised", next && "bg-raised/60")} data-testid="coursework-row" data-next={next || undefined}>
+    <li className={cn("bw-coursework-row group flex min-h-11 items-center gap-2.5 border-b border-line-soft px-3.5 py-1.5 last:border-b-0 hover:bg-raised", next && "bg-raised/60 shadow-[inset_2px_0_0_var(--bw-text-2)]")} data-testid="coursework-row" data-next={next || undefined}>
       <Checkbox
         checked={task.done}
         onCheckedChange={() => toggleTask(task.id)}
@@ -91,7 +91,7 @@ export function CourseworkRow({ task, course, showCourse, next }: { task: Task; 
       />
       <span className="bw-type-slot"><TypeChip type={task.learningType} kind={course?.kind} /></span>
       <button type="button" onClick={() => openForm({ kind: "task", id: task.id })} className="min-w-0 flex-1 rounded-[4px] py-0.5 text-left" title={`Edit ${type.label.toLowerCase()}`}>
-        <span className={cn("line-clamp-2 text-[13px] leading-snug break-words", event ? "text-ink-2" : "text-ink", next && "font-semibold", task.done && "text-faint line-through")} title={task.title}>{task.title}</span>
+        <span className={cn("line-clamp-2 text-[13px] leading-snug break-words", event ? "text-ink-2" : "text-ink", next && "font-semibold", task.done && "text-faint line-through")} title={task.title}>{next && <span className="sr-only">Next up: </span>}{task.title}</span>
         {showCourse && course ? (
           // Across courses, the course goes under the title so narrow columns keep the title readable.
           <span className="mt-1 flex min-w-0 items-center gap-1.5">
@@ -109,9 +109,11 @@ export function CourseworkRow({ task, course, showCourse, next }: { task: Task; 
           overdue ? "text-amber" : soon || next ? "text-ink" : "text-muted-foreground",
         )}
       >
-        {next && <span className="mr-1 rounded-full bg-ink-2/10 px-1.5 py-px text-[10px] font-semibold text-ink-2">Next</span>}
         {overdue && <CalendarClock className="size-3" aria-hidden />}
-        {task.done ? "Done" : courseworkWhen(task)}
+        {task.done ? "Done" : task.due && task.time ? (
+          // In narrow rows the time drops under the date so the title keeps its room.
+          <span className="bw-coursework-when"><span>{relativeDue(task.due)}</span><span className="bw-coursework-time"><span aria-hidden className="bw-coursework-sep">{"\u00a0·\u00a0"}</span>{formatTime(task.time)}</span></span>
+        ) : courseworkWhen(task)}
       </span>
     </li>
   )

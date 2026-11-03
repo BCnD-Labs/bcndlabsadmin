@@ -1,12 +1,14 @@
 import type { LearningItemType, Task } from "../../lib/types.ts"
+import { ITEM_TYPES } from "../../lib/course-panels.ts"
+
+export { ITEM_TYPES }
 
 /**
  * Pure coursework helpers (no React, no stores), so they can be unit tested with node --test:
- * item-type tints, the Coursework panel's filter + grouping, and the per-course panel prefs.
+ * item-type tints and the Coursework panel's filter + grouping. Per-course panel prefs are in
+ * src/lib/course-panels.ts.
  */
 
-export const ITEM_TYPES: LearningItemType[] = ["assignment", "exam", "milestone", "event"]
-export const isItemType = (v: unknown): v is LearningItemType => (ITEM_TYPES as unknown[]).includes(v)
 export const itemType = (t: Pick<Task, "learningType">): LearningItemType => t.learningType ?? "assignment"
 
 /**
@@ -111,47 +113,4 @@ export function courseworkGroups(
 export function nextItem(items: Task[], today: string): Task | undefined {
   const open = items.filter((t) => !t.done && t.due).sort(compareCoursework)
   return open.find((t) => t.due! >= today) ?? open[0]
-}
-
-/**
- * Per-course type panels (Settings live in prefs, per browser): course id → the types whose
- * focused card is on. Anything malformed is dropped; unknown types and duplicates too.
- */
-export type CoursePanels = Record<string, LearningItemType[]>
-const MAX_COURSES = 200
-const BAD_KEYS = new Set(["__proto__", "constructor", "prototype"])
-
-export function normalizeCoursePanels(raw: unknown): CoursePanels {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {}
-  const out: CoursePanels = {}
-  for (const [id, value] of Object.entries(raw as Record<string, unknown>)) {
-    if (Object.keys(out).length >= MAX_COURSES) break
-    if (!id || id.length > 80 || BAD_KEYS.has(id) || !Array.isArray(value)) continue
-    const types = ITEM_TYPES.filter((t) => value.includes(t))
-    if (types.length) out[id] = types
-  }
-  return out
-}
-
-/** The panels that are on for a course, limited to the types its kind uses, in that order. */
-export function coursePanelsFor(map: CoursePanels, courseId: string, allowed: LearningItemType[]): LearningItemType[] {
-  const on = Object.hasOwn(map, courseId) && Array.isArray(map[courseId]) ? map[courseId] : []
-  return allowed.filter((t) => on.includes(t))
-}
-
-/**
- * Turn one type panel on or off. When the live course ids are given, entries for courses that
- * no longer exist are dropped at the same time, so stale ids don't pile up.
- */
-export function toggleCoursePanel(map: CoursePanels, courseId: string, type: LearningItemType, on: boolean, liveIds?: Iterable<string>): CoursePanels {
-  const clean = normalizeCoursePanels(map)
-  if (liveIds) {
-    const live = new Set(liveIds)
-    for (const id of Object.keys(clean)) if (id !== courseId && !live.has(id)) delete clean[id]
-  }
-  const current = clean[courseId] ?? []
-  const next = on ? ITEM_TYPES.filter((t) => t === type || current.includes(t)) : current.filter((t) => t !== type)
-  if (next.length) clean[courseId] = next
-  else delete clean[courseId]
-  return normalizeCoursePanels(clean)
 }
