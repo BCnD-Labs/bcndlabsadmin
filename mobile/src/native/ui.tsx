@@ -2,7 +2,10 @@ import { Ionicons } from "@expo/vector-icons"
 import type { ComponentProps, ReactNode } from "react"
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
 import { color } from "../theme.ts"
+import { NAV_CLEARANCE } from "./nav/destinations.ts"
 import type { CourseworkType } from "./sample.ts"
+
+export { NAV_CLEARANCE }
 
 /** Shared building blocks for the native skeleton screens. Plain React Native, no extra packages. */
 
@@ -18,7 +21,7 @@ export function Icon({ name, size = 20, tint = color.muted }: { name: IconName; 
   return <Ionicons name={name} size={size} color={tint} />
 }
 
-/** A scrolling page with a title. Leave room at the bottom for the dock. */
+/** A scrolling page with a title. Keeps NAV_CLEARANCE at the bottom so the floating nav bubble never covers the last row. */
 export function Screen({ title, subtitle, right, children }: { title: string; subtitle?: string; right?: ReactNode; children: ReactNode }) {
   return (
     <ScrollView style={styles.flex} contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
@@ -149,7 +152,7 @@ export function Empty({ children }: { children: string }) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  screen: { padding: 16, paddingBottom: 24, gap: 12 },
+  screen: { padding: 16, paddingBottom: NAV_CLEARANCE, gap: 12 },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   title: { color: color.text, fontSize: 24, fontWeight: "700" },
   subtitle: { color: color.muted, fontSize: 13, marginTop: 2 },

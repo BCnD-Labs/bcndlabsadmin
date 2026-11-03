@@ -54,7 +54,7 @@ export default function App() {
       <SafeAreaView style={styles.flex} edges={["top", "bottom", "left", "right"]}>
         <View style={styles.flex} onLayout={(e) => setArea(e.nativeEvent.layout)}>
           {Native ? <Native address={boot.address} onOpenSettings={openSettings} /> : <WebScreen ref={web} startUrl={boot.address} onOpenSettings={openSettings} />}
-          <SettingsHandle area={area} onOpen={openSettings} badge={updateAvailable} />
+          <SettingsHandle area={area} onOpen={openSettings} badge={updateAvailable} reserveBottom={Native ? 96 : 0} />
         </View>
         <SettingsScreen
           visible={settingsOpen}
