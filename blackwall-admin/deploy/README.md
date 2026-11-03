@@ -94,12 +94,12 @@ Then restart the `app` container. To restore on a fresh server, deploy the stack
 
 ## Phone app updates
 
-The Android app's **Settings → App update → Check for update** asks this server for a newer build. The server reads a folder (`APP_UPDATES_DIR_HOST`, default `/opt/blackwall/app-updates`, mounted read-only into the app) that holds two things:
+The Android app's **Settings → App update → Check for update** asks this server for a newer build. The server has two possible sources and offers whichever has the higher `versionCode`:
 
-- `android.json`: `{ "versionCode": 3, "versionName": "0.3.0", "file": "blackwall-android-3.apk" }` (optional `sha256` and `notes`)
-- the `.apk` it names
+1. **GitHub (automatic).** With `BLACKWALL_UPDATE_GITHUB_TOKEN` set (the same read-only token as the panel's update check), the server looks at the repo's releases when the app asks (at most once a minute, and once when it starts), and keeps the newest Android build in a cache folder inside the container. Nothing to copy or configure. It is Android only: a release counts only if its tag is `apk-build-<n>` or `apk-pr-<number>-build-<n>` (what the *Android APK* workflow publishes) and it holds exactly `android.json` and `blackwall-android-<n>.apk`; the build number in the tag, the manifest and the file name must agree, and the download must match the manifest's `sha256`. A Mac build, or anything else on the releases page, is never downloaded or served. The cache is rebuilt after each server update, so the first check afterwards may need a few seconds to fetch the build again.
+2. **A drop folder (manual).** `APP_UPDATES_DIR_HOST` (default `/opt/blackwall/app-updates`, mounted read-only into the app) can hold two files: `android.json` (`{ "versionCode": 3, "versionName": "0.3.0", "file": "blackwall-android-3.apk" }`, optional `sha256`, `md5` and `notes`) and the `.apk` it names. Copy them in by hand, or point a build job or n8n at the folder.
 
-Anything that can write that folder publishes an update: copy the two files in by hand, or point a build job or n8n at it. The app only offers builds with a higher `versionCode` than the one installed. Only the file named in `android.json` is ever served. The manifest and download don't need a sign-in (the server is only reachable on your tailnet); they are at `/api/app-updates/android.json` and `/app-updates/<file>`.
+The app only offers builds with a higher `versionCode` than the one installed (bump `versionCode` in `mobile/app.json` for a release). Only the file named in the manifest is ever served. The manifest and download don't need a sign-in (the server is only reachable on your tailnet); they are at `/api/app-updates/android.json` and `/app-updates/<file>`.
 
 ## Moving existing connections
 

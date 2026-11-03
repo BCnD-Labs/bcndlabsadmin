@@ -19,7 +19,7 @@ import { publishSite } from "./site-publish.ts"
 import { handleStorage } from "./storage.ts"
 import type { WorkspaceStore } from "./workspace.ts"
 import type { System } from "./system.ts"
-import { readUpdateManifest } from "./app-updates.ts"
+import { type UpdatesDir, readUpdateManifest } from "./app-updates.ts"
 
 /**
  * Blackwall's JSON API (/api/*). The same handler runs inside Vite on a dev
@@ -42,8 +42,10 @@ export interface ApiOptions {
   health?: () => Promise<Record<string, unknown>>
   /** Version, update check and self-update (home server only). */
   system?: System
-  /** Drop folder holding android.json and the .apk it names (see app-updates.ts). */
-  appUpdatesDir?: string
+  /** Folder holding android.json and the .apk it names, or a function that picks it (see app-updates.ts). */
+  appUpdatesDir?: UpdatesDir
+  /** Runs before the manifest is read, e.g. to pull the newest build from GitHub first. Must not throw. */
+  beforeAppUpdates?: () => Promise<void>
 }
 
 const LOOPBACK = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/
@@ -224,6 +226,7 @@ export function createApi(opts: ApiOptions) {
     }
     // The app update manifest is public like the download it names (see app-updates.ts).
     if (parts[0] === "app-updates" && parts[1] === "android.json" && parts.length === 2 && method === "GET") {
+      await opts.beforeAppUpdates?.()
       const manifest = readUpdateManifest(opts.appUpdatesDir)
       return manifest ? send(res, 200, manifest, { "Cache-Control": "no-cache" }) : send(res, 404, { error: "No app update is published" })
     }

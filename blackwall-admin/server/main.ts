@@ -1,12 +1,14 @@
 import { createServer } from "node:http"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { createApi } from "./app.ts"
 import { Sessions } from "./auth.ts"
 import { loadKey } from "./crypto.ts"
-import { serveAppUpdates } from "./app-updates.ts"
+import { newestUpdatesDir, serveAppUpdates } from "./app-updates.ts"
+import { GithubAppUpdates } from "./app-updates-github.ts"
 import { serveStatic } from "./static.ts"
 import { PostgresConnectionStore } from "./store-postgres.ts"
-import { System } from "./system.ts"
+import { System, updateConfigFromEnv } from "./system.ts"
 
 /**
  * Home-server entry point: serves the built panel and the API, with
@@ -33,7 +35,18 @@ const allowedHosts = (process.env.BLACKWALL_ALLOWED_HOSTS ?? "")
 
 const system = System.fromEnv(path.join(import.meta.dirname, ".."))
 
-const appUpdatesDir = process.env.APP_UPDATES_DIR || undefined
+// Phone app updates come from the newest Android build on GitHub (when the update check's token is set)
+// and/or a manual drop folder; whichever has the higher build number is offered.
+const manualUpdatesDir = process.env.APP_UPDATES_DIR || undefined
+const updateConfig = updateConfigFromEnv(process.env)
+const githubUpdates = updateConfig.githubToken
+  ? new GithubAppUpdates({
+      repo: updateConfig.repo,
+      token: updateConfig.githubToken,
+      cacheDir: process.env.APP_UPDATES_CACHE_DIR || path.join(tmpdir(), "blackwall-app-updates"),
+    })
+  : undefined
+const appUpdatesDir = () => newestUpdatesDir([githubUpdates?.cacheDir, manualUpdatesDir])
 const LOOPBACK_HOST = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/
 const appUpdates = serveAppUpdates(appUpdatesDir, (host) => LOOPBACK_HOST.test(host) || allowedHosts.includes(host))
 
@@ -44,6 +57,8 @@ const api = createApi({
   auth: { passwordHash, sessions: new Sessions(key) },
   backupDir: process.env.BACKUP_DIR ?? "/backups",
   appUpdatesDir,
+  // The phone gives a check 10 seconds; a download that takes longer finishes in the background.
+  beforeAppUpdates: githubUpdates ? () => githubUpdates.refreshWithin(6000) : undefined,
   health: async () => {
     await store.ping()
     return { database: "ok" }
@@ -77,6 +92,7 @@ const server = createServer((req, res) => {
 
 server.listen(port, () => {
   console.log(`[blackwall] listening on :${port}; store ${store.where}; allowed hosts: ${allowedHosts.join(", ") || "(loopback only)"}`)
+  void githubUpdates?.refresh() // have the newest build ready before the phone asks
 })
 
 for (const sig of ["SIGTERM", "SIGINT"] as const) {
