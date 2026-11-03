@@ -1,0 +1,47 @@
+# Unsigned macOS build of the desktop shell: `npm run desktop:build`.
+# Two-package layout: Electron and electron-builder are devDependencies of the
+# web app's package.json; desktop/package.json describes the app itself and has
+# no dependencies, so nothing from the web app ends up in the bundle.
+appId: dev.bcndlabs.blackwall
+productName: Blackwall
+copyright: bcndlabs
+directories:
+  app: desktop
+  output: release
+files:
+  - package.json
+  - out/main/**
+  - out/preload/**
+  - out/shared/**
+  - out/chrome/**
+  - out/icons/**
+  # The app has no runtime dependencies. Without this, electron-builder falls
+  # back to collecting the web app's node_modules from the parent folder.
+  - "!node_modules/**"
+asar: true
+npmRebuild: false
+mac:
+  # No arch here: electron-builder builds for the Mac it runs on (arm64 on Apple silicon).
+  target: dmg
+  category: public.app-category.productivity
+  icon: public/icons/icon-512.png
+  # Ad-hoc signature only ("-"): no Apple Developer ID, no notarization. Apple
+  # silicon refuses to run code with no signature at all.
+  identity: "-"
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  darkModeSupport: true
+dmg:
+  title: Blackwall ${version}
+  artifactName: Blackwall-${version}-${arch}.${ext}
+# Lock down the Electron binary: no ELECTRON_RUN_AS_NODE, NODE_OPTIONS or
+# --inspect, and only the checked app.asar can be loaded.
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+  grantFileProtocolExtraPrivileges: false
+  loadBrowserProcessSpecificV8Snapshot: false
+  resetAdHocDarwinSignature: true

@@ -6,10 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "typecheck": "tsc -b",
+    "typecheck": "tsc -b && tsc -b desktop",
     "lint": "oxlint",
-    "check": "tsc -b && oxlint && vite build",
-    "preview": "vite preview"
+    "check": "npm run typecheck && oxlint && vite build",
+    "preview": "vite preview",
+    "desktop:compile": "tsc -b desktop && node desktop/scripts/copy-static.ts",
+    "desktop:dev": "npm run desktop:compile && electron desktop",
+    "desktop:build": "npm run desktop:compile && node desktop/scripts/build.ts",
+    "desktop:test": "node --test desktop/tests/*.test.ts"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.3.0",
@@ -44,6 +48,8 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
+    "electron": "44.10.1",
+    "electron-builder": "26.18.0",
     "oxlint": "^1.89.0",
     "typescript": "~7.0.2",
     "vite": "^8.3.5"
