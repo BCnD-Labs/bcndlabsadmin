@@ -3,6 +3,8 @@ import { Animated, Easing, Keyboard, Pressable, StyleSheet, Text, useWindowDimen
 import { color } from "../../theme.ts"
 import { Icon, tone, type IconName } from "../ui.tsx"
 import { findDestination, PRIMARY, type ScreenKey } from "./destinations.ts"
+import { anchorLeft, barShift } from "./geometry.ts"
+import type { NavSide } from "./side.ts"
 import { CHOOSE_COLLAPSE_MS, CLOSE_MS, navDuration, OPEN_MS } from "./motion.ts"
 import { useReduceMotion } from "./useReduceMotion.ts"
 
@@ -10,6 +12,7 @@ const SIZE = 56
 const EDGE = 16
 
 type Props = {
+  side: NavSide
   current: ScreenKey
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -19,13 +22,14 @@ type Props = {
 }
 
 /**
- * A 56dp bubble at the bottom-right showing the current screen's icon. Tap it and it grows
- * into a mini bar (Home, Planner, Learning, Projects, All). One Animated.Value drives
- * everything with the native driver: the bar's background is scaled from a bubble-sized
- * pill (never an animated width) while the slots and the bubble cross-fade.
+ * A 56dp bubble at the bottom (left, center or right, per `side`) showing the current screen's
+ * icon. Tap it and it grows into a mini bar (Home, Planner, Learning, Projects, All) that opens
+ * from the bubble. One Animated.Value drives everything with the native driver: the bar's
+ * background is scaled from a bubble-sized pill (never an animated width, see geometry.ts)
+ * while the slots and the bubble cross-fade.
  * Hidden while the keyboard is up. Reduce motion makes every duration 0.
  */
-export function FloatingNav({ current, open, onOpenChange, onSelect, onAll }: Props) {
+export function FloatingNav({ side, current, open, onOpenChange, onSelect, onAll }: Props) {
   const reduce = useReduceMotion()
   const { width } = useWindowDimensions()
   const p = useRef(new Animated.Value(0)).current
@@ -34,16 +38,17 @@ export function FloatingNav({ current, open, onOpenChange, onSelect, onAll }: Pr
 
   const barW = Math.max(SIZE, Math.min(width - 2 * EDGE, 320))
   const anim = useMemo(() => {
-    const s0 = SIZE / barW
+    const g = barShift(side, barW, SIZE)
     const clamp = { extrapolate: "clamp" } as const
     return {
-      scaleX: p.interpolate({ inputRange: [0, 1], outputRange: [s0, 1] }),
-      shift: p.interpolate({ inputRange: [0, 1], outputRange: [(barW * (1 - s0)) / 2, 0] }),
+      scaleX: p.interpolate({ inputRange: [0, 1], outputRange: [g.collapsedScale, 1] }),
+      shift: p.interpolate({ inputRange: [0, 1], outputRange: [g.shift, 0] }),
+      bubbleLeft: g.bubbleLeft,
       bg: p.interpolate({ inputRange: [0, 0.15], outputRange: [0, 1], ...clamp }),
       slots: p.interpolate({ inputRange: [0.5, 1], outputRange: [0, 1], ...clamp }),
       bubble: p.interpolate({ inputRange: [0, 0.4], outputRange: [1, 0], ...clamp }),
     }
-  }, [p, barW])
+  }, [p, barW, side])
 
   useEffect(() => {
     const show = Keyboard.addListener("keyboardDidShow", () => setKeyboard(true))
@@ -82,7 +87,7 @@ export function FloatingNav({ current, open, onOpenChange, onSelect, onAll }: Pr
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       {open ? <Pressable style={StyleSheet.absoluteFill} onPress={() => onOpenChange(false)} accessible={false} importantForAccessibility="no" /> : null}
-      <View style={[styles.anchor, { width: barW }]} pointerEvents="box-none">
+      <View style={[styles.anchor, { width: barW, left: anchorLeft(side, width, barW, EDGE) }]} pointerEvents="box-none">
         <Animated.View pointerEvents="none" style={[styles.bar, { opacity: anim.bg, transform: [{ translateX: anim.shift }, { scaleX: anim.scaleX }] }]} />
         <Animated.View
           style={[styles.slots, { opacity: anim.slots }]}
@@ -105,7 +110,7 @@ export function FloatingNav({ current, open, onOpenChange, onSelect, onAll }: Pr
             }}
           />
         </Animated.View>
-        <Animated.View style={[styles.bubbleWrap, { opacity: anim.bubble }]} pointerEvents={open ? "none" : "auto"}>
+        <Animated.View style={[styles.bubbleWrap, { left: anim.bubbleLeft, opacity: anim.bubble }]} pointerEvents={open ? "none" : "auto"}>
           <Pressable
             onPress={() => onOpenChange(true)}
             style={({ pressed }) => [styles.bubble, pressed && styles.pressed]}
@@ -139,13 +144,13 @@ function Slot({ label, icon, active, role, onPress }: { label: string; icon: Ico
 }
 
 const styles = StyleSheet.create({
-  anchor: { position: "absolute", right: EDGE, bottom: EDGE, height: SIZE },
+  anchor: { position: "absolute", bottom: EDGE, height: SIZE },
   bar: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, borderRadius: SIZE / 2, backgroundColor: color.panel, borderWidth: 1, borderColor: color.border, elevation: 8 },
   slots: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, flexDirection: "row", alignItems: "center", paddingHorizontal: 4 },
   slot: { flex: 1, height: SIZE - 8, borderRadius: (SIZE - 8) / 2, alignItems: "center", justifyContent: "center", gap: 2 },
   label: { color: color.muted, fontSize: 11, fontWeight: "600" },
   labelActive: { color: tone.red },
   pressed: { backgroundColor: color.raised },
-  bubbleWrap: { position: "absolute", right: 0, bottom: 0, width: SIZE, height: SIZE },
+  bubbleWrap: { position: "absolute", bottom: 0, width: SIZE, height: SIZE },
   bubble: { width: SIZE, height: SIZE, borderRadius: SIZE / 2, alignItems: "center", justifyContent: "center", backgroundColor: color.panel, borderWidth: 1, borderColor: color.border, elevation: 8 },
 })
