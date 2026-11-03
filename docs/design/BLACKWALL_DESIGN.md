@@ -100,6 +100,14 @@ Ordinary dates are unfilled, day buttons stay 32px, and week gaps are 4px. A six
 - Settings is a normal settings menu: General · Appearance · Home · Sidebar · Notifications · Connections · Data & storage · Server & backups · Keyboard shortcuts · About. Groups are a small caption over compact rows (label + one-line description + control).
 - Kept on purpose despite the review: the Planner calendar's 25px inset and Comfortable as the default density.
 
+## Shared polish rules (Nov 2026 UI polish)
+
+- **Panel footer:** every panel footer is `PanelFooter` (`src/components/common/panel.tsx`, `.bw-panel-footer` in theme.css): a full-width soft separator, the panel header height (36px), the panel inset, an optional muted note on the left and one `bw-action-link` (13px, 32px target) with an arrow icon on the right. No page-specific footer rows.
+- **Inputs:** every text/search input uses the 6px control radius (`--bw-control-radius`), a visible control border (`border-rim`) and a visible focus ring; no borderless `outline-none` fields. Compact inputs and chips use `--bw-control-sm` (28px desktop, 32px touch), never a fixed `h-7`.
+- **Content-sized placeholders:** the Planner inspector with nothing selected sizes to its hint (a selected task keeps the full-height column). The Planner daily log starts at about four lines and grows with its text up to 60vh.
+- **Filters:** segmented filters in page toolbars are content-width (as on Projects), not stretched across the row.
+- **Two-line titles:** coursework row titles wrap to two lines on word boundaries before an ellipsis.
+
 ## Mikoshi launcher
 
 - Mikoshi is its own sidebar section in the homelab's phosphor green (#28b845), with tabs Launcher, Status (Uptime Kuma, next) and Storage (Nextcloud).
