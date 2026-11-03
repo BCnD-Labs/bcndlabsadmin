@@ -1,11 +1,11 @@
-import { Pressable, StyleSheet, Text, View } from "react-native"
-import { color } from "../../../../theme.ts"
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
+import { plannerColor as color } from "../../../planner-theme.ts"
 import { tone } from "../../../ui.tsx"
 import { dayNumber, longDay, weekdayHeaders } from "./format.ts"
 import { sameMonth, type WeekStart } from "./grid.ts"
 import { dayDots, type DayDot, type Task } from "./schedule.ts"
 
-const DOT: Record<DayDot, string> = { done: tone.green, overdue: tone.amber, open: color.red }
+const DOT: Record<DayDot, string> = { done: tone.green, overdue: tone.amber, open: color.accent }
 
 /**
  * The month as a grid of whole weeks. Each day shows its number and up to three dots (open, overdue,
@@ -30,6 +30,7 @@ export function MonthGrid({ weeks, month, selected, today, byDay, weekStart, onS
           </Text>
         ))}
       </View>
+      <ScrollView nestedScrollEnabled>
       {weeks.map((week) => (
         <View key={week[0]} style={styles.row}>
           {week.map((day) => {
@@ -61,20 +62,21 @@ export function MonthGrid({ weeks, month, selected, today, byDay, weekStart, onS
           })}
         </View>
       ))}
+      </ScrollView>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: color.panel, borderRadius: 16, borderWidth: 1, borderColor: color.edge, padding: 6 },
+  card: { flex: 1, backgroundColor: color.ground, padding: 4 },
   row: { flexDirection: "row" },
   head: { flex: 1, textAlign: "center", color: color.muted, fontSize: 12, fontWeight: "700", paddingVertical: 6 },
-  cell: { flex: 1, minHeight: 54, alignItems: "center", justifyContent: "center", gap: 3 },
-  num: { minWidth: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: "transparent" },
-  numToday: { borderColor: color.red },
-  numOn: { backgroundColor: color.red, borderColor: color.red },
-  numText: { color: color.text, fontSize: 15, fontWeight: "600" },
-  numTextOn: { fontWeight: "800" },
+  cell: { flex: 1, minHeight: 44, alignItems: "center", justifyContent: "center", gap: 3 },
+  num: { minWidth: 26, height: 26, borderRadius: 15, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: "transparent" },
+  numToday: { borderColor: color.accent },
+  numOn: { backgroundColor: color.accent, borderColor: color.accent },
+  numText: { color: color.text, fontSize: 13, fontWeight: "600" },
+  numTextOn: { fontWeight: "800", color: color.ground },
   outside: { opacity: 0.4 },
   dots: { flexDirection: "row", alignItems: "center", gap: 3, height: 8 },
   dot: { width: 6, height: 6, borderRadius: 3 },

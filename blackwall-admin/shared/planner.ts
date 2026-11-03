@@ -16,6 +16,8 @@ export function validDateKey(value: unknown): value is string {
 }
 
 export function validPlannerFields(row: Record<string, unknown>): boolean {
+  if (row.kind !== undefined && row.kind !== "task" && row.kind !== "event") return false
+  if (row.kind === "event" && !validDateKey(row.scheduledDate)) return false
   for (const key of ["focusDate", "scheduledDate"]) if (row[key] != null && !validDateKey(row[key])) return false
   if (row.scheduledTime != null && (typeof row.scheduledTime !== "string" || !/^([01]\d|2[0-3]):[0-5]\d$/.test(row.scheduledTime) || !row.scheduledDate)) return false
   if (row.durationMinutes != null && (typeof row.durationMinutes !== "number" || !Number.isInteger(row.durationMinutes) || row.durationMinutes < 5 || row.durationMinutes > 1440)) return false

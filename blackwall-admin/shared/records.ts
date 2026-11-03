@@ -4,7 +4,8 @@
  * NEW object; inputs are never mutated. No browser, zustand or framework APIs live here.
  * The rules are the ones the web store has always had: keep them in step with it, not ahead of it.
  */
-import type { JournalEntry, Note, Task } from "../src/lib/types.ts"
+import { validJournalItems, validJournalSections } from "./journal-sections.ts"
+import type { JournalSection, JournalLogItem, JournalEntry, Note, Task } from "../src/lib/types.ts"
 import type { Collections } from "./workspace.ts"
 
 export interface RecordOptions {
@@ -51,7 +52,7 @@ export function toggleTask<T extends TaskData>(data: T, id: string, opts: Record
   const t = (opts.now ?? defaultNow)()
   return {
     ...data,
-    tasks: data.tasks.map((task) => (task.id === id ? { ...task, done: !task.done, completedAt: task.done ? undefined : t, updatedAt: t } : task)),
+    tasks: data.tasks.map((task) => (task.id === id && task.kind !== "event" ? { ...task, done: !task.done, completedAt: task.done ? undefined : t, updatedAt: t } : task)),
   }
 }
 
@@ -93,10 +94,10 @@ export function removeCourseRecords<T extends TaskData & NoteData>(data: T, cour
   }
 }
 
-/** Upsert the log for a day (its id is the date); text that is empty after trimming deletes it. */
+/** Upsert main log text; blank text deletes only entries without explicitly added sections. */
 export function saveJournal<T extends JournalData>(data: T, date: string, text: string, opts: RecordOptions = {}): T {
   const t = (opts.now ?? defaultNow)()
-  if (!text.trim()) return { ...data, journal: data.journal.filter((entry) => entry.id !== date) }
+  if (!text.trim() && !data.journal.find((entry) => entry.id === date)?.sections?.length && !data.journal.find((entry) => entry.id === date)?.entries?.length) return { ...data, journal: data.journal.filter((entry) => entry.id !== date) }
   if (data.journal.some((entry) => entry.id === date)) {
     return { ...data, journal: data.journal.map((entry) => (entry.id === date ? { ...entry, text, updatedAt: t } : entry)) }
   }
@@ -104,11 +105,61 @@ export function saveJournal<T extends JournalData>(data: T, date: string, text: 
   return { ...data, journal: [...data.journal, entry] }
 }
 
-/** Move a day's log to another date, appending (blank line between) if that day already has one. */
+/** Update only this day's explicitly added sections, preserving its main text. */
+export function saveJournalSections<T extends JournalData>(data: T, date: string, sections: JournalSection[], opts: RecordOptions = {}): T {
+  if (!validJournalSections(sections)) return data
+  if (!validJournalItems(data.journal.find((entry) => entry.id === date)?.entries ?? [], sections)) return data
+  const t = (opts.now ?? defaultNow)()
+  const existing = data.journal.find((entry) => entry.id === date)
+  if (!sections.length && !existing?.text.trim() && !existing?.entries?.length) return { ...data, journal: data.journal.filter((entry) => entry.id !== date) }
+  const entry: JournalEntry = { id: date, text: "", createdAt: t, ...existing, sections: sections.map((section) => { const noteId = section.noteId ?? existing?.sections?.find((value) => value.id === section.id)?.noteId; return noteId ? { ...section, noteId } : { ...section } }), updatedAt: t }
+  return { ...data, journal: existing ? data.journal.map((value) => value.id === date ? entry : value) : [...data.journal, entry] }
+}
+
+/** A stable item id makes retries idempotent; text and optional Note save in one workspace edit. */
+export function saveJournalItem<T extends JournalData & NoteData>(data: T, date: string, input: JournalLogItem, asNote = false, opts: RecordOptions = {}): T {
+  const existing = data.journal.find((entry) => entry.id === date)
+  if (!input.text.trim() || !validJournalItems([input], existing?.sections ?? [])) return data
+  const previous = existing?.entries?.find((entry) => entry.id === input.id)
+  const t = (opts.now ?? defaultNow)()
+  const noteId = previous?.noteId ?? input.noteId ?? `nte_log_${input.id.slice(0, 90)}`
+  let next = data
+  if (asNote) next = data.notes.some((note) => note.id === noteId) ? updateNote(data, noteId, { text: input.text }, opts) : createNote(data, { text: input.text, color: "plain", pinned: false }, { ...opts, makeId: () => noteId }).data
+  const item: JournalLogItem = { ...input, createdAt: previous?.createdAt ?? input.createdAt, updatedAt: t, noteId: asNote ? noteId : previous?.noteId ?? input.noteId }
+  const entries = previous ? existing!.entries!.map((entry) => entry.id === item.id ? item : entry) : [...(existing?.entries ?? []), item]
+  if (!validJournalItems(entries, existing?.sections ?? [])) return data
+  const row: JournalEntry = { id: date, text: "", createdAt: t, ...existing, entries, updatedAt: t }
+  return { ...next, journal: existing ? next.journal.map((entry) => entry.id === date ? row : entry) : [...next.journal, row] }
+}
+
+/** Edit legacy main/section text in place, preserving the old representation and all newer items. */
+export function saveJournalLegacyText<T extends JournalData & NoteData>(data: T, date: string, sectionId: string | undefined, text: string, asNote: boolean, stableNoteId: string, opts: RecordOptions = {}): T {
+  const existing = data.journal.find((entry) => entry.id === date)
+  const section = existing?.sections?.find((value) => value.id === sectionId)
+  if (sectionId && !section) return data
+  const noteId = section ? section.noteId ?? stableNoteId : existing?.mainNoteId ?? stableNoteId
+  let next = section ? saveJournalSections(data, date, existing!.sections!.map((value) => value.id === sectionId ? { ...value, text, noteId: asNote ? noteId : value.noteId } : value), opts) : saveJournal(data, date, text, opts)
+  if (!asNote) return next
+  next = next.notes.some((note) => note.id === noteId) ? updateNote(next, noteId, { text }, opts) : createNote(next, { text, color: "plain", pinned: false }, { ...opts, makeId: () => noteId }).data
+  if (!section) next = { ...next, journal: next.journal.map((entry) => entry.id === date ? { ...entry, mainNoteId: noteId } : entry) }
+  return next
+}
+
+/** Move a log without dropping section text; colliding tabs are kept as named Markdown sections. */
 export function moveJournal<T extends JournalData>(data: T, from: string, to: string, opts: RecordOptions = {}): T {
   if (from === to) return data
   const src = data.journal.find((entry) => entry.id === from)
   if (!src) return data
   const dest = data.journal.find((entry) => entry.id === to)
-  return saveJournal(saveJournal(data, to, dest ? `${dest.text}\n\n${src.text}` : src.text, opts), from, "", opts)
+  const t = (opts.now ?? defaultNow)()
+  const sourceText = [src.text, ...(dest ? (src.sections ?? []).map((section) => `## ${section.title}\n${section.text}`) : [])].filter(Boolean).join("\n\n")
+  const usedIds = new Set(dest?.entries?.map((entry) => entry.id))
+  const entries = [...(dest?.entries ?? []), ...(src.entries ?? []).map((entry) => {
+    const id = usedIds.has(entry.id) ? (opts.makeId ?? defaultMakeId)("log") : entry.id
+    usedIds.add(id)
+    return dest ? { ...entry, id, sectionId: undefined } : entry
+  })]
+  const moved: JournalEntry = dest ? { ...dest, text: [dest.text, sourceText].filter(Boolean).join("\n\n"), updatedAt: t } : { ...src, id: to, updatedAt: t }
+  if (entries.length) moved.entries = entries
+  return { ...data, journal: [...data.journal.filter((entry) => entry.id !== from && entry.id !== to), moved] }
 }

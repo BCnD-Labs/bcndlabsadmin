@@ -1,69 +1,36 @@
 import { useEffect, useState } from "react"
 import { BackHandler, StyleSheet, View } from "react-native"
-import { loadNavSide, saveNavSide } from "../lib/storage.ts"
 import { color } from "../theme.ts"
 import { WorkspaceProvider } from "./data/WorkspaceProvider.tsx"
-import { FloatingNav } from "./nav/FloatingNav.tsx"
-import { LauncherSheet } from "./nav/LauncherSheet.tsx"
+import { PillNav } from "./nav/PillNav.tsx"
 import type { ScreenKey } from "./nav/destinations.ts"
-import type { NavSide } from "./nav/side.ts"
 import { SCREENS } from "./nav/screens.tsx"
 import { SnackHost } from "./snack/SnackHost.tsx"
 import type { NativeHomeProps } from "./index.ts"
 
-/**
- * Native Blackwall skeleton: one screen fills the area and a floating bubble (bottom left,
- * center or right, your choice) opens a mini bar and an "All" launcher. The WorkspaceProvider
- * connects screens to the real workspace; the Planner reads and saves it, every other screen
- * still shows sample data with a "Sample data" badge. The web view is always one tap away:
- * Settings (edge handle or the launcher) switches back.
- */
+/** Shared screen host with a persistent floating pill and an anchored More menu. */
 export function NativeShell({ address, onOpenSettings }: NativeHomeProps) {
   const [current, setCurrent] = useState<ScreenKey>("home")
-  const [navOpen, setNavOpen] = useState(false)
-  const [sheetOpen, setSheetOpen] = useState(false)
-  // null until the saved side has loaded, so the bubble never jumps from the default.
-  const [side, setSide] = useState<NavSide | null>(null)
+  const [moreOpen, setMoreOpen] = useState(false)
   const Current = SCREENS[current]
 
   useEffect(() => {
-    let alive = true
-    loadNavSide().then((s) => {
-      if (alive) setSide(s)
-    })
-    return () => {
-      alive = false
-    }
-  }, [])
-
-  function changeSide(next: NavSide) {
-    setSide(next)
-    void saveNavSide(next)
-  }
-
-  // Android Back closes the sheet, then the bar. With neither open no handler is registered,
-  // so Back keeps its default behaviour.
-  useEffect(() => {
-    if (!navOpen && !sheetOpen) return
+    if (!moreOpen) return
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
-      if (sheetOpen) setSheetOpen(false)
-      else setNavOpen(false)
+      setMoreOpen(false)
       return true
     })
     return () => sub.remove()
-  }, [navOpen, sheetOpen])
+  }, [moreOpen])
 
   return (
     <WorkspaceProvider address={address}>
       <View style={styles.root}>
-        <Current onOpenSettings={onOpenSettings} />
-        <SnackHost />
-        {side ? (
-          <>
-            <FloatingNav side={side} current={current} open={navOpen} onOpenChange={setNavOpen} onSelect={setCurrent} onAll={() => setSheetOpen(true)} />
-            <LauncherSheet visible={sheetOpen} side={side} onSideChange={changeSide} current={current} onSelect={setCurrent} onOpenSettings={onOpenSettings} onClose={() => setSheetOpen(false)} />
-          </>
-        ) : null}
+        <View style={styles.page} accessibilityElementsHidden={moreOpen} importantForAccessibility={moreOpen ? "no-hide-descendants" : "auto"}>
+          <Current onOpenSettings={onOpenSettings} />
+          <SnackHost />
+        </View>
+        <PillNav current={current} moreOpen={moreOpen} onMoreOpen={setMoreOpen} onSelect={setCurrent} onOpenSettings={onOpenSettings} />
       </View>
     </WorkspaceProvider>
   )
@@ -71,4 +38,5 @@ export function NativeShell({ address, onOpenSettings }: NativeHomeProps) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, position: "relative", backgroundColor: color.ground },
+  page: { flex: 1 },
 })

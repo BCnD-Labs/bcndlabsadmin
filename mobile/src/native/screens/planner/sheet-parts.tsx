@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 import { Pressable, StyleSheet, Switch, Text, View } from "react-native"
-import { color } from "../../../theme.ts"
+import { plannerColor as c } from "../../planner-theme.ts"
+const color = { ...c, edge: c.line, well: c.ground, faint: c.muted, red: c.accent, errorText: "#ffa8a8" }
 import { Icon, tone } from "../../ui.tsx"
 
 /** Small building blocks shared by the task editor's sections (plain React Native, theme tokens only). */
@@ -46,10 +47,10 @@ export function TextAction({ label, onPress, danger }: { label: string; onPress:
 
 export const shared = StyleSheet.create({
   label: { color: color.muted, fontSize: 12, fontWeight: "700", marginTop: 4 },
-  input: { minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: color.border, backgroundColor: color.well, color: color.text, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, justifyContent: "center" },
+  input: { minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: color.border, backgroundColor: color.well, color: color.text, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, justifyContent: "center" },
   multi: { minHeight: 88, textAlignVertical: "top" },
-  value: { color: color.text, fontSize: 15 },
-  placeholder: { color: color.faint, fontSize: 15 },
+  value: { color: color.text, fontSize: 14 },
+  placeholder: { color: color.faint, fontSize: 14 },
   error: { color: color.errorText, fontSize: 13 },
   hint: { color: color.muted, fontSize: 12, lineHeight: 17 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
@@ -60,9 +61,9 @@ export const shared = StyleSheet.create({
 const styles = StyleSheet.create({
   toggle: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 48 },
   section: { borderRadius: 12, borderWidth: 1, borderColor: color.edge, backgroundColor: color.ground },
-  head: { flexDirection: "row", alignItems: "center", gap: 8, minHeight: 52, paddingHorizontal: 14 },
+  head: { flexDirection: "row", alignItems: "center", gap: 8, minHeight: 44, paddingHorizontal: 14 },
   headText: { flex: 1, gap: 1 },
-  sectionTitle: { color: color.text, fontSize: 15, fontWeight: "700" },
+  sectionTitle: { color: color.text, fontSize: 14, fontWeight: "700" },
   summary: { color: color.muted, fontSize: 12 },
   body: { gap: 8, paddingHorizontal: 14, paddingBottom: 14 },
   action: { minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: color.border, alignItems: "center", justifyContent: "center", paddingHorizontal: 14, alignSelf: "flex-start" },

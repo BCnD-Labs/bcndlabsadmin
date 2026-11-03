@@ -15,6 +15,8 @@ export interface DocLink {
 
 export interface Task {
   id: ID
+  /** Standalone calendar events share scheduling fields; absent means an ordinary task. */
+  kind?: "task" | "event"
   /** Planner additions are optional so older workspaces retain their meaning. */
   focusDate?: DateKey
   scheduledDate?: DateKey
@@ -72,10 +74,18 @@ export interface Note {
   updatedAt: Timestamp
 }
 
+export interface JournalSection { id: ID; title: string; text: string; noteId?: ID }
+export interface JournalLogItem { id: ID; text: string; createdAt: Timestamp; updatedAt: Timestamp; sectionId?: ID; noteId?: ID }
+
 /** One daily log entry per day; `id` is the date. */
 export interface JournalEntry {
   id: DateKey
   text: string
+  /** Explicitly added tabs for this day only; no defaults, at most three. */
+  sections?: JournalSection[]
+  /** Individual entries added from the compact daily log list. */
+  entries?: JournalLogItem[]
+  mainNoteId?: ID
   createdAt: Timestamp
   updatedAt: Timestamp
 }

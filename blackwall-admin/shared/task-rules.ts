@@ -47,6 +47,7 @@ export const TASK_TABS: { value: TaskTab; label: string }[] = [
 
 /** Today = open, due today or overdue. Next = open, due after today (undated tasks only show in All). */
 export function inTab(t: Task, tab: TaskTab, today: string): boolean {
+  if (t.kind === "event") return false
   if (tab === "done") return t.done
   if (t.done) return false
   if (tab === "today") return !!t.due && daysUntil(t.due, today) <= 0
@@ -87,7 +88,7 @@ export interface TaskViewOptions {
 export function taskRows(tasks: readonly Task[], o: TaskViewOptions): Task[] {
   const needle = normalizeSearch(o.query ?? "")
   return tasks
-    .filter((t) => (inTab(t, o.tab, o.today) || !!o.lingering?.has(t.id)) && matchesSearch(t, needle) && (!o.starredOnly || t.starred))
+    .filter((t) => t.kind !== "event" && (inTab(t, o.tab, o.today) || !!o.lingering?.has(t.id)) && matchesSearch(t, needle) && (!o.starredOnly || t.starred))
     .sort(compareTasks)
 }
 
@@ -110,9 +111,10 @@ export const TASK_FILTERS: { value: TaskFilter; label: string }[] = [
 ]
 
 /** Open tasks that are overdue, due today, or starred. */
-export const isForToday = (t: Task, today: string) => !t.done && ((!!t.due && daysUntil(t.due, today) <= 0) || t.starred)
+export const isForToday = (t: Task, today: string) => t.kind !== "event" && !t.done && ((!!t.due && daysUntil(t.due, today) <= 0) || t.starred)
 
 export function matchesFilter(t: Task, f: TaskFilter, today: string): boolean {
+  if (t.kind === "event") return false
   switch (f) {
     case "today":
       return isForToday(t, today)
@@ -128,7 +130,7 @@ export function matchesFilter(t: Task, f: TaskFilter, today: string): boolean {
 /** Home Productivity panel tabs: Next also lists undated open tasks. */
 export type HomeTab = "today" | "next" | "done"
 export const inHomeTab = (t: Task, tab: HomeTab, today: string) =>
-  tab === "done" ? t.done : !t.done && (tab === "today" ? !!t.due && daysUntil(t.due, today) <= 0 : !t.due || daysUntil(t.due, today) > 0)
+  t.kind !== "event" && (tab === "done" ? t.done : !t.done && (tab === "today" ? !!t.due && daysUntil(t.due, today) <= 0 : !t.due || daysUntil(t.due, today) > 0))
 
 const WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]
 

@@ -84,7 +84,7 @@ function withoutRepeats<G extends { items: { id: string }[] }>(groups: G[]): G[]
 /** Today's daily focus (same search and star filters as the list), open before done, in the shared task order. */
 function focusSection(tasks: Tasks, courses: Courses, o: PlannerOptions): PlannerSection | null {
   const needle = normalizeSearch(o.search)
-  const picked = tasks.filter((t) => t.focusDate === o.today && matchesSearch(t, needle) && (!o.starredOnly || t.starred)).sort(compareTasks)
+  const picked = tasks.filter((t) => t.kind !== "event" && t.focusDate === o.today && matchesSearch(t, needle) && (!o.starredOnly || t.starred)).sort(compareTasks)
   return picked.length ? { key: "focus", title: "Focus today", warn: false, count: picked.length, rows: picked.map((t) => plannerRow(t, courses, o.today)) } : null
 }
 

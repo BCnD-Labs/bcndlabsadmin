@@ -14,38 +14,41 @@ export { normalizeTime }
 
 type Task = Collections["tasks"][number]
 
-export interface TaskDraft { title: string; details: string; due: string; time: string; starred: boolean; done: boolean; extras?: Extras }
+export interface TaskDraft { kind?: "task" | "event"; title: string; details: string; due: string; time: string; starred: boolean; done: boolean; extras?: Extras }
 export interface DraftErrors extends ExtraErrors { title?: string; due?: string; time?: string }
 
-export const emptyDraft = (due = ""): TaskDraft => ({ title: "", details: "", due, time: "", starred: false, done: false, extras: emptyExtras() })
+export const emptyDraft = (due = "", kind?: Task["kind"]): TaskDraft => ({ ...(kind && { kind }), title: "", details: "", due: kind === "event" ? "" : due, time: "", starred: false, done: false, extras: { ...emptyExtras(), ...(kind === "event" && { scheduledDate: due }) } })
 
 export function draftFromTask(t: Task): TaskDraft {
-  return { title: t.title, details: t.details ?? "", due: t.due ?? "", time: t.time ?? "", starred: t.starred, done: t.done, extras: extrasFromTask(t) }
+  return { ...(t.kind && { kind: t.kind }), title: t.title, details: t.details ?? "", due: t.due ?? "", time: t.time ?? "", starred: t.starred, done: t.done, extras: extrasFromTask(t) }
 }
 
 /** Why a draft can't be saved yet. The time only counts when there is a due date (as on the web). `start` limits the extras check to what was touched. */
 export function draftErrors(d: TaskDraft, start?: TaskDraft): DraftErrors {
   const errors: DraftErrors = {}
-  if (!d.title.trim()) errors.title = "Give the task a title."
-  if (d.due && !validDateKey(d.due)) errors.due = "Pick a valid date."
-  if (d.due && d.time.trim() && !normalizeTime(d.time)) errors.time = "Use 24-hour time, like 09:30."
-  return d.extras ? { ...errors, ...extraErrors(d.extras, start?.extras) } : errors
+  const event = d.kind === "event"
+  if (!d.title.trim()) errors.title = `Give the ${event ? "event" : "task"} a title.`
+  if (!event && d.due && !validDateKey(d.due)) errors.due = "Pick a valid date."
+  if (!event && d.due && d.time.trim() && !normalizeTime(d.time)) errors.time = "Use 24-hour time, like 09:30."
+  const extras = d.extras ? extraErrors(d.extras, start?.extras) : {}
+  if (event && !validDateKey(d.extras?.scheduledDate)) extras.schedule = "Pick a date for the event."
+  return { ...errors, ...extras }
 }
 
 /** Empty details, time and date become undefined; the time is dropped without a due date. */
 function fields(d: TaskDraft) {
-  return { title: d.title.trim(), details: d.details.trim() || undefined, due: d.due || undefined, time: d.due ? normalizeTime(d.time) : undefined, starred: d.starred, done: d.done }
+  return { title: d.title.trim(), details: d.details.trim() || undefined, due: d.kind === "event" ? undefined : d.due || undefined, time: d.kind !== "event" && d.due ? normalizeTime(d.time) : undefined, starred: d.starred, done: d.kind === "event" ? false : d.done }
 }
 
 /** A new task: undefined fields are left out entirely. */
 export function buildNewTask(d: TaskDraft, now: string): NewTask {
   const f = fields(d)
-  return { title: f.title, starred: f.starred, done: f.done, ...(f.details && { details: f.details }), ...(f.due && { due: f.due }), ...(f.time && { time: f.time }), ...(f.done && { completedAt: now }), ...newExtras(d.extras, now) }
+  return { ...(d.kind && { kind: d.kind }), title: f.title, starred: f.starred, done: f.done, ...(f.details && { details: f.details }), ...(f.due && { due: f.due }), ...(f.time && { time: f.time }), ...(f.done && { completedAt: now }), ...newExtras(d.extras, now) }
 }
 
 /** The patch for an edit: cleared fields are explicit undefined so they really clear. Completing keeps an earlier completedAt. */
 export function buildPatch(d: TaskDraft, existing: Task, now: string): Partial<NewTask> {
-  return { ...fields(d), completedAt: d.done ? (existing.completedAt ?? now) : undefined, ...extrasPatch(d.extras, existing, now) }
+  return { ...fields(d), ...(d.kind !== existing.kind && { kind: d.kind }), completedAt: d.kind !== "event" && d.done ? (existing.completedAt ?? now) : undefined, ...extrasPatch(d.extras, existing, now) }
 }
 
 export interface QuickAddPreview { title: string; due?: string }
