@@ -14,12 +14,13 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Textarea } from "@/components/ui/textarea"
 import { EmptyState } from "@/components/common/empty-state"
+import { FilterChips } from "@/components/common/filter-chips"
 import { ListGroupLabel } from "@/components/common/list"
 import { PageHeader } from "@/components/common/page-header"
 import { Panel } from "@/components/common/panel"
 import { SegmentedTabs } from "@/components/common/segmented-tabs"
 import { StickyNote } from "@/features/notes/sticky-note"
-import { daysUntil } from "@/lib/dates"
+import { daysUntil, todayKey } from "@/lib/dates"
 import { parseQuickAdd } from "@/lib/quick-add"
 import { learningHref, notesHref } from "@/lib/routes"
 import type { Course, LearningItemType, Task } from "@/lib/types"
@@ -28,9 +29,8 @@ import { useWorkspace } from "@/stores/workspace"
 import { Input } from "@/components/ui/input"
 import { CourseworkRow, KindIcon } from "./coursework"
 import { ProgressBar, ProgressRing, dateRange, kindSubtitle } from "./learning-page"
-import { COURSE_STATUS_LABEL, compareCoursework, courseStatus, kindInfo, kindOf, kindProgress, learningType } from "./learning-utils"
-
-type View = "open" | "done" | "all"
+import { COURSE_STATUS_LABEL, courseStatus, kindInfo, kindOf, kindProgress, kindTypeLabels, learningType, typeLabels } from "./learning-utils"
+import { courseworkGroups, typeCounts, typeOptions, type CourseworkGroupBy, type CourseworkView } from "./coursework-view"
 
 function AddItem({ course }: { course: Course }) {
   const openForm = useUi((s) => s.openForm)
@@ -61,31 +61,27 @@ function AddItem({ course }: { course: Course }) {
   )
 }
 
-/** Open items grouped by when; done items newest first. */
+/** What the main item list is called for each kind. */
 const ITEMS_TITLE: Record<string, string> = { course: "Coursework", certification: "Study plan", selfpaced: "Sections", skill: "Milestones", reading: "Chapters" }
 
+/** Every item of a course in one list: To do / Done / All, type filter chips, grouped by when or by type. */
 function Coursework({ course, items }: { course: Course; items: Task[] }) {
   const create = useWorkspace((s) => s.create)
-  const info = kindInfo(kindOf(course))
+  const kind = kindOf(course)
+  const info = kindInfo(kind)
   const first = info.types[0]
   const firstLabel = first.label.toLowerCase()
   const article = /^[aeiou]/.test(firstLabel) ? "an" : "a"
-  const [view, setView] = useState<View>("open")
+  const [view, setView] = useState<CourseworkView>("open")
+  const [types, setTypes] = useState<string[]>([])
+  const [groupBy, setGroupBy] = useState<CourseworkGroupBy>("when")
   const [quick, setQuick] = useState("")
-  const open = items.filter((t) => !t.done).sort(compareCoursework)
-  const done = items.filter((t) => t.done).sort((a, b) => (b.completedAt ?? "").localeCompare(a.completedAt ?? ""))
-
-  const groups =
-    view === "done"
-      ? [{ label: "Done", items: done }]
-      : [
-          { label: "Overdue", tone: "warn" as const, items: open.filter((t) => t.due && daysUntil(t.due) < 0) },
-          { label: "Next 7 days", items: open.filter((t) => t.due && daysUntil(t.due) >= 0 && daysUntil(t.due) <= 7) },
-          { label: "Later", items: open.filter((t) => t.due && daysUntil(t.due) > 7) },
-          { label: "No date", items: open.filter((t) => !t.due) },
-          ...(view === "all" ? [{ label: "Done", items: done }] : []),
-        ]
-  const shown = groups.filter((g) => g.items.length)
+  const openCount = items.filter((t) => !t.done).length
+  const doneCount = items.length - openCount
+  const options = typeOptions(items, kindTypeLabels(kind), (t) => typeLabels(kind).find((x) => x.value === t)!)
+  const counts = typeCounts(items, view)
+  const chosen = types.filter((t): t is LearningItemType => options.some((o) => o.value === t))
+  const shown = courseworkGroups(items, { view, types: chosen, groupBy, labels: options, today: todayKey() })
 
   const add = () => {
     const { title, due } = parseQuickAdd(quick)
@@ -96,19 +92,44 @@ function Coursework({ course, items }: { course: Course; items: Task[] }) {
   }
 
   return (
-    <Panel category="learning" title={ITEMS_TITLE[info.value]} tool={course.code ? course.code.toLowerCase().replace(/\s+/g, "") : "course"} command="coursework" meta={`${open.length} open · ${done.length} done`}>
-      <div className="flex flex-wrap items-center gap-2 border-b border-line px-3.5 py-2.5">
-        <SegmentedTabs
-          label={`Show ${ITEMS_TITLE[info.value].toLowerCase()}`}
-          value={view}
-          onChange={setView}
-          tabClassName="px-3"
-          tabs={[
-            { value: "open", label: "To do", count: open.length },
-            { value: "done", label: "Done", count: done.length },
-            { value: "all", label: "All" },
-          ]}
-        />
+    <Panel category="learning" title={ITEMS_TITLE[info.value]} tool={course.code ? course.code.toLowerCase().replace(/\s+/g, "") : "course"} command="coursework" meta={`${openCount} open · ${doneCount} done`}>
+      <div className="grid gap-2 border-b border-line px-3.5 py-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <SegmentedTabs
+            label={`Show ${ITEMS_TITLE[info.value].toLowerCase()}`}
+            value={view}
+            onChange={setView}
+            tabClassName="px-3"
+            tabs={[
+              { value: "open", label: "To do", count: openCount },
+              { value: "done", label: "Done", count: doneCount },
+              { value: "all", label: "All" },
+            ]}
+          />
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-medium tracking-[0.04em] text-faint uppercase" aria-hidden>Group by</span>
+            <SegmentedTabs
+              label="Group by"
+              value={groupBy}
+              onChange={setGroupBy}
+              tabClassName="flex-none px-2.5"
+              tabs={[{ value: "when", label: "When" }, { value: "type", label: "Type" }]}
+            />
+          </div>
+        </div>
+        {options.length > 1 && (
+          <FilterChips
+            wrap
+            label="Type"
+            value={chosen}
+            onChange={setTypes}
+            allCount={counts.all}
+            options={options.map((o) => {
+              const Icon = learningType(o.value, kind).icon
+              return { value: o.value, label: o.plural, count: counts[o.value], icon: <Icon data-item-type={o.value} className="size-3 text-[var(--bw-type)]" aria-hidden /> }
+            })}
+          />
+        )}
       </div>
       <form
         onSubmit={(e) => {
@@ -130,8 +151,8 @@ function Coursework({ course, items }: { course: Course; items: Task[] }) {
       </form>
       {shown.length ? (
         shown.map((g) => (
-          <section key={g.label} aria-label={g.label}>
-            <ListGroupLabel tone={"tone" in g ? g.tone : undefined}>
+          <section key={g.key} aria-label={g.label}>
+            <ListGroupLabel tone={g.tone}>
               {g.label} <span className="text-faint">· {g.items.length}</span>
             </ListGroupLabel>
             <ul>
@@ -141,8 +162,12 @@ function Coursework({ course, items }: { course: Course; items: Task[] }) {
             </ul>
           </section>
         ))
+      ) : chosen.length ? (
+        <EmptyState icon={learningType(chosen[0], kind).icon} title="Nothing of this type here">
+          {view === "done" ? "Nothing of the chosen types is done yet." : "Try All, or another tab."}
+        </EmptyState>
       ) : (
-        <EmptyState icon={learningType(first.value, info.value).icon} title={view === "done" ? "Nothing finished yet" : "Nothing to do"}>
+        <EmptyState icon={learningType(first.value, kind).icon} title={view === "done" ? "Nothing finished yet" : "Nothing to do"}>
           {view === "done" ? "Check items off and they land here." : `Add ${first.plural.toLowerCase()} above${info.types.length > 1 ? `, or ${info.types.slice(1).map((t) => t.plural.toLowerCase()).join(", ")} from the Add menu` : ""}.`}
         </EmptyState>
       )}
