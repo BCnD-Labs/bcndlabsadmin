@@ -1,6 +1,7 @@
 import { Loader2 } from "lucide-react"
 import { useState, type FormEvent } from "react"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Field } from "@/components/common/field"
 import { Panel } from "@/components/common/panel"
@@ -10,6 +11,7 @@ import { useSession } from "@/services/connector"
 export function SignIn() {
   const login = useSession((s) => s.login)
   const [password, setPassword] = useState("")
+  const [remember, setRemember] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -18,7 +20,7 @@ export function SignIn() {
     setBusy(true)
     setError(null)
     try {
-      await login(password)
+      await login(password, remember)
     } catch (err) {
       setError((err as Error).message)
       setPassword("")
@@ -50,6 +52,10 @@ export function SignIn() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </Field>
+          <label className="-my-1 flex min-h-8 cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+            <Checkbox checked={remember} onCheckedChange={(v) => setRemember(v === true)} />
+            Remember me for 30 days
+          </label>
           <Button type="submit" size="lg" className="w-full" disabled={!password || busy}>
             {busy && <Loader2 className="animate-spin" />} Sign in
           </Button>

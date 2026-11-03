@@ -207,13 +207,14 @@ export function createApi(opts: ApiOptions) {
       if (limiter.blocked(client) || everyone.blocked("*")) {
         return send(res, 429, { error: "Too many attempts. Try again in a few minutes." })
       }
-      const { password } = await readJson<{ password?: string }>(req)
+      const { password, remember } = await readJson<{ password?: string; remember?: unknown }>(req)
       if (typeof password !== "string" || !verifyPassword(password, auth.passwordHash)) {
         limiter.fail(client)
         everyone.fail("*")
         return send(res, 401, { error: "Wrong password" })
       }
-      return send(res, 200, { authenticated: true }, { "Set-Cookie": auth.sessions.issue(secure) })
+      // Only an explicit `true` remembers; anything else gets the short browser-session login.
+      return send(res, 200, { authenticated: true }, { "Set-Cookie": auth.sessions.issue(secure, remember === true) })
     }
     if (parts[0] === "logout" && method === "POST") {
       return send(res, 200, { authenticated: false }, auth ? { "Set-Cookie": auth.sessions.clear(secure) } : {})
