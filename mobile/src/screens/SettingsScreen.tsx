@@ -1,9 +1,10 @@
 import Constants from "expo-constants"
 import { useState, type ReactNode } from "react"
-import { Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { AddressForm } from "../components/AddressForm.tsx"
-import { checkForUpdate, type UpdateResult } from "../lib/app-update.ts"
+import { downloadAndInstall } from "../lib/app-installer.ts"
+import type { UpdateResult } from "../lib/app-update.ts"
 import { VIEW_MODES, type ViewMode } from "../lib/view-mode.ts"
 import { color, mono } from "../theme.ts"
 
@@ -17,6 +18,9 @@ type Props = {
   onViewMode: (mode: ViewMode) => void
   onReload: () => void
   onClearSiteData: () => Promise<void>
+  /** Result of the server check (null until it has run). */
+  update: UpdateResult | "checking" | null
+  onCheckUpdate: () => void
 }
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -50,16 +54,28 @@ function Row({ label, hint, onPress, destructive, disabled }: { label: string; h
 export function SettingsScreen(p: Props) {
   const [editing, setEditing] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [update, setUpdate] = useState<UpdateResult | "checking" | null>(null)
+  const [install, setInstall] = useState<{ phase: "downloading"; pct: number } | { phase: "opening" } | { phase: "error"; reason: string } | null>(null)
   const version = Constants.expoConfig?.version ?? "?"
   const build = Constants.expoConfig?.android?.versionCode
 
-  const checkUpdate = async () => {
-    setUpdate("checking")
-    setUpdate(await checkForUpdate(p.address, build ?? 1))
+  const update = p.update
+  const available = update && update !== "checking" && update.status === "available" ? update : null
+  const installing = install?.phase === "downloading"
+
+  const startInstall = async () => {
+    if (!available || installing) return
+    setInstall({ phase: "downloading", pct: 0 })
+    const done = await downloadAndInstall(available.manifest, available.url, (pct) => setInstall({ phase: "downloading", pct }))
+    setInstall(done.ok ? { phase: "opening" } : { phase: "error", reason: done.reason })
   }
-  const updateText =
-    update === "checking"
+
+  const updateText = install
+    ? install.phase === "downloading"
+      ? `Downloading… ${install.pct}%`
+      : install.phase === "opening"
+        ? "Android's installer is open. Tap Update there, then reopen Blackwall."
+        : install.reason
+    : update === "checking"
       ? "Checking…"
       : update === null
         ? "Asks your Blackwall server for a newer Android build."
@@ -180,13 +196,23 @@ export function SettingsScreen(p: Props) {
           </Section>
 
           <Section title="App update">
-            <View style={styles.block}>
+            <View style={styles.block} accessibilityLiveRegion="polite">
               <Text style={styles.rowHint}>{updateText}</Text>
+              {install?.phase === "downloading" ? (
+                <View style={styles.track} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: install.pct }}>
+                  <View style={[styles.fill, { width: `${install.pct}%` }]} />
+                </View>
+              ) : null}
             </View>
-            <Row label={update === "checking" ? "Checking…" : "Check for update"} onPress={() => void checkUpdate()} disabled={update === "checking"} />
-            {update && update !== "checking" && update.status === "available" ? (
-              <Row label="Download and install" hint="Opens the download; tap the file when it finishes" onPress={() => void Linking.openURL(update.url)} />
+            {available ? (
+              <Row
+                label={installing ? "Downloading…" : `Update to ${available.manifest.versionName}`}
+                hint="Downloads here, then Android asks to install"
+                onPress={() => void startInstall()}
+                disabled={installing}
+              />
             ) : null}
+            <Row label={update === "checking" ? "Checking…" : "Check for update"} onPress={p.onCheckUpdate} disabled={update === "checking" || installing} />
           </Section>
 
           <Section title="About">
@@ -227,5 +253,7 @@ const styles = StyleSheet.create({
   radioRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: color.muted, alignItems: "center", justifyContent: "center" },
   radioOn: { borderColor: color.red },
+  track: { height: 6, borderRadius: 3, backgroundColor: color.well, overflow: "hidden" },
+  fill: { height: 6, backgroundColor: color.red },
   radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: color.red },
 })

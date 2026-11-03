@@ -59,8 +59,10 @@ jobs:
             const file = `blackwall-android-${versionCode}.apk`
             fs.mkdirSync("dist-apk", { recursive: true })
             fs.copyFileSync("android/app/build/outputs/apk/release/app-release.apk", `dist-apk/${file}`)
-            const sha256 = crypto.createHash("sha256").update(fs.readFileSync(`dist-apk/${file}`)).digest("hex")
-            fs.writeFileSync("dist-apk/android.json", JSON.stringify({ versionCode, versionName, file, sha256 }, null, 2) + "\n")
+            const bytes = fs.readFileSync(`dist-apk/${file}`)
+            const sha256 = crypto.createHash("sha256").update(bytes).digest("hex")
+            const md5 = crypto.createHash("md5").update(bytes).digest("hex") // the app checks this after downloading
+            fs.writeFileSync("dist-apk/android.json", JSON.stringify({ versionCode, versionName, file, sha256, md5 }, null, 2) + "\n")
             console.log(fs.readFileSync("dist-apk/android.json", "utf8"))
           '
           ls -l dist-apk
