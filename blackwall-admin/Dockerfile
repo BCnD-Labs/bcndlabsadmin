@@ -4,6 +4,8 @@ FROM node:24-alpine AS build
 RUN apk add --no-cache git
 WORKDIR /app
 COPY package.json package-lock.json ./
+# The Mac app's Electron is a devDependency; the server image never runs it, so skip its large binary download.
+ENV ELECTRON_SKIP_BINARY_DOWNLOAD=1
 RUN npm ci
 COPY . .
 # Version stamp: the Git tree hash of these files, the same hash GitHub has for
