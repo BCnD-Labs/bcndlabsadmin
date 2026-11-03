@@ -3,6 +3,7 @@ import path from "node:path"
 import { createApi } from "./app.ts"
 import { Sessions } from "./auth.ts"
 import { loadKey } from "./crypto.ts"
+import { serveAppUpdates } from "./app-updates.ts"
 import { serveStatic } from "./static.ts"
 import { PostgresConnectionStore } from "./store-postgres.ts"
 import { System } from "./system.ts"
@@ -32,12 +33,17 @@ const allowedHosts = (process.env.BLACKWALL_ALLOWED_HOSTS ?? "")
 
 const system = System.fromEnv(path.join(import.meta.dirname, ".."))
 
+const appUpdatesDir = process.env.APP_UPDATES_DIR || undefined
+const LOOPBACK_HOST = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/
+const appUpdates = serveAppUpdates(appUpdatesDir, (host) => LOOPBACK_HOST.test(host) || allowedHosts.includes(host))
+
 const api = createApi({
   store,
   workspace: store,
   allowedHosts,
   auth: { passwordHash, sessions: new Sessions(key) },
   backupDir: process.env.BACKUP_DIR ?? "/backups",
+  appUpdatesDir,
   health: async () => {
     await store.ping()
     return { database: "ok" }
@@ -65,6 +71,7 @@ const server = createServer((req, res) => {
     return res.end("ok")
   }
   if (url.startsWith("/api/")) return void api(req, res)
+  if (url.startsWith("/app-updates/")) return appUpdates(req, res)
   files(req, res)
 })
 
