@@ -2,7 +2,7 @@ import assert from "node:assert/strict"
 import { test } from "node:test"
 import { emptyWorkspace, mergeWorkspace, validWorkspace } from "../shared/workspace.ts"
 import { validDateKey } from "../shared/planner.ts"
-import { chipOverflow, dayDots, isDeadlineOn, isEndOfDay, startTimeOn, taskSlot, taskOnDate, timedLanes } from "../src/features/productivity/planner-utils.ts"
+import { chipOverflow, dayDots, isAllDayOn, isDeadlineOn, isEndOfDay, isTimedOn, startTimeOn, taskSlot, taskOnDate, timedLanes } from "../src/features/productivity/planner-utils.ts"
 import type { Task } from "../src/lib/types.ts"
 const timestamp = "2026-11-02T14:42:00Z"
 const task = (patch: Partial<Task> = {}): Task => ({ id: "a", title: "A task", done: false, starred: false, createdAt: timestamp, updatedAt: timestamp, ...patch })
@@ -93,4 +93,31 @@ test("narrow month dots: done, overdue and open, at most three plus a count", ()
   assert.deepEqual(dayDots(items.slice(0, 3), today), { dots: ["done", "overdue", "open"], more: 0 })
   assert.deepEqual(dayDots(items, today), { dots: ["done", "overdue", "open"], more: 2 })
   assert.deepEqual(dayDots([], today), { dots: [], more: 0 })
+})
+test("week and day views: end-of-day deadlines sit in the All-day / Due row, real times stay timed", () => {
+  const day = "2026-11-03"
+  const endOfDay = task({ id: "eod", due: day, time: "23:55" })
+  const lateEdge = task({ id: "edge", due: day, time: "23:45" })
+  const real = task({ id: "real", due: day, time: "09:30" })
+  const late = task({ id: "late", due: day, time: "23:30" })
+  const allDay = task({ id: "all", due: day })
+  const scheduledLate = task({ id: "sched", due: "2026-11-06", scheduledDate: day, scheduledTime: "23:55" })
+  for (const value of [endOfDay, lateEdge, allDay]) {
+    assert.ok(isAllDayOn(value, day), `${value.id} is all-day / due`)
+    assert.ok(!isTimedOn(value, day), `${value.id} is not timed`)
+  }
+  for (const value of [real, late, scheduledLate]) {
+    assert.ok(isTimedOn(value, day), `${value.id} keeps its time`)
+    assert.ok(!isAllDayOn(value, day), `${value.id} is not all-day`)
+  }
+  // A scheduled item's deadline day shows it as due, not timed.
+  assert.ok(isAllDayOn(scheduledLate, "2026-11-06"))
+  assert.ok(!isTimedOn(scheduledLate, "2026-11-06"))
+  // Nothing appears on an unrelated day.
+  assert.ok(!isAllDayOn(endOfDay, "2026-11-04") && !isTimedOn(endOfDay, "2026-11-04"))
+  const lanes = timedLanes([endOfDay, lateEdge, real, late, allDay, scheduledLate], day)
+  assert.deepEqual(lanes.map((lane) => lane.task.id), ["real", "late", "sched"])
+  assert.equal(lanes[2].start, 23 * 60 + 55, "a scheduled 23:55 slot is a real start")
+  // Display only: the stored due time is untouched.
+  assert.equal(endOfDay.time, "23:55")
 })

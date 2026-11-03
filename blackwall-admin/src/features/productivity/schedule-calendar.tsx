@@ -9,7 +9,7 @@ import type { Task } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useWorkspace } from "@/stores/workspace"
 import { useUi } from "@/stores/ui"
-import { chipOverflow, dayDots, isDeadlineOn, startTimeOn, taskOnDate, taskSlot, timedLanes } from "./planner-utils"
+import { chipOverflow, dayDots, isAllDayOn, isDeadlineOn, startTimeOn, taskOnDate, timedLanes } from "./planner-utils"
 
 type View = "day" | "week" | "month"
 const HOUR = 44
@@ -86,7 +86,7 @@ export function ScheduleCalendar({ date, onDate, tasks, selected, onSelect }: {
         <span className="planner-time-label">All-day<br />/ Due</span>
         {days.map((value) => {
           const key = toDateKey(value)
-          const items = tasks.filter((task) => { const slot = taskSlot(task); return (slot.date === key && !slot.time) || (task.due === key && slot.date !== key) })
+          const items = tasks.filter((task) => isAllDayOn(task, key))
           return <div key={key} className="planner-all-day-cell">{items.map((task) => <CalendarItem key={task.id} task={task} date={key} selected={selected} onSelect={onSelect} />)}</div>
         })}
       </div>
@@ -150,8 +150,8 @@ function TimedDay({ date, tasks, selected, onSelect, onAdd }: { date: string; ta
   const lanes = useMemo(() => timedLanes(tasks, date), [tasks, date])
   return <div className={cn("planner-timed-day", date === todayKey() && "is-today")}>
     {Array.from({ length: 24 }, (_, hour) => <button key={hour} type="button" className="planner-hour-cell" style={{ top: hour * HOUR, height: HOUR }} aria-label={`Add task ${date} at ${String(hour).padStart(2, "0")}:00`} onClick={() => onAdd(date, `${String(hour).padStart(2, "0")}:00`)} />)}
-    {lanes.map(({ task, start, end, lane, lanes: count }) => <button key={task.id} type="button" aria-pressed={selected === task.id} className={cn("planner-timed-event", task.done && "is-done", selected === task.id && "is-active")} onClick={() => onSelect(task)} title={`${task.title} · ${taskSlot(task).time}`} style={{ top: start / 60 * HOUR, height: Math.max(44, (end - start) / 60 * HOUR), left: `calc(${lane / count * 100}% + 2px)`, width: `calc(${100 / count}% - 4px)` }}>
-      <span className="block break-words">{task.done && "✓ "}{task.title}</span><span className="block text-[10px]">{taskSlot(task).time}{task.durationMinutes ? ` · ${task.durationMinutes}m` : ""}</span>
+    {lanes.map(({ task, start, end, lane, lanes: count }) => <button key={task.id} type="button" aria-pressed={selected === task.id} className={cn("planner-timed-event", task.done && "is-done", selected === task.id && "is-active")} onClick={() => onSelect(task)} title={`${task.title} · ${startTimeOn(task, date)}`} style={{ top: start / 60 * HOUR, height: Math.max(44, (end - start) / 60 * HOUR), left: `calc(${lane / count * 100}% + 2px)`, width: `calc(${100 / count}% - 4px)` }}>
+      <span className="block break-words">{task.done && "✓ "}{task.title}</span><span className="block text-[10px]">{startTimeOn(task, date)}{task.durationMinutes ? ` · ${task.durationMinutes}m` : ""}</span>
     </button>)}
   </div>
 }
