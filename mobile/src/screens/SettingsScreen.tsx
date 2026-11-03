@@ -1,8 +1,9 @@
 import Constants from "expo-constants"
 import { useState, type ReactNode } from "react"
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
+import { Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
 import { AddressForm } from "../components/AddressForm.tsx"
+import { checkForUpdate, type UpdateResult } from "../lib/app-update.ts"
 import { VIEW_MODES, type ViewMode } from "../lib/view-mode.ts"
 import { color, mono } from "../theme.ts"
 
@@ -49,8 +50,24 @@ function Row({ label, hint, onPress, destructive, disabled }: { label: string; h
 export function SettingsScreen(p: Props) {
   const [editing, setEditing] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [update, setUpdate] = useState<UpdateResult | "checking" | null>(null)
   const version = Constants.expoConfig?.version ?? "?"
   const build = Constants.expoConfig?.android?.versionCode
+
+  const checkUpdate = async () => {
+    setUpdate("checking")
+    setUpdate(await checkForUpdate(p.address, build ?? 1))
+  }
+  const updateText =
+    update === "checking"
+      ? "Checking…"
+      : update === null
+        ? "Asks your Blackwall server for a newer Android build."
+        : update.status === "current"
+          ? "You're on the newest build."
+          : update.status === "available"
+            ? `Version ${update.manifest.versionName} (build ${update.manifest.versionCode}) is ready.${update.manifest.notes ? ` ${update.manifest.notes}` : ""}`
+            : update.reason
 
   const close = () => {
     setEditing(false)
@@ -160,6 +177,16 @@ export function SettingsScreen(p: Props) {
               }}
             />
             <Row label={busy ? "Clearing…" : "Clear site data and sign out"} onPress={clearSiteData} destructive disabled={busy} />
+          </Section>
+
+          <Section title="App update">
+            <View style={styles.block}>
+              <Text style={styles.rowHint}>{updateText}</Text>
+            </View>
+            <Row label={update === "checking" ? "Checking…" : "Check for update"} onPress={() => void checkUpdate()} disabled={update === "checking"} />
+            {update && update !== "checking" && update.status === "available" ? (
+              <Row label="Download and install" hint="Opens the download; tap the file when it finishes" onPress={() => void Linking.openURL(update.url)} />
+            ) : null}
           </Section>
 
           <Section title="About">

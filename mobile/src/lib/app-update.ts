@@ -1,0 +1,56 @@
+/**
+ * In-app update check. The Blackwall server serves a small drop folder: `android.json`
+ * (the newest build) plus the .apk it names. The app compares build numbers and, when the
+ * server has a newer one, opens the .apk address so Android downloads it and offers to
+ * install. Pure functions plus an injectable fetch, so they run under `node --test`.
+ */
+
+export type UpdateManifest = { versionCode: number; versionName: string; file: string; notes?: string }
+
+export type UpdateResult =
+  | { status: "current"; versionCode: number }
+  | { status: "available"; manifest: UpdateManifest; url: string }
+  | { status: "unavailable"; reason: string }
+
+const APK_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,100}\.apk$/
+
+function base(address: string): string {
+  return address.replace(/\/+$/, "")
+}
+
+export function manifestUrl(address: string): string {
+  return `${base(address)}/api/app-updates/android.json`
+}
+
+export function apkUrl(address: string, file: string): string {
+  return `${base(address)}/api/app-updates/files/${encodeURIComponent(file)}`
+}
+
+/** A valid manifest, or null. The file must be a plain .apk name (no paths). */
+export function parseManifest(value: unknown): UpdateManifest | null {
+  if (!value || typeof value !== "object") return null
+  const m = value as Record<string, unknown>
+  if (typeof m.versionCode !== "number" || !Number.isInteger(m.versionCode) || m.versionCode < 1) return null
+  if (typeof m.file !== "string" || !APK_NAME.test(m.file)) return null
+  const versionName = typeof m.versionName === "string" && m.versionName.length <= 40 ? m.versionName : String(m.versionCode)
+  const notes = typeof m.notes === "string" ? m.notes.slice(0, 500) : undefined
+  return { versionCode: m.versionCode, versionName, file: m.file, notes }
+}
+
+export async function checkForUpdate(address: string, currentVersionCode: number, fetchImpl: typeof fetch = fetch): Promise<UpdateResult> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 10_000)
+  try {
+    const res = await fetchImpl(manifestUrl(address), { signal: controller.signal, headers: { Accept: "application/json" } })
+    if (res.status === 404) return { status: "unavailable", reason: "The server has no app updates set up yet." }
+    if (!res.ok) return { status: "unavailable", reason: `The server answered ${res.status}.` }
+    const manifest = parseManifest(await res.json())
+    if (!manifest) return { status: "unavailable", reason: "The server's update file isn't valid." }
+    if (manifest.versionCode <= currentVersionCode) return { status: "current", versionCode: currentVersionCode }
+    return { status: "available", manifest, url: apkUrl(address, manifest.file) }
+  } catch {
+    return { status: "unavailable", reason: "Couldn't reach the server. Check the connection and try again." }
+  } finally {
+    clearTimeout(timer)
+  }
+}
