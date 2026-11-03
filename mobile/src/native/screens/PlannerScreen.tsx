@@ -1,6 +1,10 @@
-import { useRef, useState } from "react"
-import { Chip, ChipRow, SampleBadge, Screen } from "../ui.tsx"
-import { SAMPLE_TASKS, SAMPLE_TODAY, type SampleTask } from "../sample.ts"
+import { useState } from "react"
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native"
+import { color } from "../../theme.ts"
+import { SyncStatus } from "../data/SyncStatus.tsx"
+import { todayKey } from "../data/sync-view.ts"
+import { useWorkspace } from "../data/WorkspaceProvider.tsx"
+import { Button, Card, Chip, ChipRow, Screen } from "../ui.tsx"
 import { CalendarView } from "./planner/CalendarView.tsx"
 import { TasksView } from "./planner/TasksView.tsx"
 
@@ -11,30 +15,54 @@ const MODES: { key: Mode; label: string }[] = [
   { key: "calendar", label: "Calendar" },
 ]
 
-/** Planner skeleton. Tasks live in local state only: nothing is saved or sent anywhere. */
-export function PlannerScreen(_props: { onOpenSettings: () => void }) {
+/** Planner on the real workspace. Tasks and the calendar read it, and ticking a task saves to the server. */
+export function PlannerScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
+  const { data, status, message, refreshing, refresh } = useWorkspace()
   const [mode, setMode] = useState<Mode>("tasks")
-  const [tasks, setTasks] = useState<SampleTask[]>(SAMPLE_TASKS)
-  const nextId = useRef(0)
+  const today = todayKey()
 
-  function toggle(id: string) {
-    setTasks((all) => all.map((t) => (t.id === id ? { ...t, done: !t.done } : t)))
-  }
-
-  function add(title: string) {
-    nextId.current += 1
-    const task: SampleTask = { id: `local-${nextId.current}`, title, done: false, starred: false, due: SAMPLE_TODAY }
-    setTasks((all) => [...all, task])
+  let body
+  if (data) {
+    body = mode === "tasks" ? <TasksView data={data} today={today} /> : <CalendarView data={data} today={today} />
+  } else if (status === "loading") {
+    body = (
+      <View style={styles.loading} accessibilityLabel="Loading your tasks">
+        <ActivityIndicator color={color.text2} />
+        <Text style={styles.note}>Loading your tasks…</Text>
+      </View>
+    )
+  } else if (status === "signed-out") {
+    body = (
+      <Card title="You're signed out">
+        <Text style={styles.note}>Sign in under Account in Settings to see your tasks here.</Text>
+        <Button label="Sign in" primary onPress={onOpenSettings} />
+      </Card>
+    )
+  } else {
+    body = (
+      <Card title={status === "offline" ? "Can't reach the server" : "Couldn't load your tasks"}>
+        <Text style={styles.note}>{status === "offline" ? "This phone has no saved copy of your workspace yet, so there is nothing to show offline." : (message ?? "Something went wrong.")}</Text>
+        <Button label="Try again" primary onPress={() => void refresh()} />
+      </Card>
+    )
   }
 
   return (
-    <Screen title="Planner" right={<SampleBadge />}>
-      <ChipRow>
-        {MODES.map((m) => (
-          <Chip key={m.key} label={m.label} active={mode === m.key} onPress={() => setMode(m.key)} />
-        ))}
-      </ChipRow>
-      {mode === "tasks" ? <TasksView tasks={tasks} onToggle={toggle} onAdd={add} /> : <CalendarView tasks={tasks} onToggle={toggle} />}
+    <Screen title="Planner" right={<SyncStatus onOpenSettings={onOpenSettings} />} onRefresh={() => void refresh()} refreshing={refreshing}>
+      {data ? (
+        <ChipRow>
+          {MODES.map((m) => (
+            <Chip key={m.key} label={m.label} active={mode === m.key} onPress={() => setMode(m.key)} />
+          ))}
+        </ChipRow>
+      ) : null}
+      {data && status !== "ok" && status !== "loading" && message ? <Text style={styles.note}>{message}</Text> : null}
+      {body}
     </Screen>
   )
 }
+
+const styles = StyleSheet.create({
+  loading: { alignItems: "center", gap: 8, paddingVertical: 32 },
+  note: { color: color.text2, fontSize: 13, lineHeight: 19 },
+})
