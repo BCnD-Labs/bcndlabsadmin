@@ -16,6 +16,7 @@
  */
 import { COLLECTION_KEYS, emptyWorkspace, mergeWorkspace, same, validWorkspace, type Collections, type WorkspaceSnapshot } from "./shared.ts"
 import { parseCache, serializeCache } from "./workspace-cache.ts"
+import { countUnsent } from "./workspace-diff.ts"
 import { MAX_BODY_CHARS, requestWorkspace, type Outcome } from "./workspace-http.ts"
 
 /** The cache file: one text in, one text out. Implementations must never throw. */
@@ -210,6 +211,8 @@ export function createWorkspaceClient(opts: { address: string; fetchImpl?: typeo
       return sync()
     }),
 
+    /** How many records have unsent edits (0 when everything is saved). */
+    pendingCount: () => (dirty && baseline && local ? countUnsent(baseline.data, local, touched) : 0),
     getConflict: () => (conflict && local ? { mine: local, theirs: conflict.remote.data, conflicts: conflict.conflicts } : undefined),
     /** The side discarded by the last conflict choice, if any. */
     getRecovery: () => recovery,

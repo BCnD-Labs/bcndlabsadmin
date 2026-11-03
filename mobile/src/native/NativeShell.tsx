@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { BackHandler, StyleSheet, View } from "react-native"
 import { loadNavSide, saveNavSide } from "../lib/storage.ts"
 import { color } from "../theme.ts"
+import { WorkspaceProvider } from "./data/WorkspaceProvider.tsx"
 import { FloatingNav } from "./nav/FloatingNav.tsx"
 import { LauncherSheet } from "./nav/LauncherSheet.tsx"
 import type { ScreenKey } from "./nav/destinations.ts"
@@ -11,11 +12,12 @@ import type { NativeHomeProps } from "./index.ts"
 
 /**
  * Native Blackwall skeleton: one screen fills the area and a floating bubble (bottom left,
- * center or right, your choice) opens a mini bar and an "All" launcher. Nothing here talks to
- * the server yet; screens show sample data with a "Sample data" badge. The web view is always
- * one tap away: Settings (edge handle or the launcher) switches back.
+ * center or right, your choice) opens a mini bar and an "All" launcher. The WorkspaceProvider
+ * connects screens to the real workspace; the Planner reads and saves it, every other screen
+ * still shows sample data with a "Sample data" badge. The web view is always one tap away:
+ * Settings (edge handle or the launcher) switches back.
  */
-export function NativeShell({ onOpenSettings }: NativeHomeProps) {
+export function NativeShell({ address, onOpenSettings }: NativeHomeProps) {
   const [current, setCurrent] = useState<ScreenKey>("home")
   const [navOpen, setNavOpen] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -51,15 +53,17 @@ export function NativeShell({ onOpenSettings }: NativeHomeProps) {
   }, [navOpen, sheetOpen])
 
   return (
-    <View style={styles.root}>
-      <Current onOpenSettings={onOpenSettings} />
-      {side ? (
-        <>
-          <FloatingNav side={side} current={current} open={navOpen} onOpenChange={setNavOpen} onSelect={setCurrent} onAll={() => setSheetOpen(true)} />
-          <LauncherSheet visible={sheetOpen} side={side} onSideChange={changeSide} current={current} onSelect={setCurrent} onOpenSettings={onOpenSettings} onClose={() => setSheetOpen(false)} />
-        </>
-      ) : null}
-    </View>
+    <WorkspaceProvider address={address}>
+      <View style={styles.root}>
+        <Current onOpenSettings={onOpenSettings} />
+        {side ? (
+          <>
+            <FloatingNav side={side} current={current} open={navOpen} onOpenChange={setNavOpen} onSelect={setCurrent} onAll={() => setSheetOpen(true)} />
+            <LauncherSheet visible={sheetOpen} side={side} onSideChange={changeSide} current={current} onSelect={setCurrent} onOpenSettings={onOpenSettings} onClose={() => setSheetOpen(false)} />
+          </>
+        ) : null}
+      </View>
+    </WorkspaceProvider>
   )
 }
 

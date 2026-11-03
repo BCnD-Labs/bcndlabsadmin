@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons"
 import type { ComponentProps, ReactNode } from "react"
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native"
 import { color } from "../theme.ts"
 import { NAV_CLEARANCE } from "./nav/destinations.ts"
 import type { CourseworkType } from "./sample.ts"
@@ -22,9 +22,14 @@ export function Icon({ name, size = 20, tint = color.muted }: { name: IconName; 
 }
 
 /** A scrolling page with a title. Keeps NAV_CLEARANCE at the bottom so the floating nav bubble never covers the last row. */
-export function Screen({ title, subtitle, right, children }: { title: string; subtitle?: string; right?: ReactNode; children: ReactNode }) {
+export function Screen({ title, subtitle, right, children, onRefresh, refreshing }: { title: string; subtitle?: string; right?: ReactNode; children: ReactNode; onRefresh?: () => void; refreshing?: boolean }) {
   return (
-    <ScrollView style={styles.flex} contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      style={styles.flex}
+      contentContainerStyle={styles.screen}
+      keyboardShouldPersistTaps="handled"
+      refreshControl={onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor={color.text2} colors={[color.red]} progressBackgroundColor={color.panel} /> : undefined}
+    >
       <View style={styles.titleRow}>
         <View style={styles.flex}>
           <Text style={styles.title} accessibilityRole="header">
@@ -142,6 +147,15 @@ export function ListRow({ title, subtitle, left, right, onPress, done }: { title
   return <View style={styles.row}>{inner}</View>
 }
 
+/** A full-width 48px button. `primary` is the red call to action; otherwise it is an outlined one. */
+export function Button({ label, onPress, primary }: { label: string; onPress: () => void; primary?: boolean }) {
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.button, primary ? styles.buttonPrimary : styles.buttonQuiet, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={label}>
+      <Text style={[styles.buttonText, primary && styles.chipTextActive]}>{label}</Text>
+    </Pressable>
+  )
+}
+
 export function SectionLabel({ children }: { children: string }) {
   return <Text style={styles.sectionLabel}>{children}</Text>
 }
@@ -180,6 +194,10 @@ const styles = StyleSheet.create({
   rowTitle: { color: color.text, fontSize: 15, fontWeight: "600" },
   rowDone: { color: color.faint, textDecorationLine: "line-through" },
   rowSub: { color: color.muted, fontSize: 12, marginTop: 2 },
+  button: { minHeight: 48, borderRadius: 12, borderWidth: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 16 },
+  buttonPrimary: { backgroundColor: color.red, borderColor: color.red },
+  buttonQuiet: { backgroundColor: color.panel, borderColor: color.border },
+  buttonText: { color: color.text, fontSize: 15, fontWeight: "700" },
   sectionLabel: { color: color.faint, fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.6, marginTop: 4 },
   empty: { color: color.muted, fontSize: 13, paddingVertical: 8 },
 })

@@ -1,45 +1,23 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Pressable, StyleSheet, Text, View } from "react-native"
+import { toggleTask, type Collections } from "../../../lib/shared.ts"
 import { color } from "../../../theme.ts"
-import { Badge, Empty, Icon, ListRow, SectionLabel, tone } from "../../ui.tsx"
-import { SAMPLE_EVENTS, SAMPLE_TODAY, type SampleTask } from "../../sample.ts"
+import { useWorkspace } from "../../data/WorkspaceProvider.tsx"
+import { Empty, Icon, ListRow, SectionLabel, tone } from "../../ui.tsx"
+import { agendaFor, busyDays } from "./agenda.ts"
 import { TaskCheck } from "./TaskCheck.tsx"
 import { WEEKDAY_SHORT, addDays, dayOfMonth, formatDay, weekDays, weekRangeLabel } from "./dates.ts"
 
-const KIND_TONE = { class: tone.blue, task: tone.amber, event: tone.green } as const
-
-type AgendaItem = {
-  key: string
-  kind: "class" | "task" | "event"
-  title: string
-  /** HH:MM; undefined for an undated time (shown as "Any time"). */
-  time?: string
-  /** HH:MM, events only. */
-  end?: string
-  /** Set for tasks, so the row can toggle them. */
-  task?: SampleTask
-}
-
-function timeText(item: AgendaItem): string {
-  if (!item.time) return "Any time"
-  return item.end ? `${item.time}–${item.end}` : item.time
-}
-
-export function CalendarView({ tasks, onToggle }: { tasks: SampleTask[]; onToggle: (id: string) => void }) {
-  const [selected, setSelected] = useState(SAMPLE_TODAY)
-  const week = weekDays(selected)
-  const hasItems = (day: string) => SAMPLE_EVENTS.some((e) => e.date === day) || tasks.some((t) => t.due === day)
-
-  const agenda: AgendaItem[] = [
-    ...SAMPLE_EVENTS.filter((e) => e.date === selected).map((e) => ({ key: e.id, kind: e.kind, title: e.title, time: e.start, end: e.end })),
-    ...tasks
-      .filter((t) => t.due === selected)
-      .map((t) => ({ key: t.id, kind: "task" as const, title: t.title, time: t.time, task: t })),
-  ].sort((a, b) => {
-    const timeA = a.time ?? "99:99"
-    const timeB = b.time ?? "99:99"
-    return timeA < timeB ? -1 : timeA > timeB ? 1 : 0
-  })
+/**
+ * One week of the real workspace's tasks, by schedule (see agenda.ts). Only tasks appear: the
+ * workspace has no class timetable or events to show here, so none are invented.
+ */
+export function CalendarView({ data, today }: { data: Collections; today: string }) {
+  const { mutate } = useWorkspace()
+  const [selected, setSelected] = useState(today)
+  const week = useMemo(() => weekDays(selected), [selected])
+  const busy = useMemo(() => busyDays(data.tasks, week), [data.tasks, week])
+  const agenda = useMemo(() => agendaFor(data.tasks, selected, data.courses), [data.tasks, data.courses, selected])
 
   return (
     <>
@@ -56,15 +34,15 @@ export function CalendarView({ tasks, onToggle }: { tasks: SampleTask[]; onToggl
       <View style={styles.strip}>
         {week.map((day, i) => {
           const active = day === selected
-          const isToday = day === SAMPLE_TODAY
-          const dot = hasItems(day)
+          const isToday = day === today
+          const dot = busy.has(day)
           return (
             <Pressable
               key={day}
               onPress={() => setSelected(day)}
               style={[styles.day, isToday && !active && styles.today, active && styles.dayOn]}
               accessibilityRole="button"
-              accessibilityLabel={`${formatDay(day)}${isToday ? ", today" : ""}${dot ? ", has items" : ""}`}
+              accessibilityLabel={`${formatDay(day)}${isToday ? ", today" : ""}${dot ? ", has tasks" : ""}`}
               accessibilityState={{ selected: active }}
             >
               <Text style={[styles.dow, active && styles.onText]}>{WEEKDAY_SHORT[i]}</Text>
@@ -78,20 +56,16 @@ export function CalendarView({ tasks, onToggle }: { tasks: SampleTask[]; onToggl
       <SectionLabel>{formatDay(selected)}</SectionLabel>
       <View style={styles.list}>
         {agenda.length === 0 ? (
-          <Empty>Nothing scheduled for this day.</Empty>
+          <Empty>No tasks on this day.</Empty>
         ) : (
           agenda.map((item) => (
             <ListRow
-              key={item.key}
+              key={item.id}
               title={item.title}
-              done={!!item.task?.done}
-              left={<Text style={styles.time}>{timeText(item)}</Text>}
-              right={
-                <View style={styles.side}>
-                  {item.task ? <TaskCheck checked={item.task.done} onPress={() => onToggle(item.task?.id ?? item.key)} label={`${item.task.done ? "Reopen" : "Complete"} ${item.title}`} /> : null}
-                  <Badge label={item.kind} tint={KIND_TONE[item.kind]} />
-                </View>
-              }
+              subtitle={item.course}
+              done={item.done}
+              left={<Text style={styles.time}>{item.time ?? "Any time"}</Text>}
+              right={<TaskCheck checked={item.done} onPress={() => void mutate(["tasks"], (d) => toggleTask(d, item.id))} label={`${item.done ? "Reopen" : "Complete"} ${item.title}`} />}
             />
           ))
         )}
@@ -113,6 +87,5 @@ const styles = StyleSheet.create({
   onText: { color: "#fff" },
   dot: { width: 5, height: 5, borderRadius: 3 },
   list: { backgroundColor: color.panel, borderRadius: 16, borderWidth: 1, borderColor: color.edge, paddingHorizontal: 12 },
-  time: { color: color.text2, fontSize: 12, fontWeight: "700", minWidth: 92 },
-  side: { flexDirection: "row", alignItems: "center", gap: 2 },
+  time: { color: color.text2, fontSize: 12, fontWeight: "700", minWidth: 56 },
 })
