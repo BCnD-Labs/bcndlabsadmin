@@ -365,7 +365,7 @@ export function MikoshiStoragePage() {
               <>
                 <label className="relative hidden sm:block">
                   <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-faint" aria-hidden />
-                  <input type="search" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filter this folder" aria-label="Filter this folder" className="h-7 w-44 rounded-[7px] bg-well pr-2 pl-7 text-[13px] text-ink outline-none placeholder:text-faint" />
+                  <input type="search" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filter this folder" aria-label="Filter this folder" className="h-[var(--bw-control-sm)] w-44 rounded-[var(--bw-control-radius)] border border-rim bg-well pr-2 pl-7 text-[13px] text-ink outline-none focus-visible:ring-2 focus-visible:ring-ring placeholder:text-faint" />
                 </label>
                 <Button variant="quiet" size="icon-sm" aria-label="New text file" title="New text file" onClick={() => setAsk({ kind: "newfile" })}><FileText /></Button>
                 <Button variant="quiet" size="icon-sm" aria-label="Reload" title="Reload" onClick={() => void load()} className={cn(loading && "animate-spin motion-reduce:animate-none")}><RotateCw /></Button>

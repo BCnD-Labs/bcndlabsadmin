@@ -171,7 +171,7 @@ export function LauncherPage() {
               </div>
               <label className="relative w-full sm:w-56">
                 <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-faint" aria-hidden />
-                <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search services" aria-label="Search services" className="h-8 w-full rounded-[7px] bg-well pr-2 pl-8 text-base text-ink outline-none placeholder:text-faint md:text-[13px]" />
+                <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search services" aria-label="Search services" className="h-8 w-full rounded-[var(--bw-control-radius)] border border-rim bg-well pr-2 pl-8 text-base text-ink outline-none focus-visible:ring-2 focus-visible:ring-ring placeholder:text-faint md:text-[13px]" />
               </label>
             </div>
             {editing && <p className="mt-2 text-xs text-muted-foreground">Editing: click a tile to change it. Pin tiles to put them in the top row.</p>}

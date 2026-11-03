@@ -177,7 +177,7 @@ function PagesRead({ course }: { course: Course }) {
       }}
     >
       <label htmlFor="pages-read" className="text-xs text-muted-foreground">Pages read</label>
-      <Input id="pages-read" inputMode="numeric" value={v} onChange={(e) => setV(e.target.value)} className="h-7 w-20 text-[13px]" />
+      <Input id="pages-read" inputMode="numeric" value={v} onChange={(e) => setV(e.target.value)} className="h-[var(--bw-control-sm)] w-20 text-[13px]" />
       <Button type="submit" size="sm" variant="outline" disabled={!ok}>Update</Button>
     </form>
   )
