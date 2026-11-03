@@ -1,0 +1,79 @@
+name: Android APK
+
+# Builds the installable Android app on GitHub's machines (no Mac needed) and attaches it,
+# with the android.json update manifest the in-app "Check for update" reads, to a prerelease:
+#   - on every pull request that changes mobile/ (tag apk-pr-<number>), so a PR can be tested on a phone;
+#   - on request (Actions -> Android APK -> Run workflow).
+# The APK is signed with the debug key Expo's generated project ships with: fine for your own
+# phone, not for the Play Store.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "mobile/**"
+      - ".github/workflows/android-apk.yml"
+
+permissions:
+  contents: write # creates the prerelease that holds the APK
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    name: Build APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CI: "1"
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+      - run: npm --prefix mobile ci --ignore-scripts
+      - name: Generate the Android project
+        working-directory: mobile
+        run: npx expo prebuild --platform android --clean
+      - name: Build the release APK (arm64 only: phones; keeps it fast)
+        working-directory: mobile/android
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon --console=plain
+      - name: Name the APK and write the update manifest
+        working-directory: mobile
+        run: |
+          node -e '
+            const fs = require("fs"), crypto = require("crypto")
+            const app = JSON.parse(fs.readFileSync("app.json", "utf8")).expo
+            const versionCode = app.android.versionCode, versionName = app.version
+            const file = `blackwall-android-${versionCode}.apk`
+            fs.mkdirSync("dist-apk", { recursive: true })
+            fs.copyFileSync("android/app/build/outputs/apk/release/app-release.apk", `dist-apk/${file}`)
+            const sha256 = crypto.createHash("sha256").update(fs.readFileSync(`dist-apk/${file}`)).digest("hex")
+            fs.writeFileSync("dist-apk/android.json", JSON.stringify({ versionCode, versionName, file, sha256 }, null, 2) + "\n")
+            console.log(fs.readFileSync("dist-apk/android.json", "utf8"))
+          '
+          ls -l dist-apk
+      - name: Publish to a prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          code=$(node -p 'JSON.parse(require("fs").readFileSync("mobile/dist-apk/android.json","utf8")).versionCode')
+          tag="apk-${PR:+pr-$PR-}build-$code"
+          gh release delete "$tag" --yes --cleanup-tag --repo "$GITHUB_REPOSITORY" || true
+          gh release create "$tag" mobile/dist-apk/* --repo "$GITHUB_REPOSITORY" --target "$SHA" --prerelease \
+            --title "Android build $code${PR:+ (pull request #$PR)}" \
+            --notes "Debug-signed Android build $code from commit ${SHA:0:7}. Install the .apk; android.json is the update manifest."
+          echo "Published $tag" | tee -a "$GITHUB_STEP_SUMMARY"
