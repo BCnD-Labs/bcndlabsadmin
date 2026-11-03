@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Pressable, StyleSheet, Text, View } from "react-native"
 import { toggleTask, type Collections } from "../../../lib/shared.ts"
 import { color } from "../../../theme.ts"
@@ -12,9 +12,11 @@ import { WEEKDAY_SHORT, addDays, dayOfMonth, formatDay, weekDays, weekRangeLabel
  * One week of the real workspace's tasks, by schedule (see agenda.ts). Only tasks appear: the
  * workspace has no class timetable or events to show here, so none are invented.
  */
-export function CalendarView({ data, today }: { data: Collections; today: string }) {
+export function CalendarView({ data, today, onEdit, onCreateDue }: { data: Collections; today: string; onEdit: (id: string) => void; onCreateDue: (due: string | undefined) => void }) {
   const { mutate } = useWorkspace()
   const [selected, setSelected] = useState(today)
+  // A task added from the "+" starts on the day being looked at.
+  useEffect(() => onCreateDue(selected), [selected, onCreateDue])
   const week = useMemo(() => weekDays(selected), [selected])
   const busy = useMemo(() => busyDays(data.tasks, week), [data.tasks, week])
   const agenda = useMemo(() => agendaFor(data.tasks, selected, data.courses), [data.tasks, data.courses, selected])
@@ -64,12 +66,14 @@ export function CalendarView({ data, today }: { data: Collections; today: string
               title={item.title}
               subtitle={item.course}
               done={item.done}
+              onPress={() => onEdit(item.id)}
               left={<Text style={styles.time}>{item.time ?? "Any time"}</Text>}
               right={<TaskCheck checked={item.done} onPress={() => void mutate(["tasks"], (d) => toggleTask(d, item.id))} label={`${item.done ? "Reopen" : "Complete"} ${item.title}`} />}
             />
           ))
         )}
       </View>
+      <View style={styles.fabRoom} />
     </>
   )
 }
@@ -87,5 +91,6 @@ const styles = StyleSheet.create({
   onText: { color: "#fff" },
   dot: { width: 5, height: 5, borderRadius: 3 },
   list: { backgroundColor: color.panel, borderRadius: 16, borderWidth: 1, borderColor: color.edge, paddingHorizontal: 12 },
+  fabRoom: { height: 64 },
   time: { color: color.text2, fontSize: 12, fontWeight: "700", minWidth: 56 },
 })
