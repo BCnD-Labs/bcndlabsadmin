@@ -1,0 +1,68 @@
+/* Planner-only geometry. Existing shared theme, shell and mobile pages are retained. */
+.planner-workspace { width: 100%; max-width: var(--bw-page-max); margin-inline: auto; container-type: inline-size; }
+.planner-focus { display: flex; align-items: center; gap: 12px; padding: 8px 12px; margin-bottom: 12px; border: 1px solid var(--bw-line); border-radius: 12px; background: var(--bw-panel); }
+.planner-focus-items { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; }
+.planner-focus-item { display: flex; align-items: center; gap: 7px; min-height: 28px; max-width: 100%; }
+.planner-focus-item button { overflow-wrap: anywhere; }
+.planner-canvas { display: grid; grid-template-columns: minmax(0,1fr); gap: 12px; align-items: start; }
+.planner-canvas > * { min-width: 0; scroll-margin-top: 100px; }
+.planner-calendar { grid-area: auto; }
+.planner-notes { overflow: hidden; max-height: 400px; }
+.planner-notes #notes { max-height: 400px; }
+.planner-inspector { grid-area: auto; }
+.planner-inspector .bw-panel-title { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+.planner-daily-log { grid-area: auto; }
+@container (min-width: 960px) {
+  .planner-canvas { grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(320px,0.95fr); grid-template-areas: "calendar calendar inspector" "notes log inspector"; align-items: stretch; }
+  .planner-calendar { grid-area: calendar; }
+  .planner-notes { grid-area: notes; }
+  .planner-daily-log { grid-area: log; }
+  .planner-inspector { grid-area: inspector; }
+}
+@container (min-width: 560px) and (max-width: 959px) {
+  .planner-canvas { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+  .planner-calendar, .planner-inspector { grid-column: 1 / -1; }
+}
+.planner-week-head, .planner-all-day { display: grid; }
+.planner-week-date { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 1px; font-size: 12px; border-left: 1px solid var(--bw-line-soft); }
+.planner-week-date strong { font-size: 14px; }
+.planner-week-date.is-selected, .planner-month-day.is-selected { background: var(--bw-selected); color: var(--bw-text); }
+.planner-week-date.is-today strong, .planner-date.is-today { text-decoration: underline; text-underline-offset: 4px; }
+.planner-all-day { border-block: 1px solid var(--bw-line); max-height: 124px; overflow-y: auto; }
+.planner-all-day-cell { min-height: 38px; padding: 3px 2px; border-left: 1px solid var(--bw-line-soft); }
+.planner-time-label { padding: 5px 2px; font-size: 9px; color: var(--bw-muted); text-align: center; }
+.planner-time-scroll { height: 352px; overflow: auto; scrollbar-gutter: stable; }
+.planner-time-grid { display: grid; position: relative; }
+.planner-hour-labels { position: relative; font-size: 10px; color: var(--bw-muted); }
+.planner-hour-labels span { position: absolute; right: 5px; transform: translateY(2px); }
+.planner-timed-day { position: relative; min-width: 0; border-left: 1px solid var(--bw-line); }
+.planner-timed-day.is-today { background: color-mix(in srgb, var(--bw-blue) 5%, transparent); }
+.planner-hour-cell { position: absolute; left: 0; width: 100%; border-top: 1px solid var(--bw-line-soft); }
+.planner-hour-cell:hover { background: var(--bw-raised); }
+.planner-timed-event { position: absolute; z-index: 1; text-align: left; border: 1px solid var(--bw-blue); border-radius: 5px; padding: 2px 4px; font-size: 11px; line-height: 1.2; background: var(--bw-raised); color: var(--bw-text); overflow: hidden; }
+.planner-timed-event.is-done, .planner-event.is-done { border-color: var(--bw-green); }
+.planner-timed-event.is-active, .planner-event.is-active { outline: 2px solid var(--bw-text-2); outline-offset: -2px; background: var(--bw-selected); }
+.planner-event { display: flex; align-items: flex-start; gap: 3px; padding: 3px 4px; margin-bottom: 2px; width: 100%; text-align: left; border: 1px solid var(--bw-line); border-radius: 4px; background: var(--bw-raised); font-size: 11px; line-height: 1.3; overflow-wrap: anywhere; }
+.planner-month-labels, .planner-month-days { display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); }
+.planner-month-labels { text-align: center; font-size: 11px; padding-block: 6px; color: var(--bw-muted); }
+.planner-month-days { max-height: 440px; overflow: auto; }
+.planner-month-day { position: relative; min-height: 84px; padding: 3px; border-top: 1px solid var(--bw-line-soft); border-right: 1px solid var(--bw-line-soft); }
+.planner-month-day.outside { color: var(--bw-muted); }
+.planner-date { display: block; min-height: 28px; min-width: 28px; border-radius: 4px; font-size: 12px; }
+.planner-more { font-size: 10px; text-decoration: underline; }
+.planner-add-day { position: absolute; top: 4px; right: 2px; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; color: var(--bw-muted); }
+.planner-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 12px; color: var(--bw-text-2); }
+.planner-field input, .planner-field select, .planner-search { min-width: 0; width: 100%; height: 32px; padding: 4px 8px; border: 1px solid var(--bw-border); border-radius: 6px; background: var(--bw-well); color: var(--bw-text); font-size: 13px; }
+.planner-reflection-text, .planner-log-text { width: 100%; resize: vertical; min-height: 160px; border: 1px solid var(--bw-border); border-radius: 7px; padding: 10px; background: var(--bw-well); color: var(--bw-text); font-size: 13px; line-height: 1.6; }
+.planner-reflection-text { min-height: 220px; }
+.planner-remove { display: flex; justify-content: center; align-items: center; min-width: 24px; min-height: 24px; border-radius: 4px; }
+.planner-remove:hover { background: var(--bw-raised); }
+@media (max-width: 639px) {
+  .planner-focus { flex-wrap: wrap; }
+  .planner-focus-items { flex-basis: 100%; order: 2; }
+  .planner-focus > button { margin-left: auto; }
+  .planner-week-date { font-size: 10px; }
+  .planner-timed-event { font-size: 10px; padding-inline: 2px; }
+  .planner-field input, .planner-field select, .planner-reflection-text, .planner-log-text { font-size: 16px; }
+  .planner-add-day, .planner-remove { min-width: 32px; min-height: 32px; }
+}
