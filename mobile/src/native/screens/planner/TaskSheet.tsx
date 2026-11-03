@@ -21,7 +21,7 @@ import { undoDelete, type UndoAction } from "./task-undo.ts"
 import { offerUndo } from "./undo-snack.ts"
 
 /** What the sheet is doing: a new task (optionally pre-dated), or an existing task by id. */
-export type Editor = { mode: "create"; due?: string; kind?: "task" | "event"; courseId?: string } | { mode: "edit"; id: string }
+export type Editor = { mode: "create"; due?: string; kind?: "task" | "event"; courseId?: string; learningType?: NonNullable<Collections["tasks"][number]["learningType"]> } | { mode: "edit"; id: string }
 type SectionKey = "schedule" | "learning" | "reflection" | "links" | "records"
 
 /**
@@ -40,7 +40,7 @@ export function TaskSheet({ editor, data, today, onClose, embedded = false }: { 
   const task = editor.mode === "edit" ? data.tasks.find((t) => t.id === editor.id) : undefined
   const [opened] = useState(() => !!task)
   const missing = editor.mode === "edit" && !opened
-  const [start] = useState<TaskDraft>(() => (task ? draftFromTask(task) : editor.mode === "create" ? { ...emptyDraft(editor.due ?? (editor.kind === "event" ? today : ""), editor.kind), ...(editor.courseId && { extras: { ...emptyExtras(), courseId: editor.courseId } }) } : emptyDraft()))
+  const [start] = useState<TaskDraft>(() => (task ? draftFromTask(task) : editor.mode === "create" ? { ...emptyDraft(editor.due ?? (editor.kind === "event" ? today : ""), editor.kind), ...(editor.courseId && { extras: { ...emptyExtras(), courseId: editor.courseId, learningType: editor.learningType ?? "assignment" } }) } : emptyDraft()))
   const [draft, setDraft] = useState(start)
   const [showErrors, setShowErrors] = useState(false)
   const [compactDate, setCompactDate] = useState(false)
@@ -112,6 +112,7 @@ export function TaskSheet({ editor, data, today, onClose, embedded = false }: { 
                 <Pressable style={styles.property} onPress={() => event ? setExpanded(true) : set({ done: !draft.done })} accessibilityRole="button" accessibilityLabel={event ? "Event properties" : draft.done ? "Reopen task" : "Complete task"}><Icon name={event ? "calendar-outline" : draft.done ? "checkbox-outline" : "square-outline"} size={16} tint={c.accent} /><Text style={styles.propertyText}>{event ? "Event" : draft.done ? "Done" : "To do"}</Text></Pressable>
                 <Pressable style={[styles.property, { backgroundColor: c.dateFill }]} onPress={() => setCompactDate(v => !v)} accessibilityRole="button" accessibilityLabel={event ? "Event date" : "Due date"}><Icon name="calendar-clear-outline" size={15} tint={c.dateText} /><Text style={[styles.propertyText, { color: c.dateText }]}>{(event ? x.scheduledDate : draft.due) ? formatDay(event ? x.scheduledDate : draft.due) : "+ Date"}</Text></Pressable>
                 {event ? <Pressable style={styles.property} onPress={() => setCompactTime(v => !v)} accessibilityRole="button" accessibilityLabel="Event start time"><Icon name="time-outline" size={15} tint={c.muted} /><Text style={styles.propertyText}>{x.scheduledTime || "+ Time"}</Text></Pressable> : null}
+                {x.courseId ? <Pressable style={[styles.property, { backgroundColor: c.tagFill }]} onPress={() => { setExpanded(true); setOpenSection("learning") }} accessibilityRole="button" accessibilityLabel={`Learning link: ${learningSummary(x, data.courses)}`}><Icon name="school-outline" size={15} tint={c.tagText} /><Text style={[styles.propertyText, { color: c.tagText }]} numberOfLines={1}>{learningSummary(x, data.courses)}</Text></Pressable> : null}
                 <Pressable style={styles.moreProperty} onPress={() => setExpanded(true)} accessibilityRole="button" accessibilityLabel="More properties"><Text style={styles.propertyText}>+ More</Text></Pressable>
               </View>
               {compactDate ? <ScrollView style={{ maxHeight: 250 }} keyboardShouldPersistTaps="handled"><DatePicker value={event ? x.scheduledDate : draft.due} today={today} onChange={date => { if (event) setX({ scheduledDate: date }); else set({ due: date }); setCompactDate(false) }} /></ScrollView> : null}

@@ -10,11 +10,11 @@ import { TextAction, shared } from "./sheet-parts.tsx"
  * a web link or a known app link (siyuan://, obsidian://, ...) is flagged and blocks saving, so
  * nothing is dropped quietly.
  */
-export function LinksSection({ links, onChange, error }: { links: DocLink[]; onChange: (links: DocLink[]) => void; error?: string }) {
+export function LinksSection({ links, onChange, error, hint = "Notes, specs or files that live elsewhere. Saved with the task; open them from the web app." }: { links: DocLink[]; onChange: (links: DocLink[]) => void; error?: string; hint?: string }) {
   const edit = (i: number, patch: Partial<DocLink>) => onChange(links.map((l, j) => (j === i ? { ...l, ...patch } : l)))
   return (
     <>
-      <Text style={shared.hint}>Notes, specs or files that live elsewhere. Saved with the task; open them from the web app.</Text>
+      <Text style={shared.hint}>{hint}</Text>
       {links.map((l, i) => {
         const bad = !!l.url.trim() && !isSafeLink(l.url)
         return (
