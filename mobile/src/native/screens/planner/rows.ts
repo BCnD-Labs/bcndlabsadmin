@@ -3,7 +3,7 @@
  * (taskRows / taskGroups, the same calls the web's task browser makes) and turns the result into
  * labelled rows. `today` is always passed in (the phone's local date, see sync-view.ts).
  */
-import { inTab, isOverdue, taskGroups, taskRows, validDateKey, type Collections, type TaskTab } from "../../../lib/shared.ts"
+import { compareTasks, inTab, isOverdue, matchesSearch, normalizeSearch, taskGroups, taskRows, validDateKey, type Collections, type TaskTab } from "../../../lib/shared.ts"
 import { shortDay } from "./dates.ts"
 
 type Tasks = Collections["tasks"]
@@ -21,6 +21,10 @@ export interface PlannerRow {
   time?: string
   /** The course's title (or its code) when `courseId` matches a course. */
   course?: string
+  /** First line of the task's details, for comfortable rows. */
+  details?: string
+  /** In today's daily focus. */
+  focused: boolean
 }
 
 export interface PlannerSection {
@@ -43,6 +47,8 @@ export interface PlannerOptions {
 }
 
 export interface PlannerView {
+  /** Today tab only: tasks whose daily focus day is today, listed first (and not repeated in `sections`), open ones before done. */
+  focus: PlannerSection | null
   sections: PlannerSection[]
   total: number
   /** Why the list is empty: filters hide everything, or the tab simply has nothing. */
@@ -60,7 +66,8 @@ export function dueText(due: string | undefined, overdue: boolean): string {
 export function plannerRow(task: Tasks[number], courses: Courses, today: string): PlannerRow {
   const course = task.courseId ? courses.find((c) => c.id === task.courseId) : undefined
   const overdue = isOverdue(task, today)
-  return { id: task.id, title: task.title, starred: task.starred, done: task.done, overdue, dueText: dueText(task.due, overdue), time: task.time || undefined, course: course ? course.title || course.code : undefined }
+  const details = task.details?.trim().split("\n")[0]
+  return { id: task.id, title: task.title, starred: task.starred, done: task.done, overdue, dueText: dueText(task.due, overdue), time: task.time || undefined, course: course ? course.title || course.code : undefined, details: details || undefined, focused: task.focusDate === today }
 }
 
 /**
@@ -74,11 +81,21 @@ function withoutRepeats<G extends { items: { id: string }[] }>(groups: G[]): G[]
   return kept.reverse().filter((g) => g.items.length)
 }
 
+/** Today's daily focus (same search and star filters as the list), open before done, in the shared task order. */
+function focusSection(tasks: Tasks, courses: Courses, o: PlannerOptions): PlannerSection | null {
+  const needle = normalizeSearch(o.search)
+  const picked = tasks.filter((t) => t.focusDate === o.today && matchesSearch(t, needle) && (!o.starredOnly || t.starred)).sort(compareTasks)
+  return picked.length ? { key: "focus", title: "Focus today", warn: false, count: picked.length, rows: picked.map((t) => plannerRow(t, courses, o.today)) } : null
+}
+
 export function plannerRows(tasks: Tasks, courses: Courses, o: PlannerOptions): PlannerView {
-  const rows = taskRows(tasks, { tab: o.tab, today: o.today, query: o.search, starredOnly: o.starredOnly, lingering: o.lingering })
+  const focus = o.tab === "today" ? focusSection(tasks, courses, o) : null
+  const focusIds = new Set(focus?.rows.map((r) => r.id))
+  const rows = taskRows(focus ? tasks.filter((t) => !focusIds.has(t.id)) : tasks, { tab: o.tab, today: o.today, query: o.search, starredOnly: o.starredOnly, lingering: o.lingering })
   const groups = withoutRepeats(taskGroups(rows, { tab: o.tab, today: o.today, lingering: o.lingering }))
   const showTitles = o.tab !== "today" || groups.length > 1
   return {
+    focus,
     sections: groups.map((g) => ({
       key: g.name ?? "done",
       title: g.name && showTitles ? g.name : null,
@@ -86,7 +103,7 @@ export function plannerRows(tasks: Tasks, courses: Courses, o: PlannerOptions): 
       count: g.items.length,
       rows: g.items.map((t) => plannerRow(t, courses, o.today)),
     })),
-    total: rows.length,
+    total: rows.length + (focus?.count ?? 0),
     empty: o.search.trim() || o.starredOnly ? { filtered: true, text: "No tasks match" } : { filtered: false, text: EMPTY_TEXT[o.tab] },
   }
 }
