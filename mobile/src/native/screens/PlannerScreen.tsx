@@ -8,32 +8,49 @@ import { Button, Card, Chip, ChipRow, Screen } from "../ui.tsx"
 import { CalendarView } from "./planner/CalendarView.tsx"
 import { AddFab } from "./planner/AddFab.tsx"
 import { TaskSheet, type Editor } from "./planner/TaskSheet.tsx"
+import { LogView } from "./planner/log/LogView.tsx"
+import { useLogDrafts } from "./planner/log/useLogDrafts.ts"
+import { NotesView } from "./planner/notes/NotesView.tsx"
 import { editAccess } from "./planner/task-form.ts"
 import { TasksView } from "./planner/TasksView.tsx"
 
-type Mode = "tasks" | "calendar"
+type Mode = "tasks" | "calendar" | "log" | "notes"
 
 const MODES: { key: Mode; label: string }[] = [
   { key: "tasks", label: "Tasks" },
   { key: "calendar", label: "Calendar" },
+  { key: "log", label: "Log" },
+  { key: "notes", label: "Notes" },
 ]
 
 /**
- * Planner on the real workspace. Tasks and the calendar read it; adding, editing, deleting and ticking
- * tasks save to the server (or queue on the phone). The "+" and the editor sheet live here, outside the scrolling page.
+ * Planner on the real workspace: Tasks, Calendar, the daily Log and Notes. Adding, editing, deleting and
+ * ticking tasks, the log text and the notes save to the server (or queue on the phone). The task "+" and
+ * the task editor sheet live here, outside the scrolling page; so does the log's typed text, which keeps it when you switch tabs.
  */
 export function PlannerScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
-  const { data, status, message, refreshing, refresh } = useWorkspace()
+  const { data, status, message, refreshing, refresh, mutate } = useWorkspace()
   const [mode, setMode] = useState<Mode>("tasks")
   const [editor, setEditor] = useState<Editor | null>(null)
   // The due date a task made with "+" starts with; the visible tab reports it.
   const [createDue, setCreateDue] = useState<string | undefined>()
   const edit = useCallback((id: string) => setEditor({ mode: "edit", id }), [])
   const today = todayKey()
+  const access = editAccess(status, true)
+  const logs = useLogDrafts(data?.journal, mutate, access.ok)
 
   let body
   if (data) {
-    body = mode === "tasks" ? <TasksView data={data} today={today} onEdit={edit} onCreateDue={setCreateDue} /> : <CalendarView data={data} today={today} onEdit={edit} onCreateDue={setCreateDue} />
+    body =
+      mode === "tasks" ? (
+        <TasksView data={data} today={today} onEdit={edit} onCreateDue={setCreateDue} />
+      ) : mode === "calendar" ? (
+        <CalendarView data={data} today={today} onEdit={edit} onCreateDue={setCreateDue} />
+      ) : mode === "log" ? (
+        <LogView data={data} today={today} logs={logs} blocked={access.reason} onEditTask={edit} />
+      ) : (
+        <NotesView data={data} blocked={access.reason} />
+      )
   } else if (status === "loading") {
     body = (
       <View style={styles.loading} accessibilityLabel="Loading your tasks">
@@ -70,7 +87,7 @@ export function PlannerScreen({ onOpenSettings }: { onOpenSettings: () => void }
         {data && status !== "ok" && status !== "loading" && message ? <Text style={styles.note}>{message}</Text> : null}
         {body}
       </Screen>
-      {data ? <AddFab enabled={editAccess(status, true).ok} onPress={() => setEditor({ mode: "create", due: createDue })} /> : null}
+      {data && (mode === "tasks" || mode === "calendar") ? <AddFab enabled={access.ok} onPress={() => setEditor({ mode: "create", due: createDue })} /> : null}
       {data && editor ? <TaskSheet editor={editor} data={data} today={today} onClose={() => setEditor(null)} /> : null}
     </View>
   )

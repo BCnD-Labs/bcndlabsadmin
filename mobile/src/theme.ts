@@ -18,3 +18,7 @@ export const color = {
 } as const
 
 export const mono = "monospace"
+
+/** The web's note paper colours (features/notes/note-colors.ts) and the dark ink that sits on them. */
+export const notePaper = { plain: "#bcc2cc", amber: "#cfbb7c", teal: "#8ebdaf", rose: "#c9a2b3", blue: "#9eaecb" } as const
+export const noteInk = "#14171c"
