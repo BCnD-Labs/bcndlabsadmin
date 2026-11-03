@@ -5,7 +5,7 @@ import type { ViewMode } from "./view-mode.ts"
 
 /**
  * Everything the app remembers, kept on this phone only (Android Keystore-backed
- * SecureStore; app backup is off in app.json). No passwords: you sign in on the page.
+ * SecureStore; app backup is off in app.json). No passwords: the sign-in password is sent once to the server and never saved.
  */
 const KEYS = {
   address: "blackwall.address",

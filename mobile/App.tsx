@@ -78,6 +78,7 @@ export default function App() {
           update={update.result}
           onCheckUpdate={() => void update.recheck()}
           onReload={() => web.current?.reload()}
+          onSessionChanged={() => web.current?.reload()}
           onClearSiteData={async () => {
             await web.current?.clearSiteData()
             setSettingsOpen(false)
