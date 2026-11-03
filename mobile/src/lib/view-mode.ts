@@ -1,13 +1,13 @@
 /**
  * How the app shows Blackwall. "web" is the hosted web app in a WebView (working, default).
- * "native" will show native screens once they exist; until then it can't be chosen and a
- * stored "native" falls back to "web".
+ * "native" shows the native skeleton screens (sample data, not connected yet); the web view
+ * stays the default and the way back.
  */
 export type ViewMode = "web" | "native"
 
 export const VIEW_MODES: readonly { mode: ViewMode; label: string; available: boolean; note?: string }[] = [
   { mode: "web", label: "Web view", available: true },
-  { mode: "native", label: "Native", available: false, note: "Not built yet" },
+  { mode: "native", label: "Native", available: true, note: "Skeleton: sample data, not connected" },
 ]
 
 export function sanitizeViewMode(stored: string | null | undefined, nativeAvailable: boolean): ViewMode {

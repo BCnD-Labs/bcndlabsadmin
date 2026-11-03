@@ -1,11 +1,11 @@
 import type { ComponentType } from "react"
+import { NativeShell } from "./NativeShell.tsx"
 
 /**
- * Native Blackwall screens go here, page by page, later. While this is null the
- * "Native" view mode stays disabled in Settings and the app always shows the web view.
- * To add the first native screen: export it here as NativeHome; App.tsx renders it when
- * the view mode is "native", and the web view stays available as the fallback.
+ * Native Blackwall: a skeleton of screens on sample data (see ./sample.ts); nothing is
+ * connected to the server yet. App.tsx renders NativeHome when the view mode is "native";
+ * the web view stays one switch away in Settings and is still the default.
  */
 export type NativeHomeProps = { address: string; onOpenSettings: () => void }
 
-export const NativeHome: ComponentType<NativeHomeProps> | null = null
+export const NativeHome: ComponentType<NativeHomeProps> | null = NativeShell
