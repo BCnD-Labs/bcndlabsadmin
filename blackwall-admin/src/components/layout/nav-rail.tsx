@@ -342,27 +342,23 @@ const TREE_ROW =
 const TREE_FILL = "bg-red-soft font-semibold text-ink hover:bg-red-soft"
 
 /**
- * The full sidebar: every destination as a row. Sections with pages open and close
- * on click like folders (→ / ← too); the one you're in starts open.
+ * The full sidebar: every destination as a row. Sections with pages are a single-open
+ * accordion: opening one (click, or →) closes the other; clicking the open one (or ←) closes
+ * it, so all can be closed. Navigating into a section opens it and closes the previous one.
  */
 function NavTree() {
   const NAV = useNav()
   const { pathname, search } = useLocation()
   const hints = useNavHints()
-  const activeId = activeIn(NAV, pathname)?.id
-  const [open, setOpen] = useState<Set<string>>(() => new Set(activeId ? [activeId] : []))
+  const active = activeIn(NAV, pathname)
+  const activeId = active?.id
+  const [openId, setOpenId] = useState<string | null>(() => (active?.children?.length ? active.id : null))
   const [seen, setSeen] = useState(activeId)
   if (activeId !== seen) {
     setSeen(activeId)
-    if (activeId && !open.has(activeId)) setOpen(new Set(open).add(activeId))
+    if (active?.children?.length) setOpenId(active.id)
   }
-  const setFolder = (id: string, to: boolean) =>
-    setOpen((o) => {
-      const n = new Set(o)
-      if (to) n.add(id)
-      else n.delete(id)
-      return n
-    })
+  const setFolder = (id: string, to: boolean) => setOpenId((o) => (to ? id : o === id ? null : o))
 
   return (
     <ul className="mt-4 -mr-1 flex min-h-0 flex-col gap-1 overflow-y-auto pr-1" aria-label="Destinations">
@@ -380,7 +376,7 @@ function NavTree() {
             </li>
           )
         }
-        const isOpen = open.has(d.id)
+        const isOpen = openId === d.id
         const fill = current && !isOpen
         return (
           <li key={d.id}>
