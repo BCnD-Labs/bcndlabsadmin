@@ -1,10 +1,12 @@
 import { useState } from "react"
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native"
-import { createCourse, updateCourse, type Collections, type NewCourse } from "../../../lib/shared.ts"
+import { createCourse, updateCourse, validDateKey, type Collections, type NewCourse } from "../../../lib/shared.ts"
 import { color } from "../../../theme.ts"
 import { plannerColor as p } from "../../planner-theme.ts"
 import { useWorkspace } from "../../data/WorkspaceProvider.tsx"
 import { Icon } from "../../ui.tsx"
+import { cleanLinks, linkProblem } from "../planner/doc-links.ts"
+import { LinksSection } from "../planner/LinksSection.tsx"
 
 type Course = Collections["courses"][number]
 type Kind = NonNullable<Course["kind"]>
@@ -22,8 +24,13 @@ export function CourseEditor({ value, onClose }: { value: Course | "new"; onClos
   const [code, setCode] = useState(previous?.code ?? "")
   const [instructor, setInstructor] = useState(previous?.instructor ?? "")
   const [term, setTerm] = useState(previous?.term ?? "")
+  const [startDate, setStartDate] = useState(previous?.startDate ?? "")
+  const [endDate, setEndDate] = useState(previous?.endDate ?? "")
+  const [schedule, setSchedule] = useState(previous?.schedule ?? "")
+  const [location, setLocation] = useState(previous?.location ?? "")
   const [description, setDescription] = useState(previous?.description ?? "")
   const [url, setUrl] = useState(previous?.url ?? "")
+  const [links, setLinks] = useState(previous?.links ?? [])
   const [pagesRead, setPagesRead] = useState(String(previous?.pagesRead ?? ""))
   const [pagesTotal, setPagesTotal] = useState(String(previous?.pagesTotal ?? ""))
   const [busy, setBusy] = useState(false)
@@ -36,11 +43,13 @@ export function CourseEditor({ value, onClose }: { value: Course | "new"; onClos
     if (busy) return
     if (!title.trim()) return setError("Give this item a title.")
     if (url.trim() && !/^https?:\/\//i.test(url.trim())) return setError("Use a full http or https link.")
+    if (linkProblem(links)) return setError(linkProblem(links)!)
+    if ((startDate.trim() && !validDateKey(startDate.trim())) || (endDate.trim() && !validDateKey(endDate.trim()))) return setError("Use YYYY-MM-DD for dates.")
     const read = pagesRead.trim() ? Number(pagesRead) : undefined, total = pagesTotal.trim() ? Number(pagesTotal) : undefined
     if (kind === "reading" && ((read != null && (!Number.isInteger(read) || read < 0)) || (total != null && (!Number.isInteger(total) || total < 1)) || (read != null && total != null && read > total))) return setError("Check the page numbers.")
-    const patch: Partial<NewCourse> = { kind, title: title.trim(), code: code.trim(), instructor: instructor.trim(), term: term.trim(), description: description.trim(), url: url.trim(), pagesRead: kind === "reading" ? read : undefined, pagesTotal: kind === "reading" ? total : undefined }
+    const patch: Partial<NewCourse> = { kind, title: title.trim(), code: code.trim(), instructor: instructor.trim(), term: term.trim(), startDate: startDate.trim() || undefined, endDate: endDate.trim() || undefined, schedule: schedule.trim(), location: location.trim(), description: description.trim(), url: url.trim(), links: cleanLinks(links), pagesRead: kind === "reading" ? read : undefined, pagesTotal: kind === "reading" ? total : undefined }
     setBusy(true)
-    const ok = await mutate(["courses"], d => previous ? updateCourse(d, previous.id, patch) : createCourse(d, { instructorEmail: "", schedule: "", location: "", tags: [], color: "blue", ...patch } as NewCourse).data)
+    const ok = await mutate(["courses"], d => previous ? updateCourse(d, previous.id, patch) : createCourse(d, { instructorEmail: "", tags: [], color: "blue", ...patch } as NewCourse).data)
     setBusy(false)
     if (ok) onClose()
     else setError(message ?? "Could not save this item. Your changes are still here.")
@@ -51,7 +60,7 @@ export function CourseEditor({ value, onClose }: { value: Course | "new"; onClos
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.kinds}>{kinds.map(k => <Pressable key={k.value} onPress={() => setKind(k.value)} style={[styles.kind, kind === k.value && styles.kindOn]} accessibilityRole="button" accessibilityState={{ selected: kind === k.value }}><Text style={[styles.kindText, kind === k.value && styles.kindTextOn]}>{k.label}</Text></Pressable>)}</ScrollView>
       {field("Title", title, setTitle, kind === "reading" ? "Book title" : "What are you learning?")}
       {kind === "reading" ? <View style={styles.pages}>{field("Pages read", pagesRead, setPagesRead)}{field("Total pages", pagesTotal, setPagesTotal)}</View> : null}
-      {expanded ? <>{field("Code / short label", code, setCode)}{field(kind === "reading" ? "Author" : kind === "certification" ? "Issuer" : "Instructor / source", instructor, setInstructor)}{field("Term / timeframe", term, setTerm)}{field("Description", description, setDescription)}{field("Source link", url, setUrl, "https://…")}</> : <Pressable onPress={() => setExpanded(true)} accessibilityRole="button" accessibilityLabel="More details" style={styles.more}><Text style={styles.moreText}>+ More details</Text></Pressable>}
+      {expanded ? <>{field("Code / short label", code, setCode)}{field(kind === "reading" ? "Author" : kind === "certification" ? "Issuer" : "Instructor / source", instructor, setInstructor)}{field("Term / timeframe", term, setTerm)}{field("Start date", startDate, setStartDate, "YYYY-MM-DD")}{field(kind === "certification" ? "Exam date" : "End / target date", endDate, setEndDate, "YYYY-MM-DD")}{field("Schedule", schedule, setSchedule)}{field("Location", location, setLocation)}{field("Description", description, setDescription)}{field("Source link", url, setUrl, "https://…")}<Text style={styles.label}>Resources</Text><LinksSection links={links} onChange={setLinks} hint="Links to notes, files, or other resources for this learning item." /></> : <Pressable onPress={() => setExpanded(true)} accessibilityRole="button" accessibilityLabel="More details" style={styles.more}><Text style={styles.moreText}>+ More details</Text></Pressable>}
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </ScrollView>
     <View style={styles.actions}><Pressable onPress={onClose} style={styles.action} accessibilityRole="button"><Text style={styles.actionText}>Close</Text></Pressable><Pressable onPress={() => void save()} style={[styles.action, styles.save]} accessibilityRole="button"><Text style={[styles.actionText, styles.saveText]}>{busy ? "Saving…" : "Save"}</Text></Pressable></View>
