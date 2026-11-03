@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ELECTRON_SKIP_BINARY_DOWNLOAD: "1" # the Mac app's Electron binary is never run here
+
+jobs:
+  web:
+    name: Web, server and Mac app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: blackwall-admin/package-lock.json
+      - run: npm --prefix blackwall-admin ci --ignore-scripts
+      - name: Typecheck, lint and build
+        run: npm --prefix blackwall-admin run check
+      - name: Web and server tests
+        run: npm --prefix blackwall-admin test
+      - name: Mac app tests
+        run: npm --prefix blackwall-admin run desktop:test
+
+  android:
+    name: Android app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm --prefix mobile ci --ignore-scripts
+      - name: Typecheck and tests
+        run: npm --prefix mobile run check
+
+  repo:
+    name: Repo rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: No build output, keys, home paths or tailnet names
+        run: python3 .github/agents/repo_guard.py --tree
+      - name: Agents workflow tests
+        run: python3 -m unittest discover -s .github/agents

@@ -1,0 +1,184 @@
+name: Agents
+
+# The button that sends an agent to build: Actions -> Agents -> Run workflow
+# (also works from the GitHub mobile app).
+#   claude: runs on GitHub's machines (works with the Mac closed).
+#   codex: runs on Blake's Mac (self-hosted runner labeled blackwall-agents),
+#   using its command-line tool already signed in there; the Mac has to be on
+#   and awake.
+# "next" builds up to `count` (1 to 3) of the oldest `ready` issues, one after
+# another, each its own pull request; an issue waits while its "Depends on"
+# issues are open, and an issue labeled for:codex or for:claude is only taken
+# by that agent. The run's Summary page says in plain words what started and
+# why anything did not. Builders edit files only; this workflow commits,
+# pushes and opens the pull request (with AGENTS_TOKEN, so CI runs on it).
+# Blake merges. Only people with write access can press this button; nothing
+# here runs on comments or forks.
+
+on:
+  workflow_dispatch:
+    inputs:
+      agent:
+        description: "Who"
+        required: true
+        type: choice
+        options: [claude, codex]
+      task:
+        description: "next = the next ready issues (up to the count below); issue = the issue number below"
+        required: true
+        type: choice
+        default: next
+        options: [next, issue]
+      count:
+        description: "How many issues for 'next' (fewer start if something is in the way)"
+        required: false
+        type: choice
+        default: "1"
+        options: ["1", "2", "3"]
+      issue:
+        description: "Issue number for 'issue'"
+        required: false
+      note:
+        description: "Extra instruction (optional)"
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agents-${{ inputs.agent }}
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    name: Pick the issues
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write # comments on an issue skipped because it waits for another
+      pull-requests: read
+    outputs:
+      proceed: ${{ steps.gate.outputs.proceed }}
+      tasks: ${{ steps.gate.outputs.tasks }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/agents
+      - name: Test the gate
+        run: python3 -m unittest discover -s .github/agents
+      - id: gate
+        name: Gate
+        env:
+          AGENT: ${{ inputs.agent }}
+          TASK: ${{ inputs.task }}
+          ISSUE: ${{ inputs.issue }}
+          COUNT: ${{ inputs.count }}
+          GATE_COMMENTS: "true"
+        run: python3 .github/agents/agent_gate.py "$AGENT" "$TASK" "$ISSUE" "$COUNT"
+
+  claude-build:
+    name: "Claude builds #${{ matrix.issue }}"
+    needs: gate
+    # Evaluated before the matrix, so an empty task list never reaches it.
+    if: needs.gate.outputs.proceed == 'true' && inputs.agent == 'claude'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      max-parallel: 1 # one after another
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.gate.outputs.tasks) }}
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    env:
+      AGENT: claude
+      ISSUE: ${{ matrix.issue }}
+      BRANCH: ${{ matrix.branch }}
+      NOTE: ${{ inputs.note }}
+      # The Mac app's Electron binary is large and is never run here.
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            blackwall-admin/package-lock.json
+            mobile/package-lock.json
+      - name: Install the web, server and Mac app packages
+        run: npm --prefix blackwall-admin ci --ignore-scripts
+      - name: Install the Android app packages
+        run: npm --prefix mobile ci --ignore-scripts
+      - name: Prepare the brief
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/agents/prepare.py build "$AGENT" "$ISSUE" "$NOTE"
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ github.token }}
+          prompt: "Read .agent/prompt.md and follow it exactly."
+          claude_args: >-
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(npm --prefix blackwall-admin run check),Bash(npm --prefix blackwall-admin run typecheck),Bash(npm --prefix blackwall-admin run lint),Bash(npm --prefix blackwall-admin test),Bash(npm --prefix blackwall-admin run desktop:test),Bash(npm --prefix mobile run check),Bash(npm --prefix mobile run typecheck),Bash(npm --prefix mobile test),Bash(python3 .github/agents/repo_guard.py),Bash(git status:*),Bash(git diff:*)"
+      - name: Commit, push and open the pull request
+        env:
+          GH_TOKEN: ${{ secrets.AGENTS_TOKEN }}
+        run: .github/agents/finish.sh
+
+  mac-build:
+    name: "Codex builds #${{ matrix.issue }} on the Mac"
+    needs: gate
+    if: needs.gate.outputs.proceed == 'true' && inputs.agent == 'codex'
+    runs-on: [self-hosted, macOS, blackwall-agents]
+    timeout-minutes: 60
+    strategy:
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.gate.outputs.tasks) }}
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    env:
+      AGENT: ${{ inputs.agent }}
+      ISSUE: ${{ matrix.issue }}
+      BRANCH: ${{ matrix.branch }}
+      NOTE: ${{ inputs.note }}
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          clean: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Check Codex is installed and signed in
+        run: |
+          if ! command -v codex >/dev/null 2>&1; then
+            echo "::error::The codex command is not on this runner's PATH. Install it, then restart the runner service (./svc.sh stop && ./svc.sh start in the runner folder)."
+            exit 1
+          fi
+          codex login status || { echo "::error::Codex is not signed in on this Mac. Run 'codex login' in Terminal."; exit 1; }
+      - name: Install the web, server and Mac app packages
+        run: npm --prefix blackwall-admin ci --ignore-scripts
+      - name: Install the Android app packages
+        run: npm --prefix mobile ci --ignore-scripts
+      - name: Prepare the brief
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/agents/prepare.py build "$AGENT" "$ISSUE" "$NOTE"
+      - name: Run Codex (its sandbox allows edits and commands in this folder, no network)
+        run: codex exec --sandbox workspace-write --cd "$GITHUB_WORKSPACE" "Read .agent/prompt.md and follow it exactly."
+      - name: Commit, push and open the pull request
+        env:
+          GH_TOKEN: ${{ secrets.AGENTS_TOKEN }}
+        run: .github/agents/finish.sh
