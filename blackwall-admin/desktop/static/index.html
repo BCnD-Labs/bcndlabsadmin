@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    />
+    <title>Blackwall</title>
+    <link rel="stylesheet" href="chrome.css" />
+    <script type="module" src="chrome.js"></script>
+  </head>
+  <body>
+    <header id="chrome">
+      <div id="tabstrip">
+        <div id="tabs" role="tablist" aria-label="Tabs"></div>
+        <button id="new-tab" class="icon-btn" title="New tab (⌘T)" aria-label="New tab">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
+        </button>
+      </div>
+      <div id="toolbar">
+        <button id="back" class="icon-btn" title="Back (⌘[)" aria-label="Back" disabled>
+          <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" /></svg>
+        </button>
+        <button id="forward" class="icon-btn" title="Forward (⌘])" aria-label="Forward" disabled>
+          <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" /></svg>
+        </button>
+        <button id="reload" class="icon-btn" title="Reload (⌘R)" aria-label="Reload">
+          <svg class="i-reload" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7" /><path d="M20 4v7h-7" /></svg>
+          <svg class="i-stop" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
+        </button>
+        <div id="address-wrap">
+          <span id="security" aria-hidden="true">
+            <svg class="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+            <svg class="i-open" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 7.5-2" /></svg>
+            <svg class="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6" /><path d="M20 20l-4.5-4.5" /></svg>
+          </span>
+          <input
+            id="address"
+            type="text"
+            spellcheck="false"
+            autocomplete="off"
+            autocapitalize="off"
+            aria-label="Address and search"
+            placeholder="Search DuckDuckGo or type a web address"
+          />
+        </div>
+        <div id="find" hidden>
+          <input id="find-input" type="text" spellcheck="false" autocomplete="off" aria-label="Find in page" placeholder="Find in page" />
+          <span id="find-count" aria-live="polite"></span>
+          <button id="find-prev" class="icon-btn small" title="Previous (⇧⌘G)" aria-label="Previous match">
+            <svg viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6" /></svg>
+          </button>
+          <button id="find-next" class="icon-btn small" title="Next (⌘G)" aria-label="Next match">
+            <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" /></svg>
+          </button>
+          <button id="find-close" class="icon-btn small" title="Close (Esc)" aria-label="Close find">
+            <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+      </div>
+      <div id="progress" aria-hidden="true"></div>
+    </header>
+
+    <main id="page">
+      <section id="panel-address" class="panel" hidden>
+        <h1><span class="prompt">❯</span> <span id="address-title">Blackwall web address</span></h1>
+        <p id="address-intro">The address of your hosted Blackwall, for example its Tailscale https address. The pinned tab opens it on launch. You can change it later in the menu bar: Blackwall → Web Address…</p>
+        <form id="address-setup">
+          <input id="web-address" type="text" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="https://blackwall.example.ts.net" aria-label="Blackwall web address" />
+          <p id="web-address-error" class="error" role="alert" hidden></p>
+          <div class="actions">
+            <button type="button" id="web-address-cancel" class="btn">Cancel</button>
+            <button type="submit" class="btn primary">Save</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="panel-error" class="panel" hidden>
+        <h1><span class="prompt">❯</span> <span id="error-title">Can’t reach this page</span></h1>
+        <p id="error-detail"></p>
+        <p id="error-url" class="mono"></p>
+        <p id="error-code" class="faint mono"></p>
+        <div class="actions">
+          <button type="button" id="error-address" class="btn">Web Address…</button>
+          <button type="button" id="error-retry" class="btn primary">Retry</button>
+        </div>
+      </section>
+
+      <section id="panel-new" class="blank" hidden>
+        <p>Type a web address or a search in the bar above.</p>
+      </section>
+    </main>
+  </body>
+</html>
