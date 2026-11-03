@@ -1,9 +1,11 @@
 import { timeFmt } from "@/lib/dates"
 import { format } from "date-fns"
+import { useLayoutEffect, useState } from "react"
 import { ArrowLeft, Menu, Search } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { useNow } from "@/hooks/use-now"
+import { useIsDesktop } from "@/hooks/use-media-query"
 import { usePrefs } from "@/stores/prefs"
 import { useUi } from "@/stores/ui"
 import { usePageHead } from "@/stores/page-head"
@@ -32,10 +34,19 @@ export function Header() {
   const nav = useNav(true)
   const dest = nav.find((d) => isActive(d, pathname))
   const hasTabs = !!dest?.children?.length && !(dest.children.length === 1)
+  const [titleEl, setTitleEl] = useState<HTMLDivElement | null>(null)
+  const [tabsEl, setTabsEl] = useState<HTMLElement | null>(null)
+  const tabsOverflow = useTabsOverflow(titleEl, tabsEl, dest?.children?.map((c) => c.label).join("|") ?? "")
+  // Tabs sit under the title beside the actions when they fit; otherwise (and on phones) they
+  // get their own full-width row below the title and actions, wrapping instead of scrolling.
+  const tabsBelow = !useIsDesktop() || tabsOverflow
 
   return (
-    <header className="bw-app-header bw-workspace mx-auto z-20 flex w-full  flex-col gap-2.5 border-b border-line-soft py-2 pr-0 pl-0 md:flex-row md:items-center md:justify-between md:gap-3">
-      <div className="flex min-w-0 items-center gap-2 md:flex-1">
+    <header
+      data-tabs={hasTabs ? (tabsBelow ? "below" : "inline") : undefined}
+      className="bw-app-header bw-workspace mx-auto z-20 flex w-full flex-col gap-2.5 border-b border-line-soft py-2 pr-0 pl-0 md:grid md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-x-3 md:gap-y-[3px]"
+    >
+      <div ref={setTitleEl} className="flex min-w-0 items-center gap-2 md:col-start-1 md:row-start-1">
         {/* Small screens only; desktop has the rail. */}
         <Button
           variant="ghost"
@@ -72,13 +83,21 @@ export function Header() {
                 <span className="flex shrink-0 items-center gap-2">{head.badge}</span>
                 {head.subtitle && <span className="hidden min-w-0 truncate text-xs text-muted-foreground 2xl:inline">{head.subtitle}</span>}
               </div>
-              {hasTabs && <SectionNav inHeader />}
             </>
           )}
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-2">
+      {!home && hasTabs && (
+        <SectionNav
+          inHeader
+          wrap={tabsBelow}
+          ref={setTabsEl}
+          className={tabsBelow ? "-mt-[7px] md:col-span-2 md:row-start-2 md:mt-1" : "md:col-start-1 md:row-start-2"}
+        />
+      )}
+
+      <div className={`flex shrink-0 items-center gap-2 md:col-start-2 md:row-start-1 ${!home && hasTabs && !tabsBelow ? "md:row-span-2" : ""}`}>
         {head.actions && <div className="mr-1 hidden items-center gap-2 border-r border-line-soft pr-3 md:flex">{head.actions}</div>}
         <CalendarMenu />
         <button
@@ -99,4 +118,27 @@ export function Header() {
       </div>
     </header>
   )
+}
+
+/**
+ * True when the section tabs need more room than the title column beside the header actions.
+ * Both widths are independent of where the tabs are drawn, so the choice never flips back and forth.
+ */
+function useTabsOverflow(titleEl: HTMLElement | null, tabsEl: HTMLElement | null, key: string) {
+  const [overflow, setOverflow] = useState(false)
+  useLayoutEffect(() => {
+    if (!titleEl || !tabsEl) return
+    const check = () => {
+      const links = Array.from(tabsEl.children) as HTMLElement[]
+      const gap = parseFloat(getComputedStyle(tabsEl).columnGap) || 0
+      const need = links.reduce((sum, link) => sum + link.getBoundingClientRect().width, 0) + gap * Math.max(0, links.length - 1)
+      setOverflow(need > titleEl.getBoundingClientRect().width + 0.5)
+    }
+    check()
+    const observer = new ResizeObserver(check)
+    observer.observe(titleEl)
+    observer.observe(tabsEl)
+    return () => observer.disconnect()
+  }, [titleEl, tabsEl, key])
+  return overflow
 }
