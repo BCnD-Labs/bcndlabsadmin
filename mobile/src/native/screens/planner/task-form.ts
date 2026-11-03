@@ -1,37 +1,35 @@
 /**
  * Pure rules for the Planner's task editor and quick add (no React, no clock: `now` and `today`
- * are passed in). Fields are exactly the ones the web's plain-task form has (title, details, due,
- * time, starred, done). Editing builds a patch of only those fields, so everything else on a
- * task (course, links, schedule, reflection, anything a newer version added) is left alone.
+ * are passed in). The base fields are the web task form's (title, details, due, time, starred,
+ * done); `extras` carries the rest (course, schedule, focus, links, reflection: see task-extras.ts).
+ * Editing builds a patch from the draft: the base fields as before, the extras only where they
+ * changed, so anything the form doesn't know (or you didn't touch) is left alone.
  */
 import { parseQuickAdd, validDateKey, type Collections, type NewTask } from "../../../lib/shared.ts"
 import type { SyncStatus } from "../../data/sync-view.ts"
+import { emptyExtras, extraErrors, extrasFromTask, extrasPatch, newExtras, type ExtraErrors, type Extras } from "./task-extras.ts"
+import { normalizeTime } from "./time.ts"
+
+export { normalizeTime }
 
 type Task = Collections["tasks"][number]
 
-export interface TaskDraft { title: string; details: string; due: string; time: string; starred: boolean; done: boolean }
-export interface DraftErrors { title?: string; due?: string; time?: string }
+export interface TaskDraft { title: string; details: string; due: string; time: string; starred: boolean; done: boolean; extras?: Extras }
+export interface DraftErrors extends ExtraErrors { title?: string; due?: string; time?: string }
 
-export const emptyDraft = (due = ""): TaskDraft => ({ title: "", details: "", due, time: "", starred: false, done: false })
+export const emptyDraft = (due = ""): TaskDraft => ({ title: "", details: "", due, time: "", starred: false, done: false, extras: emptyExtras() })
 
 export function draftFromTask(t: Task): TaskDraft {
-  return { title: t.title, details: t.details ?? "", due: t.due ?? "", time: t.time ?? "", starred: t.starred, done: t.done }
+  return { title: t.title, details: t.details ?? "", due: t.due ?? "", time: t.time ?? "", starred: t.starred, done: t.done, extras: extrasFromTask(t) }
 }
 
-/** "9:30" or "09:30" -> "09:30"; undefined when empty or not a 24-hour time. */
-export function normalizeTime(text: string): string | undefined {
-  const m = text.trim().match(/^(\d{1,2}):(\d{2})$/)
-  if (!m || Number(m[1]) > 23 || Number(m[2]) > 59) return undefined
-  return `${m[1].padStart(2, "0")}:${m[2]}`
-}
-
-/** Why a draft can't be saved yet. The time only counts when there is a due date (as on the web). */
-export function draftErrors(d: TaskDraft): DraftErrors {
+/** Why a draft can't be saved yet. The time only counts when there is a due date (as on the web). `start` limits the extras check to what was touched. */
+export function draftErrors(d: TaskDraft, start?: TaskDraft): DraftErrors {
   const errors: DraftErrors = {}
   if (!d.title.trim()) errors.title = "Give the task a title."
   if (d.due && !validDateKey(d.due)) errors.due = "Pick a valid date."
   if (d.due && d.time.trim() && !normalizeTime(d.time)) errors.time = "Use 24-hour time, like 09:30."
-  return errors
+  return d.extras ? { ...errors, ...extraErrors(d.extras, start?.extras) } : errors
 }
 
 /** Empty details, time and date become undefined; the time is dropped without a due date. */
@@ -42,12 +40,12 @@ function fields(d: TaskDraft) {
 /** A new task: undefined fields are left out entirely. */
 export function buildNewTask(d: TaskDraft, now: string): NewTask {
   const f = fields(d)
-  return { title: f.title, starred: f.starred, done: f.done, ...(f.details && { details: f.details }), ...(f.due && { due: f.due }), ...(f.time && { time: f.time }), ...(f.done && { completedAt: now }) }
+  return { title: f.title, starred: f.starred, done: f.done, ...(f.details && { details: f.details }), ...(f.due && { due: f.due }), ...(f.time && { time: f.time }), ...(f.done && { completedAt: now }), ...newExtras(d.extras, now) }
 }
 
 /** The patch for an edit: cleared fields are explicit undefined so they really clear. Completing keeps an earlier completedAt. */
 export function buildPatch(d: TaskDraft, existing: Task, now: string): Partial<NewTask> {
-  return { ...fields(d), completedAt: d.done ? (existing.completedAt ?? now) : undefined }
+  return { ...fields(d), completedAt: d.done ? (existing.completedAt ?? now) : undefined, ...extrasPatch(d.extras, existing, now) }
 }
 
 export interface QuickAddPreview { title: string; due?: string }

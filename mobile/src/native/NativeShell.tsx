@@ -8,6 +8,7 @@ import { LauncherSheet } from "./nav/LauncherSheet.tsx"
 import type { ScreenKey } from "./nav/destinations.ts"
 import type { NavSide } from "./nav/side.ts"
 import { SCREENS } from "./nav/screens.tsx"
+import { SnackHost } from "./snack/SnackHost.tsx"
 import type { NativeHomeProps } from "./index.ts"
 
 /**
@@ -56,6 +57,7 @@ export function NativeShell({ address, onOpenSettings }: NativeHomeProps) {
     <WorkspaceProvider address={address}>
       <View style={styles.root}>
         <Current onOpenSettings={onOpenSettings} />
+        <SnackHost />
         {side ? (
           <>
             <FloatingNav side={side} current={current} open={navOpen} onOpenChange={setNavOpen} onSelect={setCurrent} onAll={() => setSheetOpen(true)} />

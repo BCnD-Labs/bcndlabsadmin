@@ -1,5 +1,6 @@
 import * as SecureStore from "expo-secure-store"
 import { sanitizeNavSide, type NavSide } from "../native/nav/side.ts"
+import { sanitizeDensity, type Density } from "../native/screens/planner/density.ts"
 import { normalizeAddress } from "./url.ts"
 import type { ViewMode } from "./view-mode.ts"
 
@@ -12,6 +13,7 @@ const KEYS = {
   viewMode: "blackwall.viewMode",
   handle: "blackwall.settingsHandle",
   navSide: "blackwall.navSide",
+  taskDensity: "blackwall.taskDensity",
 } as const
 
 /** Your saved Blackwall start URL, re-validated on read. Null if none is saved or it's no longer valid. */
@@ -67,4 +69,17 @@ export async function loadNavSide(): Promise<NavSide> {
 
 export async function saveNavSide(side: NavSide): Promise<void> {
   await SecureStore.setItemAsync(KEYS.navSide, side).catch(() => {})
+}
+
+/** How tightly task rows are packed. Never rejects; anything missing or unknown is "comfortable". */
+export async function loadTaskDensity(): Promise<Density> {
+  try {
+    return sanitizeDensity(await SecureStore.getItemAsync(KEYS.taskDensity))
+  } catch {
+    return sanitizeDensity(null)
+  }
+}
+
+export async function saveTaskDensity(density: Density): Promise<void> {
+  await SecureStore.setItemAsync(KEYS.taskDensity, density).catch(() => {})
 }
