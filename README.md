@@ -8,6 +8,8 @@ cd blackwall-admin && npm install && npm run dev
 
 **Android app:** [`mobile/`](./mobile) is an Expo app that shows your hosted Blackwall in a full-screen WebView, with native setup and settings. It's a separate project with its own `package.json`. See its [README](./mobile/README.md).
 
+**Working with coding agents:** [`AGENTS.md`](./AGENTS.md) has the rules Claude and Codex follow here, and how issues, the Agents button and pull requests work.
+
 ## Long-term scope
 
 Blackwall is meant to grow into the place to "run" bcndlabs:
