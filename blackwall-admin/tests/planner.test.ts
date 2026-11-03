@@ -2,7 +2,7 @@ import assert from "node:assert/strict"
 import { test } from "node:test"
 import { emptyWorkspace, mergeWorkspace, validWorkspace } from "../shared/workspace.ts"
 import { validDateKey } from "../shared/planner.ts"
-import { taskSlot, taskOnDate, timedLanes } from "../src/features/productivity/planner-utils.ts"
+import { chipOverflow, dayDots, isDeadlineOn, isEndOfDay, startTimeOn, taskSlot, taskOnDate, timedLanes } from "../src/features/productivity/planner-utils.ts"
 import type { Task } from "../src/lib/types.ts"
 const timestamp = "2026-11-02T14:42:00Z"
 const task = (patch: Partial<Task> = {}): Task => ({ id: "a", title: "A task", done: false, starred: false, createdAt: timestamp, updatedAt: timestamp, ...patch })
@@ -60,4 +60,37 @@ test("reflection edits retain existing conflict protection and merge independent
   assert.equal(result.data.tasks[0].reflection?.text, "A short note")
   assert.equal(result.data.tasks[1].done, true)
   assert.deepEqual(mergeWorkspace(base, local, { ...base, tasks: [task({ title: "Concurrent edit" }), task({ id: "b" })] }).conflicts, ["tasks: a"])
+})
+
+test("calendar items show a start time only when there is a real one", () => {
+  const day = "2026-11-03"
+  assert.equal(startTimeOn(task({ due: day, time: "09:30" }), day), "09:30")
+  for (const time of ["23:55", "23:59", "23:45"]) {
+    const value = task({ due: day, time })
+    assert.ok(isEndOfDay(time))
+    assert.equal(startTimeOn(value, day), undefined, `${time} is an end-of-day deadline`)
+    assert.ok(isDeadlineOn(value, day))
+  }
+  assert.ok(!isEndOfDay("23:30"))
+  assert.ok(isDeadlineOn(task({ due: day }), day))
+  // A scheduled slot is a real start even late at night, and never turns the deadline day into a timed one.
+  const scheduled = task({ due: "2026-11-06", scheduledDate: day, scheduledTime: "23:55" })
+  assert.equal(startTimeOn(scheduled, day), "23:55")
+  assert.ok(!isDeadlineOn(scheduled, day))
+  assert.equal(startTimeOn(scheduled, "2026-11-06"), undefined)
+  assert.ok(isDeadlineOn(scheduled, "2026-11-06"))
+  assert.equal(startTimeOn(task({ due: day, time: "10:00" }), "2026-11-04"), undefined)
+})
+test("month chips cap at three rows with a +N more row", () => {
+  assert.deepEqual(chipOverflow([1, 2, 3]), { shown: [1, 2, 3], more: 0 })
+  assert.deepEqual(chipOverflow([1, 2, 3, 4]), { shown: [1, 2], more: 2 })
+  assert.deepEqual(chipOverflow([1, 2, 3, 4, 5, 6], 2), { shown: [1], more: 5 })
+  assert.deepEqual(chipOverflow([]), { shown: [], more: 0 })
+})
+test("narrow month dots: done, overdue and open, at most three plus a count", () => {
+  const today = "2026-11-02"
+  const items = [task({ done: true, due: "2026-10-01" }), task({ due: "2026-10-30" }), task({ due: today }), task(), task()]
+  assert.deepEqual(dayDots(items.slice(0, 3), today), { dots: ["done", "overdue", "open"], more: 0 })
+  assert.deepEqual(dayDots(items, today), { dots: ["done", "overdue", "open"], more: 2 })
+  assert.deepEqual(dayDots([], today), { dots: [], more: 0 })
 })

@@ -41,3 +41,39 @@ export function timedLanes(tasks: Task[], date: string) {
 export function reflectionSummary(task: Task) {
   return [task.reflection?.text, ...Object.values(task.reflection?.items ?? {})].filter(Boolean).join(" · ")
 }
+
+/**
+ * Deadlines entered as "due at 23:55 / 23:59" mean "by the end of the day", not a start time.
+ * Only the legacy due-date time can be one; a scheduled slot is always a real start.
+ */
+export const END_OF_DAY = "23:45"
+export function isEndOfDay(time?: string) {
+  return !!time && time >= END_OF_DAY
+}
+
+/** The start time a calendar item shows on `date`; none for deadlines, all-day and end-of-day items. */
+export function startTimeOn(task: Task, date: string) {
+  const slot = taskSlot(task)
+  if (slot.date !== date || !slot.time) return undefined
+  if (!task.scheduledDate && isEndOfDay(slot.time)) return undefined
+  return slot.time
+}
+
+/** Due on `date` without a real start time there: shown as a deadline. */
+export function isDeadlineOn(task: Task, date: string) {
+  return task.due === date && !startTimeOn(task, date)
+}
+
+/** Month cells show up to `max` rows: all items when they fit, else `max - 1` items and "+N more". */
+export function chipOverflow<T>(items: T[], max = 3) {
+  if (items.length <= max) return { shown: items, more: 0 }
+  const shown = items.slice(0, Math.max(0, max - 1))
+  return { shown, more: items.length - shown.length }
+}
+
+export type DayDot = "done" | "overdue" | "open"
+/** Narrow month cells: one dot per item (done / overdue / open), at most `max`, then a count of the rest. */
+export function dayDots(tasks: Task[], today: string, max = 3) {
+  const kinds: DayDot[] = tasks.map((task) => task.done ? "done" : task.due && task.due < today ? "overdue" : "open")
+  return { dots: kinds.slice(0, max), more: Math.max(0, kinds.length - max) }
+}
