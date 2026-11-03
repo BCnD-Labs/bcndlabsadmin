@@ -94,7 +94,7 @@ export async function signOut(address: string, fetchImpl: typeof fetch = fetch):
 export function statusLabel(status: SessionStatus): { title: string; hint: string } {
   switch (status) {
     case "signed-in":
-      return { title: "Signed in", hint: "The web view and native screens share this sign-in." }
+      return { title: "Signed in", hint: "Native screens are signed in. If the web view still asks for a password, sign out and sign in again." }
     case "signed-out":
       return { title: "Signed out", hint: "Enter your Blackwall password to sign in." }
     case "no-login-needed":
