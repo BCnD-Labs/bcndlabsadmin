@@ -4,14 +4,19 @@ import { color } from "../../theme.ts"
 import { Icon, SectionLabel, tone } from "../ui.tsx"
 import { launcherGroups, type Destination, type ScreenKey } from "./destinations.ts"
 import { navDuration, SHEET_MS } from "./motion.ts"
+import { NAV_SIDES, type NavSide } from "./side.ts"
 import { useReduceMotion } from "./useReduceMotion.ts"
 
 const PAD = 16
 const GAP = 8
 const COLUMNS = 3
 
+const SIDE_LABEL: Record<NavSide, string> = { left: "Left", center: "Center", right: "Right" }
+
 type Props = {
   visible: boolean
+  side: NavSide
+  onSideChange: (side: NavSide) => void
   current: ScreenKey
   onSelect: (key: ScreenKey) => void
   onOpenSettings: () => void
@@ -19,7 +24,7 @@ type Props = {
 }
 
 /** The "All" bottom sheet: every destination that is not on the mini bar, grouped, in a 3-column grid. */
-export function LauncherSheet({ visible, current, onSelect, onOpenSettings, onClose }: Props) {
+export function LauncherSheet({ visible, side, onSideChange, current, onSelect, onOpenSettings, onClose }: Props) {
   const reduce = useReduceMotion()
   const { width, height } = useWindowDimensions()
   const p = useRef(new Animated.Value(0)).current
@@ -86,6 +91,26 @@ export function LauncherSheet({ visible, current, onSelect, onOpenSettings, onCl
               </View>
             </View>
           ))}
+          <View style={styles.group}>
+            <SectionLabel>Bubble position</SectionLabel>
+            <View style={styles.sides}>
+              {NAV_SIDES.map((s) => {
+                const active = s === side
+                return (
+                  <Pressable
+                    key={s}
+                    onPress={() => onSideChange(s)}
+                    style={({ pressed }) => [styles.sideChip, active && styles.tileActive, pressed && styles.pressed]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Move navigation to the ${s}`}
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Text style={[styles.tileLabel, active && styles.tileLabelActive]}>{SIDE_LABEL[s]}</Text>
+                  </Pressable>
+                )
+              })}
+            </View>
+          </View>
           <Text style={styles.note}>Web view: Settings {">"} Web view</Text>
         </ScrollView>
       </Animated.View>
@@ -104,6 +129,8 @@ const styles = StyleSheet.create({
   group: { gap: 8 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: GAP },
   tile: { minHeight: 72, borderRadius: 16, alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: 6, backgroundColor: color.raised, borderWidth: 1, borderColor: color.edge },
+  sides: { flexDirection: "row", gap: GAP },
+  sideChip: { flex: 1, minHeight: 48, borderRadius: 16, alignItems: "center", justifyContent: "center", paddingHorizontal: 6, backgroundColor: color.raised, borderWidth: 1, borderColor: color.edge },
   tileActive: { backgroundColor: color.selected, borderColor: color.border },
   pressed: { backgroundColor: color.selected },
   tileLabel: { color: color.text2, fontSize: 13, fontWeight: "600" },

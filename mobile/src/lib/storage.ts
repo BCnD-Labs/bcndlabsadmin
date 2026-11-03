@@ -1,4 +1,5 @@
 import * as SecureStore from "expo-secure-store"
+import { sanitizeNavSide, type NavSide } from "../native/nav/side.ts"
 import { normalizeAddress } from "./url.ts"
 import type { ViewMode } from "./view-mode.ts"
 
@@ -10,6 +11,7 @@ const KEYS = {
   address: "blackwall.address",
   viewMode: "blackwall.viewMode",
   handle: "blackwall.settingsHandle",
+  navSide: "blackwall.navSide",
 } as const
 
 /** Your saved Blackwall start URL, re-validated on read. Null if none is saved or it's no longer valid. */
@@ -52,4 +54,17 @@ export async function loadHandle(): Promise<HandlePosition> {
 
 export async function saveHandle(p: HandlePosition): Promise<void> {
   await SecureStore.setItemAsync(KEYS.handle, JSON.stringify(p)).catch(() => {})
+}
+
+/** Where the floating navigation bubble sits. Never rejects; anything missing or unknown is "right". */
+export async function loadNavSide(): Promise<NavSide> {
+  try {
+    return sanitizeNavSide(await SecureStore.getItemAsync(KEYS.navSide))
+  } catch {
+    return sanitizeNavSide(null)
+  }
+}
+
+export async function saveNavSide(side: NavSide): Promise<void> {
+  await SecureStore.setItemAsync(KEYS.navSide, side).catch(() => {})
 }
