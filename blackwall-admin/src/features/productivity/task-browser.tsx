@@ -7,32 +7,15 @@ import { ListGroupLabel } from "@/components/common/list"
 import { Panel } from "@/components/common/panel"
 import { SegmentedTabs } from "@/components/common/segmented-tabs"
 import { TaskRow } from "@/features/work/task-row"
-import { GROUP_ORDER, compareTasks, groupOf, type TaskGroup } from "@/features/work/task-utils"
-import { daysUntil, parseKey } from "@/lib/dates"
+import { inTab, taskGroups, taskRows, type TaskTab } from "@shared/task-rules"
+import { parseKey, todayKey } from "@/lib/dates"
 import type { Task } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
-import { reflectionSummary } from "./planner-utils"
 function SearchBox({ value, onChange, label, onClose }: { value: string; onChange: (v: string) => void; label: string; onClose: () => void }) {
   return <div className="flex gap-2 px-3 py-2"><input className="planner-search flex-1" aria-label={label} placeholder={label} value={value} onChange={(e) => onChange(e.target.value)} /><Button variant="quiet" size="xs" onClick={onClose}>Close</Button></div>
 }
-type TaskTab = "today" | "next" | "all" | "done"
-
-const inTab = (t: Task, tab: TaskTab) => {
-  if (tab === "done") return t.done
-  if (t.done) return false
-  if (tab === "today") return !!t.due && daysUntil(t.due) <= 0
-  if (tab === "next") return !!t.due && daysUntil(t.due) > 0
-  return true
-}
-
-const TAB_GROUPS: Record<Exclude<TaskTab, "done">, TaskGroup[]> = {
-  today: ["Overdue", "Today"],
-  next: ["Tomorrow", "Next 7 days", "Later"],
-  all: GROUP_ORDER,
-}
-
 /** Tasks under the calendar. Add opens the task form, due on the day selected in the calendar. */
 export function TaskBrowser({ date, onSelect, onComplete }: { date: string; onSelect: (task: Task) => void; onComplete: (task: Task) => void }) {
   const tasks = useWorkspace((s) => s.tasks)
@@ -44,15 +27,13 @@ export function TaskBrowser({ date, onSelect, onComplete }: { date: string; onSe
   // Checked off here: stays visible (struck through) until the tab changes.
   const [lingering, setLingering] = useState<Set<string>>(new Set())
 
+  const today = todayKey()
   const needle = q.trim().toLowerCase()
   const rows = useMemo(
-    () =>
-      tasks
-        .filter((t) => (inTab(t, tab) || lingering.has(t.id)) && (!needle || t.title.toLowerCase().includes(needle) || !!t.details?.toLowerCase().includes(needle) || reflectionSummary(t).toLowerCase().includes(needle)) && (!starred || t.starred))
-        .sort(compareTasks),
-    [tasks, tab, lingering, needle, starred],
+    () => taskRows(tasks, { tab, today, query: needle, starredOnly: starred, lingering }),
+    [tasks, tab, today, lingering, needle, starred],
   )
-  const count = (k: TaskTab) => tasks.filter((t) => inTab(t, k)).length
+  const count = (k: TaskTab) => tasks.filter((t) => inTab(t, k, today)).length
   const changeTab = (t: TaskTab) => {
     setTab(t)
     setLingering(new Set())
@@ -61,10 +42,7 @@ export function TaskBrowser({ date, onSelect, onComplete }: { date: string; onSe
     setQ("")
     setSearching(false)
   }
-  const groups =
-    tab === "done"
-      ? [{ name: null as TaskGroup | null, items: rows }]
-      : TAB_GROUPS[tab].map((g) => ({ name: g as TaskGroup | null, items: rows.filter((t) => groupOf(t) === g || (t.done && lingering.has(t.id) && g === TAB_GROUPS[tab][0])) })).filter((g) => g.items.length)
+  const groups = taskGroups(rows, { tab, today, lingering })
   const dueLabel = isToday(parseKey(date)) ? "today" : format(parseKey(date), "MMM d")
   const add = () => openForm({ kind: "task", defaults: { due: date } })
 

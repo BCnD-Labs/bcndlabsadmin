@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { DueChip } from "@/components/common/due-chip"
 import { SegmentedTabs } from "@/components/common/segmented-tabs"
-import { daysUntil, shortAgo, todayKey } from "@/lib/dates"
+import { shortAgo, todayKey } from "@/lib/dates"
+import { inHomeTab, type HomeTab } from "@shared/task-rules"
 import type { Note, Task } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useUi } from "@/stores/ui"
@@ -15,11 +16,10 @@ import { compareTasks } from "@/features/work/task-utils"
 import type { PanelBodyProps } from "./panel-registry"
 import { notesHref } from "@/lib/routes"
 
-type Tab = "today" | "next" | "done"
+type Tab = HomeTab
 
 /** Today = open and due today or overdue. Next = open and due later or undated. Done = done. */
-const inTab = (t: Task, tab: Tab) =>
-  tab === "done" ? t.done : !t.done && (tab === "today" ? !!t.due && daysUntil(t.due) <= 0 : !t.due || daysUntil(t.due) > 0)
+const inTab = (t: Task, tab: Tab) => inHomeTab(t, tab, todayKey())
 
 const EMPTY: Record<Tab, string> = {
   today: "Nothing due today.",
