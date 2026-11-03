@@ -21,7 +21,7 @@ import { undoDelete, type UndoAction } from "./task-undo.ts"
 import { offerUndo } from "./undo-snack.ts"
 
 /** What the sheet is doing: a new task (optionally pre-dated), or an existing task by id. */
-export type Editor = { mode: "create"; due?: string; kind?: "task" | "event" } | { mode: "edit"; id: string }
+export type Editor = { mode: "create"; due?: string; kind?: "task" | "event"; courseId?: string } | { mode: "edit"; id: string }
 type SectionKey = "schedule" | "learning" | "reflection" | "links" | "records"
 
 /**
@@ -40,7 +40,7 @@ export function TaskSheet({ editor, data, today, onClose, embedded = false }: { 
   const task = editor.mode === "edit" ? data.tasks.find((t) => t.id === editor.id) : undefined
   const [opened] = useState(() => !!task)
   const missing = editor.mode === "edit" && !opened
-  const [start] = useState<TaskDraft>(() => (task ? draftFromTask(task) : editor.mode === "create" ? emptyDraft(editor.due ?? (editor.kind === "event" ? today : ""), editor.kind) : emptyDraft()))
+  const [start] = useState<TaskDraft>(() => (task ? draftFromTask(task) : editor.mode === "create" ? { ...emptyDraft(editor.due ?? (editor.kind === "event" ? today : ""), editor.kind), ...(editor.courseId && { extras: { ...emptyExtras(), courseId: editor.courseId } }) } : emptyDraft()))
   const [draft, setDraft] = useState(start)
   const [showErrors, setShowErrors] = useState(false)
   const [compactDate, setCompactDate] = useState(false)

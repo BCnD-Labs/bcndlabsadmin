@@ -5,7 +5,7 @@
  * The rules are the ones the web store has always had: keep them in step with it, not ahead of it.
  */
 import { validJournalItems, validJournalSections } from "./journal-sections.ts"
-import type { JournalSection, JournalLogItem, JournalEntry, Note, Task } from "../src/lib/types.ts"
+import type { Course, JournalSection, JournalLogItem, JournalEntry, Note, Task } from "../src/lib/types.ts"
 import type { Collections } from "./workspace.ts"
 
 export interface RecordOptions {
@@ -16,12 +16,14 @@ export interface RecordOptions {
 }
 export type NewTask = Omit<Task, "id" | "createdAt" | "updatedAt">
 export type NewNote = Omit<Note, "id" | "createdAt" | "updatedAt">
+export type NewCourse = Omit<Course, "id" | "createdAt" | "updatedAt">
 export const TASK_ID_PREFIX = "tsk"
 export const NOTE_ID_PREFIX = "nte"
 
 type TaskData = Pick<Collections, "tasks">
 type NoteData = Pick<Collections, "notes">
 type JournalData = Pick<Collections, "journal">
+type CourseData = Pick<Collections, "courses">
 
 export function defaultMakeId(prefix: string): string {
   const rand = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID().slice(0, 8) : Math.random().toString(36).slice(2, 10)
@@ -80,6 +82,18 @@ export function removeNote<T extends NoteData>(data: T, id: string): T {
 export function togglePin<T extends NoteData>(data: T, id: string, opts: RecordOptions = {}): T {
   const t = (opts.now ?? defaultNow)()
   return { ...data, notes: data.notes.map((note) => (note.id === id ? { ...note, pinned: !note.pinned, updatedAt: t } : note)) }
+}
+
+/** Learning records use the same local-first workspace path as tasks and notes. */
+export function createCourse<T extends CourseData>(data: T, input: NewCourse, opts: RecordOptions = {}): { data: T; record: Course } {
+  const t = (opts.now ?? defaultNow)()
+  const record: Course = { ...input, id: (opts.makeId ?? defaultMakeId)("crs"), createdAt: t, updatedAt: t }
+  return { data: { ...data, courses: [record, ...data.courses] }, record }
+}
+
+export function updateCourse<T extends CourseData>(data: T, id: string, patch: Partial<NewCourse>, opts: RecordOptions = {}): T {
+  const t = (opts.now ?? defaultNow)()
+  return { ...data, courses: data.courses.map((course) => course.id === id ? { ...course, ...patch, updatedAt: t } : course) }
 }
 
 /**

@@ -3,7 +3,6 @@ import type { ComponentProps, ReactNode } from "react"
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native"
 import { color } from "../theme.ts"
 import { NAV_CLEARANCE } from "./nav/destinations.ts"
-import type { CourseworkType } from "./sample.ts"
 
 export { NAV_CLEARANCE }
 
@@ -11,10 +10,7 @@ export { NAV_CLEARANCE }
 
 export const tone = { blue: "#74a7ff", amber: "#f2b84b", green: "#6fcf97", red: "#ff8787", grey: "#aab1bc" } as const
 
-export const TYPE_TONE: Record<CourseworkType, string> = { assignment: tone.blue, exam: tone.red, milestone: tone.amber, event: tone.green }
-export const TYPE_LABEL: Record<CourseworkType, string> = { assignment: "Assignment", exam: "Exam", milestone: "Milestone", event: "Event" }
 export type IconName = ComponentProps<typeof Ionicons>["name"]
-export const TYPE_ICON: Record<CourseworkType, IconName> = { assignment: "document-text-outline", exam: "ribbon-outline", milestone: "flag-outline", event: "calendar-clear-outline" }
 
 /** An icon from the Ionicons set (names are type-checked). */
 export function Icon({ name, size = 20, tint = color.muted }: { name: IconName; size?: number; tint?: string }) {
@@ -44,14 +40,6 @@ export function Screen({ title, subtitle, right, children, onRefresh, refreshing
   )
 }
 
-/** The honest label every sample-data screen shows (the web app's "Sample data" badge). */
-export function SampleBadge() {
-  return (
-    <View style={styles.sample} accessibilityLabel="Sample data, not connected">
-      <Text style={styles.sampleText}>Sample data</Text>
-    </View>
-  )
-}
 
 export function Card({ title, right, children, onPress }: { title?: string; right?: ReactNode; children?: ReactNode; onPress?: () => void }) {
   const body = (
