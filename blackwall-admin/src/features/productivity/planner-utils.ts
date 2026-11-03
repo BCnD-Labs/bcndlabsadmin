@@ -38,9 +38,7 @@ export function timedLanes(tasks: Task[], date: string) {
   return items
 }
 
-export function reflectionSummary(task: Task) {
-  return [task.reflection?.text, ...Object.values(task.reflection?.items ?? {})].filter(Boolean).join(" · ")
-}
+export { reflectionSummary } from "../../../shared/task-rules.ts"
 
 /**
  * Deadlines entered as "due at 23:55 / 23:59" mean "by the end of the day", not a start time.
