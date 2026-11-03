@@ -27,7 +27,7 @@ npm run doctor    # expo-doctor (20 checks)
    - normalizes the address to the site root (any path, query or `#…` is dropped, and the host is lowercased)
    - refuses `http://`, `javascript:`, `file:`, `data:` and every other scheme, credentials (`user:pw@`), non-ASCII hosts, bad ports and anything malformed
 2. The address is stored **only on this phone**, in `expo-secure-store` (Android Keystore). App backup is turned off. It's never in the code, the config, an env file or the bundle.
-3. Sign in on the Blackwall page itself. The app never sees or stores your password. Sign-in uses Blackwall's own cookie, which the WebView keeps across restarts. The **Remember me for 30 days** checkbox (PR #3) appears once the server has been redeployed with that change.
+3. Sign in either on the Blackwall page itself or under **Settings → Account**. In Settings the password is sent once, over https, to your own Blackwall server (`POST /api/login`) and is never stored, logged or kept in the app's state; the field is emptied as soon as the request returns. The server answers with its `bw_session` cookie, which lives in Android's cookie store. The WebView and the app's own requests use that same store, so one sign-in covers both (not yet confirmed on a device). **Keep me signed in** asks for the 30-day cookie instead of the 12-hour one. Signing in or out in Settings reloads the page so it picks up the change.
 4. To change or clear the address, open **Settings** (see below) → **Server** → **Change address** / **Clear address**.
 
 If the address can't be reached (Tailscale off, server down, a 5xx from the server, or nothing back within 30 s), the app shows **Can't reach Blackwall** with the reason, **Is Tailscale connected on this phone?**, **Retry** and **Change address**.
@@ -50,6 +50,7 @@ If the address can't be reached (Tailscale off, server down, a 5xx from the serv
 | --- | --- |
 | Server → Change / Clear address | Edit the saved address (same validation as first launch), or clear it and go back to setup |
 | View mode | **Web view** (default, working) or **Native** (visible, disabled: "Not built yet"). The choice is saved. |
+| Account | Shows whether you're signed in, signs you in (password field, **Keep me signed in**) or out, and **Check again** |
 | Page → Reload | Reloads the page |
 | Page → Clear site data and sign out | Signs out (`/api/logout`), unregisters the service worker, and clears Cache Storage, local/session storage and IndexedDB from inside the page. Then the native module clears every WebView cookie and all web storage, the HTTP cache is cleared, and the app starts again at the sign-in page. Your server data isn't touched. Unsynced edits that exist only on this phone are lost. |
 | About | App version and build number |
@@ -92,7 +93,7 @@ EAS gives you a download link (and a QR code) for the APK. On the phone, allow i
 
 ## Security model
 
-- **Address:** device-only (SecureStore, no backup). No passwords are stored. There's no JS bridge except one fixed message (`bw:pull:1` / `bw:pull:0`, from your origin only) that turns pull-to-refresh on or off.
+- **Address:** device-only (SecureStore, no backup). **Password:** sent once to your own server to sign in and never stored; the session cookie is kept by Android's cookie store, not by the app. There's no JS bridge except one fixed message (`bw:pull:1` / `bw:pull:0`, from your origin only) that turns pull-to-refresh on or off.
 - **WebView:**
   - JavaScript and DOM storage are on, with persistent cookies; third-party cookies are off.
   - File access is off: `allowFileAccess`, `allowFileAccessFromFileURLs` and `allowUniversalAccessFromFileURLs` are all false.

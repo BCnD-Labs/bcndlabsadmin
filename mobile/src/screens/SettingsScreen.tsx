@@ -1,8 +1,10 @@
 import Constants from "expo-constants"
-import { useState, type ReactNode } from "react"
+import { useState } from "react"
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
 import { SafeAreaView } from "react-native-safe-area-context"
+import { AccountSection } from "../components/AccountSection.tsx"
 import { AddressForm } from "../components/AddressForm.tsx"
+import { Row, Section, rowStyles } from "../components/settings-ui.tsx"
 import { downloadAndInstall } from "../lib/app-installer.ts"
 import type { UpdateResult } from "../lib/app-update.ts"
 import { VIEW_MODES, type ViewMode } from "../lib/view-mode.ts"
@@ -21,36 +23,11 @@ type Props = {
   /** Result of the server check (null until it has run). */
   update: UpdateResult | "checking" | null
   onCheckUpdate: () => void
+  /** Called after signing in or out here, so the web view reloads with the new cookie. */
+  onSessionChanged: () => void
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle} accessibilityRole="header">
-        {title}
-      </Text>
-      <View style={styles.card}>{children}</View>
-    </View>
-  )
-}
-
-function Row({ label, hint, onPress, destructive, disabled }: { label: string; hint?: string; onPress: () => void; destructive?: boolean; disabled?: boolean }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      style={({ pressed }) => [styles.row, pressed && styles.rowPressed, disabled && styles.disabled]}
-      accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      accessibilityHint={hint}
-    >
-      <Text style={[styles.rowLabel, destructive && styles.destructive]}>{label}</Text>
-      {hint ? <Text style={styles.rowHint}>{hint}</Text> : null}
-    </Pressable>
-  )
-}
-
-/** Native Settings: address, view mode, reload, clear site data, version. */
+/** Native Settings: address, account, view mode, reload, clear site data, version. */
 export function SettingsScreen(p: Props) {
   const [editing, setEditing] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -159,6 +136,8 @@ export function SettingsScreen(p: Props) {
             ) : null}
           </Section>
 
+          <AccountSection address={p.address} active={p.visible} onSessionChanged={p.onSessionChanged} />
+
           <Section title="View mode">
             <View accessibilityRole="radiogroup">
               {VIEW_MODES.map((m) => {
@@ -231,6 +210,7 @@ export function SettingsScreen(p: Props) {
 }
 
 const styles = StyleSheet.create({
+  ...rowStyles,
   safe: { flex: 1, backgroundColor: color.ground },
   flex: { flex: 1 },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: color.line },
@@ -238,18 +218,8 @@ const styles = StyleSheet.create({
   done: { minHeight: 44, minWidth: 64, alignItems: "center", justifyContent: "center", borderRadius: 8 },
   doneText: { color: color.text, fontSize: 16, fontWeight: "600" },
   scroll: { padding: 16, gap: 20, maxWidth: 640, width: "100%", alignSelf: "center" },
-  section: { gap: 8 },
-  sectionTitle: { color: color.muted, fontSize: 11, fontWeight: "600", letterSpacing: 0.8, textTransform: "uppercase" },
-  card: { backgroundColor: color.panel, borderColor: color.edge, borderWidth: 1, borderRadius: 10, overflow: "hidden" },
-  block: { padding: 14, gap: 8, borderBottomWidth: 1, borderBottomColor: color.line },
   label: { color: color.text2, fontSize: 13 },
   address: { color: color.text, fontFamily: mono, fontSize: 14 },
-  row: { minHeight: 48, paddingHorizontal: 14, paddingVertical: 10, justifyContent: "center", borderBottomWidth: 1, borderBottomColor: color.line },
-  rowPressed: { backgroundColor: color.raised },
-  rowLabel: { color: color.text, fontSize: 15 },
-  rowHint: { color: color.muted, fontSize: 12, marginTop: 2 },
-  destructive: { color: color.errorText },
-  disabled: { opacity: 0.5 },
   radioRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: color.muted, alignItems: "center", justifyContent: "center" },
   radioOn: { borderColor: color.red },
