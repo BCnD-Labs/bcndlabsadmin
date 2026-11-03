@@ -365,6 +365,57 @@ html[data-theme="dark"] [data-category="kind-selfpaced"] { --bw-category: #12b5c
 html[data-theme="dark"] [data-category="kind-skill"] { --bw-category: #a142f4; }
 html[data-theme="dark"] [data-category="kind-reading"] { --bw-category: #fa7b17; }
 
+/* Coursework item types: a tonal chip (icon + label) per type. Hues stay clear of the status
+ * colors (green done, amber overdue, red error) and of each other. Events don't count toward
+ * progress, so they are neutral and read lighter. Labels meet AA (4.5:1) on the chip over the
+ * panel and the hovered row in both themes: Dim ≥ 4.6:1, Dark ≥ 4.9:1. */
+:root {
+  --bw-type-assignment: #9cc4f2;
+  --bw-type-exam: #cbb5ff;
+  --bw-type-milestone: #5fd0e6;
+  --bw-type-event: var(--bw-muted);
+}
+html[data-theme="dark"] {
+  --bw-type-assignment: #8ab4f8;
+  --bw-type-exam: #c58af9;
+  --bw-type-milestone: #4ecde6;
+  --bw-type-event: var(--bw-muted);
+}
+[data-item-type="assignment"] { --bw-type: var(--bw-type-assignment); }
+[data-item-type="exam"] { --bw-type: var(--bw-type-exam); }
+[data-item-type="milestone"] { --bw-type: var(--bw-type-milestone); }
+[data-item-type="event"] { --bw-type: var(--bw-type-event); }
+.bw-type-chip {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  max-width: 9.5rem;
+  padding: 0 7px 0 5px;
+  border-radius: 999px;
+  color: var(--bw-type);
+  background: color-mix(in srgb, var(--bw-type) 16%, transparent);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+.bw-type-chip[data-item-type="event"] { background: color-mix(in srgb, var(--bw-type) 10%, transparent); }
+.bw-type-chip > svg { width: 12px; height: 12px; flex-shrink: 0; }
+.bw-type-chip-label { overflow: hidden; text-overflow: ellipsis; }
+html[data-category-colors="off"] .bw-type-chip { color: var(--bw-text-2); background: var(--bw-raised); }
+/* Narrow rows (under ~380px wide) keep the icon; the label stays as the accessible name and tooltip. */
+.bw-coursework-row { container-type: inline-size; }
+/* A fixed slot so titles line up whatever the label; the pill keeps its own width inside. */
+.bw-type-slot { display: flex; flex-shrink: 0; width: 6.5rem; }
+.bw-type-slot > .bw-type-chip { max-width: 100%; }
+@container (max-width: 380px) {
+  .bw-type-slot { width: auto; }
+  .bw-type-chip { width: 20px; justify-content: center; padding: 0; }
+  .bw-type-chip-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+
 /* Settings → Appearance → Motion: "reduce" stops animations everywhere; "system" leaves it to the OS (motion-reduce: classes). */
 html[data-motion="reduce"] *, html[data-motion="reduce"] *::before, html[data-motion="reduce"] *::after {
   animation-duration: 0.01ms !important;
