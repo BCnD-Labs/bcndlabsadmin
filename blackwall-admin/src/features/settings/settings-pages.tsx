@@ -392,7 +392,7 @@ function SidebarPanel() {
   return (
     <Panel title="Sections" tool="sidebar" command="nav" meta="Rename or hide. Hidden pages stay reachable by search." bodyClassName="divide-y divide-line">
       {NAV.map((d) => (
-        <SettingRow key={d.id} title={d.label} description={d.id === "home" ? "Always shown." : undefined} htmlFor={`nav-label-${d.id}`} keywords="sidebar navigation rename hide section">
+        <SettingRow key={d.id} title={d.label} description={d.id === "home" ? "Always shown." : d.id === "learning" ? "Its pages follow what you track: Courses, plus other kinds once you add them." : undefined} htmlFor={`nav-label-${d.id}`} keywords="sidebar navigation rename hide section">
           <div className="flex w-full min-w-0 items-center gap-2">
             <Input id={`nav-label-${d.id}`} aria-label={`Name for ${d.label}`} placeholder={d.label} value={labels[d.id] ?? ""} maxLength={32}
               onChange={(e) => set({ navLabels: { ...labels, [d.id]: e.target.value } })} className="w-44" />

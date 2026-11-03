@@ -1,6 +1,6 @@
 import type { Ref } from "react"
 import { Link, useLocation } from "react-router-dom"
-import { useNav, activeChild, isActive } from "./nav-config"
+import { useNav, activeChild, activeIn } from "./nav-config"
 import { cn } from "@/lib/utils"
 
 /**
@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils"
 export function SectionNav({ inHeader = false, wrap = false, className, ref }: { inHeader?: boolean; wrap?: boolean; className?: string; ref?: Ref<HTMLElement> }) {
   const NAV = useNav(true)
   const { pathname, search } = useLocation()
-  const destination = NAV.find((d) => isActive(d, pathname))
+  const destination = activeIn(NAV, pathname)
   if (!destination?.children?.length) return null
   const current = activeChild(destination, pathname, search)
   return (

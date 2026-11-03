@@ -81,7 +81,7 @@ type Persisted = Omit<PrefsState, "set" | "reset">
 /** Older stored shapes, read only by the migration. */
 type Legacy = Partial<Persisted> & { homeSlots?: PanelType[]; showHomeProjects?: boolean; showHomeLog?: boolean }
 
-export const PREFS_VERSION = 6
+export const PREFS_VERSION = 7
 
 const DEFAULT_PREFS = (): Persisted => ({
   categoryColors: true,
@@ -135,6 +135,15 @@ export const usePrefs = create<PrefsState>()(
         // v5 → v6: the four-slot fields are gone (Home layout replaced them); new options take their defaults.
         const { homeSlots: _a, showHomeProjects: _b, showHomeLog: _c, ...rest } = p as Legacy & { homeSizing?: unknown }
         delete (rest as Record<string, unknown>).homeSizing
+        // v6 → v7: Learning becomes its own sidebar section ("learning"), visible by default. No saved
+        // name or hidden flag could exist for it yet; clear any so it starts as Learning, shown.
+        if (version < 7) {
+          if (Array.isArray(rest.navHidden)) rest.navHidden = rest.navHidden.filter((id) => id !== "learning")
+          if (rest.navLabels && typeof rest.navLabels === "object") {
+            const { learning: _l, ...labels } = rest.navLabels as Record<string, string>
+            rest.navLabels = labels
+          }
+        }
         return rest
       },
       // Never trust stored values blindly: unknown panel types or bad numbers fall back to defaults.

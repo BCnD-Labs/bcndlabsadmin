@@ -9,7 +9,7 @@ import { useIsDesktop } from "@/hooks/use-media-query"
 import { usePrefs } from "@/stores/prefs"
 import { useUi } from "@/stores/ui"
 import { usePageHead } from "@/stores/page-head"
-import { useNav, isActive } from "./nav-config"
+import { useNav, activeIn } from "./nav-config"
 import { SectionNav } from "./section-nav"
 import { SyncStatus } from "./workspace-status"
 import { CalendarMenu } from "./calendar-menu"
@@ -32,7 +32,7 @@ export function Header() {
   const home = pathname === "/"
   const head = usePageHead()
   const nav = useNav(true)
-  const dest = nav.find((d) => isActive(d, pathname))
+  const dest = activeIn(nav, pathname)
   const hasTabs = !!dest?.children?.length && !(dest.children.length === 1)
   const [titleEl, setTitleEl] = useState<HTMLDivElement | null>(null)
   const [tabsEl, setTabsEl] = useState<HTMLElement | null>(null)

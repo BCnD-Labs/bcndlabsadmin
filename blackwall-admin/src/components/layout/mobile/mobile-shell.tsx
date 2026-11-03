@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { usePrefs } from "@/stores/prefs"
 import { useUi } from "@/stores/ui"
-import { isActive, useNav } from "../nav-config"
+import { activeIn, useNav } from "../nav-config"
 
 /**
  * Mobile view pages, added one at a time. A route listed here renders its mobile page; every
@@ -23,14 +23,16 @@ export function MobileOutlet() {
 
 /** Bottom tab bar: your sidebar sections (names and hidden ones follow Settings), plus More. */
 export function MobileTabBar() {
-  const nav = useNav().slice(0, 4)
+  const all = useNav()
+  const nav = all.slice(0, 4)
   const { pathname } = useLocation()
+  const activeId = activeIn(all, pathname)?.id
   return (
     <nav aria-label="Sections" className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-ground/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md">
       <ul className="mx-auto flex max-w-xl">
         {nav.map((d) => {
           const Icon = CATEGORIES[d.category]
-          const on = isActive(d, pathname)
+          const on = d.id === activeId
           return (
             <li key={d.id} className="flex-1">
               <Link to={d.to} aria-current={on ? "page" : undefined} className={cn("flex h-14 flex-col items-center justify-center gap-0.5 text-[10.5px]", on ? "text-ink" : "text-muted-foreground")}>

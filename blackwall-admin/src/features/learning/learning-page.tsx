@@ -2,7 +2,8 @@ import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
 import { format } from "date-fns"
 import { ChevronDown, GraduationCap, Plus } from "lucide-react"
 import { useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useSearchParams } from "react-router-dom"
+import { kindFromSearch } from "@/components/layout/nav-model"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -259,15 +260,28 @@ export function LearningPage() {
   const tasks = useWorkspace((s) => s.tasks)
   const courseMap = useCourseMap()
   const [filter, setFilter] = useState<Filter>("active")
-  const [kind, setKind] = useState<KindFilter>("all")
+  // The kind filter lives in the address (?kind=certification), so the sidebar's Learning pages
+  // link straight to it; anything missing or invalid is All.
+  const [params, setParams] = useSearchParams()
+  const kind: KindFilter = kindFromSearch(params.toString(), KINDS)
+  const setKind = (next: KindFilter) =>
+    setParams((p) => {
+      const out = new URLSearchParams(p)
+      if (next === "all") out.delete("kind")
+      else out.set("kind", next)
+      return out
+    }, { replace: true })
 
   const byCourse = new Map<string, Task[]>()
   for (const t of tasks) if (t.courseId) byCourse.set(t.courseId, [...(byCourse.get(t.courseId) ?? []), t])
   const withStatus = courses.map((c) => ({ c, status: courseStatus(c), kind: kindOf(c) }))
   const counts = { active: 0, upcoming: 0, completed: 0 }
   for (const { status } of withStatus) counts[status]++
-  // Land on a status that has something in it.
-  const effective: Filter = filter !== "all" && counts[filter] === 0 && courses.length ? (counts.active ? "active" : counts.upcoming ? "upcoming" : "all") : filter
+  // Land on a status that has something in it, for the kind asked for in the address if there is one.
+  const pool = kind !== "all" && withStatus.some((x) => x.kind === kind) ? withStatus.filter((x) => x.kind === kind) : withStatus
+  const poolCounts = { active: 0, upcoming: 0, completed: 0 }
+  for (const { status } of pool) poolCounts[status]++
+  const effective: Filter = filter !== "all" && poolCounts[filter] === 0 && courses.length ? (poolCounts.active ? "active" : poolCounts.upcoming ? "upcoming" : "all") : filter
   const inStatus = withStatus.filter(({ status }) => effective === "all" || status === effective)
   const kindCounts = new Map<LearningKind, number>()
   for (const x of inStatus) kindCounts.set(x.kind, (kindCounts.get(x.kind) ?? 0) + 1)

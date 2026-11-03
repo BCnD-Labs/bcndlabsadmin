@@ -25,6 +25,7 @@ import { todayKey } from "@/lib/dates"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
 import { draftHref } from "@/lib/routes"
+import { useNav } from "./nav-config"
 
 export function QuickCreate({ quiet = false }: { quiet?: boolean }) {
   const openForm = useUi((s) => s.openForm)
@@ -32,6 +33,8 @@ export function QuickCreate({ quiet = false }: { quiet?: boolean }) {
   const navigate = useNavigate()
   // New assignments default to the most recently added course.
   const firstCourse = useWorkspace((s) => s.courses[0]?.id)
+  // Named like the sidebar section (Settings → Sidebar can rename it).
+  const learningLabel = useNav(true).find((d) => d.id === "learning")?.label ?? "Learning"
 
   return (
     <DropdownMenu>
@@ -56,7 +59,7 @@ export function QuickCreate({ quiet = false }: { quiet?: boolean }) {
           <ClipboardList /> Assignment
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => openForm({ kind: "course" })}>
-          <GraduationCap /> Learning
+          <GraduationCap /> {learningLabel}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => navigate(draftHref(createDraft().id))}>

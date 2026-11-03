@@ -1,12 +1,13 @@
 import { useMemo } from "react"
 import type { Category } from "@/components/common/category-icon"
+import type { LearningKind } from "@/lib/types"
 import { usePrefs } from "@/stores/prefs"
+import { useWorkspace } from "@/stores/workspace"
+import { KINDS } from "@/features/learning/learning-utils"
+import { activeDestination, learningChildren, matchesRoute, type NavChild } from "./nav-model"
 import { CMS, DEVELOPMENT, cmsPagesHref, formsHref, siteSettingsHref, MIKOSHI, PRODUCTIVITY, launcherHref, mikoshiStatusHref, mikoshiStorageHref, insightsHref, learningHref, mediaHref, plannerHref, postsHref, projectsHref, siteAnalyticsHref, SOCIAL, socialHref } from "@/lib/routes"
 
-export interface NavChild {
-  label: string
-  to: string
-}
+export type { NavChild }
 
 export interface NavDestination {
   id: string
@@ -30,9 +31,18 @@ export const NAV: NavDestination[] = [
     children: [
       { label: "Planner", to: plannerHref },
       { label: "Projects", to: projectsHref },
-      { label: "Learning", to: learningHref },
       { label: "Activity insights", to: insightsHref },
     ],
+  },
+  // Its own section; the route stays under /productivity so links and course pages keep working.
+  // Children are derived from your records by useNav (Courses always, other kinds once they exist).
+  {
+    id: "learning",
+    label: "Learning",
+    category: "learning",
+    to: learningHref,
+    match: learningHref,
+    children: [{ label: "Courses", to: `${learningHref}?kind=course` }],
   },
   {
     id: "development",
@@ -71,9 +81,13 @@ export const NAV: NavDestination[] = [
   },
 ]
 
+/** Whether `pathname` is under this destination (Productivity also covers Learning's route; see activeIn). */
 export function isActive(dest: NavDestination, pathname: string) {
-  return dest.match === "/" ? pathname === "/" : pathname.startsWith(dest.match)
+  return matchesRoute(dest.match, pathname)
 }
+
+/** The one section you're in: the most specific match, so /productivity/learning is Learning. */
+export const activeIn = activeDestination
 
 /** The sub-page you're on: an exact match, else the longest prefix (so /productivity/projects isn't the Planner at /productivity). */
 export function activeChild(dest: NavDestination, pathname: string, search = ""): NavChild | undefined {
@@ -85,12 +99,19 @@ export function activeChild(dest: NavDestination, pathname: string, search = "")
   )
 }
 
-/** NAV with your own section names (Settings → Sidebar); hidden sections are left out unless asked for. */
+/**
+ * NAV with your own section names (Settings → Sidebar) and Learning's children from your
+ * records; hidden sections are left out unless asked for. Every navigation surface (sidebar,
+ * rail pop-outs, header tabs, command search, the phone sheet and tab bar) reads this.
+ */
 export function useNav(includeHidden = false): NavDestination[] {
   const labels = usePrefs((s) => s.navLabels)
   const hidden = usePrefs((s) => s.navHidden)
-  return useMemo(
-    () => NAV.map((d) => ({ ...d, label: labels[d.id] || d.label })).filter((d) => includeHidden || d.id === "home" || !hidden.includes(d.id)),
-    [labels, hidden, includeHidden],
-  )
+  // A stable key of which kinds exist, so the nav only changes when that does.
+  const kinds = useWorkspace((s) => [...new Set(s.courses.map((c) => c.kind ?? "course"))].sort().join(","))
+  return useMemo(() => {
+    const learning = learningChildren(kinds ? kinds.split(",").map((kind) => ({ kind: kind as LearningKind })) : [], KINDS)
+    return NAV.map((d) => ({ ...d, label: labels[d.id] || d.label, ...(d.id === "learning" ? { children: learning } : {}) }))
+      .filter((d) => includeHidden || d.id === "home" || !hidden.includes(d.id))
+  }, [labels, hidden, includeHidden, kinds])
 }
