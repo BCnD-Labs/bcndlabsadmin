@@ -3,9 +3,11 @@ import type { IncomingMessage, ServerResponse } from "node:http"
 import path from "node:path"
 
 /**
- * App updates: a drop folder (APP_UPDATES_DIR, mounted read-only) holding `android.json`, the
- * newest build's manifest, and the .apk it names. Anything that can write the folder (a build
- * job, n8n, a person) publishes an update; the phone app compares build numbers and downloads.
+ * App updates: a folder holding `android.json`, the newest build's manifest, and the .apk it
+ * names. There are two ways to fill one: the server copies the newest Android build from GitHub
+ * (app-updates-github.ts), or anything that can write the drop folder (APP_UPDATES_DIR, mounted
+ * read-only: n8n, a person) publishes one by hand. The higher build number wins. The phone app
+ * compares build numbers and downloads.
  *
  * Only the file the manifest names is ever served, so nothing else in the folder is reachable.
  * The manifest and the download are readable without signing in (they're app builds, and the
@@ -14,7 +16,11 @@ import path from "node:path"
  */
 export type UpdateManifest = { versionCode: number; versionName: string; file: string; sha256?: string; md5?: string; notes?: string }
 
-const APK_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,100}\.apk$/
+export const APK_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,100}\.apk$/
+
+/** A folder, or a function that picks one per request (when updates can come from more than one place). */
+export type UpdatesDir = string | undefined | (() => string | undefined)
+const resolveDir = (dir: UpdatesDir) => (typeof dir === "function" ? dir() : dir)
 
 export function parseUpdateManifest(value: unknown): UpdateManifest | null {
   if (!value || typeof value !== "object") return null
@@ -32,7 +38,8 @@ export function parseUpdateManifest(value: unknown): UpdateManifest | null {
 }
 
 /** The current manifest, or null when the folder, file or JSON is missing or invalid. */
-export function readUpdateManifest(dir: string | undefined): UpdateManifest | null {
+export function readUpdateManifest(source: UpdatesDir): UpdateManifest | null {
+  const dir = resolveDir(source)
   if (!dir) return null
   try {
     return parseUpdateManifest(JSON.parse(readFileSync(path.join(dir, "android.json"), "utf8")))
@@ -41,8 +48,18 @@ export function readUpdateManifest(dir: string | undefined): UpdateManifest | nu
   }
 }
 
+/** Of several update folders, the one whose manifest has the highest build number (undefined when none has one). */
+export function newestUpdatesDir(dirs: (string | undefined)[]): string | undefined {
+  let best: { dir: string; code: number } | undefined
+  for (const dir of dirs) {
+    const code = readUpdateManifest(dir)?.versionCode
+    if (dir && code !== undefined && (!best || code > best.code)) best = { dir, code }
+  }
+  return best?.dir
+}
+
 /** GET /app-updates/<file>: streams the manifest's .apk; 404 for anything else. */
-export function serveAppUpdates(dir: string | undefined, hostAllowed: (host: string) => boolean) {
+export function serveAppUpdates(source: UpdatesDir, hostAllowed: (host: string) => boolean) {
   return function serve(req: IncomingMessage, res: ServerResponse) {
     const fail = (status: number) => {
       res.statusCode = status
@@ -56,6 +73,7 @@ export function serveAppUpdates(dir: string | undefined, hostAllowed: (host: str
     } catch {
       return fail(400)
     }
+    const dir = resolveDir(source)
     const manifest = readUpdateManifest(dir)
     if (!dir || !manifest || name !== manifest.file) return fail(404)
     const file = path.join(dir, manifest.file)
