@@ -92,6 +92,15 @@ Then restart the `app` container. To restore on a fresh server, deploy the stack
 
 **How the version check works.** Portainer deletes `.git` when it clones, so there's no commit number inside the image. Instead the Docker build computes the Git *tree hash* of `blackwall-admin/` from the files themselves (`build-info.json`). GitHub reports the same hash for that folder when the code is identical, so the panel compares the two. Changes outside `blackwall-admin/` (docs, design references) don't count as updates.
 
+## Phone app updates
+
+The Android app's **Settings → App update → Check for update** asks this server for a newer build. The server reads a folder (`APP_UPDATES_DIR_HOST`, default `/opt/blackwall/app-updates`, mounted read-only into the app) that holds two things:
+
+- `android.json`: `{ "versionCode": 3, "versionName": "0.3.0", "file": "blackwall-android-3.apk" }` (optional `sha256` and `notes`)
+- the `.apk` it names
+
+Anything that can write that folder publishes an update: copy the two files in by hand, or point a build job or n8n at it. The app only offers builds with a higher `versionCode` than the one installed. Only the file named in `android.json` is ever served. The manifest and download don't need a sign-in (the server is only reachable on your tailnet); they are at `/api/app-updates/android.json` and `/app-updates/<file>`.
+
 ## Moving existing connections
 
 Connections from a dev machine's `.blackwall/connections.json` can be copied in once:

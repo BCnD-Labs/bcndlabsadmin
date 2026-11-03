@@ -38,6 +38,8 @@ services:
       BLACKWALL_PASSWORD_HASH: ${BLACKWALL_PASSWORD_HASH:?set BLACKWALL_PASSWORD_HASH}
       BLACKWALL_ALLOWED_HOSTS: ${BLACKWALL_ALLOWED_HOSTS:-}
       BACKUP_DIR: /backups
+      # Phone app updates: a folder holding android.json and the .apk it names (see deploy/README.md).
+      APP_UPDATES_DIR: /app-updates
       # Settings → General: check for updates and update from the panel (optional; see deploy/README.md).
       BLACKWALL_UPDATE_WEBHOOK: ${BLACKWALL_UPDATE_WEBHOOK:-}
       BLACKWALL_UPDATE_INSECURE_TLS: ${BLACKWALL_UPDATE_INSECURE_TLS:-}
@@ -52,6 +54,7 @@ services:
       - "127.0.0.1:${BLACKWALL_PORT:-8780}:8780"
     volumes:
       - ${BACKUP_DIR_HOST:-/opt/blackwall/backups}:/backups:ro
+      - ${APP_UPDATES_DIR_HOST:-/opt/blackwall/app-updates}:/app-updates:ro
     networks: [internal]
 
   backup:
