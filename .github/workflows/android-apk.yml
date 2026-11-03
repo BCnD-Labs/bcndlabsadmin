@@ -46,7 +46,7 @@ jobs:
       - name: Generate the Android project
         working-directory: mobile
         run: npx expo prebuild --platform android --clean
-      - name: Build the release APK (arm64 only: phones; keeps it fast)
+      - name: "Build the release APK (arm64 only, for phones, keeps it fast)"
         working-directory: mobile/android
         run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon --console=plain
       - name: Name the APK and write the update manifest
