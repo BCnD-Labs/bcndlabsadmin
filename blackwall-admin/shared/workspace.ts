@@ -1,4 +1,5 @@
 import type { Course, Draft, JournalEntry, Note, Project, RepoLink, Service, Site, SiteForm, SitePage, SocialAccount, SocialPost, Task } from "../src/lib/types.ts"
+import { validJournalItems, validJournalSections } from "./journal-sections.ts"
 import { validPlannerFields } from "./planner.ts"
 
 export interface Collections {
@@ -65,6 +66,9 @@ export function validWorkspace(value: unknown): value is Collections {
       if (key === "courses" && row.kind != null && !["course", "certification", "selfpaced", "skill", "reading"].includes(row.kind)) return false
       if (key === "tasks" && (typeof row.done !== "boolean" || typeof row.starred !== "boolean")) return false
       if (key === "tasks" && !validPlannerFields(row)) return false
+      if (key === "journal" && row.sections !== undefined && !validJournalSections(row.sections)) return false
+      if (key === "journal" && row.entries !== undefined && !validJournalItems(row.entries, row.sections ?? [])) return false
+      if (key === "journal" && row.mainNoteId !== undefined && (typeof row.mainNoteId !== "string" || !row.mainNoteId || row.mainNoteId.length > 100)) return false
       if ((key === "notes" || key === "services") && typeof row.pinned !== "boolean") return false
       // An uploaded tile logo is a small image data URL (resized in the browser before saving).
       if (key === "services" && row.customLogo != null && (row.customLogo.length > 200_000 || !/^data:image\/(png|webp|jpeg|svg\+xml)[;,]/.test(row.customLogo))) return false

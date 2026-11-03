@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { saveJournal, validWorkspace, type Collections } from "../src/lib/shared.ts"
+import { saveJournal, saveJournalSections, saveJournalItem, validWorkspace, type Collections } from "../src/lib/shared.ts"
 import { LOG_PROMPTS, SAVE_LABEL, appendPrompt, completedOn, dayTitle, dueOn, entryText, previewLine, reconcileDrafts, recentEntries, saveState, shiftDay, shownText, timestampKey, weekStrip } from "../src/native/screens/planner/log/log-rules.ts"
 import { ADDRESS, fakeServer, memoryStore, task, ts, ws } from "./workspace-fake.ts"
 import { createWorkspaceClient } from "../src/lib/workspace-client.ts"
@@ -125,4 +125,43 @@ test("through the workspace client: a log save reaches the server; a stale save 
   assert.equal(client.getState().status, "conflict")
   assert.equal(server.snap.data.journal.find((e) => e.id === today)?.text, "from the web")
   assert.equal(client.getConflict()?.mine.journal.find((e) => e.id === today)?.text, "from the phone")
+})
+
+
+test("custom log sections sync with the main text and appear in date navigation", async () => {
+  const server = fakeServer(ws({ journal: [entry(today, "Original main text")] }), 1)
+  const cache = memoryStore()
+  const client = createWorkspaceClient({ address: ADDRESS, fetchImpl: server.fetchImpl, store: cache })
+  await client.load()
+  const sections = [{ id: "morning", title: "Morning", text: "Wrote the plan" }]
+  await client.mutate(["journal"], (data) => saveJournalSections(data, today, sections))
+  assert.deepEqual(server.snap.data.journal[0].sections, sections)
+  assert.equal(server.snap.data.journal[0].text, "Original main text")
+  await client.mutate(["journal"], (data) => saveJournal(data, today, ""))
+  const journal = server.snap.data.journal
+  assert.equal(journal.length, 1, "clearing main text cannot delete custom section content")
+  assert.deepEqual(journal[0].sections, sections)
+  assert.equal(saveState(today, journal, {}, {}, {}), "saved")
+  assert.ok(weekStrip(today, today, journal, {}).find((day) => day.key === today)?.has)
+  assert.equal(recentEntries(journal, {})[0].preview, "Morning: Wrote the plan")
+  const reopened = createWorkspaceClient({ address: ADDRESS, fetchImpl: server.fetchImpl, store: cache })
+  await reopened.load()
+  assert.deepEqual(reopened.getState().snapshot?.data.journal[0].sections, sections)
+})
+
+
+test("individual same-day log items and optional Notes survive a workspace-client round trip", async () => {
+  const server = fakeServer(ws({ journal: [entry(today, "Existing main text")] }), 1)
+  const client = createWorkspaceClient({ address: ADDRESS, fetchImpl: server.fetchImpl, store: memoryStore() })
+  await client.load()
+  const first = { id: "first", text: "Morning entry", createdAt: ts, updatedAt: ts }
+  await client.mutate(["journal", "notes"], (data) => saveJournalItem(data, today, first, true))
+  await client.mutate(["journal", "notes"], (data) => saveJournalItem(data, today, { id: "second", text: "Afternoon entry", createdAt: ts, updatedAt: ts }))
+  await client.mutate(["journal", "notes"], (data) => saveJournalItem(data, today, first, true))
+  assert.equal(server.snap.data.journal[0].text, "Existing main text")
+  assert.equal(server.snap.data.journal[0].entries?.length, 2)
+  assert.equal(server.snap.data.notes.length, 1)
+  assert.equal(server.snap.data.notes[0].text, "Morning entry")
+  assert.equal(server.snap.data.journal[0].entries?.[0].noteId, server.snap.data.notes[0].id)
+  assert.equal(saveState(today, [{ ...server.snap.data.journal[0], text: "" }], {}, {}, {}), "saved")
 })

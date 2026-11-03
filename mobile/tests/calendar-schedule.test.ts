@@ -63,10 +63,10 @@ test("parity with the web: which tasks are on which day, in the all-day row and 
   }
 })
 
-test("parity with the web: lanes for overlapping items", () => {
+test("parity with the web: lanes for overlapping hour-or-longer items", () => {
   const sample = [
     t("a", { due: today, time: "09:00" }),
-    t("b", { scheduledDate: today, scheduledTime: "09:30", durationMinutes: 30 }),
+    t("b", { scheduledDate: today, scheduledTime: "09:30", durationMinutes: 60 }),
     t("c", { scheduledDate: today, scheduledTime: "09:45", durationMinutes: 120 }),
     t("d", { scheduledDate: today, scheduledTime: "13:00" }),
     t("e", { scheduledDate: today, scheduledTime: "13:00" }),
@@ -77,12 +77,12 @@ test("parity with the web: lanes for overlapping items", () => {
   assert.deepEqual(mine, theirs)
 })
 
-test("lane layout: overlaps split the width, gaps reset it, minimum length is an hour, the day ends at midnight", () => {
+test("lane layout: overlaps split the width, gaps reset it, real duration is preserved, the day ends at midnight", () => {
   const lanes = timedLanes(
     [
       t("a", { scheduledDate: today, scheduledTime: "09:00" }), // 09:00-10:00
-      t("b", { scheduledDate: today, scheduledTime: "09:30", durationMinutes: 15 }), // overlaps a; shown as an hour
-      t("c", { scheduledDate: today, scheduledTime: "09:45" }), // overlaps both
+      t("b", { scheduledDate: today, scheduledTime: "09:30", durationMinutes: 15 }), // overlaps a; ends before c starts
+      t("c", { scheduledDate: today, scheduledTime: "09:45" }), // overlaps a, reuses b's lane
       t("d", { scheduledDate: today, scheduledTime: "10:00" }), // starts as a ends: reuses lane 0
       t("e", { scheduledDate: today, scheduledTime: "15:00" }), // alone
       t("f", { scheduledDate: today, scheduledTime: "23:30", durationMinutes: 600 }), // clipped at 24:00
@@ -90,10 +90,10 @@ test("lane layout: overlaps split the width, gaps reset it, minimum length is an
     today,
   )
   const by = Object.fromEntries(lanes.map((l) => [l.task.id, l]))
-  assert.deepEqual([by.a.lane, by.b.lane, by.c.lane, by.d.lane], [0, 1, 2, 0])
-  assert.deepEqual([by.a.lanes, by.b.lanes, by.c.lanes, by.d.lanes], [3, 3, 3, 3])
+  assert.deepEqual([by.a.lane, by.b.lane, by.c.lane, by.d.lane], [0, 1, 1, 0])
+  assert.deepEqual([by.a.lanes, by.b.lanes, by.c.lanes, by.d.lanes], [2, 2, 2, 2])
   assert.deepEqual([by.e.lane, by.e.lanes], [0, 1])
-  assert.equal(by.b.end - by.b.start, 60)
+  assert.equal(by.b.end - by.b.start, 15)
   assert.equal(by.f.end, 1440)
   assert.deepEqual(ids(lanes.map((l) => l.task)), ["a", "b", "c", "d", "e", "f"])
   // Two items that touch (one ends exactly when the next starts) do not share a lane group.
@@ -110,7 +110,7 @@ test("hour range grows to fit and block boxes follow it", () => {
   assert.equal(axisHeight(range, 50), 200)
   const a = blockBox(lanes[0], range, 50, 30)
   assert.deepEqual([a.top, a.height, a.leftPct, a.widthPct], [75, 75, 0, 50])
-  // The 15-minute item is drawn as an hour (the web's minimum), so it fits its lane and starts on its time.
+  // Short items retain real timing; the visual minimum keeps them tappable.
   const b = blockBox(lanes[1], range, 50, 30)
   assert.deepEqual([b.top, b.leftPct, b.widthPct], [87.5, 50, 50])
   assert.equal(blockBox({ ...lanes[0], end: lanes[0].start + 5 }, range, 10, 30).height, 30)

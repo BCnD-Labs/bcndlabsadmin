@@ -8,6 +8,17 @@ const timestamp = "2026-11-02T14:42:00Z"
 const task = (patch: Partial<Task> = {}): Task => ({ id: "a", title: "A task", done: false, starred: false, createdAt: timestamp, updatedAt: timestamp, ...patch })
 const validTask = (value: unknown) => validWorkspace({ ...emptyWorkspace(), tasks: [value] })
 
+test("standalone calendar events are additive and require their own scheduled date", () => {
+  const legacy = task({ due: "2026-11-03", learningType: "event" })
+  assert.ok(validTask(JSON.parse(JSON.stringify(legacy))))
+  const event = task({ kind: "event", scheduledDate: "2026-11-03", scheduledTime: "10:00", durationMinutes: 45, links: [{ label: "Call", url: "https://example.com" }] })
+  assert.ok(validTask(JSON.parse(JSON.stringify(event))))
+  assert.equal(event.due, undefined)
+  assert.ok(!validTask({ ...event, scheduledDate: undefined }))
+  assert.ok(!validTask({ ...event, scheduledDate: "2026-02-30" }))
+  assert.ok(!validTask({ ...legacy, kind: "appointment" }))
+})
+
 test("legacy tasks remain valid; scheduling preserves independent deadlines", () => {
   assert.ok(validTask(task()))
   const value = task({ due: "2026-11-06", time: "10:00", scheduledDate: "2026-11-02", scheduledTime: "14:00" })

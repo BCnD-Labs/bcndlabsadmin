@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from "react-native"
-import { color } from "../../../theme.ts"
+import { plannerColor as color } from "../../planner-theme.ts"
 import { Icon, tone } from "../../ui.tsx"
 import { SwipeRow } from "./SwipeRow.tsx"
 import { TaskCheck } from "./TaskCheck.tsx"
@@ -25,7 +25,6 @@ interface Props {
  */
 export function TaskRow({ row, density, tagFocus, onToggle, onOpen, onStar, onDelete, onMenu }: Props) {
   const m = rowMetrics(density)
-  const sub = [row.time, row.course, tagFocus && row.focused && !row.done ? "Focus" : ""].filter(Boolean).join(" · ")
   const actions = [
     { name: "complete", label: row.done ? "Reopen" : "Complete" },
     { name: "star", label: row.starred ? "Remove star" : "Star" },
@@ -41,31 +40,33 @@ export function TaskRow({ row, density, tagFocus, onToggle, onOpen, onStar, onDe
   return (
     <SwipeRow done={row.done} starred={row.starred} onComplete={onToggle} onStar={onStar} onDelete={onDelete}>
       <View style={[styles.row, { minHeight: m.minHeight }]}>
+        {!row.done && (row.overdue || row.starred) ? <View style={[styles.priority, { backgroundColor: row.overdue ? tone.red : color.amber }]} /> : null}
         <TaskCheck checked={row.done} onPress={onToggle} label={`${row.done ? "Reopen" : "Complete"} ${row.title}`} />
         <Pressable
           onPress={onOpen}
           onLongPress={onMenu}
-          style={[styles.body, { paddingVertical: m.vertical }]}
+          style={[styles.body, { paddingVertical: Math.max(2, m.vertical - 3) }]}
           accessibilityRole="button"
           accessibilityLabel={`Edit ${row.title}`}
           accessibilityActions={actions}
           onAccessibilityAction={(e) => onAction(e.nativeEvent.actionName)}
         >
-          <Text style={[styles.title, row.done && styles.done]} numberOfLines={m.titleLines}>
+          <Text style={[styles.title, row.overdue && styles.overdue, row.starred && !row.done && styles.starredTitle, row.done && styles.done]} numberOfLines={m.titleLines}>
             {row.title}
           </Text>
-          <Text style={styles.sub} numberOfLines={1}>
-            <Text style={row.overdue ? styles.overdue : undefined}>{row.dueText}</Text>
-            {sub ? ` · ${sub}` : ""}
-          </Text>
+          {row.dueText !== "No date" || row.time || row.course || (tagFocus && row.focused && !row.done) ? <View style={styles.meta}>
+            {row.dueText !== "No date" || row.time ? <View style={[styles.badge, styles.dueBadge]}><Icon name="calendar-outline" size={11} tint={row.overdue ? tone.red : color.dateText} /><Text numberOfLines={1} style={[styles.badgeText, styles.dueText, row.overdue && styles.overdue]}>{[row.dueText !== "No date" && row.dueText, row.time].filter(Boolean).join(" · ")}</Text></View> : null}
+            {row.course ? <View style={[styles.badge, styles.courseBadge]}><Text numberOfLines={1} style={[styles.badgeText, styles.courseText]}>{row.course}</Text></View> : null}
+            {tagFocus && row.focused && !row.done ? <View style={[styles.badge, styles.focusBadge]}><Text style={[styles.badgeText, styles.focusText]}>Focus</Text></View> : null}
+          </View> : null}
           {m.showDetails && row.details ? (
             <Text style={styles.details} numberOfLines={1}>
               {row.details}
             </Text>
           ) : null}
         </Pressable>
-        <Pressable onPress={onStar} style={styles.star} accessibilityRole="button" accessibilityLabel={`${row.starred ? "Unstar" : "Star"} ${row.title}`} accessibilityState={{ selected: row.starred }}>
-          <Icon name={row.starred ? "star" : "star-outline"} size={18} tint={row.starred ? tone.amber : color.faint} />
+        <Pressable onPress={row.starred ? onStar : onMenu} onLongPress={onMenu} style={styles.star} accessibilityRole="button" accessibilityLabel={`${row.starred ? "Unstar" : "More actions for"} ${row.title}`} accessibilityState={{ selected: row.starred }}>
+          <Icon name={row.starred ? "star" : "ellipsis-horizontal"} size={17} tint={row.starred ? tone.amber : color.muted} />
         </Pressable>
       </View>
     </SwipeRow>
@@ -73,12 +74,22 @@ export function TaskRow({ row, density, tagFocus, onToggle, onOpen, onStar, onDe
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8 },
-  body: { flex: 1, gap: 2, minHeight: 44, justifyContent: "center" },
-  title: { color: color.text, fontSize: 15, fontWeight: "600" },
-  done: { color: color.faint, textDecorationLine: "line-through" },
-  sub: { color: color.muted, fontSize: 12 },
-  details: { color: color.faint, fontSize: 12 },
-  overdue: { color: tone.red, fontWeight: "700" },
-  star: { width: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
+  row: { flexDirection: "row", alignItems: "center", gap: 2, paddingHorizontal: 0 },
+  priority: { position: "absolute", left: 0, top: 9, bottom: 9, width: 3, borderRadius: 3 },
+  body: { flex: 1, minWidth: 0, gap: 4, minHeight: 44, justifyContent: "center" },
+  title: { color: color.text, fontSize: 14, lineHeight: 19, fontWeight: "500" },
+  starredTitle: { color: color.amber },
+  done: { color: color.green, textDecorationLine: "line-through" },
+  meta: { flexDirection: "row", flexWrap: "wrap", gap: 4 },
+  badge: { flexDirection: "row", alignItems: "center", gap: 4, maxWidth: "100%", minHeight: 20, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  badgeText: { flexShrink: 1, fontSize: 10, lineHeight: 14 },
+  dueBadge: { backgroundColor: color.dateFill },
+  dueText: { color: color.dateText },
+  courseBadge: { backgroundColor: color.tagFill },
+  courseText: { color: color.tagText },
+  focusBadge: { backgroundColor: color.selected },
+  focusText: { color: color.accent },
+  details: { color: color.muted, fontSize: 11, lineHeight: 16 },
+  overdue: { color: tone.red },
+  star: { width: 36, minHeight: 44, alignItems: "center", justifyContent: "center" },
 })

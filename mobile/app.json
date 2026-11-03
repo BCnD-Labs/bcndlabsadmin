@@ -2,17 +2,17 @@
   "expo": {
     "name": "Blackwall",
     "slug": "blackwall",
-    "version": "0.10.0",
+    "version": "0.11.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#1f2228",
+    "backgroundColor": "#28292b",
     "platforms": [
       "android"
     ],
     "android": {
       "package": "dev.bcndlabs.blackwall",
-      "versionCode": 10,
+      "versionCode": 11,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#c92a2a"
@@ -44,11 +44,11 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#1f2228",
+          "backgroundColor": "#28292b",
           "image": "./assets/splash-icon.png",
           "imageWidth": 120,
           "dark": {
-            "backgroundColor": "#1f2228",
+            "backgroundColor": "#28292b",
             "image": "./assets/splash-icon.png"
           }
         }

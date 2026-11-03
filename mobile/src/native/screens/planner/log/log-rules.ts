@@ -82,7 +82,7 @@ export function saveState(day: string, journal: Journal, drafts: Drafts, saving:
   if (failed[day]) return "failed"
   if (saving[day]) return "saving"
   if (day in drafts) return "unsaved"
-  return journal.some((e) => e.id === day && e.text.trim()) ? "saved" : "idle"
+  return journal.some((e) => e.id === day && (e.text.trim() || e.sections?.length || e.entries?.length)) ? "saved" : "idle"
 }
 
 export interface StripDay { key: string; weekday: string; num: number; has: boolean; today: boolean; selected: boolean }
@@ -93,7 +93,7 @@ export function weekStrip(day: string, today: string, journal: Journal, drafts: 
     key,
     weekday: WEEKDAY_SHORT[i],
     num: Number(key.slice(8)),
-    has: !!shownText(drafts, journal, key).trim(),
+    has: !!shownText(drafts, journal, key).trim() || !!journal.find((entry) => entry.id === key)?.sections?.length || !!journal.find((entry) => entry.id === key)?.entries?.length,
     today: key === today,
     selected: key === day,
   }))
@@ -112,7 +112,7 @@ export function recentEntries(journal: Journal, drafts: Drafts, limit = 8): Rece
   const days = new Set([...journal.map((e) => e.id), ...Object.keys(drafts)])
   return [...days]
     .sort((a, b) => b.localeCompare(a))
-    .map((day) => ({ day, preview: previewLine(shownText(drafts, journal, day)) }))
+    .map((day) => ({ day, preview: previewLine(shownText(drafts, journal, day)) || previewLine((journal.find((entry) => entry.id === day)?.sections ?? []).map((section) => `${section.title}: ${section.text}`).join("\n")) || previewLine((journal.find((entry) => entry.id === day)?.entries ?? []).map((entry) => entry.text).join("\n")) }))
     .filter((e) => e.preview)
     .slice(0, limit)
 }

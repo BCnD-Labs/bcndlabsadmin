@@ -58,7 +58,7 @@ export function timedLanes(tasks: readonly Task[], date: string): Lane[] {
     .filter((t) => startTimeOn(t, date))
     .map((task) => {
       const start = minuteOfDay(startTimeOn(task, date)!)
-      return { task, start, end: Math.min(1440, start + Math.max(60, task.durationMinutes ?? 60)), lane: 0, lanes: 1 }
+      return { task, start, end: Math.min(1440, start + (task.durationMinutes ?? 60)), lane: 0, lanes: 1 }
     })
     .sort((a, b) => a.start - b.start || a.end - b.end || a.task.id.localeCompare(b.task.id))
   let group: Lane[] = []
@@ -105,7 +105,7 @@ export function dayDots(tasks: readonly Task[], today: string, max = 3): { dots:
 }
 
 /** One agenda line for a day. `time` is HH:mm, set only for a real start time. */
-export interface AgendaItem { id: string; title: string; done: boolean; time?: string; deadline: boolean; overdue: boolean; course?: string; duration?: number }
+export interface AgendaItem { event?: boolean; id: string; title: string; done: boolean; time?: string; deadline: boolean; overdue: boolean; course?: string; duration?: number }
 
 /** A day's items: timed ones by start time first, then the rest in creation order. */
 export function agendaItems(tasks: readonly Task[], date: string, today: string, courses: Courses): AgendaItem[] {
@@ -115,7 +115,7 @@ export function agendaItems(tasks: readonly Task[], date: string, today: string,
     .map((t) => {
       const course = t.courseId ? courses.find((c) => c.id === t.courseId) : undefined
       const time = startTimeOn(t, date)
-      return { id: t.id, title: t.title, done: t.done, time, deadline: isDeadlineOn(t, date), overdue: isOverdue(t, today), course: course ? course.title || course.code : undefined, duration: time ? t.durationMinutes : undefined }
+      return { ...(t.kind === "event" && { event: true }), id: t.id, title: t.title, done: t.done, time, deadline: isDeadlineOn(t, date), overdue: isOverdue(t, today), course: course ? course.title || course.code : undefined, duration: time ? t.durationMinutes : undefined }
     })
 }
 
@@ -128,7 +128,7 @@ export function localKeyOf(timestamp: string): string | undefined {
 /** What the day's header notes beside the item count: a written daily log and tasks completed that day. */
 export function dayMeta(tasks: readonly Task[], journal: Journal, date: string): { logged: boolean; completed: number } {
   return {
-    logged: journal.some((j) => j.id === date && j.text.trim() !== ""),
-    completed: tasks.filter((t) => t.done && !!t.completedAt && localKeyOf(t.completedAt) === date).length,
+    logged: journal.some((j) => j.id === date && (j.text.trim() !== "" || (j.sections ?? []).some(s => !!s.text.trim()) || (j.entries ?? []).some(e => !!e.text.trim()))),
+    completed: tasks.filter((t) => t.kind !== "event" && t.done && !!t.completedAt && localKeyOf(t.completedAt) === date).length,
   }
 }

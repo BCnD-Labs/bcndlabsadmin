@@ -5,8 +5,8 @@ import type { IconName } from "../ui.tsx"
  * in plain node); the icon type is a type-only import and is erased at runtime.
  */
 
-/** Bottom padding every Screen keeps so the floating bubble never covers the last row. */
-export const NAV_CLEARANCE = 88
+/** Bottom padding lets the final row clear the floating pill and the Planner add button. */
+export const NAV_CLEARANCE = 140
 
 /** Screens the shell can show. "settings" is an action (opens native Settings), not a screen. */
 export type ScreenKey = "home" | "planner" | "learning" | "dev" | "notes" | "insights" | "website"
@@ -31,7 +31,7 @@ export const DESTINATIONS: readonly Destination[] = [
   { key: "home", label: "Home", icon: "home-outline", activeIcon: "home", primary: true },
   { key: "planner", label: "Planner", icon: "calendar-outline", activeIcon: "calendar", primary: true },
   { key: "learning", label: "Learning", icon: "school-outline", activeIcon: "school", primary: true },
-  { key: "dev", label: "Projects", icon: "git-branch-outline", activeIcon: "git-branch", primary: true },
+  { key: "dev", label: "Projects", icon: "folder-outline", activeIcon: "folder", primary: true },
   { key: "notes", label: "Notes", icon: "document-text-outline", activeIcon: "document-text", group: "Daily" },
   { key: "insights", label: "Insights", icon: "stats-chart-outline", activeIcon: "stats-chart", group: "Daily" },
   { key: "website", label: "Website", icon: "globe-outline", activeIcon: "globe", group: "Build" },

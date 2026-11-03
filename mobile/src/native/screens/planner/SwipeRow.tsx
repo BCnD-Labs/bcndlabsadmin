@@ -1,6 +1,7 @@
 import { useRef, useState, type ReactNode } from "react"
 import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from "react-native"
 import { color } from "../../../theme.ts"
+import { plannerColor } from "../../planner-theme.ts"
 import { Icon, tone } from "../../ui.tsx"
 import { REVEAL, claimsDrag, positionFor, settle } from "./swipe.ts"
 
@@ -82,8 +83,8 @@ export function SwipeRow({ children, done, starred, onComplete, onStar, onDelete
 }
 
 const styles = StyleSheet.create({
-  wrap: { overflow: "hidden", borderBottomWidth: 1, borderBottomColor: color.line },
-  front: { backgroundColor: color.panel },
+  wrap: { overflow: "hidden", borderRadius: 8 },
+  front: { backgroundColor: plannerColor.ground },
   doneHint: { ...StyleSheet.absoluteFill, justifyContent: "center", paddingLeft: 16, backgroundColor: color.well },
   strip: { position: "absolute", top: 0, bottom: 0, right: 0, width: REVEAL, flexDirection: "row" },
   button: { flex: 1, alignItems: "center", justifyContent: "center", gap: 2, backgroundColor: color.raised },
