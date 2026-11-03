@@ -25,3 +25,7 @@ dist-ssr
 .blackwall/
 deploy/.env
 deploy/backups/
+
+# Desktop app build output
+desktop/out/
+release/

@@ -23,6 +23,8 @@
     }
   ],
   "ignorePatterns": [
-    "dist"
+    "dist",
+    "desktop/out",
+    "release"
   ]
 }

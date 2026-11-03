@@ -1,0 +1,11 @@
+{
+  "name": "blackwall-desktop",
+  "productName": "Blackwall",
+  "version": "0.1.0",
+  "description": "Blackwall for macOS: a tabbed shell around the hosted Blackwall web app.",
+  "private": true,
+  "type": "module",
+  "main": "out/main/main.js",
+  "author": "bcndlabs",
+  "license": "UNLICENSED"
+}

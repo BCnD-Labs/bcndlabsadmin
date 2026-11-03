@@ -26,6 +26,27 @@ Sidebar: **Home · Productivity** (Planner, Projects, Learning, Activity insight
 
 Blackwall is installable from its HTTPS (Tailscale) address and stays the same app as in the browser: same sign-in, same server data. iPhone (Safari): Share → Add to Home Screen. Android (Chrome): ⋮ → Install app. Mac: Chrome/Edge install icon, or Safari → File → Add to Dock. The service worker (`public/sw.js`) never touches `/api/`; page loads are network-first (so in-app updates appear immediately) with the last page kept for offline starts; hashed `/assets/` files are cached. Icons live in `public/icons/`.
 
+## Desktop app (macOS)
+
+`desktop/` is an Electron app for the Mac. Phase 1 is a tabbed browser whose first, pinned tab is your hosted Blackwall. You get the same server, data and sign-in as in the browser, inside a real app: its own window and Dock icon, green-button fullscreen and native menus. It needs no server changes, and the web app's code is untouched.
+
+| Command | What it does |
+| --- | --- |
+| `npm run desktop:dev` | Compile `desktop/` and run it with Electron (profile: `~/Library/Application Support/Blackwall Dev`) |
+| `npm run desktop:build` | Build an unsigned app for this Mac's architecture: `release/mac-arm64/Blackwall.app` and `release/Blackwall-<version>-arm64.dmg` (gitignored) |
+| `npm run desktop:test` | Unit tests for the address bar, link rules and config |
+| `npx electron desktop/scripts/verify.ts <https-address> <dir>` | End-to-end check of the shell (after `desktop:compile`), with screenshots into `<dir>` |
+
+**Web address.** On first launch the pinned tab asks for your Blackwall address (for example `https://blackwall.example.ts.net`). Change it any time from **Blackwall → Web Address…**. It's stored in `~/Library/Application Support/Blackwall/desktop-config.json`, along with the window size and position and your open tabs. Sign-in, the service worker and site data live in the app's own browser profile next to it. The app stores no passwords.
+
+**Using it.** ⌘T new tab, ⌘W close tab (the pinned tab stays), ⌘L address bar, ⌘[ / ⌘] back/forward, ⌘R reload, ⌘1–9 pick a tab, ⇧⌘[ / ⇧⌘] previous/next tab, ⌘F find in page, ⌘= / ⌘- / ⌘0 zoom, ⌃⌘F fullscreen. Typing something that isn't an address searches DuckDuckGo. Links that open a new window open a new tab instead. Links to other sites from the pinned tab also open in a new tab. Links like `obsidian://` or `mailto:` ask before opening the other app. If a page can't load (server down, Tailscale off) or crashes, the tab shows the reason and a **Retry** button. Tabs and each tab's last page come back when you relaunch. Closing the window keeps Blackwall in the Dock, and clicking the Dock icon reopens it.
+
+**Security.** Web tabs run sandboxed with no preload and no access to the app's internals. All permission requests are denied, except plain-text copy to the clipboard, which Blackwall's Copy buttons use. Downloads always ask where to save. Certificate errors are never bypassed. The tab strip is served from a private `bw-shell://` scheme that web pages can't load. The built app has Electron's hardening fuses set (no `ELECTRON_RUN_AS_NODE`, `NODE_OPTIONS` or `--inspect`, and only the checked `app.asar` loads).
+
+**First launch of the unsigned app.** The build is ad-hoc signed, not signed with an Apple Developer ID, so Gatekeeper blocks it the first time it comes from a download or another Mac. Right-click (or Control-click) **Blackwall.app → Open → Open**, or use **System Settings → Privacy & Security → Open Anyway**. A build you made on this Mac usually opens directly. To install it, open the `.dmg` and drag Blackwall to Applications.
+
+**Not done yet.** There's no native Blackwall UI yet: the pinned "Native" tab with the bundled UI comes later, page by page. The app isn't signed with a Developer ID or notarized, and has no auto-update (rebuild to update). There are no notification or permission prompts (everything except clipboard write is denied), no history, bookmarks or extensions, and no drag-to-reorder for tabs. `window.open` popups that need their opener (some OAuth flows) won't work, because they open as ordinary tabs. Only macOS builds are set up.
+
 ## Run it
 
 ```bash
