@@ -1,7 +1,8 @@
-import { GraduationCap } from "lucide-react"
+import { ArrowRight, GraduationCap } from "lucide-react"
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/common/empty-state"
+import { PanelFooter } from "@/components/common/panel"
 import { CourseworkRow } from "@/features/learning/coursework"
 import { compareCoursework } from "@/features/learning/learning-utils"
 import { daysUntil } from "@/lib/dates"
@@ -50,11 +51,11 @@ export function CourseworkPanel() {
       ) : (
         <EmptyState icon={GraduationCap} title="Nothing due in the next two weeks" className="flex-1" />
       )}
-      <div className="border-t border-line-soft px-3.5 py-2 text-right">
-        <Link to={learningHref} className="text-[11px] text-ink-2 underline-offset-2 hover:underline">
-          All courses →
+      <PanelFooter>
+        <Link to={learningHref} className="bw-action-link">
+          All courses <ArrowRight className="size-3.5" aria-hidden />
         </Link>
-      </div>
+      </PanelFooter>
     </div>
   )
 }

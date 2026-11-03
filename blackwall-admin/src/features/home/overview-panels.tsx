@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
 import { addDays, format, subDays } from "date-fns"
 import { ArrowRight, CircleCheck, ExternalLink, Plus } from "lucide-react"
-import { Panel } from "@/components/common/panel"
+import { Panel, PanelFooter } from "@/components/common/panel"
 import { SourceBadge } from "@/components/common/source-badge"
 import { FeedFallback } from "@/components/common/feed-fallback"
 import { SegmentedTabs } from "@/components/common/segmented-tabs"
@@ -40,16 +40,6 @@ function Pill({ tone, children }: { tone: Tone; children: ReactNode }) {
   )
 }
 
-function PanelFooter({ left, children }: { left?: ReactNode; children: ReactNode }) {
-  return (
-    <footer className="mx-5 mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-line-soft py-3.5 text-[13px] text-muted-foreground">
-      <span>{left}</span>
-      {children}
-    </footer>
-  )
-}
-
-const footerLink = "inline-flex items-center gap-1.5 text-ink-2 hover:text-ink"
 
 // ---------------------------------------------------------------- Pull requests
 
@@ -131,7 +121,7 @@ export function PullRequestsPanel() {
         <div className="px-5 py-4"><FeedFallback feed={feed} provider="github" what="pull requests from your GitHub accounts" /></div>
       )}
       <PanelFooter left={feed.status === "live" ? "Live from GitHub" : undefined}>
-        <Link to={DEVELOPMENT} className={footerLink}>Open GitHub activity <ArrowRight className="size-3.5" aria-hidden /></Link>
+        <Link to={DEVELOPMENT} className="bw-action-link">Open GitHub activity <ArrowRight className="size-3.5" aria-hidden /></Link>
       </PanelFooter>
     </Panel>
   )
@@ -175,7 +165,7 @@ export function ThisWeekPanel() {
         <p className="flex items-center gap-2 px-5 py-6 text-sm text-muted-foreground"><CircleCheck className="size-4 text-green" aria-hidden />Nothing due in the next 7 days.</p>
       )}
       <PanelFooter left="From Planner and Learning">
-        <Link to={plannerHref} className={footerLink}>Open Planner <ArrowRight className="size-3.5" aria-hidden /></Link>
+        <Link to={plannerHref} className="bw-action-link">Open Planner <ArrowRight className="size-3.5" aria-hidden /></Link>
       </PanelFooter>
     </Panel>
   )
@@ -311,7 +301,7 @@ export function RepositoriesPanel() {
         <div className="px-5 py-4"><FeedFallback feed={feed} provider="github" what="activity for your tracked repositories" /></div>
       )}
       <PanelFooter left={feed.status === "live" ? "Live from GitHub" : undefined}>
-        <button type="button" className={footerLink} onClick={() => useUi.getState().openForm({ kind: "repo" })}>Track a repository <Plus className="size-3.5" aria-hidden /></button>
+        <button type="button" className="bw-action-link" onClick={() => useUi.getState().openForm({ kind: "repo" })}>Track a repository <Plus className="size-3.5" aria-hidden /></button>
       </PanelFooter>
     </Panel>
   )

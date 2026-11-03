@@ -279,6 +279,8 @@ html[data-font="mono"] {
   /* Decoration yields first: narrow title bars drop the window buttons instead of wrapping. */
   .bw-panel-heading { container-type: inline-size; }
   @container (max-width: 400px) { .bw-window-buttons { display: none; } }
+  /* Panel footer (PanelFooter): one height, inset and type size on every page. */
+  .bw-panel-footer { margin-top: auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.25rem 0.75rem; min-height: var(--bw-panel-header-h); padding: 0.125rem 0.75rem 0.125rem var(--bw-panel-pad); border-top: 1px solid var(--bw-line-soft); font-size: 0.75rem; color: var(--bw-muted); }
   .bw-action-link { display: inline-flex; align-items: center; gap: 0.375rem; min-height: var(--bw-control-h); border-radius: var(--bw-control-radius); font-size: 0.8125rem; color: var(--bw-text-2); }
   .bw-action-link:hover { color: var(--bw-text); text-decoration: underline; text-underline-offset: 0.2em; }
   .bw-row { min-height: var(--bw-row-regular); }

@@ -109,3 +109,16 @@ export function TitleBar({ category, title, meta, children }: { category: Catego
     </>
   )
 }
+
+/**
+ * The one panel footer: a full-width separator, an optional muted note on the left and one
+ * link or action on the right (use `bw-action-link` on it, so it keeps a 32px target).
+ */
+export function PanelFooter({ left, children }: { left?: ReactNode; children?: ReactNode }) {
+  return (
+    <footer className="bw-panel-footer">
+      {left != null && <span className="mr-auto min-w-0 truncate">{left}</span>}
+      {children}
+    </footer>
+  )
+}

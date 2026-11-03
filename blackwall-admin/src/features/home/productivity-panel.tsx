@@ -91,7 +91,7 @@ export function ProductivityPanel({ slot }: PanelBodyProps) {
             { value: "done", label: "Done", count: count("done") },
           ]}
         />
-        <label className="flex h-8 shrink-0 items-center gap-2 rounded-[7px] border border-dashed border-ledge-hi bg-well px-2.5 focus-within:border-ledge-hi">
+        <label className="flex h-8 shrink-0 items-center gap-2 rounded-[var(--bw-control-radius)] border border-dashed border-ledge-hi bg-well px-2.5 focus-within:border-ledge-hi">
           <Plus className="size-3 shrink-0 text-faint" strokeWidth={2} aria-hidden />
           <input
             aria-label="New task, due today"
@@ -152,12 +152,12 @@ export function ProductivityPanel({ slot }: PanelBodyProps) {
         <div className="flex items-center justify-between">
           <h3 className="bw-label">Pinned notes</h3>
           <Button
-            variant="ghost"
+            variant="quiet"
+            size="icon-sm"
             aria-label="New note"
-            className="h-[22px] w-6 p-0"
             onClick={() => openForm({ kind: "note", defaults: { pinned: true } })}
           >
-            +
+            <Plus />
           </Button>
         </div>
         {notes.length ? (

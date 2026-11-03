@@ -1,7 +1,7 @@
-import { FolderKanban, Plus, ArrowUpRight } from "lucide-react"
+import { ArrowRight, FolderKanban, Plus, ArrowUpRight } from "lucide-react"
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { Panel } from "@/components/common/panel"
+import { Panel, PanelFooter } from "@/components/common/panel"
 import { ProjectStatusLabel } from "@/components/common/tags"
 import { useNow } from "@/hooks/use-now"
 import { toDateKey } from "@/lib/dates"
@@ -31,7 +31,7 @@ export function ProjectsPanel() {
           <ProjectStatusLabel status={p.status} /><ArrowUpRight className="size-3.5 shrink-0 text-faint" aria-hidden />
         </Link></li>)}
       </ul> : <p className="px-4 py-4 text-xs text-muted-foreground">Group related repositories and drafts into a project.</p>}
-      <Link to={projectsHref} className="mt-auto flex min-h-9 items-center justify-end border-t border-line-soft px-4 text-xs text-ink-2 hover:text-ink">All projects →</Link>
+      <PanelFooter><Link to={projectsHref} className="bw-action-link">All projects <ArrowRight className="size-3.5" aria-hidden /></Link></PanelFooter>
     </Panel>
   )
 }
@@ -88,7 +88,7 @@ export function LinkedServicesPanel() {
             <Button variant="outline" size="sm" onClick={() => open()}><Plus /> Link a service</Button>
           </div>
         )}
-        <button type="button" onClick={() => open()} className="mt-auto flex min-h-8 items-center justify-end border-t border-line-soft px-3.5 text-[11px] text-ink-2 hover:text-ink">Manage connections →</button>
+        <PanelFooter><button type="button" onClick={() => open()} className="bw-action-link">Manage connections <ArrowRight className="size-3.5" aria-hidden /></button></PanelFooter>
       </Panel>
   )
 }
