@@ -17,7 +17,7 @@ const TAP_SLOP = 6
  * notification shade, and pulling down on the page is pull-to-refresh. A visible,
  * movable tab is the one control that doesn't collide with any of them.
  */
-export function SettingsHandle({ area, onOpen, badge }: { area: LayoutRectangle | null; onOpen: () => void; badge?: boolean }) {
+export function SettingsHandle({ area, onOpen, badge, reserveBottom = 0 }: { area: LayoutRectangle | null; onOpen: () => void; badge?: boolean; reserveBottom?: number }) {
   const [pos, setPos] = useState<HandlePosition | null>(null)
   const drag = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current
   const moved = useRef(false)
@@ -26,7 +26,8 @@ export function SettingsHandle({ area, onOpen, badge }: { area: LayoutRectangle 
     void loadHandle().then(setPos)
   }, [])
 
-  const travel = area ? Math.max(0, area.height - H) : 0
+  // reserveBottom keeps the handle clear of anything floating at the bottom (the native nav bubble).
+  const travel = area ? Math.max(0, area.height - H - reserveBottom) : 0
   const top = pos ? pos.y * travel : 0
 
   const responder = useMemo(
