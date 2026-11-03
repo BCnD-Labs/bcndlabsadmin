@@ -6,6 +6,8 @@ Home of **Blackwall**, the internal workspace for bcndlabs. The app lives in [`b
 cd blackwall-admin && npm install && npm run dev
 ```
 
+**Android app:** [`mobile/`](./mobile) is an Expo app that shows your hosted Blackwall in a full-screen WebView, with native setup and settings. It's a separate project with its own `package.json`. See its [README](./mobile/README.md).
+
 ## Long-term scope
 
 Blackwall is meant to grow into the place to "run" bcndlabs:
