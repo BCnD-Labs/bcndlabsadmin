@@ -12,7 +12,7 @@ import path from "node:path"
  * server is only published on the tailnet): a phone's browser can't send a session or the
  * X-Blackwall header, so the download lives at /app-updates/<file>, outside /api.
  */
-export type UpdateManifest = { versionCode: number; versionName: string; file: string; sha256?: string; notes?: string }
+export type UpdateManifest = { versionCode: number; versionName: string; file: string; sha256?: string; md5?: string; notes?: string }
 
 const APK_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,100}\.apk$/
 
@@ -26,6 +26,7 @@ export function parseUpdateManifest(value: unknown): UpdateManifest | null {
     versionName: typeof m.versionName === "string" && m.versionName.length <= 40 ? m.versionName : String(m.versionCode),
     file: m.file,
     sha256: typeof m.sha256 === "string" && /^[0-9a-f]{64}$/i.test(m.sha256) ? m.sha256.toLowerCase() : undefined,
+    md5: typeof m.md5 === "string" && /^[0-9a-f]{32}$/i.test(m.md5) ? m.md5.toLowerCase() : undefined,
     notes: typeof m.notes === "string" ? m.notes.slice(0, 500) : undefined,
   }
 }

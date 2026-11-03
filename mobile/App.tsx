@@ -6,6 +6,7 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context"
 import { SettingsHandle } from "./src/components/SettingsHandle.tsx"
 import { clearAddress, loadAddress, loadViewMode, saveAddress, saveViewMode } from "./src/lib/storage.ts"
 import { sanitizeViewMode, type ViewMode } from "./src/lib/view-mode.ts"
+import { useUpdateCheck } from "./src/lib/use-update-check.ts"
 import { NativeHome } from "./src/native/index.ts"
 import { SettingsScreen } from "./src/screens/SettingsScreen.tsx"
 import { SetupScreen } from "./src/screens/SetupScreen.tsx"
@@ -26,6 +27,8 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [area, setArea] = useState<LayoutRectangle | null>(null)
   const web = useRef<WebScreenHandle>(null)
+  const update = useUpdateCheck(boot.status === "ready" ? boot.address : null)
+  const updateAvailable = update.result !== null && update.result !== "checking" && update.result.status === "available"
 
   useEffect(() => {
     void (async () => {
@@ -51,7 +54,7 @@ export default function App() {
       <SafeAreaView style={styles.flex} edges={["top", "bottom", "left", "right"]}>
         <View style={styles.flex} onLayout={(e) => setArea(e.nativeEvent.layout)}>
           {Native ? <Native address={boot.address} onOpenSettings={openSettings} /> : <WebScreen ref={web} startUrl={boot.address} onOpenSettings={openSettings} />}
-          <SettingsHandle area={area} onOpen={openSettings} />
+          <SettingsHandle area={area} onOpen={openSettings} badge={updateAvailable} />
         </View>
         <SettingsScreen
           visible={settingsOpen}
@@ -72,6 +75,8 @@ export default function App() {
             void saveViewMode(next)
             setBoot({ ...boot, viewMode: next })
           }}
+          update={update.result}
+          onCheckUpdate={() => void update.recheck()}
           onReload={() => web.current?.reload()}
           onClearSiteData={async () => {
             await web.current?.clearSiteData()

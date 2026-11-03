@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { apkUrl, checkForUpdate, manifestUrl, parseManifest } from "../src/lib/app-update.ts"
+import { apkUrl, checkForUpdate, manifestUrl, parseManifest, percent } from "../src/lib/app-update.ts"
 
 const sent: Record<string, string>[] = []
 const reply = (status: number, body?: unknown) =>
@@ -15,7 +15,9 @@ test("addresses ignore trailing slashes and encode the file name", () => {
 })
 
 test("manifests must name a plain .apk and a whole build number", () => {
-  assert.deepEqual(parseManifest({ versionCode: 3, versionName: "0.3.0", file: "blackwall.apk" }), { versionCode: 3, versionName: "0.3.0", file: "blackwall.apk", notes: undefined })
+  assert.deepEqual(parseManifest({ versionCode: 3, versionName: "0.3.0", file: "blackwall.apk" }), { versionCode: 3, versionName: "0.3.0", file: "blackwall.apk", md5: undefined, notes: undefined })
+  assert.equal(parseManifest({ versionCode: 3, file: "a.apk", md5: "ABCDEF0123456789ABCDEF0123456789" })?.md5, "abcdef0123456789abcdef0123456789")
+  assert.equal(parseManifest({ versionCode: 3, file: "a.apk", md5: "nothex" })?.md5, undefined)
   for (const bad of [null, {}, { versionCode: 0, file: "a.apk" }, { versionCode: 1.5, file: "a.apk" }, { versionCode: 2, file: "../a.apk" }, { versionCode: 2, file: "a/b.apk" }, { versionCode: 2, file: "a.exe" }, { versionCode: "2", file: "a.apk" }]) {
     assert.equal(parseManifest(bad), null, JSON.stringify(bad))
   }
@@ -32,4 +34,14 @@ test("update check: newer is available, same or older is current, problems say w
   assert.equal((await checkForUpdate("https://x.example.ts.net", 1, reply(404))).status, "unavailable")
   assert.equal((await checkForUpdate("https://x.example.ts.net", 1, reply(200, { nope: true }))).status, "unavailable")
   assert.equal((await checkForUpdate("https://x.example.ts.net", 1, (async () => { throw new Error("offline") }) as unknown as typeof fetch)).status, "unavailable")
+})
+
+test("download progress is a whole percent and never leaves 0 to 100", () => {
+  assert.equal(percent(0, 1000), 0)
+  assert.equal(percent(500, 1000), 50)
+  assert.equal(percent(999, 1000), 99)
+  assert.equal(percent(2000, 1000), 100)
+  assert.equal(percent(50, 0), 0)
+  assert.equal(percent(-5, 100), 0)
+  assert.equal(percent(Number.NaN, 100), 0)
 })

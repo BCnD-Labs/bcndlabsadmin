@@ -9,7 +9,7 @@ import { parseUpdateManifest, readUpdateManifest, serveAppUpdates } from "../ser
 
 test("manifests need a whole build number and a plain .apk name", () => {
   const sha = "a".repeat(64)
-  assert.deepEqual(parseUpdateManifest({ versionCode: 3, versionName: "0.3.0", file: "blackwall.apk", sha256: sha.toUpperCase() }), { versionCode: 3, versionName: "0.3.0", file: "blackwall.apk", sha256: sha, notes: undefined })
+  assert.deepEqual(parseUpdateManifest({ versionCode: 3, versionName: "0.3.0", file: "blackwall.apk", sha256: sha.toUpperCase(), md5: "B".repeat(32) }), { versionCode: 3, versionName: "0.3.0", file: "blackwall.apk", sha256: sha, md5: "b".repeat(32), notes: undefined })
   assert.equal(parseUpdateManifest({ versionCode: 3, file: "x.apk" })?.versionName, "3")
   for (const bad of [null, [], {}, { versionCode: 0, file: "a.apk" }, { versionCode: 1.5, file: "a.apk" }, { versionCode: 1, file: "../a.apk" }, { versionCode: 1, file: "a/b.apk" }, { versionCode: 1, file: ".hidden.apk" }, { versionCode: 1, file: "a.exe" }]) {
     assert.equal(parseUpdateManifest(bad), null, JSON.stringify(bad))

@@ -17,7 +17,7 @@ const TAP_SLOP = 6
  * notification shade, and pulling down on the page is pull-to-refresh. A visible,
  * movable tab is the one control that doesn't collide with any of them.
  */
-export function SettingsHandle({ area, onOpen }: { area: LayoutRectangle | null; onOpen: () => void }) {
+export function SettingsHandle({ area, onOpen, badge }: { area: LayoutRectangle | null; onOpen: () => void; badge?: boolean }) {
   const [pos, setPos] = useState<HandlePosition | null>(null)
   const drag = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current
   const moved = useRef(false)
@@ -67,7 +67,7 @@ export function SettingsHandle({ area, onOpen }: { area: LayoutRectangle | null;
       style={[styles.hit, { top, [right ? "right" : "left"]: 0, alignItems: right ? "flex-end" : "flex-start" }, { transform: drag.getTranslateTransform() }]}
       accessible
       accessibilityRole="button"
-      accessibilityLabel="App settings"
+      accessibilityLabel={badge ? "App settings, update available" : "App settings"}
       accessibilityHint="Opens Blackwall app settings. Drag to move this handle."
       accessibilityActions={[{ name: "activate" }]}
       onAccessibilityAction={onOpen}
@@ -75,6 +75,7 @@ export function SettingsHandle({ area, onOpen }: { area: LayoutRectangle | null;
       <View style={[styles.tab, right ? styles.tabRight : styles.tabLeft]}>
         <View style={styles.grip} />
         <View style={styles.grip} />
+        {badge ? <View style={styles.badge} /> : null}
       </View>
     </Animated.View>
   )
@@ -94,5 +95,6 @@ const styles = StyleSheet.create({
   },
   tabRight: { borderTopLeftRadius: 8, borderBottomLeftRadius: 8, borderRightWidth: 0 },
   tabLeft: { borderTopRightRadius: 8, borderBottomRightRadius: 8, borderLeftWidth: 0 },
+  badge: { position: "absolute", top: 3, width: 8, height: 8, borderRadius: 4, backgroundColor: "#c92a2a", borderWidth: 1, borderColor: "#1f2228" },
   grip: { width: 2, height: 12, borderRadius: 1, backgroundColor: "rgba(231, 234, 238, 0.55)" },
 })
