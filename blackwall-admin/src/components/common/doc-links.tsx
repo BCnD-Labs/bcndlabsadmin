@@ -77,7 +77,7 @@ export function DocLinksList({ links }: { links?: DocLink[] }) {
     <ul className="flex flex-wrap gap-1.5">
       {links.map((l, i) => (
         <li key={i}>
-          <a href={l.url} target="_blank" rel="noreferrer noopener" className="inline-flex h-7 max-w-64 items-center gap-1.5 rounded-full bg-raised px-3 text-xs text-ink-2 hover:text-ink">
+          <a href={l.url} target="_blank" rel="noreferrer noopener" className="inline-flex h-[var(--bw-control-sm)] max-w-64 items-center gap-1.5 rounded-full bg-raised px-3 text-xs text-ink-2 hover:text-ink">
             <ExternalLink className="size-3.5 shrink-0" aria-hidden /><span className="truncate">{l.label}</span>
           </a>
         </li>

@@ -14,7 +14,7 @@ import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
 function SearchBox({ value, onChange, label, onClose }: { value: string; onChange: (v: string) => void; label: string; onClose: () => void }) {
   return (
-    <label className="mx-3 mt-2.5 flex h-8 shrink-0 items-center gap-2 rounded-[7px] border border-rim bg-well px-2.5">
+    <label className="mx-3 mt-2.5 flex h-8 shrink-0 items-center gap-2 rounded-[var(--bw-control-radius)] border border-rim bg-well px-2.5">
       <Search className="size-3.5 shrink-0 text-faint" aria-hidden />
       <input
         autoFocus

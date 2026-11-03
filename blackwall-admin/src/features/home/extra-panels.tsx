@@ -1,8 +1,9 @@
 import { format } from "date-fns"
-import { CircleDot, GitBranch, GitPullRequest, XCircle } from "lucide-react"
+import { ArrowRight, CircleDot, GitBranch, GitPullRequest, XCircle } from "lucide-react"
 import { useMemo } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
+import { PanelFooter } from "@/components/common/panel"
 import { SourceBadge } from "@/components/common/source-badge"
 import { StatusMarker } from "@/components/common/tags"
 import { FeedFallback, hasData } from "@/components/common/feed-fallback"
@@ -20,9 +21,7 @@ import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
 
 const Footer = ({ to, children }: { to: string; children: string }) => (
-  <div className="mt-auto border-t border-line-soft px-3.5 py-1.5 text-right">
-    <Link to={to} className="bw-action-link">{children} →</Link>
-  </div>
+  <PanelFooter><Link to={to} className="bw-action-link">{children} <ArrowRight className="size-3.5" aria-hidden /></Link></PanelFooter>
 )
 
 const Mini = ({ label, value, tone }: { label: string; value: React.ReactNode; tone?: "error" }) => (

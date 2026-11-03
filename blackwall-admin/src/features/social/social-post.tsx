@@ -60,7 +60,7 @@ function KitRow({ post, account }: { post: SocialPost; account: SocialAccount })
         </div>
       ) : (
         <div className="flex gap-1.5">
-          <Input className="h-7 min-w-0 flex-1 text-xs" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Live post link (optional)" aria-label={`Live post link for ${account.name}`} />
+          <Input className="h-[var(--bw-control-sm)] min-w-0 flex-1 text-xs" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Live post link (optional)" aria-label={`Live post link for ${account.name}`} />
           <Button size="xs" variant="outline" onClick={markPosted}><Check /> Posted</Button>
         </div>
       )}

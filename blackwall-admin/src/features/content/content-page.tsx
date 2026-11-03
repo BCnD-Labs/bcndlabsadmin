@@ -128,7 +128,7 @@ export function ContentPage() {
                     onChange={(e) => setQ(e.target.value)}
                     placeholder="Search posts"
                     aria-label="Search posts"
-                    className="h-8 w-full rounded-[7px] bg-well pr-2 pl-8 text-base text-ink outline-none placeholder:text-faint focus:border-ink-2/40 md:text-[13px]"
+                    className="h-8 w-full rounded-[var(--bw-control-radius)] border border-rim bg-well pr-2 pl-8 text-base text-ink outline-none focus-visible:ring-2 focus-visible:ring-ring placeholder:text-faint focus:border-ink-2/40 md:text-[13px]"
                   />
                 </label>
               </>
