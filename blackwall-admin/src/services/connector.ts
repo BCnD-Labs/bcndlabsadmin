@@ -43,7 +43,8 @@ interface SessionState {
   state: "checking" | "open" | "signin" | "offline"
   authRequired: boolean
   check: () => Promise<void>
-  login: (password: string) => Promise<void>
+  /** `remember`: stay signed in for 30 days; otherwise the session ends when the browser quits (12 hours at most). */
+  login: (password: string, remember?: boolean) => Promise<void>
   logout: () => Promise<void>
   expired: () => void
 }
@@ -59,8 +60,8 @@ export const useSession = create<SessionState>()((set) => ({
       set({ state: "offline", authRequired: false })
     }
   },
-  login: async (password) => {
-    await api("login", { method: "POST", body: JSON.stringify({ password }) })
+  login: async (password, remember = false) => {
+    await api("login", { method: "POST", body: JSON.stringify({ password, remember }) })
     set({ state: "open" })
   },
   logout: async () => {

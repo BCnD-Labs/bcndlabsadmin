@@ -26,9 +26,16 @@ export function verifyPassword(password: string, stored: string): boolean {
 }
 
 const COOKIE = "bw_session"
-const MAX_AGE_S = 30 * 24 * 3600
+/** "Remember me for 30 days": a persistent cookie and a 30-day server-side expiry. */
+export const REMEMBER_S = 30 * 24 * 3600
+/** Default sign-in: a browser-session cookie (gone when the browser or app quits) and a 12-hour server-side expiry. */
+export const SESSION_S = 12 * 3600
 
-/** Stateless signed session cookie: `<expiry>.<hmac>`. */
+/**
+ * Stateless signed session cookie: `<expiry>.<hmac>`. The expiry inside the
+ * signed value is what the server enforces; Max-Age only tells the browser
+ * whether to keep the cookie after it quits.
+ */
 export class Sessions {
   private readonly key: Buffer
   constructor(secretKey: Buffer) {
@@ -40,10 +47,12 @@ export class Sessions {
     return createHmac("sha256", this.key).update(payload).digest("base64url")
   }
 
-  issue(secure: boolean): string {
-    const exp = String(Math.floor(Date.now() / 1000) + MAX_AGE_S)
+  issue(secure: boolean, remember = false): string {
+    const ttl = remember ? REMEMBER_S : SESSION_S
+    const exp = String(Math.floor(Date.now() / 1000) + ttl)
     const value = `${exp}.${this.sign(exp)}`
-    return `${COOKIE}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${MAX_AGE_S}${secure ? "; Secure" : ""}`
+    const maxAge = remember ? `; Max-Age=${REMEMBER_S}` : ""
+    return `${COOKIE}=${value}; Path=/; HttpOnly; SameSite=Strict${maxAge}${secure ? "; Secure" : ""}`
   }
 
   clear(secure: boolean): string {
