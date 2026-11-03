@@ -1,2 +1,5 @@
 .DS_STORE
 private/
+# Agents workflow scratch files and Python caches
+/.agent/
+__pycache__/

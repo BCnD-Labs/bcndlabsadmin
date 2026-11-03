@@ -13,7 +13,8 @@
     "desktop:compile": "tsc -b desktop && node desktop/scripts/copy-static.ts",
     "desktop:dev": "npm run desktop:compile && electron desktop",
     "desktop:build": "npm run desktop:compile && node desktop/scripts/build.ts",
-    "desktop:test": "node --test desktop/tests/*.test.ts"
+    "desktop:test": "node --test desktop/tests/*.test.ts",
+    "test": "node --test tests/*.test.ts"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.3.0",
