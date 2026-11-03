@@ -2,7 +2,7 @@
  * In-app update check. The Blackwall server serves a small drop folder: `android.json`
  * (the newest build) plus the .apk it names. The app compares build numbers and, when the
  * server has a newer one, opens the .apk address so Android downloads it and offers to
- * install. Pure functions plus an injectable fetch, so they run under `node --test`.
+ * install. The manifest is fetched with the X-Blackwall header every API call needs. Pure functions plus an injectable fetch, so they run under `node --test`.
  */
 
 export type UpdateManifest = { versionCode: number; versionName: string; file: string; notes?: string }
@@ -22,8 +22,9 @@ export function manifestUrl(address: string): string {
   return `${base(address)}/api/app-updates/android.json`
 }
 
+/** The .apk is served outside /api (a phone's browser can't send the X-Blackwall header the API requires). */
 export function apkUrl(address: string, file: string): string {
-  return `${base(address)}/api/app-updates/files/${encodeURIComponent(file)}`
+  return `${base(address)}/app-updates/${encodeURIComponent(file)}`
 }
 
 /** A valid manifest, or null. The file must be a plain .apk name (no paths). */
@@ -41,7 +42,7 @@ export async function checkForUpdate(address: string, currentVersionCode: number
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), 10_000)
   try {
-    const res = await fetchImpl(manifestUrl(address), { signal: controller.signal, headers: { Accept: "application/json" } })
+    const res = await fetchImpl(manifestUrl(address), { signal: controller.signal, headers: { Accept: "application/json", "X-Blackwall": "1" } })
     if (res.status === 404) return { status: "unavailable", reason: "The server has no app updates set up yet." }
     if (!res.ok) return { status: "unavailable", reason: `The server answered ${res.status}.` }
     const manifest = parseManifest(await res.json())
