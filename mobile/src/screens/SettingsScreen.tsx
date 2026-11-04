@@ -9,6 +9,7 @@ import { downloadAndInstall } from "../lib/app-installer.ts"
 import type { UpdateResult } from "../lib/app-update.ts"
 import { VIEW_MODES, type ViewMode } from "../lib/view-mode.ts"
 import { color, mono } from "../theme.ts"
+import { plannerColor as c } from "../native/planner-theme.ts"
 
 type Props = {
   visible: boolean
@@ -95,17 +96,17 @@ export function SettingsScreen(p: Props) {
     )
 
   return (
-    <Modal visible={p.visible} animationType="slide" onRequestClose={close} statusBarTranslucent navigationBarTranslucent>
-      <SafeAreaView style={styles.safe} edges={["top", "bottom", "left", "right"]}>
+    <Modal visible={p.visible} transparent animationType="fade" onRequestClose={close} statusBarTranslucent navigationBarTranslucent>
+      <View style={styles.backdrop}><SafeAreaView style={styles.safe} edges={["left", "right"]}>
         <View style={styles.header}>
           <Text style={styles.title} accessibilityRole="header">
-            Settings
+            Blackwall <Text style={styles.breadcrumb}>/ Settings</Text>
           </Text>
           <Pressable onPress={close} style={({ pressed }) => [styles.done, pressed && styles.rowPressed]} accessibilityRole="button" accessibilityLabel="Close settings">
             <Text style={styles.doneText}>Done</Text>
           </Pressable>
         </View>
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <Section title="Server">
             <View style={styles.block}>
               <Text style={styles.label}>Blackwall address</Text>
@@ -204,26 +205,28 @@ export function SettingsScreen(p: Props) {
             </View>
           </Section>
         </ScrollView>
-      </SafeAreaView>
+      </SafeAreaView></View>
     </Modal>
   )
 }
 
 const styles = StyleSheet.create({
   ...rowStyles,
-  safe: { flex: 1, backgroundColor: color.ground },
+  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.62)", alignItems: "center", justifyContent: "center" },
+  safe: { width: "92%", maxWidth: 560, maxHeight: "88%", backgroundColor: c.panel, borderColor: c.border, borderWidth: 1, borderRadius: 16, overflow: "hidden" },
+  scrollView: { flexGrow: 0, flexShrink: 1 },
   flex: { flex: 1 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: color.line },
-  title: { color: color.text, fontSize: 20, fontWeight: "700" },
-  done: { minHeight: 44, minWidth: 64, alignItems: "center", justifyContent: "center", borderRadius: 8 },
-  doneText: { color: color.text, fontSize: 16, fontWeight: "600" },
-  scroll: { padding: 16, gap: 20, maxWidth: 640, width: "100%", alignSelf: "center" },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 12, minHeight: 38, borderBottomWidth: 1, borderBottomColor: c.line },
+  title: { color: c.text, fontSize: 14, fontWeight: "600" }, breadcrumb: { color: c.muted, fontWeight: "400" },
+  done: { minHeight: 27, paddingHorizontal: 10, alignItems: "center", justifyContent: "center", borderRadius: 15, backgroundColor: c.raised },
+  doneText: { color: c.text2, fontSize: 12, fontWeight: "600" },
+  scroll: { padding: 12, gap: 13, paddingBottom: 16 },
   label: { color: color.text2, fontSize: 13 },
   address: { color: color.text, fontFamily: mono, fontSize: 14 },
   radioRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: color.muted, alignItems: "center", justifyContent: "center" },
-  radioOn: { borderColor: color.red },
+  radioOn: { borderColor: c.accent },
   track: { height: 6, borderRadius: 3, backgroundColor: color.well, overflow: "hidden" },
-  fill: { height: 6, backgroundColor: color.red },
-  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: color.red },
+  fill: { height: 6, backgroundColor: c.blue },
+  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: c.blue },
 })

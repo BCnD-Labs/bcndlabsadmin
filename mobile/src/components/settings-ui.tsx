@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 import { Pressable, StyleSheet, Text, View } from "react-native"
 import { color } from "../theme.ts"
+import { plannerColor as c } from "../native/planner-theme.ts"
 
 /** The Settings building blocks, shared by the Settings screen and its sections. */
 
@@ -32,14 +33,14 @@ export function Row({ label, hint, onPress, destructive, disabled }: { label: st
 }
 
 export const rowStyles = StyleSheet.create({
-  section: { gap: 8 },
-  sectionTitle: { color: color.muted, fontSize: 11, fontWeight: "600", letterSpacing: 0.8, textTransform: "uppercase" },
-  card: { backgroundColor: color.panel, borderColor: color.edge, borderWidth: 1, borderRadius: 10, overflow: "hidden" },
-  block: { padding: 14, gap: 8, borderBottomWidth: 1, borderBottomColor: color.line },
-  row: { minHeight: 48, paddingHorizontal: 14, paddingVertical: 10, justifyContent: "center", borderBottomWidth: 1, borderBottomColor: color.line },
+  section: { gap: 4 },
+  sectionTitle: { color: c.accent, fontSize: 10, fontWeight: "700", letterSpacing: 0.7, textTransform: "uppercase" },
+  card: { backgroundColor: c.panel, borderBottomWidth: 1, borderColor: c.line },
+  block: { paddingHorizontal: 8, paddingVertical: 8, gap: 5, borderBottomWidth: 1, borderBottomColor: c.line },
+  row: { minHeight: 38, paddingHorizontal: 8, paddingVertical: 6, justifyContent: "center", borderBottomWidth: 1, borderBottomColor: c.line },
   rowPressed: { backgroundColor: color.raised },
-  rowLabel: { color: color.text, fontSize: 15 },
-  rowHint: { color: color.muted, fontSize: 12, marginTop: 2 },
+  rowLabel: { color: c.text, fontSize: 13 },
+  rowHint: { color: c.muted, fontSize: 11, marginTop: 2 },
   destructive: { color: color.errorText },
   disabled: { opacity: 0.5 },
 })
