@@ -1,4 +1,6 @@
-@import "tailwindcss";
+/* Both the hosted and Mac entries use these utilities. The Mac Vite root is
+   src/mac, so scan the shared feature components from the project root. */
+@import "tailwindcss" source("../");
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource/jetbrains-mono/400.css";
