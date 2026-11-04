@@ -133,6 +133,23 @@ server.listen(0, "127.0.0.1", () => {
       return { display: getComputedStyle(grid).display, columns: getComputedStyle(grid).gridTemplateColumns.split(' ').length };
     })()`)
     assert(homeLayout?.display === "grid" && homeLayout.columns >= 2, `Home panels use their desktop grid (${JSON.stringify(homeLayout)})`)
+    // The Mac app's own updater: private to the bundled workspace, and visible in Settings → About.
+    const bare = await wc!.executeJavaScript("fetch('/__mac/update/status').then((r) => r.status)")
+    assert(bare === 404, "Updater endpoints refuse requests without the app header")
+    const updateStatus = await wc!.executeJavaScript("fetch('/__mac/update/status', { headers: { 'X-Blackwall': '1' } }).then((r) => r.json())")
+    assert(updateStatus.state === "idle" && typeof updateStatus.version === "string", `Updater reports its status (${JSON.stringify(updateStatus)})`)
+    await wc!.executeJavaScript("location.href = '/settings/about'")
+    const waitFor = async (script: string) => {
+      for (let i = 0; i < 60; i++) {
+        if (await wc!.executeJavaScript(script).catch(() => false)) return true
+        await new Promise((resolve) => setTimeout(resolve, 100))
+      }
+      return false
+    }
+    const panelButton = "Array.from(document.querySelectorAll('[role=status] button')).find((b) => b.textContent?.trim() === 'Check for updates')"
+    assert(await waitFor(`!!(${panelButton})`), "Settings → About shows the Mac update button")
+    await wc!.executeJavaScript(`(${panelButton}).click()`)
+    assert(await waitFor("document.body.textContent?.includes('No newer Mac build has been published yet')"), "Check for updates reports when nothing is published")
     const sw = await wc!.executeJavaScript("navigator.serviceWorker ? navigator.serviceWorker.getRegistration().then(r => !!r).catch(() => false) : false")
     assert(sw === false, "Bundled workspace does not register the web service worker")
     app.exit(0)

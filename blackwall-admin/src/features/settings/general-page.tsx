@@ -12,6 +12,7 @@ import { api } from "@/services/connector"
 import { clearFeedCache } from "@/services/data"
 import { usePrefs } from "@/stores/prefs"
 import { migrateWorkspace, useWorkspace } from "@/stores/workspace"
+import { MacUpdatePanel, inMacApp } from "./mac-update-row"
 import { ConfirmButton, SettingRow, SettingsPage } from "./settings-pages"
 
 type UpdateState =
@@ -59,6 +60,7 @@ export function AboutSettings() {
   return (
     <SettingsPage>
       <AboutPanel />
+      {inMacApp() && <MacUpdatePanel />}
       <InstallPanel />
     </SettingsPage>
   )
