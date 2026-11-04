@@ -70,6 +70,15 @@ server.listen(0, "127.0.0.1", () => {
     }
     assert(wc!.getURL() === "bw-native://app/productivity", "Workspace route survives a reload")
     assert(await wc!.executeJavaScript("!!document.querySelector('[data-testid=planner]')"), "Planner opens with server workspace data")
+    const macFrame = await wc!.executeJavaScript(`({
+      rail: !!document.querySelector('.mac-rail'),
+      sections: !!document.querySelector('.mac-navigator'),
+      command: !!document.querySelector('.mac-command-bar'),
+      hostedShell: !!document.querySelector('.bw-app-shell'),
+      focusedEditor: document.activeElement?.matches('input, textarea, [contenteditable=true]') ?? false,
+    })`)
+    assert(macFrame.rail && macFrame.sections && macFrame.command && !macFrame.hostedShell, "Mac workspace uses its own navigation and command shell")
+    assert(!macFrame.focusedEditor, "Mac workspace does not focus an editor on arrival")
     await wc!.executeJavaScript(`location.href = ${JSON.stringify(`http://127.0.0.1:${address.port}/productivity`)}`)
     await new Promise((resolve) => setTimeout(resolve, 150))
     assert(wc!.getURL() === "bw-native://app/productivity", "Links back to the server stay in the Mac workspace")
@@ -80,6 +89,12 @@ server.listen(0, "127.0.0.1", () => {
       assert(await wc!.executeJavaScript("document.querySelector('[aria-label=\"Calendar view\"] [data-value=\"month\"]')?.getAttribute('aria-selected') === 'true'"), "Month view control follows the calendar")
       writeFileSync(process.env.BW_NATIVE_MONTH_SHOT, (await wc!.capturePage()).toPNG())
     }
+    await wc!.executeJavaScript("document.querySelector('a.mac-nav-child[href=\"/productivity/learning\"]')?.click()")
+    for (let i = 0; i < 40; i++) {
+      if (await wc!.executeJavaScript("document.querySelector('.mac-page-title h1')?.textContent === 'Learning'")) break
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+    assert(await wc!.executeJavaScript("location.pathname === '/productivity/learning' && document.querySelector('.mac-page-title h1')?.textContent === 'Learning'"), "Section tree opens Learning inside the Mac workspace")
     const sw = await wc!.executeJavaScript("navigator.serviceWorker ? navigator.serviceWorker.getRegistration().then(r => !!r).catch(() => false) : false")
     assert(sw === false, "Bundled workspace does not register the web service worker")
     app.exit(0)

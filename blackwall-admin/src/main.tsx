@@ -2,10 +2,7 @@ import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import "./index.css"
 import "./styles/countdown.css"
-import "./styles/mac-native.css"
 import App from "./App"
-
-if (window.location.protocol === "bw-native:") document.documentElement.dataset.runtime = "mac-native"
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
