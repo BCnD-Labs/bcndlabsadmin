@@ -1,11 +1,12 @@
 import { useState } from "react"
-import { Linking, Pressable, StyleSheet, Text, View } from "react-native"
+import { Linking, Modal, Pressable, StyleSheet, Text, View } from "react-native"
 import type { Collections } from "../../lib/shared.ts"
 import { useWorkspace } from "../data/WorkspaceProvider.tsx"
 import { plannerColor as c } from "../planner-theme.ts"
 import { WorkspacePage, WorkspaceSection } from "../WorkspacePage.tsx"
 import { Icon } from "../ui.tsx"
 import { DraftEditor } from "./DraftEditor.tsx"
+import { SiteEditor } from "./SiteEditor.tsx"
 
 type Site = Collections["sites"][number]
 type Draft = Collections["drafts"][number]
@@ -19,13 +20,20 @@ export function WebsiteScreen({ onOpenSettings }: { onOpenSettings: () => void }
   const { data, status, message, refreshing, refresh } = useWorkspace()
   const [open, setOpen] = useState<string | null>(null)
   const [editor, setEditor] = useState<{ value: Draft | "new"; siteId?: string } | null>(null)
+  const [siteEditor, setSiteEditor] = useState<Site | "new" | null>(null)
+  const [addOpen, setAddOpen] = useState(false)
   const [notice, setNotice] = useState("")
   function edit(value: Draft | "new", siteId?: string) {
     if (status === "conflict") setNotice("Resolve the sync conflict before editing.")
     else if (!data) setNotice("Load your workspace first.")
     else { setNotice(""); setEditor({ value, siteId }) }
   }
-  const add = <Pressable onPress={() => edit("new", data?.sites.length === 1 ? data.sites[0]?.id : undefined)} style={s.add} accessibilityRole="button" accessibilityLabel="New draft"><Icon name="add" size={20} tint={c.accent} /></Pressable>
+  function editSite(value: Site | "new") {
+    if (status === "conflict") setNotice("Resolve the sync conflict before editing.")
+    else if (!data) setNotice("Load your workspace first.")
+    else { setNotice(""); setSiteEditor(value) }
+  }
+  const add = <Pressable onPress={() => setAddOpen(true)} style={s.add} accessibilityRole="button" accessibilityLabel="Add website item"><Icon name="add" size={20} tint={c.accent} /></Pressable>
   return <WorkspacePage page="Website" onOpenSettings={onOpenSettings} action={add} onRefresh={() => void refresh()} refreshing={refreshing}>
     {notice ? <Text style={s.error}>{notice}</Text> : null}
     {data ? <>
@@ -42,6 +50,7 @@ export function WebsiteScreen({ onOpenSettings }: { onOpenSettings: () => void }
             </Pressable>
             {expanded ? <View style={s.detail}>
               <View style={s.summary}><Text style={s.meta}>{site.publishedAt ? "Published " + site.publishedAt.slice(0, 10) : "Not published yet"}</Text>{url && site.publishedAt ? <Pressable onPress={() => void Linking.openURL(url)} accessibilityRole="link" style={s.open}><Text style={s.openText}>Open site</Text><Icon name="open-outline" size={13} tint={c.accent} /></Pressable> : null}</View>
+              <Pressable onPress={() => editSite(site)} style={s.newDraft} accessibilityRole="button"><Text style={s.newDraftText}>Edit site details</Text></Pressable>
               {pages.map(page => <View key={page.id} style={s.subrow}><Icon name="document-outline" size={15} tint={c.muted} /><Text style={s.subTitle} numberOfLines={1}>{page.title}</Text><Text style={s.meta}>/{page.slug}</Text></View>)}
               {drafts.map(draft => <Pressable key={draft.id} onPress={() => edit(draft)} style={s.subrow} accessibilityRole="button" accessibilityLabel={`Edit ${draft.title}`}><Icon name="create-outline" size={15} tint={c.amber} /><Text style={s.subTitle} numberOfLines={1}>{draft.title}</Text><Text style={s.meta}>{draft.status}</Text></Pressable>)}
               <Pressable onPress={() => edit("new", site.id)} style={s.newDraft} accessibilityRole="button"><Text style={s.newDraftText}>+ New draft for this site</Text></Pressable>
@@ -49,12 +58,14 @@ export function WebsiteScreen({ onOpenSettings }: { onOpenSettings: () => void }
             </View> : null}
           </View>
         })}
-        {!data.sites.length ? <Text style={s.empty}>No sites yet. Create a site in the web view.</Text> : null}
+        {!data.sites.length ? <Pressable onPress={() => editSite("new")} style={s.newDraft} accessibilityRole="button"><Text style={s.newDraftText}>+ Create a site</Text></Pressable> : null}
       </WorkspaceSection>
       {data.drafts.filter(d => !d.siteId || !data.sites.some(site => site.id === d.siteId)).length ? <WorkspaceSection title="Unassigned drafts" icon="create-outline" tint={c.amber}>{data.drafts.filter(d => !d.siteId || !data.sites.some(site => site.id === d.siteId)).map(d => <Pressable key={d.id} onPress={() => edit(d)} style={s.subrow} accessibilityRole="button" accessibilityLabel={`Edit ${d.title}`}><Icon name="create-outline" size={15} tint={c.amber} /><Text style={s.subTitle} numberOfLines={1}>{d.title}</Text><Text style={s.meta}>{d.status}</Text></Pressable>)}</WorkspaceSection> : null}
     </> : <Text style={s.empty}>{status === "signed-out" ? "Sign in under Settings to see your sites." : message ?? "Loading your workspace…"}</Text>}
     {data && editor ? <DraftEditor key={editor.value === "new" ? `new-${editor.siteId ?? "none"}` : editor.value.id} value={editor.value} siteId={editor.siteId} data={data} onClose={() => setEditor(null)} /> : null}
+    {siteEditor ? <SiteEditor key={siteEditor === "new" ? "new" : siteEditor.id} value={siteEditor} onClose={() => setSiteEditor(null)} /> : null}
+    <Modal visible={addOpen} transparent animationType="fade" onRequestClose={() => setAddOpen(false)}><View style={s.menuBackdrop}><Pressable style={s.menuDismiss} onPress={() => setAddOpen(false)} accessibilityLabel="Close add menu" /><View style={s.menu}><Text style={s.menuLabel}>CREATE</Text><Pressable onPress={() => { setAddOpen(false); edit("new", data?.sites.length === 1 ? data.sites[0]?.id : undefined) }} style={s.menuItem} accessibilityRole="button"><Icon name="create-outline" size={17} tint={c.amber} /><Text style={s.menuText}>Draft</Text></Pressable><Pressable onPress={() => { setAddOpen(false); editSite("new") }} style={s.menuItem} accessibilityRole="button"><Icon name="globe-outline" size={17} tint={c.blue} /><Text style={s.menuText}>Site</Text></Pressable></View></View></Modal>
   </WorkspacePage>
 }
 
-const s = StyleSheet.create({ add: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: c.panel, borderWidth: 1, borderColor: c.line }, error: { color: "#ffa8a8", fontSize: 12 }, meta: { color: c.muted, fontSize: 11 }, site: { borderBottomWidth: 1, borderColor: c.line }, row: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: 9 }, siteMark: { width: 30, height: 30, borderRadius: 9, backgroundColor: "#2196f326", alignItems: "center", justifyContent: "center" }, flex: { flex: 1, gap: 3 }, title: { color: c.text, fontSize: 14, fontWeight: "600" }, detail: { paddingLeft: 39, paddingBottom: 8, gap: 7 }, summary: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, open: { flexDirection: "row", alignItems: "center", gap: 4 }, openText: { color: c.accent, fontSize: 11, fontWeight: "600" }, subrow: { minHeight: 29, flexDirection: "row", alignItems: "center", gap: 8 }, subTitle: { color: c.text2, fontSize: 12, flex: 1 }, newDraft: { minHeight: 27, alignSelf: "flex-start", justifyContent: "center" }, newDraftText: { color: c.accent, fontSize: 11, fontWeight: "600" }, empty: { color: c.muted, fontSize: 12, paddingVertical: 9 } })
+const s = StyleSheet.create({ add: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: c.panel, borderWidth: 1, borderColor: c.line }, menuBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)" }, menuDismiss: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }, menu: { position: "absolute", top: 89, right: 16, width: 158, padding: 9, borderRadius: 15, backgroundColor: c.panel, borderColor: c.border, borderWidth: 1 }, menuLabel: { color: c.muted, fontSize: 10, paddingHorizontal: 7, paddingBottom: 3 }, menuItem: { minHeight: 35, flexDirection: "row", alignItems: "center", gap: 9, paddingHorizontal: 7 }, menuText: { color: c.text, fontSize: 13 }, error: { color: "#ffa8a8", fontSize: 12 }, meta: { color: c.muted, fontSize: 11 }, site: { borderBottomWidth: 1, borderColor: c.line }, row: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: 9 }, siteMark: { width: 30, height: 30, borderRadius: 9, backgroundColor: "#2196f326", alignItems: "center", justifyContent: "center" }, flex: { flex: 1, gap: 3 }, title: { color: c.text, fontSize: 14, fontWeight: "600" }, detail: { paddingLeft: 39, paddingBottom: 8, gap: 7 }, summary: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, open: { flexDirection: "row", alignItems: "center", gap: 4 }, openText: { color: c.accent, fontSize: 11, fontWeight: "600" }, subrow: { minHeight: 29, flexDirection: "row", alignItems: "center", gap: 8 }, subTitle: { color: c.text2, fontSize: 12, flex: 1 }, newDraft: { minHeight: 27, alignSelf: "flex-start", justifyContent: "center" }, newDraftText: { color: c.accent, fontSize: 11, fontWeight: "600" }, empty: { color: c.muted, fontSize: 12, paddingVertical: 9 } })
