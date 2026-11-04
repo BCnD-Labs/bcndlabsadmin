@@ -5,7 +5,7 @@
  * The rules are the ones the web store has always had: keep them in step with it, not ahead of it.
  */
 import { validJournalItems, validJournalSections } from "./journal-sections.ts"
-import type { Course, JournalSection, JournalLogItem, JournalEntry, Note, Task } from "../src/lib/types.ts"
+import type { Course, JournalSection, JournalLogItem, JournalEntry, Note, Service, Task } from "../src/lib/types.ts"
 import type { Collections } from "./workspace.ts"
 
 export interface RecordOptions {
@@ -17,6 +17,7 @@ export interface RecordOptions {
 export type NewTask = Omit<Task, "id" | "createdAt" | "updatedAt">
 export type NewNote = Omit<Note, "id" | "createdAt" | "updatedAt">
 export type NewCourse = Omit<Course, "id" | "createdAt" | "updatedAt">
+export type NewService = Omit<Service, "id" | "createdAt" | "updatedAt">
 export const TASK_ID_PREFIX = "tsk"
 export const NOTE_ID_PREFIX = "nte"
 
@@ -24,6 +25,7 @@ type TaskData = Pick<Collections, "tasks">
 type NoteData = Pick<Collections, "notes">
 type JournalData = Pick<Collections, "journal">
 type CourseData = Pick<Collections, "courses">
+type ServiceData = Pick<Collections, "services">
 
 export function defaultMakeId(prefix: string): string {
   const rand = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID().slice(0, 8) : Math.random().toString(36).slice(2, 10)
@@ -94,6 +96,22 @@ export function createCourse<T extends CourseData>(data: T, input: NewCourse, op
 export function updateCourse<T extends CourseData>(data: T, id: string, patch: Partial<NewCourse>, opts: RecordOptions = {}): T {
   const t = (opts.now ?? defaultNow)()
   return { ...data, courses: data.courses.map((course) => course.id === id ? { ...course, ...patch, updatedAt: t } : course) }
+}
+
+/** Mikoshi tool records use the same guarded workspace save path on every client. */
+export function createService<T extends ServiceData>(data: T, input: NewService, opts: RecordOptions = {}): { data: T; record: Service } {
+  const t = (opts.now ?? defaultNow)()
+  const record: Service = { ...input, id: (opts.makeId ?? defaultMakeId)("svc"), createdAt: t, updatedAt: t }
+  return { data: { ...data, services: [record, ...data.services] }, record }
+}
+
+export function updateService<T extends ServiceData>(data: T, id: string, patch: Partial<NewService>, opts: RecordOptions = {}): T {
+  const t = (opts.now ?? defaultNow)()
+  return { ...data, services: data.services.map((service) => service.id === id ? { ...service, ...patch, updatedAt: t } : service) }
+}
+
+export function removeService<T extends ServiceData>(data: T, id: string): T {
+  return { ...data, services: data.services.filter((service) => service.id !== id) }
 }
 
 /**
