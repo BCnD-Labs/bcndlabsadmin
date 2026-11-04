@@ -127,7 +127,7 @@ export function TaskSheet({ editor, data, today, onClose, embedded = false }: { 
                 {(["task", "event"] as const).map(kind => <Pressable key={kind} style={[styles.kind, (draft.kind ?? "task") === kind && styles.kindOn]} onPress={() => set({ kind, ...(kind === "event" && { extras: { ...x, scheduledDate: x.scheduledDate || draft.due || today, scheduledTime: x.scheduledTime || draft.time } }) })} accessibilityRole="radio" accessibilityLabel={kind === "event" ? "Calendar event" : "Task"} accessibilityState={{ checked: (draft.kind ?? "task") === kind }}><Icon name={kind === "event" ? "calendar-outline" : "checkbox-outline"} size={17} tint={(draft.kind ?? "task") === kind ? c.accent : color.muted} /><Text style={[styles.kindText, (draft.kind ?? "task") === kind && styles.kindTextOn]}>{kind === "event" ? "Event" : "Task"}</Text></Pressable>)}
               </View>
               <Text style={shared.label}>Title</Text>
-              <TextInput value={draft.title} onChangeText={(title) => set({ title })} placeholder={event ? "What's happening?" : "What needs doing?"} placeholderTextColor={c.muted} accessibilityLabel="Title" autoFocus={editor.mode === "create"} style={[shared.input, styles.input]} />
+              <TextInput value={draft.title} onChangeText={(title) => set({ title })} placeholder={event ? "What's happening?" : "What needs doing?"} placeholderTextColor={c.muted} accessibilityLabel="Title" style={[shared.input, styles.input]} />
               {errors.title ? <Text style={shared.error}>{errors.title}</Text> : null}
 
               <Text style={shared.label}>Details</Text>

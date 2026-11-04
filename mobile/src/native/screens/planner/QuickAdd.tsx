@@ -49,7 +49,6 @@ export function QuickAdd({ today, defaultDue }: { today: string; defaultDue?: st
           accessibilityLabel="Add a task"
           returnKeyType="done"
           style={styles.input}
-          autoFocus
         />
         <Pressable
           onPress={() => void submit()}
