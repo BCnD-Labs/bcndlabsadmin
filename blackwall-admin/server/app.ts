@@ -19,7 +19,7 @@ import { publishSite } from "./site-publish.ts"
 import { handleStorage } from "./storage.ts"
 import type { WorkspaceStore } from "./workspace.ts"
 import type { System } from "./system.ts"
-import { type UpdatesDir, readUpdateManifest } from "./app-updates.ts"
+import { MAC, type UpdatesDir, readUpdateManifest } from "./app-updates.ts"
 
 /**
  * Blackwall's JSON API (/api/*). The same handler runs inside Vite on a dev
@@ -46,6 +46,9 @@ export interface ApiOptions {
   appUpdatesDir?: UpdatesDir
   /** Runs before the manifest is read, e.g. to pull the newest build from GitHub first. Must not throw. */
   beforeAppUpdates?: () => Promise<void>
+  /** The same for the Mac app: a folder holding mac.json and the .dmg it names. */
+  macUpdatesDir?: UpdatesDir
+  beforeMacUpdates?: () => Promise<void>
 }
 
 const LOOPBACK = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/
@@ -229,6 +232,11 @@ export function createApi(opts: ApiOptions) {
       await opts.beforeAppUpdates?.()
       const manifest = readUpdateManifest(opts.appUpdatesDir)
       return manifest ? send(res, 200, manifest, { "Cache-Control": "no-cache" }) : send(res, 404, { error: "No app update is published" })
+    }
+    if (parts[0] === "app-updates" && parts[1] === "mac.json" && parts.length === 2 && method === "GET") {
+      await opts.beforeMacUpdates?.()
+      const manifest = readUpdateManifest(opts.macUpdatesDir, MAC)
+      return manifest ? send(res, 200, manifest, { "Cache-Control": "no-cache" }) : send(res, 404, { error: "No Mac update is published" })
     }
     if (!signedIn) return send(res, 401, { error: "Sign in required" })
 
