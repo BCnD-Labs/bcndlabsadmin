@@ -9,7 +9,7 @@ import type { IconName } from "../ui.tsx"
 export const NAV_CLEARANCE = 140
 
 /** Screens the shell can show. "settings" is an action (opens native Settings), not a screen. */
-export type ScreenKey = "home" | "planner" | "learning" | "dev" | "notes" | "insights" | "website"
+export type ScreenKey = "home" | "planner" | "learning" | "dev" | "notes" | "insights" | "website" | "mikoshi"
 export type DestinationKey = ScreenKey | "settings"
 export type GroupName = "Daily" | "Build" | "Homelab" | "App"
 
@@ -35,8 +35,12 @@ export const DESTINATIONS: readonly Destination[] = [
   { key: "notes", label: "Notes", icon: "document-text-outline", activeIcon: "document-text", group: "Daily" },
   { key: "insights", label: "Insights", icon: "stats-chart-outline", activeIcon: "stats-chart", group: "Daily" },
   { key: "website", label: "Website", icon: "globe-outline", activeIcon: "globe", group: "Build" },
+  { key: "mikoshi", label: "Mikoshi", icon: "server-outline", activeIcon: "server", group: "Homelab" },
   { key: "settings", label: "Settings", icon: "settings-outline", activeIcon: "settings", group: "App" },
 ]
+
+/** Screens that keep their state (open tools, scroll) while you visit another screen, once they have been opened. */
+export const KEEP_ALIVE: readonly ScreenKey[] = ["mikoshi"]
 
 /** The mini bar slots, in order. */
 export const PRIMARY: readonly Destination[] = DESTINATIONS.filter((d) => d.primary)

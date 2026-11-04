@@ -3,12 +3,14 @@ import { DevScreen } from "../screens/DevScreen.tsx"
 import { HomeScreen } from "../screens/HomeScreen.tsx"
 import { InsightsScreen } from "../screens/InsightsScreen.tsx"
 import { LearningScreen } from "../screens/LearningScreen.tsx"
+import { MikoshiScreen } from "../screens/mikoshi/MikoshiScreen.tsx"
 import { NotesScreen } from "../screens/NotesScreen.tsx"
 import { PlannerScreen } from "../screens/PlannerScreen.tsx"
 import { WebsiteScreen } from "../screens/WebsiteScreen.tsx"
 import type { ScreenKey } from "./destinations.ts"
 
-export type ScreenProps = { onOpenSettings: () => void }
+/** `focused` is false while a screen that stays mounted in the background (see KEEP_ALIVE) is not the one on show. */
+export type ScreenProps = { onOpenSettings: () => void; focused?: boolean }
 
 /** Every screen the shell can show, by destination key. A new screen needs an entry here and in destinations.ts. */
 export const SCREENS: Record<ScreenKey, ComponentType<ScreenProps>> = {
@@ -19,4 +21,5 @@ export const SCREENS: Record<ScreenKey, ComponentType<ScreenProps>> = {
   notes: NotesScreen,
   insights: InsightsScreen,
   website: WebsiteScreen,
+  mikoshi: MikoshiScreen,
 }

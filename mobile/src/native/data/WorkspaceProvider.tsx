@@ -8,6 +8,8 @@ import { pollDelay, type SyncStatus } from "./sync-view.ts"
 export interface ConflictInfo { conflicts: string[]; mine: Collections; theirs: Collections }
 
 export interface WorkspaceValue {
+  /** The saved server address (for the few requests besides the workspace, like the Mikoshi status check). */
+  address: string
   /** What this phone shows: the server's data plus unsent edits. Null until something is loaded or cached. */
   data: Collections | null
   status: SyncStatus
@@ -148,8 +150,8 @@ export function WorkspaceProvider({ address, children }: { address: string; chil
   )
 
   const value = useMemo<WorkspaceValue>(
-    () => ({ ...view, message: notice ?? view.message, refreshing, refresh, mutate, resolveConflict }),
-    [view, notice, refreshing, refresh, mutate, resolveConflict],
+    () => ({ ...view, address, message: notice ?? view.message, refreshing, refresh, mutate, resolveConflict }),
+    [view, address, notice, refreshing, refresh, mutate, resolveConflict],
   )
   return <Context.Provider value={value}>{children}</Context.Provider>
 }
