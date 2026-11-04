@@ -30,7 +30,7 @@ export function InsightsScreen({ onOpenSettings }: { onOpenSettings: () => void 
         <View style={s.chart}>{week.map((day, i) => <View key={day} style={s.barCell}><Text style={s.barValue}>{completed[i] || ""}</Text><View style={[s.bar, { height: 4 + 29 * completed[i] / Math.max(1, ...completed), backgroundColor: completed[i] ? c.green : c.line }]} /><Text style={[s.day, day === today && s.today]}>{["M", "T", "W", "T", "F", "S", "S"][i]}</Text></View>)}</View>
       </WorkspaceSection>
       <WorkspaceSection title="Task balance" icon="checkmark-circle-outline" count={String(tasks.length) + " total"}>
-        <View style={s.balance}><View style={[s.balanceDone, { flex: Math.max(done, 0.01) }]} /><View style={[s.balanceOpen, { flex: Math.max(open, 0.01) }]} /></View>
+        {tasks.length ? <View style={s.balance}>{done ? <View style={[s.balanceDone, { flex: done }]} /> : null}{open ? <View style={[s.balanceOpen, { flex: open }]} /> : null}</View> : <Text style={s.empty}>No task history yet.</Text>}
         <View style={s.legend}><Text style={s.meta}>{done} complete</Text><Text style={s.meta}>{open} open</Text></View>
       </WorkspaceSection>
       <WorkspaceSection title="Learning" icon="school-outline" tint="#b39ddb" count={String(data.courses.length) + " items"}>

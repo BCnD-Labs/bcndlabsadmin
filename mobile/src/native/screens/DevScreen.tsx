@@ -11,6 +11,7 @@ import { ProjectEditor } from "./ProjectEditor.tsx"
 type Project = Collections["projects"][number]
 type RepoLink = Collections["repos"][number]
 const statusTint: Record<Project["status"], string> = { active: c.green, planned: c.blue, paused: c.amber, done: c.muted }
+const projectTint: Record<Project["color"], string> = { teal: "#26a69a", amber: c.amber, red: "#ef5350", slate: "#90a4ae" }
 
 /** Native projects show saved records and repository links, without invented GitHub activity. */
 export function DevScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
@@ -33,7 +34,7 @@ export function DevScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
           const expanded = open === project.id
           return <View key={project.id} style={s.item}>
             <Pressable onPress={() => setOpen(expanded ? null : project.id)} style={s.row} accessibilityRole="button" accessibilityState={{ expanded }} accessibilityLabel={project.name + ", " + project.status + ", " + repos.length + " repositories"}>
-              <View style={[s.marker, { backgroundColor: statusTint[project.status] }]} /><View style={s.body}><Text style={s.title} numberOfLines={1}>{project.name}</Text><Text style={s.meta}>{project.code || "Project"} · {repos.length} repos</Text></View><Text style={[s.status, { color: statusTint[project.status] }]}>{project.status}</Text><Icon name={expanded ? "chevron-up" : "chevron-down"} size={15} tint={c.muted} />
+              <View style={[s.marker, { backgroundColor: projectTint[project.color] }]} /><View style={s.body}><Text style={s.title} numberOfLines={1}>{project.name}</Text><Text style={s.meta}>{project.code || "Project"} · {repos.length} repos</Text></View><Text style={[s.status, { color: statusTint[project.status] }]}>{project.status}</Text><Icon name={expanded ? "chevron-up" : "chevron-down"} size={15} tint={c.muted} />
             </Pressable>
             {expanded ? <View style={s.detail}>{project.description ? <Text style={s.description}>{project.description}</Text> : null}{repos.map(repo => <RepoRow key={repo.id} repo={repo} />)}{!repos.length ? <Text style={s.meta}>No repositories linked.</Text> : null}<Pressable onPress={() => status === "conflict" ? setNotice("Resolve the sync conflict before editing.") : setEditor(project)} style={s.edit} accessibilityRole="button"><Text style={s.editText}>Edit project</Text></Pressable></View> : null}
           </View>
