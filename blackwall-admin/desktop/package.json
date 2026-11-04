@@ -1,8 +1,8 @@
 {
   "name": "blackwall-desktop",
   "productName": "Blackwall",
-  "version": "0.1.0",
-  "description": "Blackwall for macOS: a tabbed shell around the hosted Blackwall web app.",
+  "version": "0.2.0",
+  "description": "Blackwall for macOS with a bundled workspace and connected server data.",
   "private": true,
   "type": "module",
   "main": "out/main/main.js",

@@ -14,6 +14,7 @@ files:
   - out/preload/**
   - out/shared/**
   - out/chrome/**
+  - out/native/**
   - out/icons/**
   # The app has no runtime dependencies. Without this, electron-builder falls
   # back to collecting the web app's node_modules from the parent folder.

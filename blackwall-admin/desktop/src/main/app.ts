@@ -4,6 +4,7 @@ import { fileURLToPath, pathToFileURL } from "node:url"
 import type { FindResult, Overlay, SetWebAddressResult, ShellCommand, ShellState, UiCommand } from "../shared/ipc.ts"
 import { ConfigStore, type WindowState } from "./config.ts"
 import { buildMenu } from "./menu.ts"
+import { NATIVE_HOME, registerNativeWorkspace } from "./native-workspace.ts"
 import { TabManager } from "./tabs.ts"
 import { addressToUrl, normalizeWebAddress, sameOrigin } from "./url.ts"
 import { createTabSession, rejectCertificateErrors } from "./web-session.ts"
@@ -44,7 +45,10 @@ export function startShell(options: ShellOptions = {}): ShellController | null {
     return null
   }
 
-  protocol.registerSchemesAsPrivileged([{ scheme: "bw-shell", privileges: { standard: true, secure: true } }])
+  protocol.registerSchemesAsPrivileged([
+    { scheme: "bw-shell", privileges: { standard: true, secure: true } },
+    { scheme: "bw-native", privileges: { standard: true, secure: true, supportFetchAPI: true } },
+  ])
 
   const config = new ConfigStore(app.getPath("userData"))
   let win: BrowserWindow | null = null
@@ -94,7 +98,9 @@ export function startShell(options: ShellOptions = {}): ShellController | null {
     const user = list.filter((t) => t.kind === "web" && t.url)
     const activeIndex = Math.max(0, [pinned, ...user].findIndex((t) => t?.id === tabs?.activeTabId))
     config.update({
-      pinnedUrl: pinned && home && sameOrigin(pinned.url, home) ? pinned.url : null,
+      pinnedUrl: pinned && home && pinned.url.startsWith(NATIVE_HOME)
+        ? new URL(new URL(pinned.url).pathname + new URL(pinned.url).search + new URL(pinned.url).hash, home).href
+        : null,
       tabs: user.map((t) => ({ url: t.url, title: t.title })),
       activeIndex,
     })
@@ -133,7 +139,10 @@ export function startShell(options: ShellOptions = {}): ShellController | null {
     const tab = tabs.active
     if (!url || !tab) return
     const home = config.get().webAddress
-    if (tab.kind === "blackwall" && (!home || !sameOrigin(url, home))) tabs.add({ kind: "web", url }, { afterActive: true })
+    if (tab.kind === "native" && home && sameOrigin(url, home)) {
+      const target = new URL(url)
+      tabs.load(tab.id, NATIVE_HOME + target.pathname.slice(1) + target.search + target.hash)
+    } else if (tab.kind === "native") tabs.add({ kind: "web", url }, { afterActive: true })
     else tabs.load(tab.id, url)
     tabs.activeContents?.focus()
   }
@@ -153,7 +162,7 @@ export function startShell(options: ShellOptions = {}): ShellController | null {
     overlay = null
     if (tabs?.pinned) {
       tabs.activate(tabs.pinned.id)
-      tabs.load(tabs.pinned.id, url)
+      tabs.load(tabs.pinned.id, NATIVE_HOME)
     }
     changed()
     return { ok: true }
@@ -291,8 +300,9 @@ export function startShell(options: ShellOptions = {}): ShellController | null {
 
     // Restore: pinned Blackwall tab first (last page if still on the same site), then saved tabs.
     const home = cfg.webAddress
-    const pinnedStart = home && cfg.pinnedUrl && sameOrigin(cfg.pinnedUrl, home) ? cfg.pinnedUrl : home
-    const pinnedId = tabs.add({ kind: "blackwall", url: pinnedStart }, { activate: true, eager: true })
+    const previous = home && cfg.pinnedUrl && sameOrigin(cfg.pinnedUrl, home) ? new URL(cfg.pinnedUrl) : null
+    const pinnedStart = previous ? NATIVE_HOME + previous.pathname.slice(1) + previous.search + previous.hash : NATIVE_HOME
+    const pinnedId = tabs.add({ kind: "native", url: pinnedStart }, { activate: true, eager: true })
     const ids = [pinnedId, ...cfg.tabs.map((t) => tabs!.add({ kind: "web", url: t.url, title: t.title }, { activate: false }))]
     tabs.activate(ids[cfg.activeIndex] ?? pinnedId)
 
@@ -338,6 +348,7 @@ export function startShell(options: ShellOptions = {}): ShellController | null {
 
     rejectCertificateErrors()
     tabSession = createTabSession()
+    registerNativeWorkspace(tabSession, () => config.get().webAddress)
 
     app.on("web-contents-created", (_e, contents) => {
       contents.on("will-attach-webview", (e) => e.preventDefault())
@@ -354,7 +365,7 @@ export function startShell(options: ShellOptions = {}): ShellController | null {
     app.setAboutPanelOptions({
       applicationName: "Blackwall",
       applicationVersion: app.getVersion(),
-      credits: "Desktop shell for the hosted Blackwall web app.",
+      credits: "Blackwall for Mac.",
       copyright: "bcndlabs",
     })
     if (!app.isPackaged && process.platform === "darwin") app.dock?.setIcon(DEV_ICON)
@@ -380,10 +391,9 @@ export function startShell(options: ShellOptions = {}): ShellController | null {
         forward: () => handle({ type: "forward" }),
         home: () => {
           const pinned = tabs?.pinned
-          const home = config.get().webAddress
           if (!tabs || !pinned) return
           tabs.activate(pinned.id)
-          if (home) tabs.load(pinned.id, home)
+          tabs.load(pinned.id, NATIVE_HOME)
         },
         zoom: (delta) => {
           const wc = tabs?.activeContents

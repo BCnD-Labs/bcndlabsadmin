@@ -1,0 +1,106 @@
+/* The installed Mac workspace: a compact, windowed dashboard. These rules do
+   not affect the hosted web app or the Android interface. */
+html[data-runtime="mac-native"] {
+  --bw-page-max: 120rem;
+  --bw-panel-radius: 0.625rem;
+  --bw-control-radius: 0.375rem;
+  --bw-grid-gap: 0.75rem;
+  --bw-panel-pad: 0.75rem;
+  --bw-panel-header-h: 2rem;
+  --bw-row-regular: 2.125rem;
+}
+
+html[data-runtime="mac-native"] body {
+  background-image: none;
+}
+
+html[data-runtime="mac-native"] .bw-app-shell {
+  padding-right: 14px;
+}
+
+html[data-runtime="mac-native"] .bw-app-shell > .bw-ground {
+  padding-block: 4px;
+  border-bottom: 1px solid var(--bw-line);
+  background-image: none;
+}
+
+html[data-runtime="mac-native"] .bw-app-header {
+  min-height: 48px;
+  padding-block: 3px;
+  border-bottom: 0;
+}
+
+html[data-runtime="mac-native"] .bw-app-header h1 {
+  font-size: 17px;
+  line-height: 21px;
+}
+
+html[data-runtime="mac-native"] .bw-panel {
+  overflow: hidden;
+  border-color: var(--bw-line);
+}
+
+html[data-runtime="mac-native"] .bw-panel-heading {
+  border-bottom: 1px solid var(--bw-line);
+  padding-block: 3px;
+}
+
+html[data-runtime="mac-native"] .bw-panel-title {
+  font-size: 13px;
+}
+
+html[data-runtime="mac-native"] .planner-workspace {
+  max-width: none;
+}
+
+html[data-runtime="mac-native"] .planner-focus {
+  gap: 8px;
+  padding: 5px 9px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+}
+
+html[data-runtime="mac-native"] .planner-month-day {
+  min-height: 84px;
+}
+
+html[data-runtime="mac-native"] .planner-month-day.is-selected,
+html[data-runtime="mac-native"] .planner-week-date.is-selected {
+  background: color-mix(in srgb, var(--bw-blue) 13%, var(--bw-panel));
+}
+
+html[data-runtime="mac-native"] .planner-event.is-chip {
+  border-left: 3px solid var(--bw-blue);
+  border-radius: 3px;
+}
+
+html[data-runtime="mac-native"] .planner-log-text {
+  min-height: 80px;
+}
+
+html[data-runtime="mac-native"] .planner-notes [data-testid="empty-state"] {
+  gap: 4px;
+  padding-block: 12px;
+}
+
+html[data-runtime="mac-native"] .planner-notes [data-testid="empty-state"] > div {
+  margin-top: 2px;
+}
+
+html[data-runtime="mac-native"] .planner-inspector.is-empty {
+  display: none;
+}
+
+@container (min-width: 1050px) {
+  html[data-runtime="mac-native"] .planner-canvas {
+    grid-template-columns: 260px minmax(0, 1fr);
+    grid-template-areas: "log calendar" "notes calendar" "inspector calendar";
+    gap: 8px;
+    align-items: start;
+  }
+
+  html[data-runtime="mac-native"] .planner-calendar { grid-area: calendar; }
+  html[data-runtime="mac-native"] .planner-daily-log { grid-area: log; }
+  html[data-runtime="mac-native"] .planner-notes { grid-area: notes; }
+  html[data-runtime="mac-native"] .planner-inspector { grid-area: inspector; }
+}

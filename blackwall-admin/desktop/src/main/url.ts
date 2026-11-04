@@ -22,7 +22,7 @@ export function isWebUrl(value: string): boolean {
  */
 const BLOCKED_SCHEMES = new Set([
   "javascript:", "data:", "file:", "blob:", "filesystem:", "about:", "chrome:", "chrome-extension:",
-  "chrome-error:", "devtools:", "view-source:", "bw-shell:", "ws:", "wss:", "ftp:",
+  "chrome-error:", "devtools:", "view-source:", "bw-shell:", "bw-native:", "ws:", "wss:", "ftp:",
 ])
 
 export type LinkKind = "web" | "external" | "blocked"
