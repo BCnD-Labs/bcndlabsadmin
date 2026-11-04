@@ -55,6 +55,15 @@ server.listen(0, "127.0.0.1", () => {
       await new Promise((resolve) => setTimeout(resolve, 100))
     }
     assert(runtime === "mac-native", "Mac desktop treatment is active")
+    // The workspace is the app: a slim title bar, no address bar; a browser tab brings the full chrome back.
+    const tabs = controller.tabs()!
+    const pinned = tabs.pinned!
+    assert(tabs.solo && tabs.chromeMode() === "strip" && pinned.view!.getBounds().y === 38, "Blackwall workspace sits under a slim title bar, not a browser toolbar")
+    const browserTab = tabs.add({ kind: "web", url: null }, { activate: true })
+    assert(!tabs.solo && tabs.chromeMode() === "full", "A browser tab brings back the tab strip and address bar")
+    tabs.close(browserTab)
+    tabs.activate(pinned.id)
+    assert(tabs.solo && tabs.chromeMode() === "strip" && pinned.view!.getBounds().y === 38, "Closing the browser tab returns to the plain workspace")
     const utilityStyles = await wc!.executeJavaScript(`(() => {
       const probe = document.createElement('div');
       probe.className = 'fixed flex items-center';

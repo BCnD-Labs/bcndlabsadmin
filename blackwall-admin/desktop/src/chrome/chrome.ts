@@ -143,6 +143,8 @@ function renderToolbar(s: ShellState) {
   const tab = active()
   document.body.classList.toggle("loading", !!tab?.loading)
   document.body.classList.toggle("fullscreen", s.fullscreen)
+  document.body.dataset.chrome = s.chromeMode
+  document.body.classList.toggle("solo", s.solo)
   back.disabled = !tab?.canGoBack
   forward.disabled = !tab?.canGoForward
   const url = tab?.url ?? ""

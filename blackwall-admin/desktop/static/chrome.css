@@ -285,6 +285,60 @@ body.fullscreen #tabstrip {
   border-bottom: 1px solid var(--bw-line);
 }
 
+/* ---------- Workspace mode: the app is the tool, not a browser ---------- */
+
+/* On the Blackwall workspace there is no address bar; the page area starts under the strip. */
+body[data-chrome="strip"] #toolbar,
+body[data-chrome="strip"] #progress {
+  display: none;
+}
+body[data-chrome="strip"] #page {
+  inset: var(--strip-h) 0 0 0;
+}
+/* Full screen with no browser tab open: the workspace fills the screen. */
+body[data-chrome="hidden"] #chrome {
+  display: none;
+}
+body[data-chrome="hidden"] #page {
+  inset: 0;
+}
+
+/* With no browser tab open the strip is just a title bar, with a button to open the browser. */
+#window-title {
+  display: none;
+}
+body.solo #tabs {
+  display: none;
+}
+body.solo #window-title {
+  display: block;
+  position: absolute;
+  inset: 0 var(--traffic) 0 var(--traffic);
+  line-height: var(--strip-h);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--bw-muted);
+  pointer-events: none;
+}
+body.solo #tabstrip {
+  position: relative;
+  align-items: center;
+}
+body.solo #new-tab {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  width: auto;
+  padding: 0 10px;
+  gap: 6px;
+  font-size: 12px;
+}
+body.solo #new-tab::after {
+  content: "Browser";
+}
+
 /* A small desktop tool strip, with a cool active edge and a physical divider. */
 #tabstrip { border-bottom: 1px solid var(--bw-line); }
 .tab.active { box-shadow: inset 0 2px 0 #82b1ea; }

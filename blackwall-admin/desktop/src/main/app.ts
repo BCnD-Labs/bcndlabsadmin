@@ -70,6 +70,8 @@ export function startShell(options: ShellOptions = {}): ShellController | null {
       tabs: tabs.state(),
       activeId: tabs.activeTabId,
       fullscreen: win.isFullScreen(),
+      chromeMode: tabs.chromeMode(),
+      solo: tabs.solo,
       webAddress: config.get().webAddress,
       overlay,
     }

@@ -43,7 +43,7 @@ export function buildMenu(a: MenuActions): Menu {
     {
       label: "File",
       submenu: [
-        { label: "New Tab", accelerator: "CmdOrCtrl+T", click: a.newTab },
+        { label: "New Browser Tab", accelerator: "CmdOrCtrl+T", click: a.newTab },
         { label: "Open Location…", accelerator: "CmdOrCtrl+L", click: a.focusAddress },
         { type: "separator" },
         { label: "Close Tab", accelerator: "CmdOrCtrl+W", click: a.closeTab },
