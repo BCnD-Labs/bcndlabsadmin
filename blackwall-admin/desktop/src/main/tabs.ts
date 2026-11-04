@@ -1,5 +1,6 @@
 import { Menu, WebContentsView, clipboard, shell, type BrowserWindow, type Session, type WebContents } from "electron"
 import { CHROME_HEIGHT, type FindResult, type TabError, type TabState } from "../shared/ipc.ts"
+import { NATIVE_HOME } from "./native-workspace.ts"
 import { classifyLink, sameOrigin } from "./url.ts"
 import { confirmExternal } from "./web-session.ts"
 
@@ -8,11 +9,10 @@ import { confirmExternal } from "./web-session.ts"
  * first shown. Tabs have no preload and no IPC: sandbox on, context isolation
  * on, Node off. Only the active tab's view is visible; it sits below the chrome.
  *
- * Kinds: "blackwall" is the pinned hosted web app, "web" is a normal tab. A
- * future pinned "native" tab (bundled Blackwall UI) would be another kind with
- * its own view setup; the manager only needs `pinned` and a view.
+ * Kinds: "native" is the pinned bundled Blackwall workspace, "web" is a
+ * normal browser tab.
  */
-export type TabKind = "blackwall" | "web"
+export type TabKind = "native" | "web"
 
 export interface TabInit {
   kind: TabKind
@@ -35,7 +35,6 @@ interface Tab {
 export interface TabHost {
   window: BrowserWindow
   session: Session
-  /** Pinned tab's home (the configured web address), or null when not set. */
   webAddress(): string | null
   /** True while the chrome draws a full-page panel; tab views are hidden then. */
   overlayOpen(): boolean
@@ -61,12 +60,12 @@ export class TabManager {
       view: null,
       url: init.url ?? "",
       // Empty for unloaded web tabs: the chrome falls back to the URL's host, then "New tab".
-      title: init.title || (init.kind === "blackwall" ? "Blackwall" : ""),
+      title: init.title || (init.kind === "native" ? "Blackwall" : ""),
       favicon: null,
       loading: false,
       error: null,
     }
-    if (tab.kind === "blackwall") this.tabs.unshift(tab)
+    if (tab.kind === "native") this.tabs.unshift(tab)
     else if (afterActive) this.tabs.splice(this.indexOf(this.activeId) + 1, 0, tab)
     else this.tabs.push(tab)
     if (eager && tab.url) this.createView(tab)
@@ -88,7 +87,7 @@ export class TabManager {
   }
 
   get pinned(): Tab | undefined {
-    return this.tabs.find((t) => t.kind === "blackwall")
+    return this.tabs.find((t) => t.kind === "native")
   }
 
   list(): readonly Tab[] {
@@ -125,7 +124,7 @@ export class TabManager {
   close(id: number): boolean {
     const i = this.indexOf(id)
     const tab = this.tabs[i]
-    if (!tab || tab.kind === "blackwall") return false
+    if (!tab || tab.kind === "native") return false
     this.tabs.splice(i, 1)
     this.destroyView(tab)
     if (this.activeId === id) {
@@ -179,7 +178,7 @@ export class TabManager {
       const wc = t.view && !t.view.webContents.isDestroyed() ? t.view.webContents : null
       return {
         id: t.id,
-        pinned: t.kind === "blackwall",
+        pinned: t.kind === "native",
         title: t.title,
         url: t.error?.url || t.url,
         favicon: t.favicon,
@@ -287,21 +286,33 @@ export class TabManager {
 
     // target=_blank / window.open → a new tab, never a new window.
     wc.setWindowOpenHandler(({ url, disposition }) => {
-      this.openLink(url, disposition !== "background-tab")
+      const server = this.host.webAddress()
+      if (tab.kind === "native" && url.startsWith("bw-native://app/")) this.load(tab.id, url)
+      else if (tab.kind === "native" && server && sameOrigin(url, server)) {
+        const target = new URL(url)
+        this.load(tab.id, NATIVE_HOME + target.pathname.slice(1) + target.search + target.hash)
+      } else this.openLink(url, disposition !== "background-tab")
       return { action: "deny" }
     })
 
     wc.on("will-navigate", (event) => {
       const url = event.url
+      if (tab.kind === "native" && url.startsWith("bw-native://app/")) return
+      const server = this.host.webAddress()
+      if (tab.kind === "native" && server && sameOrigin(url, server)) {
+        event.preventDefault()
+        const target = new URL(url)
+        this.load(tab.id, NATIVE_HOME + target.pathname.slice(1) + target.search + target.hash)
+        return
+      }
       const kind = classifyLink(url)
       if (kind !== "web") {
         event.preventDefault()
         if (kind === "external") void this.openExternal(url)
         return
       }
-      // The pinned tab stays on Blackwall; links to other sites open in a new tab.
-      const home = this.host.webAddress()
-      if (tab.kind === "blackwall" && home && !sameOrigin(url, home)) {
+      // The bundled workspace stays pinned; external pages open in a web tab.
+      if (tab.kind === "native") {
         event.preventDefault()
         this.openLink(url, true)
       }

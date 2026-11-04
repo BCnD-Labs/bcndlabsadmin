@@ -20,7 +20,7 @@ test("address bar: URLs load, bare hosts get a scheme, anything else searches", 
 })
 
 test("address bar never produces a non-web URL", () => {
-  for (const text of ["javascript:alert(1)", "file:///etc/passwd", "data:text/html,hi", "bw-shell://chrome/index.html", "chrome://gpu"]) {
+  for (const text of ["javascript:alert(1)", "file:///etc/passwd", "data:text/html,hi", "bw-shell://chrome/index.html", "bw-native://app/", "chrome://gpu"]) {
     const url = addressToUrl(text)
     assert.ok(url?.startsWith("https://duckduckgo.com/"), `${text} → ${url}`)
   }
@@ -31,7 +31,7 @@ test("links: web, external apps after confirmation, dangerous schemes blocked", 
   assert.equal(classifyLink("http://a.test/"), "web")
   assert.equal(classifyLink("mailto:a@b.test"), "external")
   assert.equal(classifyLink("obsidian://open?vault=x"), "external")
-  for (const url of ["javascript:alert(1)", "file:///etc/hosts", "data:text/html,x", "blob:https://a.test/1", "about:blank", "bw-shell://chrome/x", "chrome://settings", "not a url"]) {
+  for (const url of ["javascript:alert(1)", "file:///etc/hosts", "data:text/html,x", "blob:https://a.test/1", "about:blank", "bw-shell://chrome/x", "bw-native://app/", "chrome://settings", "not a url"]) {
     assert.equal(classifyLink(url), "blocked", url)
   }
 })

@@ -285,6 +285,13 @@ body.fullscreen #tabstrip {
   border-bottom: 1px solid var(--bw-line);
 }
 
+/* A small desktop tool strip, with a cool active edge and a physical divider. */
+#tabstrip { border-bottom: 1px solid var(--bw-line); }
+.tab.active { box-shadow: inset 0 2px 0 #82b1ea; }
+#toolbar { border-bottom-color: var(--bw-border); }
+#address { border-radius: 5px; }
+#address:focus, #find-input:focus, #web-address:focus { box-shadow: 0 0 0 2px rgba(130, 177, 234, 0.25); }
+
 #reload .i-stop,
 body.loading #reload .i-reload {
   display: none;
@@ -350,7 +357,7 @@ body.loading #reload .i-stop {
 #web-address:focus {
   border-color: var(--bw-muted);
   color: var(--bw-text);
-  box-shadow: 0 0 0 2px rgba(201, 42, 42, 0.35);
+  box-shadow: 0 0 0 2px rgba(130, 177, 234, 0.25);
 }
 
 #address::placeholder,

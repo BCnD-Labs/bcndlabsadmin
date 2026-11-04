@@ -10,7 +10,7 @@
     "lint": "oxlint",
     "check": "npm run typecheck && oxlint && vite build",
     "preview": "vite preview",
-    "desktop:compile": "tsc -b desktop && node desktop/scripts/copy-static.ts",
+    "desktop:compile": "npm run build && tsc -b desktop && node desktop/scripts/copy-static.ts",
     "desktop:dev": "npm run desktop:compile && electron desktop",
     "desktop:build": "npm run desktop:compile && node desktop/scripts/build.ts",
     "desktop:test": "node --test desktop/tests/*.test.ts",

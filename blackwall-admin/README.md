@@ -28,16 +28,16 @@ Blackwall is installable from its HTTPS (Tailscale) address and stays the same a
 
 ## Desktop app (macOS)
 
-`desktop/` is an Electron app for the Mac. Phase 1 is a tabbed browser whose first, pinned tab is your hosted Blackwall. You get the same server, data and sign-in as in the browser, inside a real app: its own window and Dock icon, green-button fullscreen and native menus. It needs no server changes, and the web app's code is untouched.
+`desktop/` is the installed Mac app. Its pinned workspace uses the interface bundled with the app and connects to your configured Blackwall server for data and sign-in. It has its own window and Dock icon, fullscreen, native menus, and optional browser tabs. Mac-specific spacing and Planner layout are scoped to the installed app.
 
 | Command | What it does |
 | --- | --- |
 | `npm run desktop:dev` | Compile `desktop/` and run it with Electron (profile: `~/Library/Application Support/Blackwall Dev`) |
 | `npm run desktop:build` | Build an unsigned app for this Mac's architecture: `release/mac-arm64/Blackwall.app` and `release/Blackwall-<version>-arm64.dmg` (gitignored) |
 | `npm run desktop:test` | Unit tests for the address bar, link rules and config |
-| `npx electron desktop/scripts/verify.ts <https-address> <dir>` | End-to-end check of the shell (after `desktop:compile`), with screenshots into `<dir>` |
+| `env -u ELECTRON_RUN_AS_NODE npx electron desktop/scripts/verify-native.ts` | Smoke check of the bundled workspace, API sign-in, and Planner (after `desktop:compile`) |
 
-**Web address.** On first launch the pinned tab asks for your Blackwall address (for example `https://blackwall.example.ts.net`). Change it any time from **Blackwall → Web Address…**. It's stored in `~/Library/Application Support/Blackwall/desktop-config.json`, along with the window size and position and your open tabs. Sign-in, the service worker and site data live in the app's own browser profile next to it. The app stores no passwords.
+**Web address.** On first launch the app asks for your Blackwall server address (for example `https://blackwall.example.ts.net`). Change it any time from **Blackwall → Web Address…**. The address is stored in `~/Library/Application Support/Blackwall/desktop-config.json`, along with the window size and open tabs. Sign-in cookies live in the app's own browser profile. The app stores no passwords. The bundled workspace does not register the hosted site's service worker.
 
 **Using it.** ⌘T new tab, ⌘W close tab (the pinned tab stays), ⌘L address bar, ⌘[ / ⌘] back/forward, ⌘R reload, ⌘1–9 pick a tab, ⇧⌘[ / ⇧⌘] previous/next tab, ⌘F find in page, ⌘= / ⌘- / ⌘0 zoom, ⌃⌘F fullscreen. Typing something that isn't an address searches DuckDuckGo. Links that open a new window open a new tab instead. Links to other sites from the pinned tab also open in a new tab. Links like `obsidian://` or `mailto:` ask before opening the other app. If a page can't load (server down, Tailscale off) or crashes, the tab shows the reason and a **Retry** button. Tabs and each tab's last page come back when you relaunch. Closing the window keeps Blackwall in the Dock, and clicking the Dock icon reopens it.
 
@@ -45,7 +45,7 @@ Blackwall is installable from its HTTPS (Tailscale) address and stays the same a
 
 **First launch of the unsigned app.** The build is ad-hoc signed, not signed with an Apple Developer ID, so Gatekeeper blocks it the first time it comes from a download or another Mac. Right-click (or Control-click) **Blackwall.app → Open → Open**, or use **System Settings → Privacy & Security → Open Anyway**. A build you made on this Mac usually opens directly. To install it, open the `.dmg` and drag Blackwall to Applications.
 
-**Not done yet.** There's no native Blackwall UI yet: the pinned "Native" tab with the bundled UI comes later, page by page. The app isn't signed with a Developer ID or notarized, and has no auto-update (rebuild to update). There are no notification or permission prompts (everything except clipboard write is denied), no history, bookmarks or extensions, and no drag-to-reorder for tabs. `window.open` popups that need their opener (some OAuth flows) won't work, because they open as ordinary tabs. Only macOS builds are set up.
+**Still evolving.** The bundled workspace currently shares the responsive feature implementations with Blackwall's web app; the Mac-specific desktop treatment begins with the shell and Planner. The app isn't signed with a Developer ID or notarized, and has no auto-update (rebuild to update). There are no notification or permission prompts (everything except clipboard write is denied), no history, bookmarks or extensions, and no drag-to-reorder for tabs. `window.open` popups that need their opener (some OAuth flows) won't work, because they open as ordinary tabs. Only macOS builds are set up.
 
 ## Run it
 

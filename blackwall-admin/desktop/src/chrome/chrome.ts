@@ -146,10 +146,11 @@ function renderToolbar(s: ShellState) {
   back.disabled = !tab?.canGoBack
   forward.disabled = !tab?.canGoForward
   const url = tab?.url ?? ""
-  security.className = url.startsWith("https://") ? "secure" : url.startsWith("http://") ? "insecure" : "none"
+  const native = url.startsWith("bw-native://app/")
+  security.className = native || url.startsWith("https://") ? "secure" : url.startsWith("http://") ? "insecure" : "none"
   security.title = url.startsWith("http://") ? "Not secure (http)" : ""
   // Don't overwrite what the user is typing, unless they switched tabs.
-  if (document.activeElement !== address || s.activeId !== shownActiveId) address.value = url
+  if (document.activeElement !== address || s.activeId !== shownActiveId) address.value = native ? `Blackwall  /  ${new URL(url).pathname.slice(1) || "Home"}` : url
   shownActiveId = s.activeId
 }
 

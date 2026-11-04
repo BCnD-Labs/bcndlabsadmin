@@ -21,9 +21,9 @@ export interface WindowState {
 
 export interface DesktopConfig {
   version: 1
-  /** The hosted Blackwall the pinned tab shows. Set from Blackwall → Web address… */
+  /** Server used by the bundled Mac workspace for data and sign-in. */
   webAddress: string | null
-  /** Last page of the pinned tab (same origin as webAddress), restored on launch. */
+  /** Last bundled workspace route, stored against the server origin for compatibility. */
   pinnedUrl: string | null
   window: WindowState
   tabs: SavedTab[]
