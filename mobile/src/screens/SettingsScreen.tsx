@@ -114,7 +114,6 @@ export function SettingsScreen(p: Props) {
                 <AddressForm
                   initial={p.address}
                   submitLabel="Save"
-                  autoFocus
                   onCancel={() => setEditing(false)}
                   onSubmit={async (url) => {
                     await p.onChangeAddress(url)

@@ -22,7 +22,7 @@ export function SetupScreen({ onSaved }: { onSaved: (url: string) => Promise<voi
               Enter the https address of your Blackwall server, for example its Tailscale address. It's saved only on
               this phone, and you can change it later in Settings.
             </Text>
-            <AddressForm submitLabel="Continue" onSubmit={onSaved} autoFocus />
+            <AddressForm submitLabel="Continue" onSubmit={onSaved} />
             <Text style={styles.note}>
               You sign in on the next screen, inside Blackwall itself. This app never stores your password.
             </Text>

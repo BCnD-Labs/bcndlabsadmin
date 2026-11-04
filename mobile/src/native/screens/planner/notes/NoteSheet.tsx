@@ -65,7 +65,7 @@ export function NoteSheet({ editor, data, onClose, compact = false }: { editor: 
       ) : (
         <>
           <Text style={styles.label}>Note</Text>
-          <TextInput value={draft.text} onChangeText={(text) => set({ text })} placeholder="Jot something down…" placeholderTextColor={color.faint} accessibilityLabel="Note" autoFocus={editor.mode === "create"} multiline textAlignVertical="top" style={[styles.input, compact ? styles.compactMulti : styles.multi]} />
+          <TextInput value={draft.text} onChangeText={(text) => set({ text })} placeholder="Jot something down…" placeholderTextColor={color.faint} accessibilityLabel="Note" multiline textAlignVertical="top" style={[styles.input, compact ? styles.compactMulti : styles.multi]} />
           {errors.text ? <Text style={styles.error}>{errors.text}</Text> : null}
 
           {compact ? <Pressable onPress={() => setMore(v => !v)} style={styles.more} accessibilityRole="button" accessibilityLabel={more ? "Fewer note properties" : "More note properties"} accessibilityState={{ expanded: more }}><Text style={styles.moreText}>{more ? "− Fewer properties" : "+ More properties"}</Text></Pressable> : null}

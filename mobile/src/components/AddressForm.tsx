@@ -9,11 +9,10 @@ type Props = {
   submitLabel: string
   onSubmit: (url: string) => void | Promise<void>
   onCancel?: () => void
-  autoFocus?: boolean
 }
 
 /** The Blackwall address field with validation, shared by first-run setup and Settings. */
-export function AddressForm({ initial = "", submitLabel, onSubmit, onCancel, autoFocus }: Props) {
+export function AddressForm({ initial = "", submitLabel, onSubmit, onCancel }: Props) {
   const [value, setValue] = useState(initial)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -50,7 +49,6 @@ export function AddressForm({ initial = "", submitLabel, onSubmit, onCancel, aut
         inputMode="url"
         returnKeyType="go"
         importantForAutofill="no"
-        autoFocus={autoFocus}
         onSubmitEditing={submit}
         accessibilityLabel="Blackwall address"
         accessibilityHint="Your Blackwall server's https address"

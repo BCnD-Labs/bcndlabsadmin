@@ -42,7 +42,7 @@ export function ProjectEditor({ value, data, onClose }: { value: Project | "new"
   return <Modal visible transparent animationType="fade" onRequestClose={onClose}><View style={s.backdrop}><View style={s.sheet}>
     <View style={s.header}><Text style={s.heading}>{previous ? "Edit project" : "New project"}</Text><Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close project editor"><Icon name="close" size={19} tint={c.text2} /></Pressable></View>
     <ScrollView style={s.scroll} contentContainerStyle={s.form} keyboardShouldPersistTaps="handled">
-      <Text style={s.label}>Name</Text><TextInput value={name} onChangeText={setName} autoFocus placeholder="Project name" placeholderTextColor={c.muted} accessibilityLabel="Project name" style={s.input} />
+      <Text style={s.label}>Name</Text><TextInput value={name} onChangeText={setName} placeholder="Project name" placeholderTextColor={c.muted} accessibilityLabel="Project name" style={s.input} />
       <Text style={s.label}>Short code</Text><TextInput value={code} onChangeText={setCode} placeholder={autoCode || "PRJ"} placeholderTextColor={c.muted} autoCapitalize="characters" maxLength={5} accessibilityLabel="Short code" style={s.input} />
       <Pressable onPress={() => setMore(v => !v)} style={s.more} accessibilityRole="button" accessibilityState={{ expanded: more }}><Text style={s.moreText}>{more ? "− Fewer details" : "+ More details"}</Text></Pressable>
       {more ? <><Text style={s.label}>Status</Text><View style={s.options}>{statuses.map(choice => <Pill key={choice} label={choice[0].toUpperCase() + choice.slice(1)} selected={status === choice} onPress={() => setStatus(choice)} />)}</View>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native"
 import { saveJournalItem, saveJournalLegacyText, type Collections } from "../../../../lib/shared.ts"
 import { MAX_LOG_SECTIONS, MAX_SECTION_TITLE } from "../../../../../../blackwall-admin/shared/journal-sections.ts"
@@ -20,7 +20,6 @@ export function DailyLogEditor({ data, day, logs, blocked }: { data: Collections
   const [active, setActive] = useState<string | null>(null)
   const [editor, setEditor] = useState<Editor | null>(null)
   const [quick, setQuick] = useState(false)
-  const input = useRef<ComponentRef<typeof TextInput>>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const busy = useRef(false)
@@ -40,7 +39,6 @@ export function DailyLogEditor({ data, day, logs, blocked }: { data: Collections
   function template(label: string) {
     changeDraft((value) => ({ ...value, text: appendPrompt(value.text, label) }))
     setQuick(false)
-    input.current?.focus()
   }
   async function saveInline() {
     if (!draft?.text.trim() || busy.current) return
@@ -107,7 +105,7 @@ export function DailyLogEditor({ data, day, logs, blocked }: { data: Collections
     {sections.length ? <View style={styles.tabsRow}><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs} keyboardShouldPersistTaps="handled">
       {[{ id: null, title: "Log" }, ...sections].map((section) => <Pressable key={section.id ?? "main"} onPress={() => setActive(section.id)} accessibilityRole="tab" accessibilityState={{ selected: active === section.id }} style={[styles.tab, active === section.id && styles.selected]}><Text style={[styles.tabText, active === section.id && styles.actionText]}>{section.title}</Text></Pressable>)}
     </ScrollView>{selected ? <Pressable disabled={!!blocked} onPress={() => { setError(null); setEditor({ kind: "section", id: selected.id, text: selected.title }) }} style={styles.icon} accessibilityRole="button" accessibilityLabel={`Rename ${selected.title}`}><Icon name="pencil-outline" tint={c.muted} size={14} /></Pressable> : null}</View> : null}
-    <TextInput ref={input} value={draft?.text ?? ""} editable={!saving && !blocked} onChangeText={(text) => changeDraft((value) => ({ ...value, text }))} multiline textAlignVertical="top" maxLength={1_000_000} placeholder="What happened today?" placeholderTextColor={c.muted} style={styles.composer} accessibilityLabel="New daily log entry" />
+    <TextInput value={draft?.text ?? ""} editable={!saving && !blocked} onChangeText={(text) => changeDraft((value) => ({ ...value, text }))} multiline textAlignVertical="top" maxLength={1_000_000} placeholder="What happened today?" placeholderTextColor={c.muted} style={styles.composer} accessibilityLabel="New daily log entry" />
     {draft?.text.trim() ? <View style={styles.composeActions}>
       <Pressable disabled={saving} onPress={() => changeDraft((value) => ({ ...value, asNote: !value.asNote }))} style={styles.noteToggle} accessibilityRole="checkbox" accessibilityState={{ checked: draft.asNote }} accessibilityLabel="Also save as a Note"><Icon name={draft.asNote ? "checkbox-outline" : "square-outline"} size={17} tint={draft.asNote ? c.accent : c.muted} /><Text style={styles.tabText}>Save as Note</Text></Pressable>
       <Pressable disabled={saving || !!blocked} onPress={() => void saveInline()} style={[styles.pill, styles.savePill]} accessibilityRole="button" accessibilityLabel="Save entry"><Text style={styles.saveText}>{saving ? "Saving…" : "Save entry"}</Text></Pressable>
@@ -125,7 +123,7 @@ export function DailyLogEditor({ data, day, logs, blocked }: { data: Collections
           {sections.length < MAX_LOG_SECTIONS ? <Pressable onPress={() => { setQuick(false); setEditor({ kind: "section", text: "" }) }} style={[styles.quickRow, styles.quickSection]} accessibilityRole="button" accessibilityLabel="Add daily log section"><Icon name="albums-outline" size={16} tint={c.accent} /><Text style={styles.quickText}>Add section</Text></Pressable> : null}
         </View> : <View style={styles.dialog} accessibilityViewIsModal>
           <View style={styles.header}><Text style={styles.modalTitle}>{editor?.kind === "section" ? editor.id ? "Rename section" : "Add section" : editor?.legacy || items.some((item) => item.id === editor?.id) ? "Edit entry" : "Add entry"}</Text><Pressable disabled={saving} onPress={close} style={styles.icon} accessibilityRole="button" accessibilityLabel="Close log editor"><Icon name="close" size={17} tint={c.muted} /></Pressable></View>
-          <TextInput autoFocus value={editor?.text ?? ""} editable={!saving} onChangeText={(text) => setEditor((value) => value ? { ...value, text } : null)} maxLength={editor?.kind === "section" ? MAX_SECTION_TITLE : 1_000_000} multiline={editor?.kind === "entry"} textAlignVertical="top" placeholder={editor?.kind === "section" ? "Section name" : "What happened?"} placeholderTextColor={c.muted} style={[styles.input, editor?.kind === "entry" && styles.notes]} accessibilityLabel={editor?.kind === "section" ? "Section name" : "Log entry"} />
+          <TextInput value={editor?.text ?? ""} editable={!saving} onChangeText={(text) => setEditor((value) => value ? { ...value, text } : null)} maxLength={editor?.kind === "section" ? MAX_SECTION_TITLE : 1_000_000} multiline={editor?.kind === "entry"} textAlignVertical="top" placeholder={editor?.kind === "section" ? "Section name" : "What happened?"} placeholderTextColor={c.muted} style={[styles.input, editor?.kind === "entry" && styles.notes]} accessibilityLabel={editor?.kind === "section" ? "Section name" : "Log entry"} />
           {editor?.kind === "entry" ? <Pressable disabled={saving} onPress={() => setEditor((value) => value?.kind === "entry" ? { ...value, asNote: !value.asNote } : value)} style={styles.noteToggle} accessibilityRole="checkbox" accessibilityState={{ checked: editor.asNote }} accessibilityLabel="Also save as a Note"><Icon name={editor.asNote ? "checkbox-outline" : "square-outline"} size={17} tint={editor.asNote ? c.accent : c.muted} /><Text style={styles.tabText}>Also save as a Note</Text></Pressable> : null}
           {error ? <Text style={styles.error} accessibilityLiveRegion="polite">{error}</Text> : null}
           <View style={styles.actions}><Pressable disabled={saving} onPress={close} style={styles.pill} accessibilityRole="button"><Text style={styles.tabText}>Cancel</Text></Pressable><Pressable disabled={saving || !editor?.text.trim()} onPress={() => void save()} style={[styles.pill, styles.selected]} accessibilityRole="button" accessibilityState={{ disabled: saving || !editor?.text.trim() }}><Text style={styles.actionText}>{saving ? "Saving…" : editor?.kind === "section" && !editor.id ? "Add" : "Save"}</Text></Pressable></View>
