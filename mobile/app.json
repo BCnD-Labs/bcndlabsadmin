@@ -2,7 +2,7 @@
   "expo": {
     "name": "Blackwall",
     "slug": "blackwall",
-    "version": "0.18.0",
+    "version": "0.19.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -12,7 +12,7 @@
     ],
     "android": {
       "package": "dev.bcndlabs.blackwall",
-      "versionCode": 18,
+      "versionCode": 19,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#c92a2a"
