@@ -5,7 +5,7 @@
 export { validWorkspace, emptyWorkspace, mergeWorkspace, same, COLLECTION_KEYS } from "../../../blackwall-admin/shared/workspace.ts"
 export type { Collections, WorkspaceSnapshot } from "../../../blackwall-admin/shared/workspace.ts"
 export { validPlannerFields, validDateKey, REFLECTION_ITEMS } from "../../../blackwall-admin/shared/planner.ts"
-export { toggleTask, createTask, updateTask, removeTask, toggleStar, saveJournal, saveJournalSections, saveJournalItem, saveJournalLegacyText, moveJournal, createNote, updateNote, removeNote, togglePin, createCourse, updateCourse } from "../../../blackwall-admin/shared/records.ts"
+export { defaultMakeId, toggleTask, createTask, updateTask, removeTask, toggleStar, saveJournal, saveJournalSections, saveJournalItem, saveJournalLegacyText, moveJournal, createNote, updateNote, removeNote, togglePin, createCourse, updateCourse } from "../../../blackwall-admin/shared/records.ts"
 export type { NewTask, NewNote, NewCourse } from "../../../blackwall-admin/shared/records.ts"
 export { GROUP_ORDER, TASK_TABS, compareTasks, groupOf, inTab, isForToday, isOverdue, matchesSearch, normalizeSearch, taskGroups, taskRows, parseQuickAdd } from "../../../blackwall-admin/shared/task-rules.ts"
 export type { TaskGroup, TaskTab } from "../../../blackwall-admin/shared/task-rules.ts"
