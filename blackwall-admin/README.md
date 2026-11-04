@@ -34,6 +34,7 @@ Blackwall is installable from its HTTPS (Tailscale) address and stays the same a
 | --- | --- |
 | `npm run desktop:dev` | Compile `desktop/` and run it with Electron (profile: `~/Library/Application Support/Blackwall Dev`) |
 | `npm run desktop:build` | Build an unsigned app for this Mac's architecture: `release/mac-arm64/Blackwall.app` and `release/Blackwall-<version>-arm64.dmg` (gitignored) |
+| `node desktop/scripts/publish.ts [--notes "…"]` | Upload the build you just made to a GitHub `mac-build-<n>` prerelease so installed Mac apps can update from Settings. Bump `version` in `desktop/package.json` first |
 | `npm run desktop:test` | Unit tests for the address bar, link rules and config |
 | `env -u ELECTRON_RUN_AS_NODE npx electron desktop/scripts/verify-native.ts` | Smoke check of the bundled workspace, API sign-in, and Planner (after `desktop:compile`) |
 

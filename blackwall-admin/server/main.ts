@@ -4,7 +4,7 @@ import path from "node:path"
 import { createApi } from "./app.ts"
 import { Sessions } from "./auth.ts"
 import { loadKey } from "./crypto.ts"
-import { newestUpdatesDir, serveAppUpdates } from "./app-updates.ts"
+import { MAC, newestUpdatesDir, serveAppUpdates } from "./app-updates.ts"
 import { GithubAppUpdates } from "./app-updates-github.ts"
 import { serveStatic } from "./static.ts"
 import { PostgresConnectionStore } from "./store-postgres.ts"
@@ -47,8 +47,16 @@ const githubUpdates = updateConfig.githubToken
     })
   : undefined
 const appUpdatesDir = () => newestUpdatesDir([githubUpdates?.cacheDir, manualUpdatesDir])
+// The Mac app's builds are kept next to the Android ones and come from GitHub the same way, or from
+// a mac/ folder inside the manual drop folder.
+const macGithubUpdates = githubUpdates
+  ? new GithubAppUpdates({ platform: "mac", repo: updateConfig.repo, token: updateConfig.githubToken!, cacheDir: path.join(githubUpdates.cacheDir, "mac") })
+  : undefined
+const macUpdatesDir = () => newestUpdatesDir([macGithubUpdates?.cacheDir, manualUpdatesDir && path.join(manualUpdatesDir, "mac")], MAC)
 const LOOPBACK_HOST = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/
-const appUpdates = serveAppUpdates(appUpdatesDir, (host) => LOOPBACK_HOST.test(host) || allowedHosts.includes(host))
+const hostAllowed = (host: string) => LOOPBACK_HOST.test(host) || allowedHosts.includes(host)
+const appUpdates = serveAppUpdates(appUpdatesDir, hostAllowed)
+const macUpdates = serveAppUpdates(macUpdatesDir, hostAllowed, MAC)
 
 const api = createApi({
   store,
@@ -59,6 +67,8 @@ const api = createApi({
   appUpdatesDir,
   // The phone gives a check 10 seconds; a download that takes longer finishes in the background.
   beforeAppUpdates: githubUpdates ? () => githubUpdates.refreshWithin(6000) : undefined,
+  macUpdatesDir,
+  beforeMacUpdates: macGithubUpdates ? () => macGithubUpdates.refreshWithin(6000) : undefined,
   health: async () => {
     await store.ping()
     return { database: "ok" }
@@ -86,13 +96,14 @@ const server = createServer((req, res) => {
     return res.end("ok")
   }
   if (url.startsWith("/api/")) return void api(req, res)
-  if (url.startsWith("/app-updates/")) return appUpdates(req, res)
+  if (url.startsWith("/app-updates/")) return (url.split("?")[0].endsWith(".dmg") ? macUpdates : appUpdates)(req, res)
   files(req, res)
 })
 
 server.listen(port, () => {
   console.log(`[blackwall] listening on :${port}; store ${store.where}; allowed hosts: ${allowedHosts.join(", ") || "(loopback only)"}`)
   void githubUpdates?.refresh() // have the newest build ready before the phone asks
+  void macGithubUpdates?.refresh()
 })
 
 for (const sig of ["SIGTERM", "SIGINT"] as const) {

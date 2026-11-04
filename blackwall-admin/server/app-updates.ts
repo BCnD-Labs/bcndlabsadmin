@@ -17,16 +17,28 @@ import path from "node:path"
 export type UpdateManifest = { versionCode: number; versionName: string; file: string; sha256?: string; md5?: string; notes?: string }
 
 export const APK_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,100}\.apk$/
+/** `Blackwall-<version>-<arch>.dmg`, the name electron-builder gives the Mac installer. */
+export const DMG_NAME = /^Blackwall-\d{1,4}\.\d{1,4}\.\d{1,4}-(?:arm64|x64)\.dmg$/
+
+/** What differs between the phone's updates and the Mac app's: the manifest's name, the files it may name, how they're served. */
+export interface UpdateKind {
+  manifest: string
+  file: RegExp
+  contentType: string
+}
+export const ANDROID: UpdateKind = { manifest: "android.json", file: APK_NAME, contentType: "application/vnd.android.package-archive" }
+/** The Mac app (Blackwall-<version>-arm64.dmg plus mac.json), published by desktop/scripts/publish.ts. */
+export const MAC: UpdateKind = { manifest: "mac.json", file: DMG_NAME, contentType: "application/x-apple-diskimage" }
 
 /** A folder, or a function that picks one per request (when updates can come from more than one place). */
 export type UpdatesDir = string | undefined | (() => string | undefined)
 const resolveDir = (dir: UpdatesDir) => (typeof dir === "function" ? dir() : dir)
 
-export function parseUpdateManifest(value: unknown): UpdateManifest | null {
+export function parseUpdateManifest(value: unknown, kind: UpdateKind = ANDROID): UpdateManifest | null {
   if (!value || typeof value !== "object") return null
   const m = value as Record<string, unknown>
   if (typeof m.versionCode !== "number" || !Number.isInteger(m.versionCode) || m.versionCode < 1) return null
-  if (typeof m.file !== "string" || !APK_NAME.test(m.file)) return null
+  if (typeof m.file !== "string" || !kind.file.test(m.file)) return null
   return {
     versionCode: m.versionCode,
     versionName: typeof m.versionName === "string" && m.versionName.length <= 40 ? m.versionName : String(m.versionCode),
@@ -38,28 +50,28 @@ export function parseUpdateManifest(value: unknown): UpdateManifest | null {
 }
 
 /** The current manifest, or null when the folder, file or JSON is missing or invalid. */
-export function readUpdateManifest(source: UpdatesDir): UpdateManifest | null {
+export function readUpdateManifest(source: UpdatesDir, kind: UpdateKind = ANDROID): UpdateManifest | null {
   const dir = resolveDir(source)
   if (!dir) return null
   try {
-    return parseUpdateManifest(JSON.parse(readFileSync(path.join(dir, "android.json"), "utf8")))
+    return parseUpdateManifest(JSON.parse(readFileSync(path.join(dir, kind.manifest), "utf8")), kind)
   } catch {
     return null
   }
 }
 
 /** Of several update folders, the one whose manifest has the highest build number (undefined when none has one). */
-export function newestUpdatesDir(dirs: (string | undefined)[]): string | undefined {
+export function newestUpdatesDir(dirs: (string | undefined)[], kind: UpdateKind = ANDROID): string | undefined {
   let best: { dir: string; code: number } | undefined
   for (const dir of dirs) {
-    const code = readUpdateManifest(dir)?.versionCode
+    const code = readUpdateManifest(dir, kind)?.versionCode
     if (dir && code !== undefined && (!best || code > best.code)) best = { dir, code }
   }
   return best?.dir
 }
 
-/** GET /app-updates/<file>: streams the manifest's .apk; 404 for anything else. */
-export function serveAppUpdates(source: UpdatesDir, hostAllowed: (host: string) => boolean) {
+/** GET /app-updates/<file>: streams the file the manifest names; 404 for anything else. */
+export function serveAppUpdates(source: UpdatesDir, hostAllowed: (host: string) => boolean, kind: UpdateKind = ANDROID) {
   return function serve(req: IncomingMessage, res: ServerResponse) {
     const fail = (status: number) => {
       res.statusCode = status
@@ -74,7 +86,7 @@ export function serveAppUpdates(source: UpdatesDir, hostAllowed: (host: string) 
       return fail(400)
     }
     const dir = resolveDir(source)
-    const manifest = readUpdateManifest(dir)
+    const manifest = readUpdateManifest(dir, kind)
     if (!dir || !manifest || name !== manifest.file) return fail(404)
     const file = path.join(dir, manifest.file)
     let size: number
@@ -86,7 +98,7 @@ export function serveAppUpdates(source: UpdatesDir, hostAllowed: (host: string) 
       return fail(404)
     }
     res.statusCode = 200
-    res.setHeader("Content-Type", "application/vnd.android.package-archive")
+    res.setHeader("Content-Type", kind.contentType)
     res.setHeader("Content-Length", String(size))
     res.setHeader("Content-Disposition", `attachment; filename="${manifest.file}"`)
     res.setHeader("X-Content-Type-Options", "nosniff")
