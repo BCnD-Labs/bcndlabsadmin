@@ -89,7 +89,7 @@ export function NotesView({ data, blocked, compact = false, hideAdd = false, con
           {rows(others)}
         </>
       )}
-      {editor ? <NoteSheet editor={editor} data={data} onClose={() => setEditor(null)} compact={compact} /> : null}
+      {editor ? <NoteSheet editor={editor} data={data} onClose={() => setEditor(null)} compact /> : null}
     </View>
   )
 }
