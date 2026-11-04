@@ -170,8 +170,8 @@ export class TabManager {
   chromeMode(): ChromeMode {
     const tab = this.active
     if (tab?.kind !== "native") return "full"
-    const immersive = this.solo && this.host.window.isFullScreen() && !tab.error && !this.host.overlayOpen()
-    return immersive ? "hidden" : "strip"
+    // The workspace owns the title bar unless a tab strip is needed above it or a panel/error is showing.
+    return this.solo && !tab.error && !this.host.overlayOpen() ? "hidden" : "strip"
   }
 
   /** Positions and shows the active view below the chrome; hides the others. */

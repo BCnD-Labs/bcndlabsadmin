@@ -1,12 +1,11 @@
 import { useEffect, useRef } from "react"
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom"
 import { format } from "date-fns"
-import { ArrowLeft, Search, Settings2 } from "lucide-react"
+import { ArrowLeft, Globe, PanelLeft, PanelRight, Search, Settings2 } from "lucide-react"
 import { CategoryIcon } from "@/components/common/category-icon"
 import { Button } from "@/components/ui/button"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Toaster } from "@/components/ui/sonner"
-import { CalendarMenu } from "@/components/layout/calendar-menu"
 import { CommandSearch } from "@/components/layout/command-search"
 import { Notifications } from "@/components/layout/notifications"
 import { QuickCreate } from "@/components/layout/quick-create"
@@ -21,6 +20,11 @@ import { useWorkspaceSync } from "@/services/workspace-sync"
 import { usePageHead } from "@/stores/page-head"
 import { usePrefs } from "@/stores/prefs"
 import { useUi } from "@/stores/ui"
+import { useDock } from "./dock/dock-store"
+import { ToolDock } from "./dock/tool-dock"
+
+/** Opens a browser tab in the Mac app (the workspace has no browser chrome of its own). */
+const openBrowser = () => fetch("/__mac/shell/browser", { method: "POST", headers: { "X-Blackwall": "1" } }).catch(() => undefined)
 
 /** The Mac renderer owns its navigation and window layout; feature pages share records and APIs. */
 export function MacShell() {
@@ -36,6 +40,10 @@ export function MacShell() {
   const workspaceReady = useWorkspaceSync((s) => s.ready)
   const setSearchOpen = useUi((s) => s.setSearchOpen)
   const openSettings = useUi((s) => s.openSettings)
+  const navOpen = useDock((s) => s.navOpen)
+  const dockOpen = useDock((s) => s.open)
+  const toggleNav = useDock((s) => s.toggleNav)
+  const toggleDock = useDock((s) => s.toggleDock)
   const mainRef = useRef<HTMLElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
 
@@ -66,6 +74,12 @@ export function MacShell() {
         event.preventDefault()
         useUi.getState().openSettings()
       }
+      // As in VS Code: ⌘B hides the left sidebar, ⌥⌘B the right one.
+      if (event.metaKey && !event.shiftKey && event.code === "KeyB") {
+        event.preventDefault()
+        if (event.altKey) useDock.getState().toggleDock()
+        else useDock.getState().toggleNav()
+      }
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
@@ -83,49 +97,54 @@ export function MacShell() {
     <TooltipProvider delayDuration={250}>
       <a href="#main" className="sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-foreground">Skip to content</a>
       <div className="mac-shell">
-        <nav className="mac-rail" aria-label="Primary navigation">
-          <Link className="mac-mark" to="/" aria-label="Blackwall home">BW</Link>
-          <div className="mac-rail-items">
-            {nav.map((item) => <Link key={item.id} to={item.to} title={item.label} aria-label={item.label} aria-current={isActive(item, pathname) ? "page" : undefined} className="mac-rail-link"><CategoryIcon category={item.category} /></Link>)}
-          </div>
-          <div className="mac-rail-bottom"><SyncStatus /><button type="button" className="mac-rail-settings" onClick={() => openSettings()} aria-label="Settings" title="Settings"><Settings2 size={17} /></button></div>
-        </nav>
-
-        <nav className="mac-navigator" aria-label="Workspace sections">
-          <div className="mac-navigator-head"><span>BLACKWALL</span><strong>Workspace</strong></div>
-          <div className="mac-nav-tree">
-            {nav.map((item) => {
-              const selected = isActive(item, pathname)
-              return <div className="mac-nav-group" key={item.id}>
-                <Link to={item.to} aria-current={selected && !currentChild ? "page" : undefined} className="mac-nav-parent" data-active={selected}><CategoryIcon category={item.category} /> <span>{item.label}</span></Link>
-                {selected && item.children && <div className="mac-nav-children">{item.children.map((child) => <Link key={child.to} to={child.to} aria-current={currentChild === child ? "page" : undefined} className="mac-nav-child">{child.label}</Link>)}</div>}
-              </div>
-            })}
-          </div>
-          <div className="mac-navigator-foot"><span>LOCAL WORKSPACE</span><span>{format(now, "EEE · MMM d")}</span></div>
-        </nav>
-
-        <div className="mac-stage">
-          <div className="mac-stage-header" ref={headerRef}>
-            <div className="mac-command-bar">
-              <div className="mac-breadcrumb"><span>BLACKWALL</span><span className="mac-breadcrumb-divider">/</span><span>{destination?.label ?? "Workspace"}</span>{currentChild && <><span className="mac-breadcrumb-divider">/</span><span>{currentChild.label}</span></>}</div>
-              <div className="mac-command-actions"><CalendarMenu /><button className="mac-search" type="button" onClick={() => setSearchOpen(true)} aria-label="Search workspace"><Search size={14} /><span>Search</span><kbd>⌘K</kbd></button><QuickCreate quiet /><Notifications /></div>
-            </div>
-            <div className="mac-page-bar">
-              <div className="mac-page-identity">
-                {head.back && <Link className="mac-back" to={head.back.to} aria-label={`Back to ${head.back.label}`}><ArrowLeft size={15} /></Link>}
-                <CategoryIcon category={destination?.category ?? "home"} />
-                <div className="mac-page-title"><h1>{head.title ?? currentChild?.label ?? destination?.label ?? "Home"}</h1>{head.subtitle && <span>{head.subtitle}</span>}</div>
-                {head.badge}
-              </div>
-              {head.actions && <div className="mac-head-actions">{head.actions}</div>}
+        <header className="mac-titlebar" ref={headerRef}>
+          <div className="mac-titlebar-lead">
+            <button type="button" className="mac-tb-btn" onClick={toggleNav} aria-label={navOpen ? "Hide navigation" : "Show navigation"} aria-pressed={navOpen} title="Navigation"><PanelLeft size={15} /></button>
+            {head.back && <Link className="mac-tb-btn" to={head.back.to} aria-label={`Back to ${head.back.label}`}><ArrowLeft size={15} /></Link>}
+            <div className="mac-page-identity">
+              <CategoryIcon category={destination?.category ?? "home"} />
+              <div className="mac-page-title"><h1>{head.title ?? currentChild?.label ?? destination?.label ?? "Home"}</h1>{head.subtitle && <span>{head.subtitle}</span>}</div>
+              {head.badge}
             </div>
           </div>
+          <button className="mac-search" type="button" onClick={() => setSearchOpen(true)} aria-label="Search workspace"><Search size={14} /><span>Search Blackwall</span><kbd>⌘K</kbd></button>
+          <div className="mac-titlebar-tail">
+            {head.actions && <div className="mac-head-actions">{head.actions}</div>}
+            <QuickCreate quiet />
+            <Notifications />
+            <button type="button" className="mac-tb-btn" onClick={() => void openBrowser()} aria-label="Open a browser tab" title="Browser (⌘T)"><Globe size={15} /></button>
+            <button type="button" className="mac-tb-btn" onClick={toggleDock} aria-label={dockOpen ? "Hide tools" : "Show tools"} aria-pressed={dockOpen} title="Tools"><PanelRight size={15} /></button>
+            <button type="button" className="mac-tb-btn" onClick={() => openSettings()} aria-label="Settings" title="Settings (⌘,)"><Settings2 size={15} /></button>
+          </div>
+        </header>
+
+        <div className="mac-body">
+          {navOpen && (
+            <nav className="mac-navigator" aria-label="Workspace sections">
+              <div className="mac-nav-tree">
+                {nav.map((item) => {
+                  const selected = isActive(item, pathname)
+                  return <div className="mac-nav-group" key={item.id}>
+                    <Link to={item.to} aria-current={selected && !currentChild ? "page" : undefined} className="mac-nav-parent" data-active={selected}><CategoryIcon category={item.category} /> <span>{item.label}</span></Link>
+                    {selected && item.children && <div className="mac-nav-children">{item.children.map((child) => <Link key={child.to} to={child.to} aria-current={currentChild === child ? "page" : undefined} className="mac-nav-child">{child.label}</Link>)}</div>}
+                  </div>
+                })}
+              </div>
+            </nav>
+          )}
           <main id="main" className="mac-main" ref={mainRef} tabIndex={-1} data-layout="responsive">
             <WorkspaceStatus connected />
             {workspaceReady && <Outlet />}
           </main>
+          {workspaceReady && <ToolDock />}
         </div>
+
+        <footer className="mac-statusbar">
+          <SyncStatus />
+          <span className="mac-status-item">{destination?.label ?? "Workspace"}{currentChild ? ` › ${currentChild.label}` : ""}</span>
+          <span className="mac-tool-spacer" />
+          <span className="mac-status-item">{format(now, "EEE, MMM d · h:mm a")}</span>
+        </footer>
       </div>
       {workspaceReady && <><FormHost /><SettingsModal /><CommandSearch /></>}
       <Toaster position="bottom-right" />

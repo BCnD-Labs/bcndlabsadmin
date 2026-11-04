@@ -10,9 +10,10 @@ export const CHROME_HEIGHT = 78
 export const STRIP_HEIGHT = 38
 
 /**
- * How much of the chrome shows. On the Blackwall workspace the app is the tool, not a browser:
- * only a slim title bar ("strip"), and nothing at all in full screen when no browser tab is open
- * ("hidden"). A browser tab brings back the tab strip and address bar ("full").
+ * How much of the chrome shows. On the Blackwall workspace the app is the tool, not a browser. With no
+ * browser tab open the workspace draws its own title bar ("hidden": no chrome at all). With browser tabs
+ * open, a slim tab strip sits above the workspace ("strip"). A browser tab itself gets the tab strip and
+ * address bar ("full").
  */
 export type ChromeMode = "full" | "strip" | "hidden"
 export const CHROME_HEIGHTS: Record<ChromeMode, number> = { full: CHROME_HEIGHT, strip: STRIP_HEIGHT, hidden: 0 }
