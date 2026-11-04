@@ -121,7 +121,7 @@ function ToolRow({ name, description, url, status, isOpen, selected, onPress, on
       </Pressable><Pressable onPress={onEdit} style={s.edit} accessibilityRole="button" accessibilityLabel={`Edit ${name}`}><Icon name="create-outline" size={15} tint={c.muted} /></Pressable></View>
       {selected ? (
         <View style={s.strip}>
-          <Text style={s.detail}>{target.kind === "browser" ? "Plain http:// isn't loaded inside the app yet." : "This isn't a web address. Fix it on the web Mikoshi page."}</Text>
+          <Text style={s.detail}>{target.kind === "browser" ? "Plain http:// isn't loaded inside the app yet." : "This isn't a web address. Tap the edit button to fix it."}</Text>
           {target.kind === "browser" ? <Pressable onPress={() => void Linking.openURL(target.url).catch(() => undefined)} style={s.pill} accessibilityRole="button" accessibilityLabel={`Open ${name} in the browser`}><Icon name="open-outline" size={12} tint={c.accent} /><Text style={s.pillText}>Open in browser</Text></Pressable> : null}
         </View>
       ) : null}
