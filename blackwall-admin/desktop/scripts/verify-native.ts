@@ -55,6 +55,16 @@ server.listen(0, "127.0.0.1", () => {
       await new Promise((resolve) => setTimeout(resolve, 100))
     }
     assert(runtime === "mac-native", "Mac desktop treatment is active")
+    const utilityStyles = await wc!.executeJavaScript(`(() => {
+      const probe = document.createElement('div');
+      probe.className = 'fixed flex items-center';
+      document.body.append(probe);
+      const style = getComputedStyle(probe);
+      const result = { position: style.position, display: style.display, alignItems: style.alignItems };
+      probe.remove();
+      return result;
+    })()`)
+    assert(utilityStyles.position === "fixed" && utilityStyles.display === "flex" && utilityStyles.alignItems === "center", "Shared page utilities are present in the Mac bundle")
     const result = await wc!.executeJavaScript(`(async () => {
       const before = await fetch('/api/session', { headers: { 'X-Blackwall': '1' } }).then(r => r.json());
       await fetch('/api/login', { method: 'POST', headers: { 'X-Blackwall': '1', 'Content-Type': 'application/json' }, body: '{}' });
@@ -79,6 +89,8 @@ server.listen(0, "127.0.0.1", () => {
     })`)
     assert(macFrame.rail && macFrame.sections && macFrame.command && !macFrame.hostedShell, "Mac workspace uses its own navigation and command shell")
     assert(!macFrame.focusedEditor, "Mac workspace does not focus an editor on arrival")
+    const headerHeight = await wc!.executeJavaScript("document.querySelector('.mac-stage-header')?.getBoundingClientRect().height")
+    assert(headerHeight > 60 && headerHeight < 120, "Mac command and page bars stay compact")
     await wc!.executeJavaScript(`location.href = ${JSON.stringify(`http://127.0.0.1:${address.port}/productivity`)}`)
     await new Promise((resolve) => setTimeout(resolve, 150))
     assert(wc!.getURL() === "bw-native://app/productivity", "Links back to the server stay in the Mac workspace")
@@ -89,12 +101,29 @@ server.listen(0, "127.0.0.1", () => {
       assert(await wc!.executeJavaScript("document.querySelector('[aria-label=\"Calendar view\"] [data-value=\"month\"]')?.getAttribute('aria-selected') === 'true'"), "Month view control follows the calendar")
       writeFileSync(process.env.BW_NATIVE_MONTH_SHOT, (await wc!.capturePage()).toPNG())
     }
-    await wc!.executeJavaScript("document.querySelector('a.mac-nav-child[href=\"/productivity/learning\"]')?.click()")
+    for (let i = 0; i < 40; i++) {
+      if (await wc!.executeJavaScript("!!document.querySelector('a.mac-nav-child[href=\"/productivity/learning\"]')")) break
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+    assert(await wc!.executeJavaScript("!!document.querySelector('a.mac-nav-child[href=\"/productivity/learning\"]')"), "Learning appears in the Mac section tree")
+    await wc!.executeJavaScript("document.querySelector('a.mac-nav-child[href=\"/productivity/learning\"]').click()")
     for (let i = 0; i < 40; i++) {
       if (await wc!.executeJavaScript("document.querySelector('.mac-page-title h1')?.textContent === 'Learning'")) break
       await new Promise((resolve) => setTimeout(resolve, 100))
     }
-    assert(await wc!.executeJavaScript("location.pathname === '/productivity/learning' && document.querySelector('.mac-page-title h1')?.textContent === 'Learning'"), "Section tree opens Learning inside the Mac workspace")
+    const learningNavigation = await wc!.executeJavaScript("({ path: location.pathname, title: document.querySelector('.mac-page-title h1')?.textContent, link: !!document.querySelector('a.mac-nav-child[href=\"/productivity/learning\"]') })")
+    assert(learningNavigation.path === "/productivity/learning" && learningNavigation.title === "Learning", `Section tree opens Learning inside the Mac workspace (${JSON.stringify(learningNavigation)})`)
+    await wc!.executeJavaScript("document.querySelector('.mac-mark')?.click()")
+    for (let i = 0; i < 40; i++) {
+      if (await wc!.executeJavaScript("!!document.querySelector('[data-testid=home-grid]')")) break
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+    const homeLayout = await wc!.executeJavaScript(`(() => {
+      const grid = document.querySelector('[data-testid=home-grid]');
+      if (!grid) return null;
+      return { display: getComputedStyle(grid).display, columns: getComputedStyle(grid).gridTemplateColumns.split(' ').length };
+    })()`)
+    assert(homeLayout?.display === "grid" && homeLayout.columns >= 2, `Home panels use their desktop grid (${JSON.stringify(homeLayout)})`)
     const sw = await wc!.executeJavaScript("navigator.serviceWorker ? navigator.serviceWorker.getRegistration().then(r => !!r).catch(() => false) : false")
     assert(sw === false, "Bundled workspace does not register the web service worker")
     app.exit(0)
