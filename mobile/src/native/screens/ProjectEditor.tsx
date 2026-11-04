@@ -1,10 +1,11 @@
 import { useState } from "react"
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native"
-import { defaultMakeId, type Collections } from "../../lib/shared.ts"
+import type { Collections } from "../../lib/shared.ts"
 import { useWorkspace } from "../data/WorkspaceProvider.tsx"
 import { plannerColor as c } from "../planner-theme.ts"
 import { Icon } from "../ui.tsx"
 import { Pill } from "./learning/LearningControls.tsx"
+import { saveProjectRecord } from "./project-records.ts"
 
 type Project = Collections["projects"][number]
 type Status = Project["status"]
@@ -31,19 +32,9 @@ export function ProjectEditor({ value, data, onClose }: { value: Project | "new"
   async function save() {
     if (busy) return
     if (!name.trim()) return setError("Give this project a name.")
-    const id = previous?.id ?? defaultMakeId("prj")
-    const now = new Date().toISOString()
     const patch = { name: name.trim(), code: (code.trim() || autoCode || "PRJ").toUpperCase().slice(0, 5), status, color: colour, description: description.trim() }
     setBusy(true)
-    const ok = await mutate(["projects", "repos"], d => ({
-      ...d,
-      projects: previous ? d.projects.map(p => p.id === id ? { ...p, ...patch, updatedAt: now } : p) : [{ ...patch, id, createdAt: now, updatedAt: now }, ...d.projects],
-      repos: d.repos.map(repo => {
-        if (linked.includes(repo.id) && (!repo.projectId || repo.projectId === id)) return { ...repo, projectId: id, updatedAt: now }
-        if (!linked.includes(repo.id) && repo.projectId === id) return { ...repo, projectId: undefined, updatedAt: now }
-        return repo
-      }),
-    }))
+    const ok = await mutate(["projects", "repos"], d => saveProjectRecord(d, previous?.id, patch, linked))
     setBusy(false)
     if (ok) onClose()
     else setError(message ?? "Could not save this project. Your changes are still here.")
