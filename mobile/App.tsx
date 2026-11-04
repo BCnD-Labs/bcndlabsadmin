@@ -19,8 +19,8 @@ type Boot = { status: "loading" } | { status: "setup" } | { status: "ready"; add
 
 /**
  * App root. First launch → setup (address). Then the main area renders by view mode:
- * "web" → the hosted Blackwall in a WebView (the only one built); "native" → NativeHome
- * once it exists. Settings is a native modal over either, opened from the edge handle.
+ * "native" → the connected Android workspace (the default); "web" → the hosted
+ * fallback. Settings is a native modal over either, opened from the edge handle.
  */
 export default function App() {
   const [boot, setBoot] = useState<Boot>({ status: "loading" })

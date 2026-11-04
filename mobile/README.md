@@ -1,6 +1,6 @@
 # Blackwall for Android
 
-An Expo app (managed workflow, TypeScript) whose main screen is a full-screen WebView of **your hosted Blackwall**. You can use the working web app as an app on your phone now, and native screens can be added later. It talks to the same server and data, with the same sign-in, as the browser. No server changes are needed.
+An Expo app (managed workflow, TypeScript) that opens the native Blackwall workspace by default. Planner, Learning, Projects, Notes, Website, Insights and Home have native screens. The hosted WebView remains selectable while the remaining workflows move over. Both views use the same server and sign-in.
 
 This folder is its own project with its own `package.json` and lockfile. It isn't part of `blackwall-admin`'s typecheck, lint, build or Docker image.
 
@@ -49,15 +49,15 @@ If the address can't be reached (Tailscale off, server down, a 5xx from the serv
 | Setting | What it does |
 | --- | --- |
 | Server → Change / Clear address | Edit the saved address (same validation as first launch), or clear it and go back to setup |
-| View mode | **Web view** (default, working) or **Native** (visible, disabled: "Not built yet"). The choice is saved. |
+| View mode | **Native** by default on a new install, or **Web view**. An explicit choice is saved. |
 | Account | Shows whether you're signed in, signs you in (password field, **Keep me signed in**) or out, and **Check again** |
 | Page → Reload | Reloads the page |
 | Page → Clear site data and sign out | Signs out (`/api/logout`), unregisters the service worker, and clears Cache Storage, local/session storage and IndexedDB from inside the page. Then the native module clears every WebView cookie and all web storage, the HTTP cache is cleared, and the app starts again at the sign-in page. Your server data isn't touched. Unsynced edits that exist only on this phone are lost. |
 | About | App version and build number |
 
-### View mode and native screens later
+### View mode
 
-`App.tsx` renders the main area by view mode. `"web"` gives the WebView; `"native"` gives `NativeHome` from `src/native/index.ts`, which is `null` today. While it's `null`, Native stays disabled in Settings and a stored `"native"` falls back to the web view. To start native screens, export a component as `NativeHome` there and Native becomes selectable. The web view stays one tap away as the fallback.
+`App.tsx` renders the main area by view mode. `"native"` gives `NativeHome` from `src/native/index.ts`; `"web"` gives the hosted WebView. New installs open Native. An explicitly saved Web view preference is preserved after an update.
 
 ## Building an APK
 
