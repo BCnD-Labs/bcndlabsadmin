@@ -31,7 +31,7 @@ const PAGE_CLEANUP_SCRIPT = `(async () => {
 })(); true;`
 
 /** Opens another app (mailto:, tel:, obsidian://…) only after you confirm. */
-function confirmAppLink(url: string) {
+export function confirmAppLink(url: string) {
   const scheme = url.slice(0, url.indexOf(":"))
   Alert.alert("Open in another app?", `This link opens outside Blackwall (${scheme}:).\n\n${url.slice(0, 200)}`, [
     { text: "Cancel", style: "cancel" },
