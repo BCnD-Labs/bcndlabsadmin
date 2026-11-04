@@ -1,35 +1,39 @@
-import { useState, type ReactNode } from "react"
-import { KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
+import type { ReactNode } from "react"
+import { Animated, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
 import { plannerColor as c } from "../../../planner-theme.ts"
 const color = { ...c, edge: c.line }
 import { Icon } from "../../../ui.tsx"
 import { useReduceMotion } from "../../../nav/useReduceMotion.ts"
+import { useGrow } from "../../../useGrow.ts"
 
 /**
  * A bottom sheet in an RN Modal, the same look as the task editor's: grabber, title, close button and a
  * scrolling body. `onBackdrop` runs when the dimmed area is tapped (the editor ignores it while there are unsaved edits).
+ * The expand button grows the same card to about 2.5x its height (a short animation, not a swap); children may be a
+ * function of `expanded` so the body can use the extra room.
  */
-export function SheetFrame({ title, onClose, onBackdrop, children, compact = false }: { title: string; onClose: () => void; onBackdrop?: () => void; children: ReactNode; compact?: boolean }) {
-  const [expanded, setExpanded] = useState(false)
+export function SheetFrame({ title, onClose, onBackdrop, children, compact = false }: { title: string; onClose: () => void; onBackdrop?: () => void; children: ReactNode | ((expanded: boolean) => ReactNode); compact?: boolean }) {
   const reduceMotion = useReduceMotion()
+  const grow = useGrow(reduceMotion)
+  const expanded = grow.expanded
   return (
     <Modal visible transparent animationType={reduceMotion ? "none" : "fade"} onRequestClose={onClose} statusBarTranslucent navigationBarTranslucent>
       <KeyboardAvoidingView style={styles.fill} behavior="padding">
         <Pressable style={styles.backdrop} onPress={onBackdrop ?? onClose} accessibilityRole="button" accessibilityLabel="Close" />
-        <View style={[styles.sheet, compact && styles.compactSheet, expanded && { maxHeight: "92%" }]} accessibilityViewIsModal>
+        <Animated.View onLayout={grow.onLayout} style={[styles.sheet, compact && styles.compactSheet, grow.style]} accessibilityViewIsModal>
           <View style={[styles.header, compact && styles.compactHeader]}>
             <Text style={styles.title} accessibilityRole="header">
               {title}
             </Text>
-            <Pressable onPress={() => setExpanded(v => !v)} style={[styles.close, compact && styles.compactClose]} accessibilityRole="button" accessibilityLabel={expanded ? "Compact note editor" : "Expand note editor"}><Icon name={expanded ? "contract-outline" : "expand-outline"} size={19} tint={c.accent} /></Pressable>
+            <Pressable onPress={grow.toggle} style={[styles.close, compact && styles.compactClose]} accessibilityRole="button" accessibilityLabel={expanded ? "Compact note editor" : "Expand note editor"}><Icon name={expanded ? "contract-outline" : "expand-outline"} size={19} tint={c.accent} /></Pressable>
             <Pressable onPress={onClose} style={[styles.close, compact && styles.compactClose]} accessibilityRole="button" accessibilityLabel="Close">
               <Icon name="close" size={22} tint={color.text2} />
             </Pressable>
           </View>
           <ScrollView contentContainerStyle={[styles.body, compact && styles.compactBody]} keyboardShouldPersistTaps="handled">
-            {children}
+            {typeof children === "function" ? children(expanded) : children}
           </ScrollView>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   )

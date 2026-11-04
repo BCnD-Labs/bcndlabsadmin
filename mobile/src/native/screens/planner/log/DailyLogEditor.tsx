@@ -5,6 +5,7 @@ import { MAX_LOG_SECTIONS, MAX_SECTION_TITLE } from "../../../../../../blackwall
 import { useWorkspace } from "../../../data/WorkspaceProvider.tsx"
 import { plannerColor as c } from "../../../planner-theme.ts"
 import { Icon } from "../../../ui.tsx"
+import { formatDay } from "../dates.ts"
 import { appendPrompt, LOG_PROMPTS, shownText } from "./log-rules.ts"
 import type { EntryDraft, LogDrafts } from "./useLogDrafts.ts"
 
@@ -95,7 +96,7 @@ export function DailyLogEditor({ data, day, logs, blocked }: { data: Collections
 
   const row = (key: string, text: string, note: boolean, onPress: () => void) => <Pressable key={key} onPress={onPress} style={styles.row} accessibilityRole="button" accessibilityLabel={`Edit log entry: ${text}`}>
     <Icon name={note ? "document-text-outline" : "ellipse-outline"} size={13} tint={c.muted} />
-    <Text style={styles.rowText} numberOfLines={2}>{text}</Text><Icon name="chevron-forward" size={13} tint={c.muted} />
+    <Text style={styles.rowText} numberOfLines={2}>{text}</Text>
   </Pressable>
 
   return <View style={styles.root}>
@@ -118,11 +119,11 @@ export function DailyLogEditor({ data, day, logs, blocked }: { data: Collections
     <Modal visible={!!editor || quick} transparent animationType="fade" onRequestClose={close}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.backdrop}>
         {quick ? <View style={[styles.dialog, styles.quickDialog]} accessibilityViewIsModal>
-          <View style={styles.header}><Text style={styles.modalTitle}>Quick inserts</Text><Pressable onPress={close} style={styles.icon} accessibilityRole="button" accessibilityLabel="Close quick inserts"><Icon name="close" size={17} tint={c.muted} /></Pressable></View>
+          <View style={styles.header}><Text style={[styles.modalTitle, styles.grow]}>Quick inserts</Text><Pressable onPress={close} style={styles.icon} accessibilityRole="button" accessibilityLabel="Close quick inserts"><Icon name="close" size={17} tint={c.muted} /></Pressable></View>
           {LOG_PROMPTS.map((label) => <Pressable key={label} onPress={() => template(label)} style={styles.quickRow} accessibilityRole="button" accessibilityLabel={`Insert ${label}`}><Icon name="text-outline" size={16} tint={c.accent} /><Text style={styles.quickText}>{label.charAt(0).toUpperCase() + label.slice(1)}</Text></Pressable>)}
           {sections.length < MAX_LOG_SECTIONS ? <Pressable onPress={() => { setQuick(false); setEditor({ kind: "section", text: "" }) }} style={[styles.quickRow, styles.quickSection]} accessibilityRole="button" accessibilityLabel="Add daily log section"><Icon name="albums-outline" size={16} tint={c.accent} /><Text style={styles.quickText}>Add section</Text></Pressable> : null}
-        </View> : <View style={styles.dialog} accessibilityViewIsModal>
-          <View style={styles.header}><Text style={styles.modalTitle}>{editor?.kind === "section" ? editor.id ? "Rename section" : "Add section" : editor?.legacy || items.some((item) => item.id === editor?.id) ? "Edit entry" : "Add entry"}</Text><Pressable disabled={saving} onPress={close} style={styles.icon} accessibilityRole="button" accessibilityLabel="Close log editor"><Icon name="close" size={17} tint={c.muted} /></Pressable></View>
+        </View> : <View style={[styles.dialog, editor?.kind === "entry" && styles.entryDialog]} accessibilityViewIsModal>
+          <View style={styles.header}><View style={styles.titleBox}><Text style={styles.modalTitle}>{editor?.kind === "section" ? editor.id ? "Rename section" : "Add section" : editor?.legacy || items.some((item) => item.id === editor?.id) ? "Edit entry" : "Add entry"}</Text>{editor?.kind === "entry" ? <Text style={styles.modalSub} numberOfLines={1}>{`${formatDay(editor.day)} · ${sections.find((section) => section.id === editor.sectionId)?.title ?? "Log"}`}</Text> : null}</View><Pressable disabled={saving} onPress={close} style={styles.icon} accessibilityRole="button" accessibilityLabel="Close log editor"><Icon name="close" size={17} tint={c.muted} /></Pressable></View>
           <TextInput value={editor?.text ?? ""} editable={!saving} onChangeText={(text) => setEditor((value) => value ? { ...value, text } : null)} maxLength={editor?.kind === "section" ? MAX_SECTION_TITLE : 1_000_000} multiline={editor?.kind === "entry"} textAlignVertical="top" placeholder={editor?.kind === "section" ? "Section name" : "What happened?"} placeholderTextColor={c.muted} style={[styles.input, editor?.kind === "entry" && styles.notes]} accessibilityLabel={editor?.kind === "section" ? "Section name" : "Log entry"} />
           {editor?.kind === "entry" ? <Pressable disabled={saving} onPress={() => setEditor((value) => value?.kind === "entry" ? { ...value, asNote: !value.asNote } : value)} style={styles.noteToggle} accessibilityRole="checkbox" accessibilityState={{ checked: editor.asNote }} accessibilityLabel="Also save as a Note"><Icon name={editor.asNote ? "checkbox-outline" : "square-outline"} size={17} tint={editor.asNote ? c.accent : c.muted} /><Text style={styles.tabText}>Also save as a Note</Text></Pressable> : null}
           {error ? <Text style={styles.error} accessibilityLiveRegion="polite">{error}</Text> : null}
@@ -143,5 +144,5 @@ const styles = StyleSheet.create({
   selected: { backgroundColor: c.selected }, tabText: { color: c.text2, fontSize: 11 }, actionText: { color: c.accent, fontSize: 11, fontWeight: "600" },
   row: { flexDirection: "row", gap: 8, alignItems: "center", minHeight: 35, paddingVertical: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.line }, rowText: { flex: 1, color: c.text2, fontSize: 12, lineHeight: 17 }, empty: { color: c.muted, fontSize: 11, paddingVertical: 9 },
   error: { color: "#ffa8a8", fontSize: 11 }, backdrop: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "rgba(0,0,0,0.45)" }, dialog: { alignSelf: "center", width: "100%", maxWidth: 350, maxHeight: "80%", padding: 12, borderRadius: 17, gap: 9, backgroundColor: c.raised },
-  modalTitle: { flex: 1, color: c.text, fontSize: 14, fontWeight: "600" }, input: { minHeight: 36, paddingHorizontal: 10, paddingVertical: 8, color: c.text, backgroundColor: c.panel, borderRadius: 10, fontSize: 12 }, notes: { height: 76, maxHeight: 120, lineHeight: 17 }, noteToggle: { flexDirection: "row", alignItems: "center", gap: 7, minHeight: 28 }, actions: { flexDirection: "row", justifyContent: "flex-end", gap: 7 },
+  modalTitle: { color: c.text, fontSize: 14, fontWeight: "600" }, input: { minHeight: 36, paddingHorizontal: 10, paddingVertical: 8, color: c.text, backgroundColor: c.panel, borderRadius: 10, fontSize: 12 }, notes: { minHeight: 220, maxHeight: 360, lineHeight: 19, fontSize: 13, paddingTop: 10 }, entryDialog: { maxWidth: 520 }, titleBox: { flex: 1, gap: 1 }, grow: { flex: 1 }, modalSub: { color: c.muted, fontSize: 11 }, noteToggle: { flexDirection: "row", alignItems: "center", gap: 7, minHeight: 28 }, actions: { flexDirection: "row", justifyContent: "flex-end", gap: 7 },
 })
