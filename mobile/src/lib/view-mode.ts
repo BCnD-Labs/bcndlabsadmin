@@ -1,6 +1,6 @@
 /**
- * How the app shows Blackwall. "web" is the hosted web app in a WebView (working, default).
- * "native" shows the connected Android workspace; the web view remains available.
+ * How the app shows Blackwall. New installs open the native Android workspace.
+ * An explicitly saved web choice remains available during the migration.
  */
 export type ViewMode = "web" | "native"
 
@@ -10,5 +10,6 @@ export const VIEW_MODES: readonly { mode: ViewMode; label: string; available: bo
 ]
 
 export function sanitizeViewMode(stored: string | null | undefined, nativeAvailable: boolean): ViewMode {
-  return stored === "native" && nativeAvailable ? "native" : "web"
+  if (!nativeAvailable) return "web"
+  return stored === "web" ? "web" : "native"
 }

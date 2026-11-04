@@ -91,9 +91,9 @@ test("pull-to-refresh bridge: only the exact message, only from your origin", ()
   assert.doesNotThrow(() => new Function(PULL_GUARD_SCRIPT))
 })
 
-test("view mode: web by default; native only once it exists", () => {
+test("view mode: native by default once it exists, web if unavailable", () => {
   assert.equal(sanitizeViewMode(null, false), "web")
   assert.equal(sanitizeViewMode("native", false), "web")
   assert.equal(sanitizeViewMode("native", true), "native")
-  assert.equal(sanitizeViewMode("garbage", true), "web")
+  assert.equal(sanitizeViewMode("garbage", true), "native")
 })
