@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native"
 import { normalizeAddress } from "../lib/url.ts"
 import { color, mono } from "../theme.ts"
+import { plannerColor as c } from "../native/planner-theme.ts"
 
 type Props = {
   initial?: string
@@ -80,27 +81,27 @@ export function AddressForm({ initial = "", submitLabel, onSubmit, onCancel, aut
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: 10 },
+  wrap: { gap: 7 },
   input: {
-    minHeight: 48,
+    minHeight: 36,
     borderWidth: 1,
     borderColor: color.border,
-    borderRadius: 8,
+    borderRadius: 11,
     backgroundColor: color.well,
     color: color.text,
-    paddingHorizontal: 12,
-    fontSize: 15,
+    paddingHorizontal: 10,
+    fontSize: 13,
     fontFamily: mono,
   },
   inputError: { borderColor: color.errorText },
   error: { color: color.errorText, fontSize: 13, lineHeight: 18 },
   row: { flexDirection: "row", justifyContent: "flex-end", gap: 8, marginTop: 4 },
-  button: { minHeight: 44, minWidth: 96, paddingHorizontal: 16, borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  primary: { backgroundColor: color.red },
-  primaryPressed: { backgroundColor: color.redPressed },
-  primaryText: { color: "#fff", fontSize: 15, fontWeight: "600" },
+  button: { minHeight: 29, paddingHorizontal: 12, borderRadius: 15, alignItems: "center", justifyContent: "center" },
+  primary: { backgroundColor: c.action },
+  primaryPressed: { backgroundColor: c.actionPressed },
+  primaryText: { color: "#fff", fontSize: 12, fontWeight: "600" },
   quiet: { borderWidth: 1, borderColor: color.border },
   quietPressed: { backgroundColor: color.raised },
-  quietText: { color: color.text, fontSize: 15 },
+  quietText: { color: color.text, fontSize: 12 },
   disabled: { opacity: 0.5 },
 })

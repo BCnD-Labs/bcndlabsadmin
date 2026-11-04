@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Pressable, StyleSheet, Switch, Text, TextInput, View, type TextInputInstance } from "react-native"
 import { sessionStatus, signIn, signOut, statusLabel, type SessionStatus } from "../lib/auth.ts"
 import { color, mono } from "../theme.ts"
+import { plannerColor as c } from "../native/planner-theme.ts"
 import { Row, Section, rowStyles } from "./settings-ui.tsx"
 
 type Props = {
@@ -111,7 +112,7 @@ export function AccountSection({ address, active, onSessionChanged }: Props) {
               <Text style={rowStyles.rowLabel}>Keep me signed in</Text>
               <Text style={rowStyles.rowHint}>{remember ? "For 30 days." : "For about 12 hours."}</Text>
             </View>
-            <Switch value={remember} onValueChange={setRemember} disabled={busy} trackColor={{ false: color.well, true: color.red }} thumbColor={color.text} accessibilityLabel="Keep me signed in" />
+            <Switch value={remember} onValueChange={setRemember} disabled={busy} trackColor={{ false: color.well, true: c.action }} thumbColor={color.text} accessibilityLabel="Keep me signed in" />
           </View>
           {error ? (
             <Text style={styles.error} accessibilityRole="alert" accessibilityLiveRegion="polite">
@@ -142,12 +143,12 @@ export function AccountSection({ address, active, onSessionChanged }: Props) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  input: { minHeight: 48, borderWidth: 1, borderColor: color.border, borderRadius: 8, backgroundColor: color.well, color: color.text, paddingHorizontal: 12, fontSize: 15, fontFamily: mono },
+  input: { minHeight: 36, borderWidth: 1, borderColor: color.border, borderRadius: 11, backgroundColor: color.well, color: color.text, paddingHorizontal: 10, fontSize: 13, fontFamily: mono },
   inputError: { borderColor: color.errorText },
   remember: { flexDirection: "row", alignItems: "center", gap: 12 },
   error: { color: color.errorText, fontSize: 13, lineHeight: 18 },
   rowError: { paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: color.line },
-  button: { minHeight: 44, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: color.red },
-  buttonPressed: { backgroundColor: color.redPressed },
-  buttonText: { color: "#fff", fontSize: 15, fontWeight: "600" },
+  button: { minHeight: 30, borderRadius: 16, alignSelf: "flex-end", paddingHorizontal: 12, alignItems: "center", justifyContent: "center", backgroundColor: c.action },
+  buttonPressed: { backgroundColor: c.actionPressed },
+  buttonText: { color: "#fff", fontSize: 12, fontWeight: "600" },
 })
