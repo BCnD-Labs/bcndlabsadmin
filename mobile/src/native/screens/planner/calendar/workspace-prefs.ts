@@ -19,7 +19,9 @@ export function moveSection(order: Section[], item: Section, direction: -1 | 1):
   return next
 }
 /** Bounds always leave room for the lower pane, including on short screens. */
-export function calendarHeight(available: number, fraction: number): number {
+export function calendarHeight(available: number, fraction: number, floor?: number): number {
   const max = Math.max(0, available - Math.min(144, available / 2) - 24)
-  return Math.min(max, Math.max(Math.min(220, max), available * Math.max(0.25, Math.min(0.8, Number.isFinite(fraction) ? fraction : 0.55))))
+  // `floor` raises the smallest size (the month view keeps its week rows readable); it never beats the largest.
+  const least = Math.min(max, Math.max(floor ?? 0, Math.min(220, max)))
+  return Math.min(max, Math.max(least, available * Math.max(0.25, Math.min(0.8, Number.isFinite(fraction) ? fraction : 0.55))))
 }
