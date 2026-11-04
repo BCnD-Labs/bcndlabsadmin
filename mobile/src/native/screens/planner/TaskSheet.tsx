@@ -1,10 +1,11 @@
 import { useState } from "react"
-import { KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native"
+import { Animated, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native"
 import { createTask, removeTask, updateTask, validDateKey, type Collections } from "../../../lib/shared.ts"
 import { color } from "../../../theme.ts"
 import { plannerColor as c } from "../../planner-theme.ts"
 import { useWorkspace } from "../../data/WorkspaceProvider.tsx"
 import { useReduceMotion } from "../../nav/useReduceMotion.ts"
+import { useGrow } from "../../useGrow.ts"
 import { Button, Icon, tone } from "../../ui.tsx"
 import { CourseSection } from "./CourseSection.tsx"
 import { DatePicker } from "./DatePicker.tsx"
@@ -36,7 +37,8 @@ type SectionKey = "schedule" | "learning" | "reflection" | "links" | "records"
 export function TaskSheet({ editor, data, today, onClose, embedded = false }: { editor: Editor; data: Collections; today: string; onClose: () => void; embedded?: boolean }) {
   const { mutate, message } = useWorkspace()
   const reduceMotion = useReduceMotion()
-  const [expanded, setExpanded] = useState(false)
+  const grow = useGrow(reduceMotion)
+  const expanded = grow.expanded
   const task = editor.mode === "edit" ? data.tasks.find((t) => t.id === editor.id) : undefined
   const [opened] = useState(() => !!task)
   const missing = editor.mode === "edit" && !opened
@@ -79,7 +81,7 @@ export function TaskSheet({ editor, data, today, onClose, embedded = false }: { 
     const found = draftErrors(draft, task ? start : undefined)
     if (Object.keys(found).length || gone) {
       const section = errorSection(found)
-      if (section) { setOpenSection(section); setExpanded(true) }
+      if (section) { setOpenSection(section); grow.expand() }
       return
     }
     const now = new Date().toISOString()
@@ -90,10 +92,10 @@ export function TaskSheet({ editor, data, today, onClose, embedded = false }: { 
   const content = (
       <KeyboardAvoidingView style={styles.fill} behavior="padding">
         <Pressable style={styles.backdrop} onPress={() => !dirty && onClose()} accessibilityRole="button" accessibilityLabel="Close" />
-        <View style={[styles.sheet, { maxHeight: expanded ? "92%" : "62%" }]} accessibilityViewIsModal>
+        <Animated.View onLayout={grow.onLayout} style={[styles.sheet, !expanded && { maxHeight: "62%" }, grow.style]} accessibilityViewIsModal>
           <View style={styles.header}>
             {expanded ? <Text style={styles.title} accessibilityRole="header" numberOfLines={1}>{draft.title || `New ${noun}`}</Text> : <TextInput value={draft.title} onChangeText={title => set({ title })} placeholder={`New ${noun}`} placeholderTextColor={c.muted} accessibilityLabel="Title" multiline style={[styles.title, styles.compactTitle]} /> }
-            <Pressable onPress={() => setExpanded(v => !v)} style={styles.close} accessibilityRole="button" accessibilityLabel={expanded ? "Compact editor" : "Expand editor"} accessibilityState={{ expanded }}>
+            <Pressable onPress={grow.toggle} style={styles.close} accessibilityRole="button" accessibilityLabel={expanded ? "Compact editor" : "Expand editor"} accessibilityState={{ expanded }}>
               <Icon name={expanded ? "contract-outline" : "expand-outline"} size={19} tint={c.muted} />
             </Pressable>
             <Pressable onPress={onClose} style={styles.close} accessibilityRole="button" accessibilityLabel="Close">
@@ -109,16 +111,16 @@ export function TaskSheet({ editor, data, today, onClose, embedded = false }: { 
             <View style={styles.compactBody}>
               {errors.title ? <Text style={shared.error}>{errors.title}</Text> : null}
               <View style={styles.properties}>
-                <Pressable style={styles.property} onPress={() => event ? setExpanded(true) : set({ done: !draft.done })} accessibilityRole="button" accessibilityLabel={event ? "Event properties" : draft.done ? "Reopen task" : "Complete task"}><Icon name={event ? "calendar-outline" : draft.done ? "checkbox-outline" : "square-outline"} size={16} tint={c.accent} /><Text style={styles.propertyText}>{event ? "Event" : draft.done ? "Done" : "To do"}</Text></Pressable>
+                <Pressable style={styles.property} onPress={() => event ? grow.expand() : set({ done: !draft.done })} accessibilityRole="button" accessibilityLabel={event ? "Event properties" : draft.done ? "Reopen task" : "Complete task"}><Icon name={event ? "calendar-outline" : draft.done ? "checkbox-outline" : "square-outline"} size={16} tint={c.accent} /><Text style={styles.propertyText}>{event ? "Event" : draft.done ? "Done" : "To do"}</Text></Pressable>
                 <Pressable style={[styles.property, { backgroundColor: c.dateFill }]} onPress={() => setCompactDate(v => !v)} accessibilityRole="button" accessibilityLabel={event ? "Event date" : "Due date"}><Icon name="calendar-clear-outline" size={15} tint={c.dateText} /><Text style={[styles.propertyText, { color: c.dateText }]}>{(event ? x.scheduledDate : draft.due) ? formatDay(event ? x.scheduledDate : draft.due) : "+ Date"}</Text></Pressable>
                 {event ? <Pressable style={styles.property} onPress={() => setCompactTime(v => !v)} accessibilityRole="button" accessibilityLabel="Event start time"><Icon name="time-outline" size={15} tint={c.muted} /><Text style={styles.propertyText}>{x.scheduledTime || "+ Time"}</Text></Pressable> : null}
-                {x.courseId ? <Pressable style={[styles.property, { backgroundColor: c.tagFill }]} onPress={() => { setExpanded(true); setOpenSection("learning") }} accessibilityRole="button" accessibilityLabel={`Learning link: ${learningSummary(x, data.courses)}`}><Icon name="school-outline" size={15} tint={c.tagText} /><Text style={[styles.propertyText, { color: c.tagText }]} numberOfLines={1}>{learningSummary(x, data.courses)}</Text></Pressable> : null}
-                <Pressable style={styles.moreProperty} onPress={() => setExpanded(true)} accessibilityRole="button" accessibilityLabel="More properties"><Text style={styles.propertyText}>+ More</Text></Pressable>
+                {x.courseId ? <Pressable style={[styles.property, { backgroundColor: c.tagFill }]} onPress={() => { grow.expand(); setOpenSection("learning") }} accessibilityRole="button" accessibilityLabel={`Learning link: ${learningSummary(x, data.courses)}`}><Icon name="school-outline" size={15} tint={c.tagText} /><Text style={[styles.propertyText, { color: c.tagText }]} numberOfLines={1}>{learningSummary(x, data.courses)}</Text></Pressable> : null}
+                <Pressable style={styles.moreProperty} onPress={grow.expand} accessibilityRole="button" accessibilityLabel="More properties"><Text style={styles.propertyText}>+ More</Text></Pressable>
               </View>
               {compactDate ? <ScrollView style={{ maxHeight: 250 }} keyboardShouldPersistTaps="handled"><DatePicker value={event ? x.scheduledDate : draft.due} today={today} onChange={date => { if (event) setX({ scheduledDate: date }); else set({ due: date }); setCompactDate(false) }} /></ScrollView> : null}
               {compactTime ? <TextInput value={x.scheduledTime} onChangeText={scheduledTime => setX({ scheduledTime })} placeholder="HH:mm" placeholderTextColor={c.muted} keyboardType="numbers-and-punctuation" maxLength={5} accessibilityLabel="Event start time" style={[shared.input, styles.input]} /> : null}
               <TextInput value={draft.details} onChangeText={details => set({ details })} placeholder="Add notes or details…" placeholderTextColor={c.muted} accessibilityLabel="Details" multiline textAlignVertical="top" style={styles.compactDetails} />
-              {x.recordLinks.length ? <Pressable style={styles.linkedRow} onPress={() => { setExpanded(true); setOpenSection("records") }} accessibilityRole="button" accessibilityLabel="Open linked records"><Icon name="return-down-forward-outline" size={16} tint={c.muted} /><Text style={styles.propertyText}>{recordsSummary(x)}</Text></Pressable> : null}
+              {x.recordLinks.length ? <Pressable style={styles.linkedRow} onPress={() => { grow.expand(); setOpenSection("records") }} accessibilityRole="button" accessibilityLabel="Open linked records"><Icon name="return-down-forward-outline" size={16} tint={c.muted} /><Text style={styles.propertyText}>{recordsSummary(x)}</Text></Pressable> : null}
               {failed || gone ? <Text style={shared.error}>{gone ? "This item was deleted on another device." : message ?? "That couldn't be saved. Your changes are still here."}</Text> : null}
             </View>
           ) : (
@@ -195,7 +197,7 @@ export function TaskSheet({ editor, data, today, onClose, embedded = false }: { 
             <Pressable onPress={onClose} style={styles.cancel} accessibilityRole="button" accessibilityLabel="Close editor"><Text style={styles.cancelText}>Close</Text></Pressable>
             <Pressable disabled={busy || gone} onPress={save} style={({ pressed }) => [styles.save, pressed && styles.savePressed, (busy || gone) && styles.disabled]} accessibilityRole="button" accessibilityLabel={editor.mode === "edit" ? "Save changes" : `Add ${noun}`} accessibilityState={{ disabled: busy || gone }}><Icon name="checkmark" size={14} tint="#fff" /><Text style={styles.saveText}>{busy ? "Saving…" : editor.mode === "edit" ? "Save changes" : `Add ${noun}`}</Text></Pressable>
           </View> : null}
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
   )
   return embedded ? content : <Modal visible transparent animationType={reduceMotion ? "none" : "fade"} onRequestClose={onClose} statusBarTranslucent navigationBarTranslucent>{content}</Modal>

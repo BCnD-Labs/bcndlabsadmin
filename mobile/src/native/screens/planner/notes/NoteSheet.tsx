@@ -57,6 +57,7 @@ export function NoteSheet({ editor, data, onClose, compact = false }: { editor: 
 
   return (
     <SheetFrame title={editor.mode === "edit" ? "Edit note" : "New note"} onClose={onClose} onBackdrop={() => !dirty && onClose()} compact={compact}>
+      {(expanded) => <>
       {missing ? (
         <>
           <Text style={styles.lead}>This note no longer exists. It may have been deleted on another device.</Text>
@@ -65,7 +66,7 @@ export function NoteSheet({ editor, data, onClose, compact = false }: { editor: 
       ) : (
         <>
           <Text style={styles.label}>Note</Text>
-          <TextInput value={draft.text} onChangeText={(text) => set({ text })} placeholder="Jot something down…" placeholderTextColor={color.faint} accessibilityLabel="Note" multiline textAlignVertical="top" style={[styles.input, compact ? styles.compactMulti : styles.multi]} />
+          <TextInput value={draft.text} onChangeText={(text) => set({ text })} placeholder="Jot something down…" placeholderTextColor={color.faint} accessibilityLabel="Note" multiline textAlignVertical="top" style={[styles.input, compact ? styles.compactMulti : styles.multi, compact && (expanded || editor.mode === "edit") && styles.largeMulti, expanded && styles.expandedMulti]} />
           {errors.text ? <Text style={styles.error}>{errors.text}</Text> : null}
 
           {compact ? <Pressable onPress={() => setMore(v => !v)} style={styles.more} accessibilityRole="button" accessibilityLabel={more ? "Fewer note properties" : "More note properties"} accessibilityState={{ expanded: more }}><Text style={styles.moreText}>{more ? "− Fewer properties" : "+ More properties"}</Text></Pressable> : null}
@@ -129,6 +130,7 @@ export function NoteSheet({ editor, data, onClose, compact = false }: { editor: 
           ) : null}
         </>
       )}
+      </>}
     </SheetFrame>
   )
 }
@@ -138,6 +140,7 @@ const styles = StyleSheet.create({
   input: { minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: color.border, backgroundColor: color.well, color: color.text, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15 },
   multi: { minHeight: 140 },
   compactMulti: { minHeight: 88, maxHeight: 180, borderRadius: 0, borderWidth: 0, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.line, backgroundColor: c.panel, paddingHorizontal: 2, paddingTop: 8, fontSize: 13, lineHeight: 19 },
+  largeMulti: { minHeight: 200, maxHeight: 300 }, expandedMulti: { minHeight: 280, maxHeight: 460 },
   more: { minHeight: 28, alignSelf: "flex-start", justifyContent: "center", paddingHorizontal: 4 }, moreText: { color: c.accent, fontSize: 12 }, compactSave: { minHeight: 29, borderRadius: 15, backgroundColor: c.action, alignSelf: "flex-end", paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 5 }, compactSaveText: { color: "#fff", fontSize: 12, fontWeight: "600" }, disabled: { opacity: 0.45 },
   swatches: { flexDirection: "row", gap: 10 },
   swatchHit: { width: 48, height: 48, borderRadius: 24, borderWidth: 2, borderColor: "transparent", alignItems: "center", justifyContent: "center" },
