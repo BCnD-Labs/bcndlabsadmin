@@ -2,17 +2,20 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { BackHandler, Keyboard, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
 import type { ServiceStatus } from "../../../lib/service-status.ts"
 import { useWorkspace } from "../../data/WorkspaceProvider.tsx"
+import type { Collections } from "../../../lib/shared.ts"
 import { plannerColor as c } from "../../planner-theme.ts"
 import type { ScreenProps } from "../../nav/screens.tsx"
 import { WorkspacePage, WorkspaceSection } from "../../WorkspacePage.tsx"
 import { Icon, type IconName } from "../../ui.tsx"
 import { addressLabel, closeTool, groupServices, noTools, openTool, pruneTools, showList, statusSummary, toolTarget, type Tools } from "./mikoshi-rules.ts"
 import { ToolWebView, type ToolHandle } from "./ToolWebView.tsx"
+import { ServiceEditor } from "./ServiceEditor.tsx"
 import { useServiceStatus } from "./useServiceStatus.ts"
 
 /** Room kept under an open tool for the floating nav pill, so it never covers the page. */
 const PILL_RESERVE = 66
 const GROUP_ICON: Record<string, IconName> = { Infrastructure: "server-outline", AI: "sparkles-outline", Media: "film-outline" }
+type Service = Collections["services"][number]
 
 /**
  * Mikoshi: your homelab tools. The list is the workspace's own services (the same records as the web launcher)
@@ -25,6 +28,7 @@ export function MikoshiScreen({ onOpenSettings, focused = true }: ScreenProps) {
   const services = useMemo(() => data?.services ?? [], [data?.services])
   const [tools, setTools] = useState<Tools>(noTools)
   const [sel, setSel] = useState<string | null>(null)
+  const [editor, setEditor] = useState<Service | "new" | null>(null)
   const handles = useRef(new Map<string, ToolHandle | null>())
   const [keyboard, setKeyboard] = useState(0)
   const urls = useMemo(() => services.map((s) => s.url), [services])
@@ -60,17 +64,18 @@ export function MikoshiScreen({ onOpenSettings, focused = true }: ScreenProps) {
   return (
     <View style={s.fill}>
       <View style={active ? s.hidden : s.fill}>
-        <WorkspacePage page="Mikoshi" onOpenSettings={onOpenSettings} onRefresh={() => { void refresh(); void live.check() }} refreshing={refreshing}>
+        <WorkspacePage page="Mikoshi" onOpenSettings={onOpenSettings} onRefresh={() => { void refresh(); void live.check() }} refreshing={refreshing} action={data ? <Pressable onPress={() => setEditor("new")} style={s.add} accessibilityRole="button" accessibilityLabel="Add tool"><Icon name="add" size={19} tint={c.accent} /></Pressable> : undefined}>
           {!data ? <View style={s.empty}><Text style={s.title}>{status === "signed-out" ? "Sign in to use Mikoshi" : "Loading your workspace"}</Text><Text style={s.meta}>{status === "signed-out" ? "Your tools will appear here after sign-in." : message ?? "Pull down to try again."}</Text></View> : null}
-          {data && !services.length ? <View style={s.empty}><Text style={s.title}>No tools yet</Text><Text style={s.meta}>Add them on the web Mikoshi page for now; they show up here.</Text></View> : null}
+          {data && !services.length ? <View style={s.empty}><Text style={s.title}>No tools yet</Text><Text style={s.meta}>Tap + to add your first tool.</Text></View> : null}
           {data && services.length ? <Text style={s.meta}>{summaryText(summary, live.checkedAt)}</Text> : null}
           {live.error ? <Text style={s.error}>{live.error}</Text> : null}
           {groupServices(services).map(({ group, items }) => (
             <WorkspaceSection key={group} title={group} icon={GROUP_ICON[group] ?? "apps-outline"} count={`${items.length}`}>
-              {items.map((svc) => <ToolRow key={svc.id} name={svc.name} description={svc.description} url={svc.url} status={live.byUrl.get(svc.url)} isOpen={tools.open.includes(svc.id)} selected={sel === svc.id} onPress={() => act(svc.id)} />)}
+              {items.map((svc) => <ToolRow key={svc.id} name={svc.name} description={svc.description} url={svc.url} status={live.byUrl.get(svc.url)} isOpen={tools.open.includes(svc.id)} selected={sel === svc.id} onPress={() => act(svc.id)} onEdit={() => setEditor(svc)} />)}
             </WorkspaceSection>
           ))}
         </WorkspacePage>
+        {data && editor ? <ServiceEditor key={editor === "new" ? "new" : editor.id} value={editor} groups={services.map(svc => svc.group)} onClose={() => setEditor(null)} /> : null}
       </View>
       {openServices.length ? (
         <View style={active ? s.fill : s.hidden}>
@@ -99,12 +104,12 @@ function summaryText(x: { up: number; down: number; unchecked: number }, checked
   return `${x.up} up · ${x.down} down${x.unchecked ? ` · ${x.unchecked} unchecked` : ""}${time}`
 }
 
-function ToolRow({ name, description, url, status, isOpen, selected, onPress }: { name: string; description: string; url: string; status?: ServiceStatus; isOpen: boolean; selected: boolean; onPress: () => void }) {
+function ToolRow({ name, description, url, status, isOpen, selected, onPress, onEdit }: { name: string; description: string; url: string; status?: ServiceStatus; isOpen: boolean; selected: boolean; onPress: () => void; onEdit: () => void }) {
   const target = toolTarget(url)
   const label = !status ? "not checked yet" : status.up ? `up${status.ms != null ? `, ${status.ms} milliseconds` : ""}` : "down"
   return (
     <View style={[s.item, selected && s.itemOn]}>
-      <Pressable onPress={onPress} style={s.row} accessibilityRole="button" accessibilityLabel={`${name}, ${label}${isOpen ? ", open" : ""}${target.kind === "app" ? "" : ", opens in the browser"}`}>
+      <View style={s.rowWrap}><Pressable onPress={onPress} style={s.row} accessibilityRole="button" accessibilityLabel={`${name}, ${label}${isOpen ? ", open" : ""}${target.kind === "app" ? "" : ", opens in the browser"}`}>
         <View style={s.badge}><Text style={s.badgeText}>{name.trim().charAt(0).toUpperCase() || "?"}</Text></View>
         <View style={s.rowBody}>
           <Text style={s.rowTitle} numberOfLines={1}>{name}</Text>
@@ -113,7 +118,7 @@ function ToolRow({ name, description, url, status, isOpen, selected, onPress }: 
         {isOpen ? <Text style={s.tagOn}>open</Text> : null}
         {target.kind !== "app" ? <Text style={s.tag}>http</Text> : null}
         <View style={[s.dot, { backgroundColor: !status ? c.muted : status.up ? c.green : "#ff8787" }]} />
-      </Pressable>
+      </Pressable><Pressable onPress={onEdit} style={s.edit} accessibilityRole="button" accessibilityLabel={`Edit ${name}`}><Icon name="create-outline" size={15} tint={c.muted} /></Pressable></View>
       {selected ? (
         <View style={s.strip}>
           <Text style={s.detail}>{target.kind === "browser" ? "Plain http:// isn't loaded inside the app yet." : "This isn't a web address. Fix it on the web Mikoshi page."}</Text>
@@ -147,9 +152,10 @@ function ToolBar({ tools, active, onSwitch, onBack, onReload, onClose, onList }:
 
 const s = StyleSheet.create({
   fill: { flex: 1, backgroundColor: c.ground }, hidden: { display: "none" },
+  add: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: c.panel, borderWidth: 1, borderColor: c.line },
   empty: { gap: 8, paddingVertical: 16 }, title: { color: c.text, fontSize: 15, fontWeight: "700" }, meta: { color: c.muted, fontSize: 11, lineHeight: 16 }, error: { color: "#ffa8a8", fontSize: 12 },
   item: { borderBottomWidth: 1, borderColor: c.line, borderLeftWidth: 3, borderLeftColor: "transparent" }, itemOn: { backgroundColor: c.selected, borderLeftColor: c.accent },
-  row: { minHeight: 46, flexDirection: "row", alignItems: "center", gap: 9, paddingVertical: 4 }, rowBody: { flex: 1, minWidth: 0 }, rowTitle: { color: c.text, fontSize: 14, fontWeight: "600" },
+  rowWrap: { flexDirection: "row", alignItems: "center" }, row: { flex: 1, minHeight: 46, flexDirection: "row", alignItems: "center", gap: 9, paddingVertical: 4 }, edit: { width: 32, height: 32, alignItems: "center", justifyContent: "center" }, rowBody: { flex: 1, minWidth: 0 }, rowTitle: { color: c.text, fontSize: 14, fontWeight: "600" },
   badge: { width: 28, height: 28, borderRadius: 8, backgroundColor: c.raised, borderWidth: 1, borderColor: c.line, alignItems: "center", justifyContent: "center" }, badgeText: { color: c.accent, fontSize: 13, fontWeight: "700" },
   tag: { color: c.dateText, fontSize: 10, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8, backgroundColor: c.dateFill }, tagOn: { color: c.accent, fontSize: 10, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8, backgroundColor: c.tagFill },
   dot: { width: 9, height: 9, borderRadius: 5, marginRight: 4 },
