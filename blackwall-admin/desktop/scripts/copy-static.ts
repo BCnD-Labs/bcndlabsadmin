@@ -5,9 +5,9 @@ import path from "node:path"
 const desktop = path.join(import.meta.dirname, "..")
 const icons = path.join(desktop, "..", "public", "icons")
 const out = path.join(desktop, "out")
-const native = path.join(desktop, "..", "dist")
+const native = path.join(desktop, "..", "dist-mac")
 
-if (!existsSync(path.join(native, "index.html"))) throw new Error("Build the Blackwall UI before compiling the Mac app")
+if (!existsSync(path.join(native, "index.html"))) throw new Error("Build the Mac UI before compiling the Mac app")
 
 mkdirSync(path.join(out, "chrome"), { recursive: true })
 mkdirSync(path.join(out, "icons"), { recursive: true })

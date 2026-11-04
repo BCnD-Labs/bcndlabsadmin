@@ -28,7 +28,7 @@ Blackwall is installable from its HTTPS (Tailscale) address and stays the same a
 
 ## Desktop app (macOS)
 
-`desktop/` is the installed Mac app. Its pinned workspace uses the interface bundled with the app and connects to your configured Blackwall server for data and sign-in. It has its own window and Dock icon, fullscreen, native menus, and optional browser tabs. Mac-specific spacing and Planner layout are scoped to the installed app.
+`desktop/` is the installed Mac app. Its pinned workspace uses a separate Mac renderer (`src/mac/`, built into `dist-mac/`) and connects to your configured Blackwall server for data and sign-in. It has its own window and Dock icon, fullscreen, native menus, and optional browser tabs. The Mac renderer has its own navigation rail, section tree, command strip, and page header. It shares feature pages and records with the web app for now; Mac-only layout and Planner styling stay in `src/mac/mac.css`. Android remains in `mobile/`.
 
 | Command | What it does |
 | --- | --- |
@@ -45,7 +45,7 @@ Blackwall is installable from its HTTPS (Tailscale) address and stays the same a
 
 **First launch of the unsigned app.** The build is ad-hoc signed, not signed with an Apple Developer ID, so Gatekeeper blocks it the first time it comes from a download or another Mac. Right-click (or Control-click) **Blackwall.app → Open → Open**, or use **System Settings → Privacy & Security → Open Anyway**. A build you made on this Mac usually opens directly. To install it, open the `.dmg` and drag Blackwall to Applications.
 
-**Still evolving.** The bundled workspace currently shares the responsive feature implementations with Blackwall's web app; the Mac-specific desktop treatment begins with the shell and Planner. The app isn't signed with a Developer ID or notarized, and has no auto-update (rebuild to update). There are no notification or permission prompts (everything except clipboard write is denied), no history, bookmarks or extensions, and no drag-to-reorder for tabs. `window.open` popups that need their opener (some OAuth flows) won't work, because they open as ordinary tabs. Only macOS builds are set up.
+**Still evolving.** The Mac renderer has its own shell and Planner treatment, while the content of most pages still shares responsive feature components with the web build. The app has no auto-update (rebuild to update). There are no notification or permission prompts (everything except clipboard write is denied), no history, bookmarks or extensions, and no drag-to-reorder for tabs. `window.open` popups that need their opener (some OAuth flows) won't work, because they open as ordinary tabs. Only macOS builds are set up.
 
 ## Run it
 

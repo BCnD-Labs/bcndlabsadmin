@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en" class="dark" data-runtime="mac-native">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#1f2228" />
+    <link rel="icon" type="image/png" href="/icons/favicon-32.png" />
+    <title>Blackwall for Mac</title>
+    <script>
+      try {
+        var p = JSON.parse(localStorage.getItem("blackwall.prefs") || "{}").state || {}
+        document.documentElement.dataset.theme = p.theme === "dark" ? "dark" : "dim"
+        document.documentElement.dataset.font = p.uiFont === "mono" ? "mono" : "sans"
+        document.documentElement.dataset.accent = p.accent || "red"
+        document.documentElement.dataset.density = p.density === "compact" ? "compact" : "comfortable"
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/main.tsx"></script>
+  </body>
+</html>
