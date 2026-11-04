@@ -4,8 +4,18 @@
  * repeats the channel names, checked against these types.
  */
 
-/** Tab strip (38px) + toolbar (40px). Tab views start below this. */
+/** Tab strip (38px) + toolbar (40px). Web tab views start below this. */
 export const CHROME_HEIGHT = 78
+/** Just the title/tab strip: what sits above the Blackwall workspace (no address bar). */
+export const STRIP_HEIGHT = 38
+
+/**
+ * How much of the chrome shows. On the Blackwall workspace the app is the tool, not a browser:
+ * only a slim title bar ("strip"), and nothing at all in full screen when no browser tab is open
+ * ("hidden"). A browser tab brings back the tab strip and address bar ("full").
+ */
+export type ChromeMode = "full" | "strip" | "hidden"
+export const CHROME_HEIGHTS: Record<ChromeMode, number> = { full: CHROME_HEIGHT, strip: STRIP_HEIGHT, hidden: 0 }
 
 export type TabError =
   | { kind: "load"; code: number; description: string; url: string }
@@ -31,6 +41,9 @@ export interface ShellState {
   tabs: TabState[]
   activeId: number
   fullscreen: boolean
+  chromeMode: ChromeMode
+  /** Only the Blackwall workspace tab exists (no browser tabs open). */
+  solo: boolean
   webAddress: string | null
   overlay: Overlay
 }

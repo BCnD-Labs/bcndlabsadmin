@@ -1,5 +1,5 @@
 import { Menu, WebContentsView, clipboard, shell, type BrowserWindow, type Session, type WebContents } from "electron"
-import { CHROME_HEIGHT, type FindResult, type TabError, type TabState } from "../shared/ipc.ts"
+import { CHROME_HEIGHTS, type ChromeMode, type FindResult, type TabError, type TabState } from "../shared/ipc.ts"
 import { NATIVE_HOME } from "./native-workspace.ts"
 import { classifyLink, sameOrigin } from "./url.ts"
 import { confirmExternal } from "./web-session.ts"
@@ -161,10 +161,24 @@ export class TabManager {
     this.host.changed()
   }
 
+  /** Only the Blackwall workspace tab exists. */
+  get solo(): boolean {
+    return this.tabs.length === 1 && this.tabs[0].kind === "native"
+  }
+
+  /** What the chrome shows now: see ChromeMode. */
+  chromeMode(): ChromeMode {
+    const tab = this.active
+    if (tab?.kind !== "native") return "full"
+    const immersive = this.solo && this.host.window.isFullScreen() && !tab.error && !this.host.overlayOpen()
+    return immersive ? "hidden" : "strip"
+  }
+
   /** Positions and shows the active view below the chrome; hides the others. */
   layout() {
     const { width, height } = this.host.window.getContentBounds()
-    const bounds = { x: 0, y: CHROME_HEIGHT, width, height: Math.max(0, height - CHROME_HEIGHT) }
+    const top = CHROME_HEIGHTS[this.chromeMode()]
+    const bounds = { x: 0, y: top, width, height: Math.max(0, height - top) }
     for (const tab of this.tabs) {
       if (!tab.view) continue
       const show = tab.id === this.activeId && !tab.error && !this.host.overlayOpen()
