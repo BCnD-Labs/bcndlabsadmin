@@ -2,15 +2,30 @@ import { existsSync, statSync } from "node:fs"
 import path from "node:path"
 import { net, type Session } from "electron"
 import { fileURLToPath, pathToFileURL } from "node:url"
+import type { MacUpdater } from "./updater.ts"
 
 export const NATIVE_HOME = "bw-native://app/"
 const NATIVE_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "native")
 
 /** The renderer only sees the bundled UI; requests for data go to the configured server. */
-export function registerNativeWorkspace(ses: Session, serverAddress: () => string | null) {
+export function registerNativeWorkspace(ses: Session, serverAddress: () => string | null, updater?: MacUpdater) {
   ses.protocol.handle("bw-native", async (request) => {
     const url = new URL(request.url)
     if (url.host !== "app") return new Response("Not found", { status: 404 })
+
+    // The app's own updater (Settings → About). Other pages can't reach this scheme (no CORS), and the
+    // custom header keeps it that way even if that changed.
+    if (url.pathname.startsWith("/__mac/update/")) {
+      if (!updater || request.headers.get("x-blackwall") !== "1") return new Response("Not found", { status: 404 })
+      const action = url.pathname.slice("/__mac/update/".length)
+      if (action === "status" && request.method === "GET") return Response.json(updater.current())
+      if (action === "check" && request.method === "POST") return Response.json(await updater.check())
+      if (action === "install" && request.method === "POST") {
+        void updater.install() // runs on; the page polls /status for progress
+        return Response.json(updater.current())
+      }
+      return new Response("Not found", { status: 404 })
+    }
 
     if (url.pathname.startsWith("/api/")) {
       const server = serverAddress()
