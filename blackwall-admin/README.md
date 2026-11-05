@@ -35,8 +35,10 @@ Blackwall is installable from its HTTPS (Tailscale) address and stays the same a
 | `npm run desktop:dev` | Compile `desktop/` and run it with Electron (profile: `~/Library/Application Support/Blackwall Dev`) |
 | `npm run desktop:build` | Build an unsigned app for this Mac's architecture: `release/mac-arm64/Blackwall.app` and `release/Blackwall-<version>-arm64.dmg` (gitignored) |
 | `node desktop/scripts/publish.ts [--notes "…"]` | Upload the build you just made to a GitHub `mac-build-<n>` prerelease so installed Mac apps can update from Settings. Bump `version` in `desktop/package.json` first |
-| `npm run desktop:test` | Unit tests for the address bar, link rules, config and the in-app updater (its installer-script tests run on macOS only) |
+| `npm run desktop:test` | Unit tests for the address bar, link rules, config and both in-app updaters (their installer-script tests run on macOS only) |
 | `env -u ELECTRON_RUN_AS_NODE npx electron desktop/scripts/verify-native.ts` | Smoke check of the bundled workspace, API sign-in, Planner, and the Settings update button (after `desktop:compile`) |
+
+**Updating the Mac app without a release.** Settings → About has **Update from source** under Check for updates. It runs a script that pulls the latest code in your local checkout (`~/Developer/bcndlabsadmin`, or the folder in the `BLACKWALL_REPO` environment variable), runs `npm install` only if the lock file changed, builds the app (`npm run desktop:build -- --dir`, no disk image) and, once it's built, closes Blackwall, swaps the new app in and reopens it. Your settings and sign-in carry over because it is the same app, not a dev copy. If the build fails the app stays open and says why; if the swap fails the old app is put back. It needs Node and git on this Mac and the app installed in a folder you can write to.
 
 **Web address.** On first launch the app asks for your Blackwall server address (for example `https://blackwall.example.ts.net`). Change it any time from **Blackwall → Web Address…**. The address is stored in `~/Library/Application Support/Blackwall/desktop-config.json`, along with the window size and open tabs. Sign-in cookies live in the app's own browser profile. The app stores no passwords. The bundled workspace does not register the hosted site's service worker.
 
