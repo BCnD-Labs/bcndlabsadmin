@@ -80,6 +80,14 @@ export function startShell(options: ShellOptions = {}): ShellController | null {
     }
   }
 
+  /** Tells the workspace page how the window frames it, so its own title bar can leave room for the traffic lights. */
+  function syncWorkspaceFrame() {
+    const wc = tabs?.pinned?.view?.webContents
+    if (!wc || wc.isDestroyed() || !win || !tabs) return
+    const script = `(() => { const d = document.documentElement; d.dataset.chrome = ${JSON.stringify(tabs.chromeMode())}; d.dataset.fullscreen = ${JSON.stringify(String(win.isFullScreen()))} })()`
+    wc.executeJavaScript(script).catch(() => {})
+  }
+
   /** Coalesces bursts of tab events into one state message and one save. */
   function changed() {
     if (statePending) return
@@ -89,6 +97,7 @@ export function startShell(options: ShellOptions = {}): ShellController | null {
       const s = state()
       if (!s || !win) return
       chrome()?.send("shell:state", s)
+      syncWorkspaceFrame()
       const active = s.tabs.find((t) => t.id === s.activeId)
       win.setTitle(active && !active.pinned && active.title ? `${active.title} — Blackwall` : "Blackwall")
       saveTabs()
@@ -385,7 +394,7 @@ export function startShell(options: ShellOptions = {}): ShellController | null {
       },
       quit: () => app.quit(),
     })
-    registerNativeWorkspace(tabSession, () => config.get().webAddress, updater, sourceUpdater)
+    registerNativeWorkspace(tabSession, () => config.get().webAddress, updater, sourceUpdater, { openBrowser: () => newTab() })
 
     app.on("web-contents-created", (_e, contents) => {
       contents.on("will-attach-webview", (e) => e.preventDefault())

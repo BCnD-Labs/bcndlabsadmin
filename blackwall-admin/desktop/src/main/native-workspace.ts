@@ -9,10 +9,21 @@ export const NATIVE_HOME = "bw-native://app/"
 const NATIVE_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "native")
 
 /** The renderer only sees the bundled UI; requests for data go to the configured server. */
-export function registerNativeWorkspace(ses: Session, serverAddress: () => string | null, updater?: MacUpdater, sourceUpdater?: SourceUpdater) {
+export interface WorkspaceShell {
+  /** Opens a browser tab (the workspace has no browser chrome of its own). */
+  openBrowser(): void
+}
+
+export function registerNativeWorkspace(ses: Session, serverAddress: () => string | null, updater?: MacUpdater, sourceUpdater?: SourceUpdater, shell?: WorkspaceShell) {
   ses.protocol.handle("bw-native", async (request) => {
     const url = new URL(request.url)
     if (url.host !== "app") return new Response("Not found", { status: 404 })
+
+    if (url.pathname === "/__mac/shell/browser") {
+      if (!shell || request.method !== "POST" || request.headers.get("x-blackwall") !== "1") return new Response("Not found", { status: 404 })
+      shell.openBrowser()
+      return Response.json({ ok: true })
+    }
 
     // The app's own updater (Settings → About). Other pages can't reach this scheme (no CORS), and the
     // custom header keeps it that way even if that changed.
