@@ -238,6 +238,14 @@ const ERROR_TEXT: Record<string, string> = {
   "-101": "The connection was reset.",
 }
 
+/** What a certificate error means, in words; anything not listed gets the general explanation. */
+const CERT_TEXT: Record<string, string> = {
+  "-201": "The site’s certificate has expired, or this Mac’s date is wrong. If this is one of your own services, renew its certificate on the server.",
+  "-200": "The site’s certificate was made for a different address than the one you opened.",
+  "-202": "The site’s certificate wasn’t issued by anyone this Mac trusts.",
+  "-207": "The site’s certificate isn’t valid.",
+}
+
 function renderPanels(s: ShellState) {
   const tab = active()
   const setup = !!tab?.pinned && !s.webAddress
@@ -270,7 +278,7 @@ function renderPanels(s: ShellState) {
       e.kind === "crash"
         ? "The page’s process ended unexpectedly. Retry to load it again."
         : cert
-          ? "The site’s certificate couldn’t be verified, so Blackwall didn’t load it. Certificate errors are never bypassed."
+          ? `${CERT_TEXT[String(e.code)] ?? "The site’s certificate couldn’t be verified."} Blackwall didn’t load it. Certificate errors are never bypassed.`
           : (ERROR_TEXT[String(e.code)] ?? "The page failed to load.")
     $("error-url").textContent = e.url
     $("error-code").textContent = e.kind === "crash" ? `Reason: ${e.reason}` : `${e.description} (${e.code})`

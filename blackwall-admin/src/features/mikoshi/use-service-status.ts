@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { api } from "@/services/connector"
 import type { Service } from "@/lib/types"
 
-export interface ServiceStatus { url: string; up: boolean; ms?: number; status?: number; error?: string }
+export interface ServiceStatus { url: string; up: boolean; ms?: number; status?: number; error?: string; reason?: string }
 
 /**
  * Up/down for each tile, checked by the Blackwall server every minute while the page is
