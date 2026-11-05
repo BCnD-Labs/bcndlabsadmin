@@ -1,10 +1,12 @@
 import { BrowserWindow, Menu, app, ipcMain, net, protocol, screen, shell, type IpcMainEvent, type IpcMainInvokeEvent, type Session, type WebContents } from "electron"
+import { spawn } from "node:child_process"
 import path from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import type { FindResult, Overlay, SetWebAddressResult, ShellCommand, ShellState, UiCommand } from "../shared/ipc.ts"
 import { ConfigStore, type WindowState } from "./config.ts"
 import { buildMenu } from "./menu.ts"
 import { NATIVE_HOME, registerNativeWorkspace } from "./native-workspace.ts"
+import { MacUpdater } from "./updater.ts"
 import { TabManager } from "./tabs.ts"
 import { addressToUrl, normalizeWebAddress, sameOrigin } from "./url.ts"
 import { createTabSession, rejectCertificateErrors } from "./web-session.ts"
@@ -350,7 +352,24 @@ export function startShell(options: ShellOptions = {}): ShellController | null {
 
     rejectCertificateErrors()
     tabSession = createTabSession()
-    registerNativeWorkspace(tabSession, () => config.get().webAddress)
+    const updater = new MacUpdater({
+      version: app.getVersion(),
+      arch: process.arch,
+      pid: process.pid,
+      server: () => config.get().webAddress,
+      fetch: (url, init) => tabSession.fetch(url, init),
+      // …/Blackwall.app/Contents/MacOS/Blackwall → …/Blackwall.app; null when run from source.
+      bundlePath: () => {
+        const bundle = path.resolve(app.getPath("exe"), "..", "..", "..")
+        return app.isPackaged && bundle.endsWith(".app") ? bundle : null
+      },
+      tempDir: () => app.getPath("temp"),
+      launchInstaller: (script, args) => {
+        spawn("/bin/sh", [script, ...args], { detached: true, stdio: "ignore" }).unref()
+      },
+      quit: () => app.quit(),
+    })
+    registerNativeWorkspace(tabSession, () => config.get().webAddress, updater)
 
     app.on("web-contents-created", (_e, contents) => {
       contents.on("will-attach-webview", (e) => e.preventDefault())

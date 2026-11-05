@@ -1,7 +1,7 @@
 {
   "name": "blackwall-desktop",
   "productName": "Blackwall",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Blackwall for macOS with a bundled workspace and connected server data.",
   "private": true,
   "type": "module",
