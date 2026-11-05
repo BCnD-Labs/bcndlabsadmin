@@ -91,7 +91,9 @@ html[data-runtime="mac-native"] .mac-shell {
   display: grid;
   grid-template-rows: 40px minmax(0, 1fr) 24px;
   height: 100dvh;
-  overflow: hidden;
+  /* clip, not hidden: a hidden box can still be scrolled by code (scrollIntoView, focus), which pushed
+     the title bar up out of the window. A clipped box can't scroll at all. */
+  overflow: clip;
   background: var(--bw-ground);
 }
 

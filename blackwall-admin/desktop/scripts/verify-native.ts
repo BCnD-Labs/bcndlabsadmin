@@ -101,6 +101,16 @@ server.listen(0, "127.0.0.1", () => {
     assert(!macFrame.focusedEditor, "Mac workspace does not focus an editor on arrival")
     const headerHeight = await wc!.executeJavaScript("document.querySelector('.mac-titlebar')?.getBoundingClientRect().height")
     assert(headerHeight >= 36 && headerHeight <= 46, "Mac title bar stays compact")
+    // Something scrolling an element into view must not push the whole frame (and its title bar) out of place.
+    const framePushed = await wc!.executeJavaScript(`(() => {
+      const shell = document.querySelector('.mac-shell')
+      shell.scrollTop = 40
+      document.querySelector('.mac-statusbar').scrollIntoView({ block: 'start' })
+      const moved = shell.scrollTop
+      shell.scrollTop = 0
+      return { moved, titlebarTop: document.querySelector('.mac-titlebar').getBoundingClientRect().top }
+    })()`)
+    assert(framePushed.moved === 0 && framePushed.titlebarTop === 0, `The frame can't be scrolled out of place (${JSON.stringify(framePushed)})`)
     // The window tells the page how it is framed, so the title bar leaves room for the traffic lights.
     const frame = await wc!.executeJavaScript("({ chrome: document.documentElement.dataset.chrome, fullscreen: document.documentElement.dataset.fullscreen, pad: getComputedStyle(document.querySelector('.mac-titlebar')).paddingLeft })")
     assert(frame.chrome === "hidden" && frame.fullscreen === "false" && frame.pad === "82px", `Title bar leaves room for the window buttons (${JSON.stringify(frame)})`)
