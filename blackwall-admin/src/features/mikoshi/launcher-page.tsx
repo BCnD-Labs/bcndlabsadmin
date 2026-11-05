@@ -35,11 +35,14 @@ const byGroup = (a: string, b: string) => {
 
 /** Green when it answered, red when it didn't, grey until the first check. Hover for details. */
 function StatusDot({ status, className }: { status?: ServiceStatus; className?: string }) {
-  const label = !status ? "Not checked yet" : status.up ? `Up · ${status.ms} ms${status.status ? ` · HTTP ${status.status}` : ""}` : `Down · ${status.error ?? `HTTP ${status.status}`}`
+  const label = !status ? "Not checked yet" : status.up ? `Up · ${status.ms} ms${status.status ? ` · HTTP ${status.status}` : ""}` : `Down · ${status.reason ?? status.error ?? `HTTP ${status.status}`}`
   return (
     <span role="img" aria-label={label} title={`${label} (checked from the Blackwall server)`} className={cn("inline-block size-2 shrink-0 rounded-full", !status ? "bg-faint/50" : status.up ? "bg-green" : "bg-red-light", className)} />
   )
 }
+
+/** Why a service is down, in words, or nothing while it's up or unchecked. */
+const downReason = (status?: ServiceStatus) => (status && !status.up ? (status.reason ?? status.error ?? `HTTP ${status.status}`) : undefined)
 
 /** Opens the service; in edit mode the same tile opens its form instead. */
 function TileShell({ service, editing, className, children }: { service: Service; editing: boolean; className: string; children: ReactNode }) {
@@ -65,7 +68,11 @@ function PinnedTile({ service, editing, status }: { service: Service; editing: b
       {!editing && <StatusDot status={status} className="absolute top-3 right-3" />}
       <ServiceLogo service={service} size={52} />
       <span className="max-w-full truncate text-sm font-semibold text-ink">{service.name}</span>
-      {service.description && <span className="-mt-2 max-w-full truncate text-[11.5px] text-muted-foreground">{service.description}</span>}
+      {!editing && downReason(status) ? (
+        <span className="-mt-2 max-w-full truncate text-[11.5px] text-red-text">{downReason(status)}</span>
+      ) : (
+        service.description && <span className="-mt-2 max-w-full truncate text-[11.5px] text-muted-foreground">{service.description}</span>
+      )}
     </TileShell>
   )
 }
@@ -88,8 +95,8 @@ function ServiceTile({ service, editing, status }: { service: Service; editing: 
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-semibold text-ink">{service.name}</span>
         <span className="block truncate text-xs text-muted-foreground">
-          {service.description}
-          {service.description && " · "}
+          {!editing && downReason(status) ? <span className="text-red-text">{downReason(status)}</span> : service.description}
+          {(service.description || (!editing && downReason(status))) && " · "}
           <span className="font-mono text-faint">{addressLabel(service.url)}</span>
         </span>
       </span>
