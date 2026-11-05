@@ -7,6 +7,7 @@ import { ConfigStore, type WindowState } from "./config.ts"
 import { buildMenu } from "./menu.ts"
 import { NATIVE_HOME, registerNativeWorkspace } from "./native-workspace.ts"
 import { MacUpdater } from "./updater.ts"
+import { SourceUpdater } from "./source-updater.ts"
 import { TabManager } from "./tabs.ts"
 import { addressToUrl, normalizeWebAddress, sameOrigin } from "./url.ts"
 import { createTabSession, rejectCertificateErrors } from "./web-session.ts"
@@ -369,7 +370,22 @@ export function startShell(options: ShellOptions = {}): ShellController | null {
       },
       quit: () => app.quit(),
     })
-    registerNativeWorkspace(tabSession, () => config.get().webAddress, updater)
+    // "Update from source": rebuilds the installed app from a local checkout of the repo (no release needed).
+    const sourceUpdater = new SourceUpdater({
+      repo: () => process.env.BLACKWALL_REPO || path.join(app.getPath("home"), "Developer", "bcndlabsadmin"),
+      bundlePath: () => {
+        const bundle = path.resolve(app.getPath("exe"), "..", "..", "..")
+        return app.isPackaged && bundle.endsWith(".app") ? bundle : null
+      },
+      pid: process.pid,
+      tempDir: () => app.getPath("temp"),
+      stateDir: () => app.getPath("userData"),
+      launch: (script, args) => {
+        spawn("/bin/sh", [script, ...args], { detached: true, stdio: "ignore" }).unref()
+      },
+      quit: () => app.quit(),
+    })
+    registerNativeWorkspace(tabSession, () => config.get().webAddress, updater, sourceUpdater)
 
     app.on("web-contents-created", (_e, contents) => {
       contents.on("will-attach-webview", (e) => e.preventDefault())

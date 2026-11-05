@@ -3,12 +3,13 @@ import path from "node:path"
 import { net, type Session } from "electron"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import type { MacUpdater } from "./updater.ts"
+import type { SourceUpdater } from "./source-updater.ts"
 
 export const NATIVE_HOME = "bw-native://app/"
 const NATIVE_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "native")
 
 /** The renderer only sees the bundled UI; requests for data go to the configured server. */
-export function registerNativeWorkspace(ses: Session, serverAddress: () => string | null, updater?: MacUpdater) {
+export function registerNativeWorkspace(ses: Session, serverAddress: () => string | null, updater?: MacUpdater, sourceUpdater?: SourceUpdater) {
   ses.protocol.handle("bw-native", async (request) => {
     const url = new URL(request.url)
     if (url.host !== "app") return new Response("Not found", { status: 404 })
@@ -24,6 +25,10 @@ export function registerNativeWorkspace(ses: Session, serverAddress: () => strin
         void updater.install() // runs on; the page polls /status for progress
         return Response.json(updater.current())
       }
+      // Update from source (a local rebuild instead of a published release).
+      if (sourceUpdater && action === "source" && request.method === "GET") return Response.json(sourceUpdater.current())
+      if (sourceUpdater && action === "source/start" && request.method === "POST") return Response.json(sourceUpdater.start())
+      if (sourceUpdater && action === "source/dismiss" && request.method === "POST") return Response.json(sourceUpdater.dismiss())
       return new Response("Not found", { status: 404 })
     }
 
