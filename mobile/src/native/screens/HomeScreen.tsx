@@ -13,6 +13,7 @@ import { plannerRow } from "./planner/rows.ts"
 import { eventChips, taskChips, type RowChip } from "./row-chips.ts"
 import { NoteSheet, type NoteEditor } from "./planner/notes/NoteSheet.tsx"
 import { TaskCheck } from "./planner/TaskCheck.tsx"
+import { learningGroups } from "./home-groups.ts"
 
 /** A compact live overview; every count and row comes from the current workspace. */
 export function HomeScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
@@ -21,6 +22,7 @@ export function HomeScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
   const [noteEditor, setNoteEditor] = useState<NoteEditor | null>(null)
   const [showToday, setShowToday] = useState(false)
   const [showLearning, setShowLearning] = useState(false)
+  const [closedLearning, setClosedLearning] = useState<Record<string, boolean>>({})
   const [notice, setNotice] = useState<string>()
   const [sel, setSel] = useState<string | null>(null)
   const today = todayKey()
@@ -28,6 +30,7 @@ export function HomeScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
   const tasks = data?.tasks.filter(t => t.kind !== "event") ?? []
   const due = tasks.filter(t => isForToday(t, today)).sort(compareTasks)
   const learning = tasks.filter(t => !t.done && t.courseId && !isForToday(t, today)).sort(compareTasks)
+  const visibleLearning = showLearning ? learning : learning.slice(0, 5)
   const events = (data?.tasks ?? []).filter(t => t.kind === "event" && t.scheduledDate && t.scheduledDate >= today).sort((a, b) => (a.scheduledDate ?? "").localeCompare(b.scheduledDate ?? "")).slice(0, 4)
   const pinned = (data?.notes ?? []).filter(n => n.pinned).slice(0, 3)
   async function complete(id: string) {
@@ -48,7 +51,12 @@ export function HomeScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
         {due.length > 5 ? <MiniAction label={showToday ? "Show less" : `Show ${due.length - 5} more`} onPress={() => setShowToday(v => !v)} /> : null}
       </WorkspaceSection>
       <WorkspaceSection title="Learning next" icon="school-outline" tint="#b39ddb" count={`${learning.length} open`}>
-        {(showLearning ? learning : learning.slice(0, 5)).map(t => { const row = plannerRow(t, data.courses, today); return <Line key={t.id} title={t.title} subtitle={[data.courses.find(x => x.id === t.courseId)?.title, t.due ? shortDay(t.due) : ""].filter(Boolean).join(" · ")} chips={taskChips(row)} detail={row.details} selected={sel === t.id} onSelect={() => setSel(t.id)} onOpen={() => open(() => setEditor({ mode: "edit", id: t.id }))} onComplete={() => void complete(t.id)} /> })}
+        {learningGroups(visibleLearning, data.courses).map(group => <View key={group.id} style={s.learningGroup}>
+          <Pressable onPress={() => setClosedLearning(value => ({ ...value, [group.id]: !value[group.id] }))} style={s.groupHead} accessibilityRole="button" accessibilityState={{ expanded: !closedLearning[group.id] }} accessibilityLabel={`${group.title}, ${group.tasks.length} items`}>
+            <Text style={s.groupTitle} numberOfLines={2}>{group.title}</Text><Text style={s.groupCount}>{group.tasks.length}</Text><Icon name={closedLearning[group.id] ? "chevron-down" : "chevron-up"} size={17} tint={c.muted} />
+          </Pressable>
+          {!closedLearning[group.id] ? group.tasks.map(t => { const row = plannerRow(t, data.courses, today); return <Line key={t.id} title={t.title} subtitle={t.due ? shortDay(t.due) : undefined} chips={taskChips(row)} detail={row.details} selected={sel === t.id} onSelect={() => setSel(t.id)} onOpen={() => open(() => setEditor({ mode: "edit", id: t.id }))} onComplete={() => void complete(t.id)} /> }) : null}
+        </View>)}
         {!learning.length ? <Text style={s.emptyText}>No upcoming learning work.</Text> : null}
         {learning.length > 5 ? <MiniAction label={showLearning ? "Show less" : `Show ${learning.length - 5} more`} onPress={() => setShowLearning(v => !v)} /> : null}
       </WorkspaceSection>
@@ -89,6 +97,7 @@ const chipFill: Record<RowChip["kind"], { backgroundColor: string }> = { date: {
 const chipInk: Record<RowChip["kind"], string> = { date: c.dateText, overdue: "#ff8787", course: c.tagText, focus: c.accent, star: c.amber, plain: c.text2 }
 const s = StyleSheet.create({
   add: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: c.panel, borderWidth: 1, borderColor: c.line }, day: { color: c.muted, fontSize: 12 }, instrument: { flexDirection: "row", gap: 7 }, instrumentCell: { flex: 1, minHeight: 48, borderRadius: shape.card, backgroundColor: c.panel, paddingHorizontal: 10, paddingVertical: 6, flexDirection: "row", alignItems: "baseline", gap: 6 }, instrumentCount: { color: c.text, fontSize: 17, fontWeight: "700" }, instrumentLabel: { color: c.muted, fontSize: 11, flexShrink: 1 },
+  learningGroup: { marginTop: 5 }, groupHead: { minHeight: 36, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 8, paddingVertical: 5 }, groupTitle: { flex: 1, color: c.text, fontSize: 13, fontWeight: "700" }, groupCount: { color: c.muted, fontSize: 12 },
   item: { borderBottomWidth: 1, borderColor: c.line, borderLeftWidth: 3, borderLeftColor: "transparent" }, itemOn: { backgroundColor: c.selected, borderLeftColor: c.accent, paddingRight: 6 }, row: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 5 }, strip: { gap: 6, paddingLeft: 36, paddingBottom: 8 }, chips: { flexDirection: "row", flexWrap: "wrap", gap: 4 }, chip: { minHeight: 20, justifyContent: "center", paddingHorizontal: 7, borderRadius: 10 }, chipText: { fontSize: 11 }, detail: { color: c.text2, fontSize: 12, lineHeight: 17 }, stripActions: { flexDirection: "row", gap: 6 }, pill: { minHeight: 26, flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, borderRadius: 14, backgroundColor: c.panel }, pillText: { color: c.accent, fontSize: 11, fontWeight: "600" }, rowBody: { flex: 1, minWidth: 0, paddingVertical: 5 }, rowTitle: { color: c.text, fontSize: 14, fontWeight: "600", lineHeight: 19 }, simpleIcon: { width: 30, alignItems: "center" }, meta: { color: c.muted, fontSize: 11, lineHeight: 16 }, emptyText: { color: c.muted, fontSize: 12, paddingVertical: 6 }, empty: { gap: 8, paddingVertical: 16 }, title: { color: c.text, fontSize: 15, fontWeight: "700" }, error: { color: "#ffa8a8", fontSize: 12 }, miniAction: { minHeight: 28, alignSelf: "flex-start", justifyContent: "center", paddingHorizontal: 8 }, actionText: { color: c.accent, fontSize: 12, fontWeight: "600" },
 })
 

@@ -1,8 +1,8 @@
 import { useEditorClose } from "../../../editing/useEditorClose.ts"
 import { KeyboardFrame, KeyboardScrollView, TextInput } from "../../../editing/keyboard.tsx"
 import { shape } from "../../../../shape.ts"
-import { useEffect, useRef, useState } from "react"
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
+import { useRef, useState } from "react"
+import { Modal, Pressable, StyleSheet, Text, View } from "react-native"
 import { saveJournalItem, saveJournalLegacyText, saveJournalSections, type Collections } from "../../../../lib/shared.ts"
 import { MAX_LOG_SECTIONS, MAX_SECTION_TITLE } from "../../../../../../blackwall-admin/shared/journal-sections.ts"
 import { useWorkspace } from "../../../data/WorkspaceProvider.tsx"
@@ -25,6 +25,7 @@ export function DailyLogEditor({ data, day, logs, blocked }: { data: Collections
   const setActive = (id: string | null) => logs.setActiveSections(current => ({ ...current, [day]: id }))
   const [editor, setEditor] = useState<Editor | null>(null)
   const [quick, setQuick] = useState(false)
+  const [closed, setClosed] = useState<Record<string, true>>({})
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const busy = useRef(false)
@@ -107,22 +108,40 @@ export function DailyLogEditor({ data, day, logs, blocked }: { data: Collections
     <Text style={styles.rowText} numberOfLines={2}>{text}</Text>
   </Pressable>
 
+  function toggleSection(id: string | null) {
+    const key = `${day}/${id ?? ""}`
+    if (active === id && !closed[key]) setClosed(current => ({ ...current, [key]: true }))
+    else { setClosed(current => { const next = { ...current }; delete next[key]; return next }); setActive(id) }
+  }
+
   return <View style={styles.root}>
     <View style={styles.header}><Icon name="create-outline" tint={c.text2} size={17} /><Text style={styles.heading} accessibilityRole="header">Daily log</Text>
       <Pressable disabled={!!blocked || saving} onPress={() => { setError(null); setQuick(true) }} style={styles.icon} accessibilityRole="button" accessibilityLabel="Daily log quick inserts"><Icon name="add" tint={c.accent} size={19} /></Pressable>
     </View>
-    {sections.length ? <View style={styles.tabsRow}><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs} keyboardShouldPersistTaps="handled">
-      {[{ id: null, title: "Log" }, ...sections].map((section) => <Pressable key={section.id ?? "main"} onPress={() => setActive(section.id)} accessibilityRole="tab" accessibilityState={{ selected: active === section.id }} style={[styles.tab, active === section.id && styles.selected]}><Text style={[styles.tabText, active === section.id && styles.actionText]}>{section.title}</Text></Pressable>)}
-    </ScrollView>{selected ? <Pressable disabled={!!blocked} onPress={() => { setError(null); setEditor({ kind: "section", id: selected.id, text: selected.title, initialText: selected.title }) }} style={styles.icon} accessibilityRole="button" accessibilityLabel={`Rename ${selected.title}`}><Icon name="pencil-outline" tint={c.muted} size={14} /></Pressable> : null}</View> : null}
-    <TextInput value={draft?.text ?? ""} editable={!saving && !blocked} onChangeText={(text) => changeDraft((value) => ({ ...value, text }))} multiline textAlignVertical="top" maxLength={1_000_000} placeholder="What happened today?" placeholderTextColor={c.muted} style={styles.composer} accessibilityLabel="New daily log entry" />
-    {draft?.text.trim() ? <View style={styles.composeActions}>
-      <Pressable disabled={saving} onPress={() => changeDraft((value) => ({ ...value, asNote: !value.asNote }))} style={styles.noteToggle} accessibilityRole="checkbox" accessibilityState={{ checked: draft.asNote }} accessibilityLabel="Also save as a Note"><Icon name={draft.asNote ? "checkbox-outline" : "square-outline"} size={17} tint={draft.asNote ? c.accent : c.muted} /><Text style={styles.tabText}>Save as Note</Text></Pressable>
-      <Pressable disabled={saving || !!blocked} onPress={() => void saveInline()} style={[styles.pill, styles.savePill]} accessibilityRole="button" accessibilityLabel="Save entry"><Text style={styles.saveText}>{saving ? "Saving…" : "Save entry"}</Text></Pressable>
-    </View> : null}
     {error && !editor && !quick ? <Text style={styles.error} accessibilityLiveRegion="polite">{error}</Text> : null}
-    {legacyText.trim() ? row("legacy", legacyText, !!((selected ? selected.noteId : journal?.mainNoteId)), () => open(undefined, true)) : null}
-    {items.map((item) => row(item.id, item.text, !!item.noteId, () => open(item)))}
-    {!legacyText.trim() && !items.length ? <Text style={styles.empty}>No entries for this {selected ? "section" : "day"}.</Text> : null}
+    {[{ id: null, title: "Log", text: shownText(logs.drafts, data.journal, day), noteId: journal?.mainNoteId }, ...sections].map(section => {
+      const entries = (journal?.entries ?? []).filter(entry => (entry.sectionId ?? null) === section.id)
+      const expanded = active === section.id && !closed[`${day}/${section.id ?? ""}`]
+      const count = entries.length + Number(!!section.text.trim())
+      return <View key={section.id ?? "main"} style={styles.group}>
+        <View style={styles.groupHeader}>
+          <Pressable onPress={() => toggleSection(section.id)} style={styles.groupButton} accessibilityRole="button" accessibilityState={{ expanded }} accessibilityLabel={`${section.title}, ${count} entries`}>
+            <Text style={styles.groupTitle} numberOfLines={2}>{section.title}</Text><Text style={styles.groupCount}>{count}</Text><Icon name={expanded ? "chevron-up" : "chevron-down"} size={17} tint={c.muted} />
+          </Pressable>
+          {section.id ? <Pressable disabled={!!blocked} onPress={() => { setActive(section.id); setError(null); setEditor({ kind: "section", id: section.id!, text: section.title, initialText: section.title }) }} style={styles.icon} accessibilityRole="button" accessibilityLabel={`Rename ${section.title}`}><Icon name="pencil-outline" tint={c.muted} size={14} /></Pressable> : null}
+        </View>
+        {expanded ? <>
+          <TextInput value={draft?.text ?? ""} editable={!saving && !blocked} onChangeText={(text) => changeDraft((value) => ({ ...value, text }))} multiline textAlignVertical="top" maxLength={1_000_000} placeholder="What happened today?" placeholderTextColor={c.muted} style={styles.composer} accessibilityLabel={`New ${section.title} entry`} />
+          {draft?.text.trim() ? <View style={styles.composeActions}>
+            <Pressable disabled={saving} onPress={() => changeDraft((value) => ({ ...value, asNote: !value.asNote }))} style={styles.noteToggle} accessibilityRole="checkbox" accessibilityState={{ checked: draft.asNote }} accessibilityLabel="Also save as a Note"><Icon name={draft.asNote ? "checkbox-outline" : "square-outline"} size={17} tint={draft.asNote ? c.accent : c.muted} /><Text style={styles.tabText}>Save as Note</Text></Pressable>
+            <Pressable disabled={saving || !!blocked} onPress={() => void saveInline()} style={[styles.pill, styles.savePill]} accessibilityRole="button" accessibilityLabel="Save entry"><Text style={styles.saveText}>{saving ? "Saving…" : "Save entry"}</Text></Pressable>
+          </View> : null}
+          {section.text.trim() ? row("legacy", section.text, !!section.noteId, () => open(undefined, true)) : null}
+          {entries.map(item => row(item.id, item.text, !!item.noteId, () => open(item)))}
+          {!count ? <Text style={styles.empty}>No entries for this {section.id ? "section" : "day"}.</Text> : null}
+        </> : null}
+      </View>
+    })}
     {logs.failed[day] ? <Text style={styles.error}>Section changes haven't saved yet. <Text onPress={() => void logs.save(day)}>Try again</Text></Text> : null}
     <Modal visible={!!editor || quick} transparent animationType="fade" onRequestClose={() => close()}>
       <KeyboardFrame style={styles.backdrop}>
@@ -150,7 +169,7 @@ const styles = StyleSheet.create({
   quickDialog: { maxWidth: 230, gap: 2 }, quickRow: { minHeight: 32, flexDirection: "row", alignItems: "center", gap: 9, paddingHorizontal: 4 }, quickText: { color: c.text2, fontSize: 12 }, quickSection: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border, marginTop: 4, paddingTop: 4 },
   root: { gap: 6 }, header: { flexDirection: "row", alignItems: "center", gap: 7 }, heading: { flex: 1, color: c.text, fontSize: 14, fontWeight: "600" },
   icon: { width: 32, height: 32, alignItems: "center", justifyContent: "center", borderRadius: 14 }, pill: { minHeight: 32, justifyContent: "center", paddingHorizontal: 11, borderRadius: 15, backgroundColor: c.panel },
-  tabsRow: { flexDirection: "row", alignItems: "center" }, tabs: { flexDirection: "row", gap: 5 }, tab: { minHeight: 32, justifyContent: "center", paddingHorizontal: 10, borderRadius: 15, backgroundColor: c.panel },
+  group: { gap: 5 }, groupHeader: { flexDirection: "row", alignItems: "center", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.line }, groupButton: { flex: 1, minHeight: 40, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 4 }, groupTitle: { flex: 1, color: c.text, fontSize: 13, fontWeight: "700" }, groupCount: { color: c.muted, fontSize: 11 },
   selected: { backgroundColor: c.selected }, tabText: { color: c.text2, fontSize: 11 }, actionText: { color: c.accent, fontSize: 11, fontWeight: "600" },
   row: { flexDirection: "row", gap: 8, alignItems: "center", minHeight: 35, paddingVertical: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.line }, rowText: { flex: 1, color: c.text2, fontSize: 12, lineHeight: 17 }, empty: { color: c.muted, fontSize: 11, paddingVertical: 9 },
   error: { color: "#ffa8a8", fontSize: 11 }, backdrop: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "rgba(0,0,0,0.45)" }, dialog: { alignSelf: "center", width: "100%", maxWidth: 350, maxHeight: "80%", padding: 12, borderRadius: shape.dialog, gap: 9, backgroundColor: c.raised },
