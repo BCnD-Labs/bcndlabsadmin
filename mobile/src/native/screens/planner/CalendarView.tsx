@@ -84,7 +84,7 @@ export function CalendarView({ data, today, onEdit, onCreateDue, logs, blocked, 
   const notes = orderNotes(linkedNotes, { search: "" })
   return <View style={styles.fill} onLayout={e => setAvailable(e.nativeEvent.layout.height)}>
     <Animated.View style={[styles.calendar, { height }]}>
-      <View onLayout={e => setChrome(e.nativeEvent.layout.height)}><CalendarHeader compact={available < 300} title={titleFor(view, displayDate, columns)} view={view} onView={setView} onStep={step} onToday={() => setSelected(today) onSettings={anchor => setSettings(anchor ?? { top: 140, right: 12 })} /></View>
+      <View onLayout={e => setChrome(e.nativeEvent.layout.height)}><CalendarHeader compact={available < 300} title={titleFor(view, displayDate, columns)} view={view} onView={setView} onStep={step} onToday={() => setSelected(today)} onSettings={anchor => setSettings(anchor ?? { top: 140, right: 12 })} /></View>
       <Animated.View {...swipe.panHandlers} style={[styles.fill, swipe.style]}>
       {view === "month" ? <MonthGrid weeks={weeks} month={selected} selected={selected} today={today} byDay={byDay} weekStart={weekStart} onSelect={setSelected} /> : <TimeGrid days={columns} byDay={byDay} today={today} selected={selected} format={timeFormat} compact={view === "week"} onSelectDay={setSelected} onEdit={onEdit} />}
       </Animated.View>
