@@ -21,6 +21,7 @@ export function NotesView({ data, blocked, compact = false, hideAdd = false, con
   const [search, setSearch] = useState("")
   const [colour, setColour] = useState<NoteColor | undefined>()
   const [localEditor, setLocalEditor] = useState<NoteEditor | null>(null)
+  const [selected, setSelected] = useState<string | null>(null)
   const editor = controlledEditor === undefined ? localEditor : controlledEditor
   const setEditor = onEditorChange ?? setLocalEditor
   const [notice, setNotice] = useState<string>()
@@ -37,7 +38,7 @@ export function NotesView({ data, blocked, compact = false, hideAdd = false, con
   }
 
   const rows = (notes: typeof pinned) =>
-    notes.map((n) => <NoteRow key={n.id} note={n} course={courseFor(data.courses, n.courseId)} now={now} compact={compact} onOpen={() => setEditor({ mode: "edit", id: n.id })} onPin={() => (blocked ? setNotice(blocked) : void pin(n.id))} />)
+    notes.map((n) => <NoteRow key={n.id} note={n} course={courseFor(data.courses, n.courseId)} now={now} compact={compact} expanded={selected === n.id} onSelect={() => setSelected(selected === n.id ? null : n.id)} onOpen={() => setEditor({ mode: "edit", id: n.id })} onPin={() => (blocked ? setNotice(blocked) : void pin(n.id))} />)
 
   return (
     <View style={[styles.gap, compact && styles.compactGap]}>
