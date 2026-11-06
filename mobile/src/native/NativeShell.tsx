@@ -28,7 +28,7 @@ export function NativeShell({ address, onOpenSettings }: NativeHomeProps) {
   }, [moreOpen])
 
   return (
-    <WorkspaceProvider address={address}>
+    <WorkspaceProvider key={address} address={address}>
       <View style={styles.root}>
         <View style={styles.page} accessibilityElementsHidden={moreOpen} importantForAccessibility={moreOpen ? "no-hide-descendants" : "auto"}>
           {KEEP_ALIVE.includes(current) ? null : <Current onOpenSettings={onOpenSettings} />}
@@ -46,3 +46,4 @@ const styles = StyleSheet.create({
   page: { flex: 1 },
   hidden: { display: "none" },
 })
+

@@ -14,8 +14,7 @@ import type { LogDrafts } from "./useLogDrafts.ts"
  * that have an entry, an inline composer with explicit Save entry, custom section tabs, the tasks done
  * and due that day, and the latest entries. Text stays in a draft until the workspace holds it.
  */
-export function LogView({ data, today, logs, blocked, onEditTask }: { data: Collections; today: string; logs: LogDrafts; blocked?: string; onEditTask: (id: string) => void }) {
-  const [day, setDay] = useState(today)
+export function LogView({ data, today, logs, day, onDay: setDay, blocked, onEditTask }: { data: Collections; today: string; day: string; onDay: (day: string) => void; logs: LogDrafts; blocked?: string; onEditTask: (id: string) => void }) {
   const { drafts } = logs
   const recent = recentEntries(data.journal, drafts)
 

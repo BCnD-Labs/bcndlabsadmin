@@ -1,5 +1,6 @@
+import { TextInput } from "../../editing/keyboard.tsx"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native"
+import { Pressable, StyleSheet, Text, View } from "react-native"
 import { TASK_TABS, removeTask, toggleStar, toggleTask, type Collections, type TaskTab } from "../../../lib/shared.ts"
 import { plannerColor as color } from "../../planner-theme.ts"
 import { useWorkspace } from "../../data/WorkspaceProvider.tsx"
@@ -167,3 +168,4 @@ const styles = StyleSheet.create({
   warn: { color: tone.red },
   list: { gap: 2 },
 })
+

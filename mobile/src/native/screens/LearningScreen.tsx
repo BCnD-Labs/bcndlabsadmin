@@ -1,6 +1,7 @@
+import { KeyboardFrame, KeyboardScrollView, TextInput } from "../editing/keyboard.tsx"
 import { shape } from "../../shape.ts"
 import { useEffect, useRef, useState, type ReactNode } from "react"
-import { Animated, Easing, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native"
+import { Animated, Easing, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native"
 import { toggleTask, type Collections } from "../../lib/shared.ts"
 import { plannerColor as c } from "../planner-theme.ts"
 import { useWorkspace } from "../data/WorkspaceProvider.tsx"
@@ -55,14 +56,14 @@ export function LearningScreen({ onOpenSettings }: { onOpenSettings: () => void 
     if (!await mutate(["tasks"], d => toggleTask(d, task.id))) setNotice(message ?? "Could not save this task.")
   }
   const tabs = course ? ["overview", "work", "notes"] as const : ["library", "upcoming"] as const
-  return <View style={s.fill}>
+  return <KeyboardFrame style={s.fill}>
     <View style={s.header}>
       <View style={s.top}><Text style={s.breadcrumb}>Blackwall <Text style={s.muted}>/ Learning</Text></Text><View style={s.topRight}><SyncStatus onOpenSettings={onOpenSettings} /><Pressable onPress={() => setMenu(v => !v)} style={s.add} accessibilityRole="button" accessibilityLabel={course ? `Add to ${course.title}` : "Add learning item"} accessibilityState={{ expanded: menu }}><Icon name="add" size={20} tint={c.accent} /></Pressable></View></View>
       <View style={s.tabs} accessibilityRole="tablist">{tabs.map(tab => <Pill key={tab} label={tab[0].toUpperCase() + tab.slice(1)} selected={course ? detail === tab : collection === tab} tab onPress={() => { if (course) setDetail(tab as DetailTab); else setCollection(tab as CollectionTab); setMenu(false) }} />)}</View>
       {menu ? <View style={s.menu}><Text style={s.menuLabel}>{course ? `ADD TO ${kindInfo(course).label.toUpperCase()}` : "CREATE"}</Text>{course ? <>{typeOptions(course.kind).map(x => <MenuItem key={x.value} label={x.label} icon={x.value === "event" ? "calendar-outline" : x.value === "exam" ? "ribbon-outline" : "checkbox-outline"} onPress={() => edit(() => { setTaskEditor({ mode: "create", courseId: course.id, learningType: x.value }); setDetail("work") })} />)}<MenuItem label="Note" icon="document-text-outline" onPress={() => edit(() => { setNoteEditor({ mode: "create", courseId: course.id }); setDetail("notes") })} /><View style={s.rule} /><MenuItem label="Edit learning item" icon="create-outline" onPress={() => edit(() => setCourseEditor(course))} /></> : <MenuItem label="Learning item" icon="school-outline" onPress={() => edit(() => setCourseEditor("new"))} />}</View> : null}
     </View>
     {menu ? <Pressable style={s.dismiss} onPress={() => setMenu(false)} accessibilityRole="button" accessibilityLabel="Close add menu" /> : null}
-    <ScrollView style={s.fill} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={c.accent} colors={[c.accent]} />}>
+    <KeyboardScrollView style={s.fill} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={c.accent} colors={[c.accent]} />}>
       {!data ? <View style={s.empty}><Text style={s.emptyTitle}>{status === "signed-out" ? "Sign in to use Learning" : "Loading your workspace"}</Text><Text style={s.meta}>{message ?? "Your learning records live in your workspace."}</Text>{status === "signed-out" ? <SmallButton label="Sign in" onPress={onOpenSettings} /> : null}</View> : null}
       {data && status !== "ok" && message ? <Text style={s.notice}>{message}</Text> : null}{notice ? <Text style={s.error}>{notice}</Text> : null}
       {data && course ? <MotionPane motionKey={`${course.id}-${detail}`} reduce={reduceMotion}>
@@ -77,11 +78,11 @@ export function LearningScreen({ onOpenSettings }: { onOpenSettings: () => void 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filters}><Pill label="All" selected={kind === "all"} onPress={() => setKind("all")} />{KINDS.map(k => <Pill key={k.value} label={k.label} selected={kind === k.value} onPress={() => setKind(k.value)} />)}</ScrollView>
         {collection === "library" ? <Library courses={shown} tasks={data.tasks} total={data.courses.length} onOpen={openCourse} onAdd={() => edit(() => setCourseEditor("new"))} /> : <Upcoming courses={shown} tasks={data.tasks} today={today} onTask={id => setTaskEditor({ mode: "edit", id })} onCourse={id => { const found = data.courses.find(x => x.id === id); if (found) openCourse(found) }} />}
       </MotionPane> : null}
-    </ScrollView>
+    </KeyboardScrollView>
     {data && courseEditor ? <CourseEditor key={courseEditor === "new" ? "new" : courseEditor.id} value={courseEditor} onClose={() => setCourseEditor(null)} /> : null}
     {data && taskEditor ? <TaskSheet key={taskEditor.mode === "edit" ? taskEditor.id : `new-${taskEditor.courseId}-${taskEditor.learningType}`} editor={taskEditor} data={data} today={today} onClose={() => setTaskEditor(null)} /> : null}
     {data && noteEditor ? <NoteSheet key={noteEditor.mode === "edit" ? noteEditor.id : `new-${noteEditor.courseId}`} editor={noteEditor} data={data} onClose={() => setNoteEditor(null)} compact /> : null}
-  </View>
+  </KeyboardFrame>
 }
 
 function MotionPane({ motionKey, reduce, children }: { motionKey: string; reduce: boolean; children: ReactNode }) {

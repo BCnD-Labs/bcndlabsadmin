@@ -1,5 +1,6 @@
-import { useCallback, useState } from "react"
-import { ActivityIndicator, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native"
+import { KeyboardFrame, KeyboardScrollView, TextInput } from "../editing/keyboard.tsx"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { ActivityIndicator, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native"
 import { plannerColor as c } from "../planner-theme.ts"
 import { SyncStatus } from "../data/SyncStatus.tsx"
 import { todayKey } from "../data/sync-view.ts"
@@ -21,6 +22,8 @@ export function PlannerScreen({ onOpenSettings }: { onOpenSettings: () => void }
   const [mode, setMode] = useState<Mode>("calendar"), [search, setSearch] = useState("")
   const [createOpen, setCreateOpen] = useState(false)
   const [headerHeight, setHeaderHeight] = useState(136)
+  const taskClose = useRef<(() => void) | null>(null)
+  const [selectedDay, setSelectedDay] = useState(() => todayKey())
   const [editor, setEditor] = useState<Editor | null>(null), [createDue, setCreateDue] = useState<string | undefined>()
   const edit = useCallback((id: string) => setEditor({ mode: "edit", id }), [])
   const today = todayKey(), access = editAccess(status, true)
@@ -29,8 +32,8 @@ export function PlannerScreen({ onOpenSettings }: { onOpenSettings: () => void }
   let body
   if (data) {
     body = floating ? <TasksView data={data} today={today} onEdit={edit} onCreateDue={setCreateDue} search={search} onSearchChange={setSearch} />
-      : mode === "calendar" ? <CalendarView data={data} today={today} onEdit={edit} onCreateDue={setCreateDue} logs={logs} blocked={access.reason} />
-      : mode === "log" ? <LogView data={data} today={today} logs={logs} blocked={access.reason} onEditTask={edit} />
+      : mode === "calendar" ? <CalendarView selected={selectedDay} onSelect={setSelectedDay} data={data} today={today} onEdit={edit} onCreateDue={setCreateDue} logs={logs} blocked={access.reason} />
+      : mode === "log" ? <LogView day={selectedDay} onDay={setSelectedDay} data={data} today={today} logs={logs} blocked={access.reason} onEditTask={edit} />
       : <NotesView data={data} blocked={access.reason} />
   } else if (status === "loading") {
     body = <View style={styles.loading}><ActivityIndicator color={c.accent} /><Text style={styles.note}>Loading your workspace…</Text></View>
@@ -47,20 +50,20 @@ export function PlannerScreen({ onOpenSettings }: { onOpenSettings: () => void }
     </View> : null}
     {data ? <View style={styles.tabs} accessibilityRole="tablist">{MODES.map(m => <Pressable key={m.key} style={[styles.tab, mode === m.key && styles.tabOn]} onPress={() => setMode(m.key)} accessibilityRole="tab" accessibilityLabel={m.label} accessibilityState={{ selected: mode === m.key }}><Text style={[styles.tabText, mode === m.key && styles.tabTextOn]}>{m.label}</Text></Pressable>)}</View> : null}
   </View>
-  return <View style={styles.fill}>
+  return <KeyboardFrame style={styles.fill}>
     {!floating ? header : null}
     {data && !floating && status !== "ok" && status !== "loading" && message ? <Text style={[styles.note, { paddingHorizontal: 14 }]}>{message}</Text> : null}
-    {mode === "calendar" && data ? body : <ScrollView style={styles.fill} contentContainerStyle={[styles.content, floating && { paddingTop: headerHeight + 12 }]} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={c.accent} colors={[c.accent]} progressViewOffset={floating ? 136 : 0} />}>
+    {mode === "calendar" && data ? body : <KeyboardScrollView style={styles.fill} contentContainerStyle={[styles.content, floating && { paddingTop: headerHeight + 12 }]} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={c.accent} colors={[c.accent]} progressViewOffset={floating ? 136 : 0} />}>
       {data && floating && status !== "ok" && status !== "loading" && message ? <Text style={styles.note}>{message}</Text> : null}
       {body}
-    </ScrollView>}
+    </KeyboardScrollView>}
     {floating ? header : null}
     {data && (floating || mode === "calendar") ? <AddFab enabled={access.ok} onPress={() => setCreateOpen(true)} /> : null}
-    {createOpen || (data && editor) ? <Modal visible transparent animationType="fade" statusBarTranslucent navigationBarTranslucent onRequestClose={() => { setCreateOpen(false); setEditor(null) }}>
+    {createOpen || (data && editor) ? <Modal visible transparent animationType="fade" statusBarTranslucent navigationBarTranslucent onRequestClose={() => { if (editor) taskClose.current?.(); else setCreateOpen(false) }}>
     {createOpen ? <AddItemMenu onClose={() => setCreateOpen(false)} onChoose={kind => { setCreateOpen(false); setEditor({ mode: "create", due: createDue ?? (kind === "event" ? today : undefined), kind }) }} /> : null}
-    {data && editor ? <TaskSheet embedded editor={editor} data={data} today={today} onClose={() => setEditor(null)} /> : null}
+    {data && editor ? <TaskSheet key={editor.mode === "edit" ? editor.id : "new"} registerClose={handler => { taskClose.current = handler }} embedded editor={editor} data={data} today={today} onClose={() => setEditor(null)} /> : null}
     </Modal> : null}
-  </View>
+  </KeyboardFrame>
 }
 const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: c.ground }, content: { padding: 14, paddingBottom: NAV_CLEARANCE, gap: 10 }, floatingContent: { paddingTop: 146 },
@@ -70,3 +73,4 @@ const styles = StyleSheet.create({
   calendarButton: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: c.panel, elevation: 3 }, tabs: { flexDirection: "row", gap: 5 }, tab: { flex: 1, minHeight: 32, alignItems: "center", justifyContent: "center", backgroundColor: c.panel, borderRadius: 18, borderWidth: 1, borderColor: c.line, elevation: 2 }, tabOn: { backgroundColor: c.selected, borderColor: c.selectedBorder }, tabText: { color: c.muted, fontSize: 12, fontWeight: "500" }, tabTextOn: { color: c.accent },
   loading: { alignItems: "center", gap: 8, paddingVertical: 32 }, note: { color: c.text2, fontSize: 13, lineHeight: 19 },
 })
+

@@ -1,6 +1,8 @@
+import { useEditorClose } from "../editing/useEditorClose.ts"
+import { KeyboardFrame, KeyboardScrollView, TextInput } from "../editing/keyboard.tsx"
 import { shape } from "../../shape.ts"
 import { useState } from "react"
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native"
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
 import type { Collections } from "../../lib/shared.ts"
 import { useWorkspace } from "../data/WorkspaceProvider.tsx"
 import { plannerColor as c } from "../planner-theme.ts"
@@ -29,20 +31,25 @@ export function ProjectEditor({ value, data, onClose }: { value: Project | "new"
   const [error, setError] = useState("")
   const available = data.repos.filter(r => !r.projectId || r.projectId === previous?.id)
   const autoCode = name.replace(/[^a-z0-9]/gi, "").slice(0, 3).toUpperCase()
+  const [initial] = useState(() => JSON.stringify([previous?.name ?? "", previous?.code ?? "", previous?.status ?? "active", previous?.color ?? "teal", previous?.description ?? "", previous ? data.repos.filter(r => r.projectId === previous.id).map(r => r.id) : []]))
+  const dirty = JSON.stringify([name, code, status, colour, description, linked]) !== initial
   function toggleRepo(id: string) { setLinked(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]) }
-  async function save() {
-    if (busy) return
-    if (!name.trim()) return setError("Give this project a name.")
+  async function save(closeAfter = true): Promise<boolean> {
+    if (busy) return false
+    if (!name.trim()) return (setError("Give this project a name."), false)
     const patch = { name: name.trim(), code: (code.trim() || autoCode || "PRJ").toUpperCase().slice(0, 5), status, color: colour, description: description.trim() }
     setBusy(true)
-    const ok = await mutate(["projects", "repos"], d => saveProjectRecord(d, previous?.id, patch, linked))
-    setBusy(false)
-    if (ok) onClose()
-    else setError(message ?? "Could not save this project. Your changes are still here.")
+    let ok = false
+    try { ok = await mutate(["projects", "repos"], d => saveProjectRecord(d, previous?.id, patch, linked))
+    } catch { setError("Could not save. Your changes are still here.") } finally { setBusy(false) }
+    if (ok && closeAfter) onClose()
+    if (!ok) setError(message ?? "Could not save this project. Your changes are still here.")
+    return ok
   }
-  return <Modal visible transparent animationType="fade" onRequestClose={onClose}><View style={s.backdrop}><View style={s.sheet}>
-    <View style={s.header}><Text style={s.heading}>{previous ? "Edit project" : "New project"}</Text><Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close project editor"><Icon name="close" size={19} tint={c.text2} /></Pressable></View>
-    <ScrollView style={s.scroll} contentContainerStyle={s.form} keyboardShouldPersistTaps="handled">
+  const close = useEditorClose(dirty, busy, onClose, () => save(false))
+  return <Modal visible transparent animationType="fade" onRequestClose={() => close()}><KeyboardFrame style={s.backdrop}><View style={s.sheet}>
+    <View style={s.header}><Text style={s.heading}>{previous ? "Edit project" : "New project"}</Text><Pressable onPress={() => close()} accessibilityRole="button" accessibilityLabel="Close project editor"><Icon name="close" size={19} tint={c.text2} /></Pressable></View>
+    <KeyboardScrollView style={s.scroll} contentContainerStyle={s.form} keyboardShouldPersistTaps="handled">
       <Text style={s.label}>Name</Text><TextInput value={name} onChangeText={setName} placeholder="Project name" placeholderTextColor={c.muted} accessibilityLabel="Project name" style={s.input} />
       <Text style={s.label}>Short code</Text><TextInput value={code} onChangeText={setCode} placeholder={autoCode || "PRJ"} placeholderTextColor={c.muted} autoCapitalize="characters" maxLength={5} accessibilityLabel="Short code" style={s.input} />
       <Pressable onPress={() => setMore(v => !v)} style={s.more} accessibilityRole="button" accessibilityState={{ expanded: more }}><Text style={s.moreText}>{more ? "− Fewer details" : "+ More details"}</Text></Pressable>
@@ -51,10 +58,10 @@ export function ProjectEditor({ value, data, onClose }: { value: Project | "new"
       <Text style={s.label}>Description</Text><TextInput value={description} onChangeText={setDescription} multiline textAlignVertical="top" placeholder="What is this project for?" placeholderTextColor={c.muted} accessibilityLabel="Description" style={[s.input, s.description]} />
       {available.length ? <><Text style={s.label}>Repositories</Text>{available.map(repo => <Pressable key={repo.id} onPress={() => toggleRepo(repo.id)} style={s.repo} accessibilityRole="checkbox" accessibilityState={{ checked: linked.includes(repo.id) }}><Icon name={linked.includes(repo.id) ? "checkbox" : "square-outline"} size={19} tint={linked.includes(repo.id) ? c.accent : c.muted} /><Text style={s.repoName} numberOfLines={1}>{repo.fullName}</Text></Pressable>)}</> : null}</> : null}
       {error ? <Text style={s.error}>{error}</Text> : null}
-    </ScrollView>
-    <View style={s.actions}><Pressable onPress={onClose} style={s.action} accessibilityRole="button"><Text style={s.actionText}>Close</Text></Pressable><Pressable onPress={() => void save()} disabled={busy} style={[s.action, s.save, busy && s.disabled]} accessibilityRole="button"><Text style={s.saveText}>{busy ? "Saving…" : "Save project"}</Text></Pressable></View>
-  </View></View></Modal>
+    </KeyboardScrollView>
+    <View style={s.actions}><Pressable onPress={() => close()} style={s.action} accessibilityRole="button"><Text style={s.actionText}>Close</Text></Pressable><Pressable onPress={() => void save()} disabled={busy} style={[s.action, s.save, busy && s.disabled]} accessibilityRole="button"><Text style={s.saveText}>{busy ? "Saving…" : "Save project"}</Text></Pressable></View>
+  </View></KeyboardFrame></Modal>
 }
 
-const s = StyleSheet.create({ backdrop: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.55)" }, sheet: { width: "92%", maxWidth: 520, maxHeight: "76%", borderRadius: shape.dialog, backgroundColor: c.panel, borderWidth: 1, borderColor: c.border, overflow: "hidden" }, header: { minHeight: 36, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderColor: c.line }, heading: { color: c.text, fontSize: 15, fontWeight: "600" }, scroll: { flexGrow: 0 }, form: { padding: 12, gap: 7 }, label: { color: c.muted, fontSize: 11 }, input: { minHeight: 34, borderRadius: 11, backgroundColor: c.ground, borderWidth: 1, borderColor: c.line, color: c.text, paddingHorizontal: 10, paddingVertical: 5, fontSize: 13 }, more: { minHeight: 26, alignSelf: "flex-start", justifyContent: "center", paddingHorizontal: 4 }, moreText: { color: c.accent, fontSize: 12 }, description: { minHeight: 64 }, options: { flexDirection: "row", flexWrap: "wrap", gap: 6 }, swatch: { minHeight: 29, borderRadius: 15, backgroundColor: c.raised, paddingHorizontal: 8, flexDirection: "row", alignItems: "center", gap: 5, borderWidth: 1, borderColor: "transparent" }, swatchOn: { borderColor: c.accent }, swatchDot: { width: 9, height: 9, borderRadius: 5 }, swatchText: { color: c.text2, fontSize: 11, textTransform: "capitalize" }, repo: { minHeight: 31, flexDirection: "row", alignItems: "center", gap: 8 }, repoName: { color: c.text2, fontSize: 12, flex: 1 }, error: { color: "#ffa8a8", fontSize: 12 }, actions: { flexDirection: "row", justifyContent: "flex-end", gap: 7, padding: 8, borderTopWidth: 1, borderColor: c.line }, action: { minHeight: 28, borderRadius: 15, paddingHorizontal: 12, justifyContent: "center", backgroundColor: c.raised }, save: { backgroundColor: c.action }, disabled: { opacity: 0.5 }, actionText: { color: c.text2, fontSize: 12 }, saveText: { color: "#fff", fontSize: 12, fontWeight: "600" } })
+const s = StyleSheet.create({ backdrop: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.55)" }, sheet: { width: "92%", maxWidth: 520, maxHeight: "76%", borderRadius: shape.dialog, backgroundColor: c.panel, borderWidth: 1, borderColor: c.border, overflow: "hidden" }, header: { minHeight: 36, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderColor: c.line }, heading: { color: c.text, fontSize: 15, fontWeight: "600" }, scroll: { flexGrow: 0 }, form: { padding: 12, gap: 7 }, label: { color: c.muted, fontSize: 11 }, input: { minHeight: 34, borderRadius: 11, backgroundColor: c.ground, borderWidth: 1, borderColor: c.line, color: c.text, paddingHorizontal: 10, paddingVertical: 5, fontSize: 13 }, more: { minHeight: 26, alignSelf: "flex-start", justifyContent: "center", paddingHorizontal: 4 }, moreText: { color: c.accent, fontSize: 12 }, description: { minHeight: 64 }, options: { flexDirection: "row", flexWrap: "wrap", gap: 6 }, swatch: { minHeight: 32, borderRadius: 15, backgroundColor: c.raised, paddingHorizontal: 8, flexDirection: "row", alignItems: "center", gap: 5, borderWidth: 1, borderColor: "transparent" }, swatchOn: { borderColor: c.accent }, swatchDot: { width: 9, height: 9, borderRadius: 5 }, swatchText: { color: c.text2, fontSize: 11, textTransform: "capitalize" }, repo: { minHeight: 32, flexDirection: "row", alignItems: "center", gap: 8 }, repoName: { color: c.text2, fontSize: 12, flex: 1 }, error: { color: "#ffa8a8", fontSize: 12 }, actions: { flexDirection: "row", justifyContent: "flex-end", gap: 7, padding: 8, borderTopWidth: 1, borderColor: c.line }, action: { minHeight: 32, borderRadius: 15, paddingHorizontal: 12, justifyContent: "center", backgroundColor: c.raised }, save: { backgroundColor: c.action }, disabled: { opacity: 0.5 }, actionText: { color: c.text2, fontSize: 12 }, saveText: { color: "#fff", fontSize: 12, fontWeight: "600" } })
 

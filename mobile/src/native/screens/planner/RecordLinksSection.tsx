@@ -1,5 +1,6 @@
+import { TextInput } from "../../editing/keyboard.tsx"
 import { useMemo, useState } from "react"
-import { Pressable, Text, TextInput, View } from "react-native"
+import { Pressable, Text, View } from "react-native"
 import type { Collections } from "../../../lib/shared.ts"
 import { color } from "../../../theme.ts"
 import { Chip, Icon, tone } from "../../ui.tsx"
@@ -60,3 +61,4 @@ export function RecordLinksSection({ links, onChange, data, selfId, today }: { l
     </>
   )
 }
+

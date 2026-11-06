@@ -1,3 +1,4 @@
+import { KeyboardFrame, KeyboardScrollView } from "../../../editing/keyboard.tsx"
 import { shape } from "../../../../shape.ts"
 import type { ReactNode } from "react"
 import { Animated, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
@@ -19,7 +20,7 @@ export function SheetFrame({ title, onClose, onBackdrop, children, compact = fal
   const expanded = grow.expanded
   return (
     <Modal visible transparent animationType={reduceMotion ? "none" : "fade"} onRequestClose={onClose} statusBarTranslucent navigationBarTranslucent>
-      <KeyboardAvoidingView style={styles.fill} behavior="padding">
+      <KeyboardFrame style={styles.fill} >
         <Pressable style={styles.backdrop} onPress={onBackdrop ?? onClose} accessibilityRole="button" accessibilityLabel="Close" />
         <Animated.View onLayout={grow.onLayout} style={[styles.sheet, compact && styles.compactSheet, grow.style]} accessibilityViewIsModal>
           <View style={[styles.header, compact && styles.compactHeader]}>
@@ -31,11 +32,11 @@ export function SheetFrame({ title, onClose, onBackdrop, children, compact = fal
               <Icon name="close" size={22} tint={color.text2} />
             </Pressable>
           </View>
-          <ScrollView contentContainerStyle={[styles.body, compact && styles.compactBody]} keyboardShouldPersistTaps="handled">
+          <KeyboardScrollView contentContainerStyle={[styles.body, compact && styles.compactBody]} keyboardShouldPersistTaps="handled">
             {typeof children === "function" ? children(expanded) : children}
-          </ScrollView>
+          </KeyboardScrollView>
         </Animated.View>
-      </KeyboardAvoidingView>
+      </KeyboardFrame>
     </Modal>
   )
 }

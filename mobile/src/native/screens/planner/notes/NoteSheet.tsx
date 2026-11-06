@@ -1,5 +1,7 @@
+import { useEditorClose } from "../../../editing/useEditorClose.ts"
+import { TextInput } from "../../../editing/keyboard.tsx"
 import { useState } from "react"
-import { Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native"
+import { Pressable, StyleSheet, Switch, Text, View } from "react-native"
 import { createNote, removeNote, updateNote, type Collections } from "../../../../lib/shared.ts"
 import { color, noteInk, notePaper } from "../../../../theme.ts"
 import { useWorkspace } from "../../../data/WorkspaceProvider.tsx"
@@ -39,24 +41,27 @@ export function NoteSheet({ editor, data, onClose, compact = false }: { editor: 
   const dirty = noteDirty(draft, start)
 
   /** Runs one change; closes when it is on the phone (saved or queued), stays open if refused. */
-  async function run(change: (d: Collections) => Collections) {
-    if (busy) return
+  async function run(change: (d: Collections) => Collections, closeAfter = true): Promise<boolean> {
+    if (busy) return false
     setBusy(true)
-    const ok = await resolveWithin(mutate(["notes"], change), 1500, true)
+    let ok = false
+    try { ok = await resolveWithin(mutate(["notes"], change), 1500, true) } catch { ok = false }
     setBusy(false)
     setFailed(!ok)
-    if (ok) onClose()
+    if (ok && closeAfter) onClose()
+    return ok
   }
 
-  function save() {
+  async function save(closeAfter = true): Promise<boolean> {
     setShowErrors(true)
-    if (Object.keys(noteErrors(draft)).length || gone) return
-    if (note) void run((d) => updateNote(d, note.id, buildNotePatch(draft)))
-    else void run((d) => createNote(d, buildNewNote(draft)).data)
+    if (Object.keys(noteErrors(draft)).length || gone) return false
+    if (note) return run((d) => updateNote(d, note.id, buildNotePatch(draft)), closeAfter)
+    else return run((d) => createNote(d, buildNewNote(draft)).data, closeAfter)
   }
 
+  const close = useEditorClose(dirty, busy, onClose, () => save(false))
   return (
-    <SheetFrame title={editor.mode === "edit" ? "Edit note" : "New note"} onClose={onClose} onBackdrop={() => !dirty && onClose()} compact={compact}>
+    <SheetFrame title={editor.mode === "edit" ? "Edit note" : "New note"} onClose={() => close()} onBackdrop={() => close()} compact={compact}>
       {(expanded) => <>
       {missing ? (
         <>
@@ -113,7 +118,7 @@ export function NoteSheet({ editor, data, onClose, compact = false }: { editor: 
 
           {gone ? <Text style={styles.error}>This note was deleted on another device, so it can't be saved. Close to discard your changes.</Text> : null}
           {failed ? <Text style={styles.error}>{message ?? "That couldn't be saved. Your changes are still here."}</Text> : null}
-          {compact ? <Pressable onPress={save} disabled={busy || gone} style={[styles.compactSave, (busy || gone) && styles.disabled]} accessibilityRole="button" accessibilityLabel={editor.mode === "edit" ? "Save changes" : "Add note"}><Icon name="checkmark" size={14} tint="#fff" /><Text style={styles.compactSaveText}>{busy ? "Saving…" : editor.mode === "edit" ? "Save changes" : "Add note"}</Text></Pressable> : <Button label={busy ? "Saving…" : editor.mode === "edit" ? "Save changes" : "Add note"} primary onPress={save} />}
+          {compact ? <Pressable onPress={() => void save()} disabled={busy || gone} style={[styles.compactSave, (busy || gone) && styles.disabled]} accessibilityRole="button" accessibilityLabel={editor.mode === "edit" ? "Save changes" : "Add note"}><Icon name="checkmark" size={14} tint="#fff" /><Text style={styles.compactSaveText}>{busy ? "Saving…" : editor.mode === "edit" ? "Save changes" : "Add note"}</Text></Pressable> : <Button label={busy ? "Saving…" : editor.mode === "edit" ? "Save changes" : "Add note"} primary onPress={() => void save()} />}
           {note && (!compact || more) && !confirming ? (
             <Pressable onPress={() => setConfirming(true)} style={styles.delete} accessibilityRole="button" accessibilityLabel="Delete note">
               <Text style={styles.deleteText}>Delete note</Text>
@@ -141,7 +146,7 @@ const styles = StyleSheet.create({
   multi: { minHeight: 140 },
   compactMulti: { minHeight: 88, maxHeight: 180, borderRadius: 0, borderWidth: 0, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.line, backgroundColor: c.panel, paddingHorizontal: 2, paddingTop: 8, fontSize: 13, lineHeight: 19 },
   largeMulti: { minHeight: 200, maxHeight: 300 }, expandedMulti: { minHeight: 280, maxHeight: 460 },
-  more: { minHeight: 28, alignSelf: "flex-start", justifyContent: "center", paddingHorizontal: 4 }, moreText: { color: c.accent, fontSize: 12 }, compactSave: { minHeight: 29, borderRadius: 15, backgroundColor: c.action, alignSelf: "flex-end", paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 5 }, compactSaveText: { color: "#fff", fontSize: 12, fontWeight: "600" }, disabled: { opacity: 0.45 },
+  more: { minHeight: 32, alignSelf: "flex-start", justifyContent: "center", paddingHorizontal: 4 }, moreText: { color: c.accent, fontSize: 12 }, compactSave: { minHeight: 32, borderRadius: 15, backgroundColor: c.action, alignSelf: "flex-end", paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 5 }, compactSaveText: { color: "#fff", fontSize: 12, fontWeight: "600" }, disabled: { opacity: 0.45 },
   swatches: { flexDirection: "row", gap: 10 },
   swatchHit: { width: 48, height: 48, borderRadius: 24, borderWidth: 2, borderColor: "transparent", alignItems: "center", justifyContent: "center" },
   swatchOn: { borderColor: color.text },
@@ -159,3 +164,4 @@ const styles = StyleSheet.create({
   deleteSure: { backgroundColor: color.red, borderColor: color.red },
   deleteSureText: { color: color.text, fontSize: 15, fontWeight: "700" },
 })
+

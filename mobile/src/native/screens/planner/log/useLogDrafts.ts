@@ -23,6 +23,7 @@ const without = (flags: Record<string, true>, day: string) => {
 export function useLogDrafts(journal: Collections["journal"] | undefined, mutate: WorkspaceValue["mutate"], allowed: boolean) {
   const [drafts, setDrafts] = useState<Drafts>({})
   // Explicit-save entry composers survive Calendar/Log tab and date changes. They never autosave.
+  const [activeSections, setActiveSections] = useState<Record<string, string | null>>({})
   const [entryDrafts, setEntryDrafts] = useState<Record<string, EntryDraft>>({})
   const [sections, setSections] = useState<SectionDrafts>({})
   const [saving, setSaving] = useState<Record<string, true>>({})
@@ -124,7 +125,8 @@ export function useLogDrafts(journal: Collections["journal"] | undefined, mutate
   // Leaving the Planner saves whatever is waiting on a timer.
   useEffect(() => () => [...timers.current.keys()].forEach((day) => void save(day)), [save])
 
-  return { drafts, entryDrafts, setEntryDrafts, sections, shownSections, editSections, acknowledgeLegacy, saving, failed, edit, save }
+  return { activeSections, setActiveSections, drafts, entryDrafts, setEntryDrafts, sections, shownSections, editSections, acknowledgeLegacy, saving, failed, edit, save }
 }
 
 export type LogDrafts = ReturnType<typeof useLogDrafts>
+

@@ -1,4 +1,5 @@
-import { Text, TextInput, View } from "react-native"
+import { TextInput } from "../../editing/keyboard.tsx"
+import { Text, View } from "react-native"
 import { type Collections } from "../../../lib/shared.ts"
 import { color } from "../../../theme.ts"
 import { Chip } from "../../ui.tsx"
@@ -51,3 +52,4 @@ export function CourseSection({ x, set, courses, errors }: { x: Extras; set: (p:
     </>
   )
 }
+

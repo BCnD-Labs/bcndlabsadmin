@@ -1,6 +1,8 @@
+import { useEditorClose } from "../../editing/useEditorClose.ts"
+import { KeyboardFrame, KeyboardScrollView, TextInput } from "../../editing/keyboard.tsx"
 import { shape } from "../../../shape.ts"
 import { useState } from "react"
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native"
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native"
 import { createService, removeService, updateService, type Collections } from "../../../lib/shared.ts"
 import { originOf } from "../../../lib/url.ts"
 import { useWorkspace } from "../../data/WorkspaceProvider.tsx"
@@ -26,28 +28,23 @@ export function ServiceEditor({ value, groups, onClose }: { value: Service | "ne
   const dirty = name !== (previous?.name ?? "") || url !== (previous?.url ?? "https://") || description !== (previous?.description ?? "") || group !== (previous?.group ?? "Services") || pinned !== (previous?.pinned ?? false)
   const choices = [...new Set([...commonGroups, ...groups.filter(Boolean)])]
 
-  function dismiss() {
-    if (busy) return
-    if (!dirty) return onClose()
-    Alert.alert("Discard tool changes?", "Your edits have not been saved.", [
-      { text: "Keep editing", style: "cancel" },
-      { text: "Discard", style: "destructive", onPress: onClose },
-    ])
-  }
 
-  async function save() {
-    if (busy) return
+
+  async function save(closeAfter = true): Promise<boolean> {
+    if (busy) return false
     const trimmed = { name: name.trim(), url: url.trim(), description: description.trim(), group: group.trim() || "Services", pinned }
-    if (!trimmed.name) return setError("Give this tool a name.")
-    if (trimmed.url.length > 2048 || !originOf(trimmed.url)) return setError("Enter a full http:// or https:// address without spaces or a password.")
+    if (!trimmed.name) return (setError("Give this tool a name."), false)
+    if (trimmed.url.length > 2048 || !originOf(trimmed.url)) return (setError("Enter a full http:// or https:// address without spaces or a password."), false)
     setBusy(true)
-    const ok = await mutate(["services"], data => {
+    let ok = false
+    try { ok = await mutate(["services"], data => {
       if (previous && !data.services.some(service => service.id === previous.id)) throw new Error("This tool no longer exists. Refresh Mikoshi and try again.")
       return previous ? updateService(data, previous.id, trimmed) : createService(data, trimmed).data
     })
-    setBusy(false)
-    if (ok) onClose()
-    else setError("Could not save this tool. Your changes are still here.")
+    } catch { setError("Could not save. Your changes are still here.") } finally { setBusy(false) }
+    if (ok && closeAfter) onClose()
+    if (!ok) setError("Could not save this tool. Your changes are still here.")
+    return ok
   }
 
   function confirmDelete() {
@@ -70,9 +67,10 @@ export function ServiceEditor({ value, groups, onClose }: { value: Service | "ne
     else setError("Could not remove this tool. Try again.")
   }
 
-  return <Modal visible transparent animationType="fade" onRequestClose={dismiss}><View style={s.backdrop}><View style={s.sheet}>
-    <View style={s.header}><Text style={s.heading}>{previous ? "Edit tool" : "New tool"}</Text><Pressable onPress={dismiss} accessibilityRole="button" accessibilityLabel="Close tool editor"><Icon name="close" size={18} tint={c.text2} /></Pressable></View>
-    <ScrollView style={s.scroll} contentContainerStyle={s.form} keyboardShouldPersistTaps="handled">
+  const close = useEditorClose(dirty, busy, onClose, () => save(false))
+  return <Modal visible transparent animationType="fade" onRequestClose={() => close()}><KeyboardFrame style={s.backdrop}><View style={s.sheet}>
+    <View style={s.header}><Text style={s.heading}>{previous ? "Edit tool" : "New tool"}</Text><Pressable onPress={() => close()} accessibilityRole="button" accessibilityLabel="Close tool editor"><Icon name="close" size={18} tint={c.text2} /></Pressable></View>
+    <KeyboardScrollView style={s.scroll} contentContainerStyle={s.form} keyboardShouldPersistTaps="handled">
       <Text style={s.label}>Name</Text><TextInput value={name} onChangeText={setName} placeholder="Portainer" placeholderTextColor={c.muted} accessibilityLabel="Tool name" maxLength={100} style={s.input} />
       <Text style={s.label}>Address</Text><TextInput value={url} onChangeText={setUrl} placeholder="https://host:9443" placeholderTextColor={c.muted} accessibilityLabel="Tool address" keyboardType="url" autoCapitalize="none" autoCorrect={false} style={s.input} />
       <Text style={s.hint}>HTTPS tools open inside Blackwall. HTTP tools open in your browser.</Text>
@@ -84,9 +82,9 @@ export function ServiceEditor({ value, groups, onClose }: { value: Service | "ne
         <View style={s.pin}><Text style={s.pinText}>Pin to the top</Text><Switch value={pinned} onValueChange={setPinned} trackColor={{ false: c.line, true: c.selectedBorder }} thumbColor={pinned ? c.accent : c.muted} accessibilityLabel="Pin tool to the top" /></View>
       </> : null}
       {error ? <Text style={s.error}>{error}</Text> : null}
-    </ScrollView>
-    <View style={s.actions}>{previous ? <Pressable onPress={confirmDelete} disabled={busy} style={s.remove} accessibilityRole="button"><Text style={s.removeText}>Remove</Text></Pressable> : null}<View style={s.spacer} /><Pressable onPress={dismiss} style={s.action} accessibilityRole="button"><Text style={s.actionText}>Close</Text></Pressable><Pressable onPress={() => void save()} disabled={busy} style={[s.action, s.save, busy && s.disabled]} accessibilityRole="button"><Text style={s.saveText}>{busy ? "Saving…" : previous ? "Save" : "Add tool"}</Text></Pressable></View>
-  </View></View></Modal>
+    </KeyboardScrollView>
+    <View style={s.actions}>{previous ? <Pressable onPress={confirmDelete} disabled={busy} style={s.remove} accessibilityRole="button"><Text style={s.removeText}>Remove</Text></Pressable> : null}<View style={s.spacer} /><Pressable onPress={() => close()} style={s.action} accessibilityRole="button"><Text style={s.actionText}>Close</Text></Pressable><Pressable onPress={() => void save()} disabled={busy} style={[s.action, s.save, busy && s.disabled]} accessibilityRole="button"><Text style={s.saveText}>{busy ? "Saving…" : previous ? "Save" : "Add tool"}</Text></Pressable></View>
+  </View></KeyboardFrame></Modal>
 }
 
 const s = StyleSheet.create({
@@ -96,10 +94,10 @@ const s = StyleSheet.create({
   heading: { color: c.text, fontSize: 14, fontWeight: "600" }, scroll: { flexGrow: 0, flexShrink: 1 }, form: { padding: 11, gap: 6 },
   label: { color: c.muted, fontSize: 11 }, hint: { color: c.muted, fontSize: 11, lineHeight: 15 },
   input: { minHeight: 33, borderRadius: 13, backgroundColor: c.ground, borderWidth: 1, borderColor: c.line, color: c.text, paddingHorizontal: 10, paddingVertical: 5, fontSize: 13 },
-  more: { minHeight: 27, alignSelf: "flex-start", justifyContent: "center", paddingHorizontal: 4 }, moreText: { color: c.accent, fontSize: 12 },
+  more: { minHeight: 32, alignSelf: "flex-start", justifyContent: "center", paddingHorizontal: 4 }, moreText: { color: c.accent, fontSize: 12 },
   choices: { flexDirection: "row", flexWrap: "wrap", gap: 5 }, pin: { minHeight: 34, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, pinText: { color: c.text2, fontSize: 12 },
   error: { color: "#ffa8a8", fontSize: 12 }, actions: { flexDirection: "row", alignItems: "center", gap: 7, padding: 8, borderTopWidth: 1, borderColor: c.line }, spacer: { flex: 1 },
-  action: { minHeight: 28, borderRadius: 15, paddingHorizontal: 12, justifyContent: "center", backgroundColor: c.raised }, save: { backgroundColor: c.action }, disabled: { opacity: 0.5 },
-  actionText: { color: c.text2, fontSize: 12 }, saveText: { color: "#fff", fontSize: 12, fontWeight: "600" }, remove: { minHeight: 28, paddingHorizontal: 8, justifyContent: "center" }, removeText: { color: "#ff8787", fontSize: 12 },
+  action: { minHeight: 32, borderRadius: 15, paddingHorizontal: 12, justifyContent: "center", backgroundColor: c.raised }, save: { backgroundColor: c.action }, disabled: { opacity: 0.5 },
+  actionText: { color: c.text2, fontSize: 12 }, saveText: { color: "#fff", fontSize: 12, fontWeight: "600" }, remove: { minHeight: 32, paddingHorizontal: 8, justifyContent: "center" }, removeText: { color: "#ff8787", fontSize: 12 },
 })
 

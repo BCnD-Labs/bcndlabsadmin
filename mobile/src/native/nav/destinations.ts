@@ -40,7 +40,7 @@ export const DESTINATIONS: readonly Destination[] = [
 ]
 
 /** Screens that keep their state (open tools, scroll) while you visit another screen, once they have been opened. */
-export const KEEP_ALIVE: readonly ScreenKey[] = ["mikoshi"]
+export const KEEP_ALIVE: readonly ScreenKey[] = ["mikoshi", "planner", "learning"]
 
 /** The mini bar slots, in order. */
 export const PRIMARY: readonly Destination[] = DESTINATIONS.filter((d) => d.primary)
@@ -56,3 +56,4 @@ export function launcherGroups(): LauncherGroup[] {
 export function findDestination(key: DestinationKey): Destination {
   return DESTINATIONS.find((d) => d.key === key) ?? DESTINATIONS[0]
 }
+
