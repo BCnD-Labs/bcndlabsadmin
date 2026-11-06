@@ -14,9 +14,9 @@ const edge = (task: Task, today: string) => (task.done ? tone.green : isOverdue(
 /**
  * The Day view (one column) and the Week view (seven): a day header, an all-day / due row, and a
  * time axis with timed tasks placed by start time and length. Overlapping tasks sit side by side.
- * Tap a header or an empty part of a column to pick that day; tap a task to open it.
+ * Tap a header or an empty part of a column to pick that day; tap a task to preview it.
  */
-export function TimeGrid({ days, byDay, today, selected, format, compact, onSelectDay, onEdit }: {
+export function TimeGrid({ days, byDay, today, selected, format, compact, onSelectDay, onPreview }: {
   days: string[]
   byDay: Map<string, Task[]>
   today: string
@@ -25,7 +25,7 @@ export function TimeGrid({ days, byDay, today, selected, format, compact, onSele
   /** Week layout: narrow columns, smaller type, short chips. */
   compact: boolean
   onSelectDay: (day: string) => void
-  onEdit: (id: string) => void
+  onPreview: (id: string, day: string) => void
 }) {
   const hourHeight = compact ? 44 : 56
   const lanes = days.map((d) => timedLanes(byDay.get(d) ?? [], d))
@@ -36,7 +36,7 @@ export function TimeGrid({ days, byDay, today, selected, format, compact, onSele
   const fontSize = compact ? 10 : 12
 
   return (
-    <View style={styles.card} accessibilityLabel={days.length === 1 ? "Day calendar" : days.length === 3 ? "Three-day calendar" : "Week calendar"}>
+    <View style={styles.card} accessibilityLabel={days.length === 1 ? "Day calendar" : "Week calendar"}>
       <View style={styles.row}>
         <View style={{ width: GUTTER }} />
         {days.map((d) => {
@@ -62,7 +62,7 @@ export function TimeGrid({ days, byDay, today, selected, format, compact, onSele
               {shown.map((t) => {
                 const due = isDeadlineOn(t, d)
                 return (
-                  <Pressable key={t.id} onPress={() => onEdit(t.id)} style={[styles.chip, { borderLeftColor: edge(t, today) }]} accessibilityRole="button" accessibilityLabel={`${due ? "Due: " : ""}${t.title}`}>
+                  <Pressable key={t.id} onPress={() => onPreview(t.id, d)} style={[styles.chip, { borderLeftColor: edge(t, today) }]} accessibilityRole="button" accessibilityLabel={`${due ? "Due: " : ""}${t.title}`}>
                     <Text style={[styles.chipText, { fontSize }, t.done && styles.done]} numberOfLines={1}>
                       {due && !compact ? "Due: " : ""}
                       {t.title}
@@ -98,7 +98,7 @@ export function TimeGrid({ days, byDay, today, selected, format, compact, onSele
             ))}
             <Pressable style={StyleSheet.absoluteFill} onPress={() => onSelectDay(d)} accessibilityRole="button" accessibilityLabel={`Pick ${longDay(d)}`} />
             {lanes[c].map((l) => (
-              <Block key={l.task.id} lane={l} box={blockBox(l, range, hourHeight, compact ? 30 : 40)} today={today} format={format} compact={compact} onEdit={onEdit} />
+              <Block key={l.task.id} lane={l} box={blockBox(l, range, hourHeight, compact ? 30 : 40)} today={today} format={format} compact={compact} day={d} onPreview={onPreview} />
             ))}
           </View>
         ))}
@@ -107,13 +107,13 @@ export function TimeGrid({ days, byDay, today, selected, format, compact, onSele
   )
 }
 
-function Block({ lane, box, today, format, compact, onEdit }: { lane: Lane; box: ReturnType<typeof blockBox>; today: string; format: TimeFormat; compact: boolean; onEdit: (id: string) => void }) {
+function Block({ lane, box, today, format, compact, day, onPreview }: { lane: Lane; box: ReturnType<typeof blockBox>; today: string; format: TimeFormat; compact: boolean; day: string; onPreview: (id: string, day: string) => void }) {
   const t = lane.task
   const hue = t.done ? color.green : isOverdue(t, today) ? color.amber : [color.green, color.accent, color.blue, color.amber][[...(t.courseId ?? t.id)].reduce((n, ch) => n + ch.charCodeAt(0), 0) % 4]
   const time = formatTime(minuteToTime(lane.start), format)
   return (
     <View style={[styles.blockWrap, { top: box.top, height: box.height, left: `${box.leftPct}%`, width: `${box.widthPct}%` }]}>
-      <Pressable onPress={() => onEdit(t.id)} style={[styles.block, { borderColor: hue, borderLeftColor: hue, backgroundColor: `${hue}22` }]} accessibilityRole="button" accessibilityLabel={`${t.title}, ${time}${t.done ? ", done" : ""}`}>
+      <Pressable onPress={() => onPreview(t.id, day)} style={[styles.block, { borderColor: hue, borderLeftColor: hue, backgroundColor: `${hue}22` }]} accessibilityRole="button" accessibilityLabel={`${t.title}, ${time}${t.done ? ", done" : ""}`}>
         <Text style={[styles.blockTitle, compact && styles.small, t.done && styles.done]} numberOfLines={compact ? 3 : 2}>
           {t.title}
         </Text>
