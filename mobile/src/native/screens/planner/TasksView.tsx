@@ -34,6 +34,7 @@ export function TasksView({ data, today, onEdit, onCreateDue, search: query, onS
   // Checked off here: stays listed (struck through) until the tab changes, like the web.
   const [lingering, setLingering] = useState<Set<string>>(new Set())
   const [menuId, setMenuId] = useState<string | null>(null)
+  const [previewId, setPreviewId] = useState<string | null>(null)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const [density, flipDensity] = useTaskDensity()
   // The newest refusal message, read after an awaited save.
@@ -51,6 +52,7 @@ export function TasksView({ data, today, onEdit, onCreateDue, search: query, onS
   function changeTab(next: TaskTab) {
     setTab(next)
     setLingering(new Set())
+    setPreviewId(null)
   }
 
   /** Saves a change; when it is on the phone and has an undo, offers it. A refusal says why instead. */
@@ -86,7 +88,7 @@ export function TasksView({ data, today, onEdit, onCreateDue, search: query, onS
 
   const menuTask = menuId ? data.tasks.find((t) => t.id === menuId) : undefined
   const renderRow = (r: PlannerRow, tagFocus: boolean) => (
-    <TaskRow key={r.id} row={r} density={density} tagFocus={tagFocus} onToggle={() => toggle(r.id)} onOpen={() => onEdit(r.id)} onStar={() => star(r.id)} onDelete={() => remove(r.id)} onMenu={() => setMenuId(r.id)} />
+    <TaskRow key={r.id} row={r} task={data.tasks.find(t => t.id === r.id)!} expanded={previewId === r.id} onSelect={() => setPreviewId(value => value === r.id ? null : r.id)} density={density} tagFocus={tagFocus} onToggle={() => toggle(r.id)} onOpen={() => onEdit(r.id)} onStar={() => star(r.id)} onDelete={() => remove(r.id)} onMenu={() => setMenuId(r.id)} />
   )
   const renderSection = (s: PlannerSection, tagFocus: boolean) => (
     <View key={s.key} accessibilityLabel={s.title ?? "Completed"}>
