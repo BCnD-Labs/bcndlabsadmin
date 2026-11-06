@@ -12,12 +12,12 @@ import { NAV_CLEARANCE, Icon } from "../ui.tsx"
 import { CourseEditor } from "./learning/CourseEditor.tsx"
 import { Pill, SmallButton } from "./learning/LearningControls.tsx"
 import { KINDS, kindInfo, type Course, type Kind, type Task } from "./learning/learning-view.ts"
-import { Library, Upcoming, Overview, Work, LinkedNotes, Progress, type WorkTab } from "./learning/LearningViews.tsx"
+import { Library, Today, Upcoming, Overview, Work, LinkedNotes, Progress, type WorkTab } from "./learning/LearningViews.tsx"
 import { TaskSheet, type Editor } from "./planner/TaskSheet.tsx"
 import { typeOptions } from "./planner/learning-types.ts"
 import { NoteSheet, type NoteEditor } from "./planner/notes/NoteSheet.tsx"
 
-type CollectionTab = "library" | "upcoming"
+type CollectionTab = "today" | "library" | "upcoming"
 type DetailTab = "overview" | "work" | "notes"
 
 /** Native Learning uses the same workspace records as Planner, with a compact tabbed layout. */
@@ -25,7 +25,7 @@ export function LearningScreen({ onOpenSettings }: { onOpenSettings: () => void 
   const { data, status, message, refreshing, refresh, mutate } = useWorkspace()
   const reduceMotion = useReduceMotion()
   const [openId, setOpenId] = useState<string | null>(null)
-  const [collection, setCollection] = useState<CollectionTab>("library")
+  const [collection, setCollection] = useState<CollectionTab>("today")
   const [detail, setDetail] = useState<DetailTab>("work")
   const [workTab, setWorkTab] = useState<WorkTab>("open")
   const [kind, setKind] = useState<Kind | "all">("all")
@@ -55,12 +55,12 @@ export function LearningScreen({ onOpenSettings }: { onOpenSettings: () => void 
     if (blocked) return setNotice("Resolve the sync conflict before editing.")
     if (!await mutate(["tasks"], d => toggleTask(d, task.id))) setNotice(message ?? "Could not save this task.")
   }
-  const tabs = course ? ["overview", "work", "notes"] as const : ["library", "upcoming"] as const
+  const tabs = course ? ["overview", "work", "notes"] as const : ["today", "upcoming", "library"] as const
   return <KeyboardFrame style={s.fill}>
     <View style={s.header}>
       <View style={s.top}><Text style={s.breadcrumb}>Blackwall <Text style={s.muted}>/ Learning</Text></Text><View style={s.topRight}><SyncStatus onOpenSettings={onOpenSettings} /><Pressable onPress={() => setMenu(v => !v)} style={s.add} accessibilityRole="button" accessibilityLabel={course ? `Add to ${course.title}` : "Add learning item"} accessibilityState={{ expanded: menu }}><Icon name="add" size={20} tint={c.accent} /></Pressable></View></View>
       <View style={s.tabs} accessibilityRole="tablist">{tabs.map(tab => <Pill key={tab} label={tab[0].toUpperCase() + tab.slice(1)} selected={course ? detail === tab : collection === tab} tab onPress={() => { if (course) setDetail(tab as DetailTab); else setCollection(tab as CollectionTab); setMenu(false) }} />)}</View>
-      {menu ? <View style={s.menu}><Text style={s.menuLabel}>{course ? `ADD TO ${kindInfo(course).label.toUpperCase()}` : "CREATE"}</Text>{course ? <>{typeOptions(course.kind).map(x => <MenuItem key={x.value} label={x.label} icon={x.value === "event" ? "calendar-outline" : x.value === "exam" ? "ribbon-outline" : "checkbox-outline"} onPress={() => edit(() => { setTaskEditor({ mode: "create", courseId: course.id, learningType: x.value }); setDetail("work") })} />)}<MenuItem label="Note" icon="document-text-outline" onPress={() => edit(() => { setNoteEditor({ mode: "create", courseId: course.id }); setDetail("notes") })} /><View style={s.rule} /><MenuItem label="Edit learning item" icon="create-outline" onPress={() => edit(() => setCourseEditor(course))} /></> : <MenuItem label="Learning item" icon="school-outline" onPress={() => edit(() => setCourseEditor("new"))} />}</View> : null}
+      {menu ? <View style={s.menu}><Text style={s.menuLabel}>{course ? `ADD TO ${kindInfo(course).label.toUpperCase()}` : "CREATE"}</Text>{course ? <>{typeOptions(course.kind).map(x => <MenuItem key={x.value} label={x.label} icon={x.value === "event" ? "calendar-outline" : x.value === "exam" ? "ribbon-outline" : "checkbox-outline"} onPress={() => edit(() => { setTaskEditor({ mode: "create", courseId: course.id, learningType: x.value, ...(x.value === "event" && { kind: "event" as const }) }); setDetail("work") })} />)}<MenuItem label="Note" icon="document-text-outline" onPress={() => edit(() => { setNoteEditor({ mode: "create", courseId: course.id }); setDetail("notes") })} /><View style={s.rule} /><MenuItem label="Edit learning item" icon="create-outline" onPress={() => edit(() => setCourseEditor(course))} /></> : <MenuItem label="Learning item" icon="school-outline" onPress={() => edit(() => setCourseEditor("new"))} />}</View> : null}
     </View>
     {menu ? <Pressable style={s.dismiss} onPress={() => setMenu(false)} accessibilityRole="button" accessibilityLabel="Close add menu" /> : null}
     <KeyboardScrollView style={s.fill} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={c.accent} colors={[c.accent]} />}>
@@ -76,7 +76,7 @@ export function LearningScreen({ onOpenSettings }: { onOpenSettings: () => void 
       </MotionPane> : data ? <MotionPane motionKey={collection} reduce={reduceMotion}>
         <View style={s.search}><Icon name="search-outline" size={16} tint={c.muted} /><TextInput value={search} onChangeText={setSearch} placeholder="Find learning…" placeholderTextColor={c.muted} style={s.searchInput} accessibilityLabel="Find learning" returnKeyType="search" />{search ? <Pressable onPress={() => setSearch("")} accessibilityRole="button" accessibilityLabel="Clear search"><Icon name="close-circle" size={17} tint={c.muted} /></Pressable> : null}</View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filters}><Pill label="All" selected={kind === "all"} onPress={() => setKind("all")} />{KINDS.map(k => <Pill key={k.value} label={k.label} selected={kind === k.value} onPress={() => setKind(k.value)} />)}</ScrollView>
-        {collection === "library" ? <Library courses={shown} tasks={data.tasks} total={data.courses.length} onOpen={openCourse} onAdd={() => edit(() => setCourseEditor("new"))} /> : <Upcoming courses={shown} tasks={data.tasks} today={today} onTask={id => setTaskEditor({ mode: "edit", id })} onCourse={id => { const found = data.courses.find(x => x.id === id); if (found) openCourse(found) }} />}
+        {collection === "today" ? <Today courses={shown} tasks={data.tasks} today={today} onTask={id => setTaskEditor({ mode: "edit", id })} onCourse={id => { const course = data.courses.find(course => course.id === id); if (course) openCourse(course) }} onAdd={() => edit(() => setCourseEditor("new"))} onToggle={complete} /> : collection === "library" ? <Library courses={shown} tasks={data.tasks} total={data.courses.length} onOpen={openCourse} onAdd={() => edit(() => setCourseEditor("new"))} /> : <Upcoming courses={shown} tasks={data.tasks} today={today} onTask={id => setTaskEditor({ mode: "edit", id })} onCourse={id => { const found = data.courses.find(x => x.id === id); if (found) openCourse(found) }} />}
       </MotionPane> : null}
     </KeyboardScrollView>
     {data && courseEditor ? <CourseEditor key={courseEditor === "new" ? "new" : courseEditor.id} value={courseEditor} onClose={() => setCourseEditor(null)} /> : null}
