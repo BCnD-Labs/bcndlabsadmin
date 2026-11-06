@@ -39,10 +39,29 @@ export function dueGroup(due: string, today: string): "Overdue" | "Next 7 days" 
 
 export function upcomingLearning(courses: Course[], tasks: Task[], today: string) {
   const known = new Set(courses.map(c => c.id))
-  const rows: { id: string; courseId: string; title: string; due: string; type: Task["learningType"]; task?: Task }[] = tasks.filter(t => t.courseId && known.has(t.courseId) && !t.done && !!t.due)
+  const event = (task: Task) => task.kind === "event" || task.learningType === "event"
+  const rows: { id: string; courseId: string; title: string; due: string; type: Task["learningType"]; time?: string; occasion?: "due" | "planned" | "event"; task?: Task }[] = tasks.filter(t => t.courseId && known.has(t.courseId) && !t.done && !event(t) && !!t.due)
     .map(t => ({ id: t.id, courseId: t.courseId!, title: t.title, due: t.due!, type: t.learningType ?? (t.kind === "event" ? "event" : "assignment"), task: t }))
+  for (const task of tasks.filter(t => t.courseId && known.has(t.courseId) && !t.done && !!(t.scheduledDate ?? (event(t) ? t.due : undefined)) && (t.scheduledDate ?? t.due!) >= today)) {
+    // Planned work is shown as well as its deadline when they fall on different dates.
+    if (!event(task) && task.scheduledDate === task.due) continue
+    rows.push({ id: `planned-${task.id}`, courseId: task.courseId!, title: task.title, due: task.scheduledDate ?? task.due!, time: task.scheduledTime, type: task.learningType, occasion: task.kind === "event" || task.learningType === "event" ? "event" : "planned", task })
+  }
   for (const c of courses) if (c.kind === "certification" && c.endDate && c.endDate >= today) {
     rows.push({ id: `exam-${c.id}`, courseId: c.id, title: `${c.title} exam date`, due: c.endDate, type: "exam" })
   }
-  return rows.sort((a, b) => a.due.localeCompare(b.due) || a.title.localeCompare(b.title))
+  return rows.sort((a, b) => a.due.localeCompare(b.due) || (a.time ?? "99:99").localeCompare(b.time ?? "99:99") || a.title.localeCompare(b.title))
+}
+
+
+/** Daily planning uses actual scheduled records; free-form course schedules are never fabricated. */
+export function learningToday(courses: Course[], tasks: Task[], today: string) {
+  const known = new Set(courses.map(course => course.id))
+  const active = tasks.filter(task => task.courseId && known.has(task.courseId) && !task.done)
+  return {
+    schedule: active.filter(task => (task.scheduledDate ?? (task.kind === "event" || task.learningType === "event" ? task.due : undefined)) === today).sort((a, b) => (a.scheduledTime ?? "99:99").localeCompare(b.scheduledTime ?? "99:99") || a.title.localeCompare(b.title)),
+    overdue: active.filter(task => task.kind !== "event" && task.learningType !== "event" && task.due && task.due < today),
+    due: active.filter(task => task.kind !== "event" && task.learningType !== "event" && task.due === today),
+    exams: courses.filter(course => course.kind === "certification" && course.endDate === today),
+  }
 }

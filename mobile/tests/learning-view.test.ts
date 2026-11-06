@@ -37,3 +37,22 @@ test("Upcoming includes dated linked work and a future exam date, with honest gr
   assert.equal(dueGroup(rows[0].due, today), "Overdue")
   assert.equal(dueGroup(rows[1].due, today), "Next 7 days")
 })
+
+
+test("scheduled sessions across every learning kind stay separate from deadlines, including older event records", async () => {
+  const { learningToday } = await import("../src/native/screens/learning/learning-view.ts")
+  let data = emptyWorkspace()
+  for (const kind of ["course", "certification", "selfpaced", "skill", "reading"] as const) {
+    data = createCourse(data, { ...courseBase, title: kind, kind, endDate: undefined }, opts(kind)).data
+    data = createTask(data, { ...taskBase, courseId: kind, title: `${kind} session`, kind: "event", learningType: "event", scheduledDate: today, scheduledTime: "09:30", due: "2026-11-01" }, opts(`session-${kind}`)).data
+  }
+  data = createTask(data, { ...taskBase, courseId: "skill", title: "Legacy session", learningType: "event", due: today }, opts("legacy-event")).data
+  const day = learningToday(data.courses, data.tasks, today)
+  assert.equal(day.schedule.length, 6)
+  assert.equal(day.overdue.length, 0)
+  assert.equal(day.due.length, 0)
+  const upcoming = upcomingLearning(data.courses, data.tasks, today)
+  assert.equal(upcoming.length, 6)
+  assert.ok(upcoming.every(row => row.occasion === "event" && row.due === today))
+  assert.equal(learningToday([], data.tasks, today).schedule.length, 0)
+})

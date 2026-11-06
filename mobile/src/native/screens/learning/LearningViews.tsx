@@ -1,4 +1,6 @@
-import { TextInput } from "../../editing/keyboard.tsx"
+import { formatTime } from "../planner/calendar/format.ts"
+import { useCalendarPrefs } from "../planner/calendar/useCalendarPrefs.ts"
+import { KeyboardFrame, KeyboardScrollView, TextInput } from "../../editing/keyboard.tsx"
 import { useState } from "react"
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native"
 import { updateCourse } from "../../../lib/shared.ts"
@@ -10,7 +12,7 @@ import { typeLabel } from "../planner/learning-types.ts"
 import { TaskCheck } from "../planner/TaskCheck.tsx"
 import { isSafeLink } from "../planner/doc-links.ts"
 import { Pill, SmallButton } from "./LearningControls.tsx"
-import { dueGroup, kindInfo, learningProgress, upcomingLearning, type Course, type Task } from "./learning-view.ts"
+import { dueGroup, kindInfo, learningProgress, learningToday, upcomingLearning, type Course, type Task } from "./learning-view.ts"
 
 export type WorkTab = "open" | "done" | "all"
 type Note = NonNullable<ReturnType<typeof useWorkspace>["data"]>["notes"][number]
@@ -25,13 +27,29 @@ export function Library({ courses, tasks, total, onOpen, onAdd }: { courses: Cou
 }
 function CourseRow({ course, tasks, onPress }: { course: Course; tasks: Task[]; onPress: () => void }) {
   const p = learningProgress(course, tasks)
-  const next = tasks.filter(t => !t.done && t.due).sort((a, b) => a.due!.localeCompare(b.due!))[0]
+  const next = tasks.filter(t => !t.done && t.kind !== "event" && t.learningType !== "event" && t.due).sort((a, b) => a.due!.localeCompare(b.due!))[0]
   return <Pressable onPress={onPress} style={({ pressed }) => [s.courseRow, pressed && s.pressed]} accessibilityRole="button" accessibilityLabel={`Open ${course.title}. ${p.label}`}><View style={[s.kindMark, { backgroundColor: kindInfo(course).tint }]} /><View style={s.flex}><Text style={s.rowTitle} numberOfLines={2}>{course.title}</Text><Text style={s.meta} numberOfLines={1}>{[kindInfo(course).label, course.code, p.label].filter(Boolean).join(" · ")}</Text>{next ? <Text style={s.next} numberOfLines={1}>Due · {next.title} · {shortDay(next.due!)}</Text> : null}{p.measured ? <View style={s.track}><View style={[s.bar, { width: `${p.value * 100}%`, backgroundColor: kindInfo(course).tint }]} /></View> : null}</View><Icon name="chevron-forward" size={16} tint={c.muted} /></Pressable>
 }
 
+export function Today({ courses, tasks, today, onTask, onCourse, onAddTask, onAddSession, onToggle }: { courses: Course[]; tasks: Task[]; today: string; onTask: (id: string) => void; onCourse: (id: string) => void; onAddTask: () => void; onAddSession: () => void; onToggle: (task: Task) => void }) {
+  const day = learningToday(courses, tasks, today)
+  const [prefs] = useCalendarPrefs()
+  const sections = [{ title: "Today's schedule", rows: day.schedule }, { title: "Overdue", rows: day.overdue }, { title: "Due today", rows: day.due }]
+  return <><View style={s.sectionHead}><Text style={s.sectionTitle} accessibilityRole="header">Today · {shortDay(today)}</Text><SmallButton label="+ Task" onPress={onAddTask} /><SmallButton label="+ Session" onPress={onAddSession} /></View>
+    {sections.map(section => <View key={section.title} style={s.group}><Text accessibilityRole="header" style={[s.groupLabel, section.title === "Overdue" && s.error]}>{section.title} · {section.rows.length}</Text>{section.rows.map(task => {
+      const course = courses.find(course => course.id === task.courseId)!
+      const event = task.kind === "event" || task.learningType === "event"
+      const schedule = section.title === "Today's schedule"
+      return <View key={task.id} style={s.workRow}>{event ? <Icon name="calendar-outline" tint={kindInfo(course).tint} size={20} /> : <TaskCheck checked={false} onPress={() => onToggle(task)} label={`Complete ${task.title}`} />}<Pressable accessibilityRole="button" accessibilityLabel={`Open ${task.title}`} onPress={() => onTask(task.id)} style={s.flex}><Text style={s.rowTitle} numberOfLines={2}>{task.title}</Text><Text style={s.meta}>{[schedule ? task.scheduledTime ? formatTime(task.scheduledTime, prefs.timeFormat) : "All day" : task.due ? `Due ${shortDay(task.due)}` : "", event ? "Session / event" : schedule ? "Planned work" : typeLabel(task.learningType ?? "", course.kind), course.title].filter(Boolean).join(" · ")}</Text></Pressable></View>
+    })}{section.rows.length === 0 ? <Text style={s.emptyHint}>{section.title === "Today's schedule" ? "Plan a dated session or schedule a learning task to see it here." : section.title === "Overdue" ? "Nothing overdue." : "Nothing due today."}</Text> : null}</View>)}
+    {day.exams.map(course => <Pressable key={course.id} style={s.recordRow} accessibilityRole="button" accessibilityLabel={`Open ${course.title} exam date`} onPress={() => onCourse(course.id)}><Icon name="ribbon-outline" tint={kindInfo(course).tint} /><Text style={s.rowTitle}>{course.title} · Exam today</Text></Pressable>)}
+  </>
+}
+
 export function Upcoming({ courses, tasks, today, onTask, onCourse }: { courses: Course[]; tasks: Task[]; today: string; onTask: (id: string) => void; onCourse: (id: string) => void }) {
+  const [prefs] = useCalendarPrefs()
   const rows = upcomingLearning(courses, tasks, today)
-  return <><View style={s.sectionHead}><Text style={s.sectionTitle}>Upcoming</Text><Text style={s.meta}>{rows.length} dated items</Text></View>{(["Overdue", "Next 7 days", "Later"] as const).map(group => { const part = rows.filter(x => dueGroup(x.due, today) === group); return part.length ? <View key={group} style={s.group}><Text style={[s.groupLabel, group === "Overdue" && s.error]}>{group} · {part.length}</Text>{part.map(x => <Pressable key={x.id} onPress={() => x.task ? onTask(x.task.id) : onCourse(x.courseId)} style={({ pressed }) => [s.upcomingRow, pressed && s.pressed]} accessibilityRole="button"><View style={s.dateBox}><Text style={s.dateText}>{shortDay(x.due)}</Text></View><View style={s.flex}><Text style={s.rowTitle} numberOfLines={2}>{x.title}</Text><Text style={s.meta} numberOfLines={1}>{courses.find(y => y.id === x.courseId)?.title} · {x.task ? typeLabel(x.task.learningType ?? "", courses.find(y => y.id === x.courseId)?.kind) : "Exam date"}</Text></View><Icon name="chevron-forward" size={16} tint={c.muted} /></Pressable>)}</View> : null })}{rows.length === 0 ? <Text style={s.emptyHint}>No dated learning work yet. Add a due date to a learning task to see it here.</Text> : null}</>
+  return <><View style={s.sectionHead}><Text style={s.sectionTitle}>Upcoming</Text><Text style={s.meta}>{rows.length} dated items</Text></View>{(["Overdue", "Next 7 days", "Later"] as const).map(group => { const part = rows.filter(x => dueGroup(x.due, today) === group); return part.length ? <View key={group} style={s.group}><Text style={[s.groupLabel, group === "Overdue" && s.error]}>{group} · {part.length}</Text>{part.map(x => <Pressable key={x.id} onPress={() => x.task ? onTask(x.task.id) : onCourse(x.courseId)} style={({ pressed }) => [s.upcomingRow, pressed && s.pressed]} accessibilityRole="button"><View style={s.dateBox}><Text style={s.dateText}>{shortDay(x.due)}</Text></View><View style={s.flex}><Text style={s.rowTitle} numberOfLines={2}>{x.title}</Text><Text style={s.meta} numberOfLines={1}>{courses.find(y => y.id === x.courseId)?.title} · {x.occasion ? `${x.occasion === "planned" ? "Planned work" : "Session / event"}${x.time ? ` · ${formatTime(x.time, prefs.timeFormat)}` : " · All day"}` : x.task ? typeLabel(x.task.learningType ?? "", courses.find(y => y.id === x.courseId)?.kind) : "Exam date"}</Text></View><Icon name="chevron-forward" size={16} tint={c.muted} /></Pressable>)}</View> : null })}{rows.length === 0 ? <Text style={s.emptyHint}>No dated learning work yet. Add a deadline or schedule a session.</Text> : null}</>
 }
 
 export function Work({ course, tasks, tab, onTab, onAdd, onOpen, onToggle }: { course: Course; tasks: Task[]; tab: WorkTab; onTab: (tab: WorkTab) => void; onAdd: () => void; onOpen: (id: string) => void; onToggle: (task: Task) => void }) {
@@ -73,4 +91,5 @@ const s = StyleSheet.create({
   body: { color: c.text2, fontSize: 13, lineHeight: 19 }, fact: { flexDirection: "row", gap: 9, borderBottomWidth: 1, borderColor: c.line, paddingVertical: 6 }, factLabel: { width: 66, color: c.muted, fontSize: 12 }, factValue: { flex: 1, color: c.text2, fontSize: 12 }, pages: { flexDirection: "row", alignItems: "center", gap: 7 }, pageInput: { width: 55, minHeight: 30, borderRadius: 9, borderWidth: 1, borderColor: c.line, color: c.text, textAlign: "center", fontSize: 13, paddingVertical: 3 },
   empty: { alignItems: "center", gap: 8, paddingVertical: 28 }, emptyTitle: { color: c.text, fontSize: 15, fontWeight: "700" }, emptyHint: { color: c.muted, fontSize: 13, lineHeight: 19, paddingVertical: 14 },
 })
+
 
