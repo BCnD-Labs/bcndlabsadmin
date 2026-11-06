@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react"
 import { checkForUpdate, type UpdateResult } from "./app-update.ts"
 
 /** This app's build number (versionCode), as set in app.json. */
+const installedUpdateId = Constants.expoConfig?.extra?.updateId as string | undefined
 export const installedBuild: number = Constants.expoConfig?.android?.versionCode ?? 1
 
 /**
@@ -15,13 +16,13 @@ export function useUpdateCheck(address: string | null) {
   const recheck = useCallback(async () => {
     if (!address) return
     setResult("checking")
-    setResult(await checkForUpdate(address, installedBuild))
+    setResult(await checkForUpdate(address, installedBuild, fetch, installedUpdateId))
   }, [address])
 
   useEffect(() => {
     if (!address) return
     let cancelled = false
-    void checkForUpdate(address, installedBuild).then((r) => {
+    void checkForUpdate(address, installedBuild, fetch, installedUpdateId).then((r) => {
       if (!cancelled) setResult(r)
     })
     return () => {
@@ -31,3 +32,4 @@ export function useUpdateCheck(address: string | null) {
 
   return { result, recheck }
 }
+

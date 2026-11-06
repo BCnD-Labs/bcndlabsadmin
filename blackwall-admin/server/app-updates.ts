@@ -6,15 +6,15 @@ import path from "node:path"
  * App updates: a folder holding `android.json`, the newest build's manifest, and the .apk it
  * names. There are two ways to fill one: the server copies the newest Android build from GitHub
  * (app-updates-github.ts), or anything that can write the drop folder (APP_UPDATES_DIR, mounted
- * read-only: n8n, a person) publishes one by hand. The higher build number wins. The phone app
- * compares build numbers and downloads.
+ * read-only: n8n, a person) publishes one by hand. Android prefers publication time; legacy manifests and Mac keep build-number fallback.
+ * The phone compares build identities, retaining Android version compatibility.
  *
  * Only the file the manifest names is ever served, so nothing else in the folder is reachable.
  * The manifest and the download are readable without signing in (they're app builds, and the
  * server is only published on the tailnet): a phone's browser can't send a session or the
  * X-Blackwall header, so the download lives at /app-updates/<file>, outside /api.
  */
-export type UpdateManifest = { versionCode: number; versionName: string; file: string; sha256?: string; md5?: string; notes?: string }
+export type UpdateManifest = { versionCode: number; versionName: string; file: string; sha256?: string; md5?: string; notes?: string; updateId?: string; publishedAt?: string; assetId?: number }
 
 export const APK_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,100}\.apk$/
 /** `Blackwall-<version>-<arch>.dmg`, the name electron-builder gives the Mac installer. */
@@ -43,6 +43,9 @@ export function parseUpdateManifest(value: unknown, kind: UpdateKind = ANDROID):
     versionCode: m.versionCode,
     versionName: typeof m.versionName === "string" && m.versionName.length <= 40 ? m.versionName : String(m.versionCode),
     file: m.file,
+    ...(typeof m.updateId === "string" && /^[a-f0-9]{64}$/.test(m.updateId) && { updateId: m.updateId }),
+    ...(typeof m.publishedAt === "string" && Number.isFinite(Date.parse(m.publishedAt)) && { publishedAt: m.publishedAt }),
+    ...(typeof m.assetId === "number" && Number.isSafeInteger(m.assetId) && m.assetId > 0 && { assetId: m.assetId }),
     sha256: typeof m.sha256 === "string" && /^[0-9a-f]{64}$/i.test(m.sha256) ? m.sha256.toLowerCase() : undefined,
     md5: typeof m.md5 === "string" && /^[0-9a-f]{32}$/i.test(m.md5) ? m.md5.toLowerCase() : undefined,
     notes: typeof m.notes === "string" ? m.notes.slice(0, 500) : undefined,
@@ -60,12 +63,14 @@ export function readUpdateManifest(source: UpdatesDir, kind: UpdateKind = ANDROI
   }
 }
 
-/** Of several update folders, the one whose manifest has the highest build number (undefined when none has one). */
+/** Android prefers publication time; legacy folders and Mac retain build-number ordering. */
 export function newestUpdatesDir(dirs: (string | undefined)[], kind: UpdateKind = ANDROID): string | undefined {
-  let best: { dir: string; code: number } | undefined
+  let best: { dir: string; code: number; at: number } | undefined
   for (const dir of dirs) {
-    const code = readUpdateManifest(dir, kind)?.versionCode
-    if (dir && code !== undefined && (!best || code > best.code)) best = { dir, code }
+    const manifest = readUpdateManifest(dir, kind)
+    if (!dir || !manifest) continue
+    const code = manifest.versionCode, at = kind === ANDROID && manifest.publishedAt ? Date.parse(manifest.publishedAt) : 0
+    if (!best || at > best.at || (at === best.at && code > best.code)) best = { dir, code, at }
   }
   return best?.dir
 }
