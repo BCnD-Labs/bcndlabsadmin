@@ -1,3 +1,4 @@
+import { RecordNavigation, type RecordRequest } from "./nav/record-navigation.tsx"
 import { useEffect, useState } from "react"
 import { BackHandler, StyleSheet, View } from "react-native"
 import { color } from "../theme.ts"
@@ -10,6 +11,7 @@ import type { NativeHomeProps } from "./index.ts"
 
 /** Shared screen host with a persistent floating pill and an anchored More menu. */
 export function NativeShell({ address, onOpenSettings }: NativeHomeProps) {
+  const [record, setRecord] = useState<RecordRequest | null>(null)
   const [current, setCurrent] = useState<ScreenKey>("home")
   const [moreOpen, setMoreOpen] = useState(false)
   const Current = SCREENS[current]
@@ -29,6 +31,7 @@ export function NativeShell({ address, onOpenSettings }: NativeHomeProps) {
 
   return (
     <WorkspaceProvider key={address} address={address}>
+    <RecordNavigation.Provider value={{ request: record, open: link => { setRecord({ ...link, serial: Date.now() }); setMoreOpen(false); setCurrent("planner") }, handled: () => setRecord(null) }}>
       <View style={styles.root}>
         <View style={styles.page} accessibilityElementsHidden={moreOpen} importantForAccessibility={moreOpen ? "no-hide-descendants" : "auto"}>
           {KEEP_ALIVE.includes(current) ? null : <Current onOpenSettings={onOpenSettings} />}
@@ -37,6 +40,7 @@ export function NativeShell({ address, onOpenSettings }: NativeHomeProps) {
         </View>
         <PillNav current={current} moreOpen={moreOpen} onMoreOpen={setMoreOpen} onSelect={setCurrent} onOpenSettings={onOpenSettings} />
       </View>
+    </RecordNavigation.Provider>
     </WorkspaceProvider>
   )
 }

@@ -1,3 +1,5 @@
+import { useRecordNavigation } from "../nav/record-navigation.tsx"
+import type { NoteEditor } from "./planner/notes/NoteSheet.tsx"
 import { KeyboardFrame, KeyboardScrollView, TextInput } from "../editing/keyboard.tsx"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { ActivityIndicator, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native"
@@ -24,17 +26,27 @@ export function PlannerScreen({ onOpenSettings }: { onOpenSettings: () => void }
   const [headerHeight, setHeaderHeight] = useState(136)
   const taskClose = useRef<(() => void) | null>(null)
   const [selectedDay, setSelectedDay] = useState(() => todayKey())
+  const records = useRecordNavigation()
+  const [linkedNote, setLinkedNote] = useState<NoteEditor | null>(null)
   const [editor, setEditor] = useState<Editor | null>(null), [createDue, setCreateDue] = useState<string | undefined>()
   const edit = useCallback((id: string) => setEditor({ mode: "edit", id }), [])
   const today = todayKey(), access = editAccess(status, true)
   const logs = useLogDrafts(data?.journal, mutate, access.ok)
+  useEffect(() => {
+    if (!data || !records.request) return
+    const target = records.request
+    if (target.kind === "log") { setSelectedDay(target.id); setMode("log") }
+    else if (target.kind === "note") { setMode("notes"); setLinkedNote({ mode: "edit", id: target.id }) }
+    else setEditor({ mode: "edit", id: target.id })
+    records.handled()
+  }, [data, records])
   const floating = mode === "tasks"
   let body
   if (data) {
     body = floating ? <TasksView data={data} today={today} onEdit={edit} onCreateDue={setCreateDue} search={search} onSearchChange={setSearch} />
       : mode === "calendar" ? <CalendarView selected={selectedDay} onSelect={setSelectedDay} data={data} today={today} onEdit={edit} onCreateDue={setCreateDue} logs={logs} blocked={access.reason} />
       : mode === "log" ? <LogView day={selectedDay} onDay={setSelectedDay} data={data} today={today} logs={logs} blocked={access.reason} onEditTask={edit} />
-      : <NotesView data={data} blocked={access.reason} />
+      : <NotesView controlledEditor={linkedNote} onEditorChange={setLinkedNote} data={data} blocked={access.reason} />
   } else if (status === "loading") {
     body = <View style={styles.loading}><ActivityIndicator color={c.accent} /><Text style={styles.note}>Loading your workspace…</Text></View>
   } else if (status === "signed-out") {

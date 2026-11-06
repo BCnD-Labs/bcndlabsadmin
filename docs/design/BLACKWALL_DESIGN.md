@@ -188,3 +188,11 @@ Provider setup uses Prepare → Details & test → Result, with focus moved to e
 
 Settings → Dashboard chooses explicit GitHub/analytics sources for this browser, or Automatic. Explicit missing/failed choices must show an actionable error and Choose data source, never silently select a different account or substitute sample data. Requests include the chosen connection ID, checked server-side for provider and usable status. Publishing and schedules retain their existing installation-wide source behavior. All layout/appearance/source choices remain per browser, separate from shared workspace records.
 
+
+
+## Mobile reliability and learning direction — Nov 6, 2026
+
+Preserve the approved Planner arrangement. Shared native editor behavior applies across sections: focused fields and save controls must remain reachable above the keyboard, with no double inset after Android resizes the window. Dialog bodies scroll independently of their actions. Native controls have at least 32dp touch targets. Every close path offers Keep editing, Discard or Save when changes are pending; a refused save keeps the editor open.
+
+Planner and Learning retain session state after navigation. Explicit daily-log composers are kept by day and custom section, with the selected date/section restored across Planner tabs. They remain drafts until Save entry, and are not promised to survive termination of the app process. Reflection remains independent of completion. Add to daily log saves the current task edits and copies reflection once into today's log, using a stable task/day identity. An existing copy is opened, never silently overwritten; linked records navigate to their targets, with unsaved edits handled first. Task-to-day links provide the reverse task rows in that day's log without a schema change.
+

@@ -1,3 +1,4 @@
+import { useRecordNavigation } from "../../../nav/record-navigation.tsx"
 import { useEditorClose } from "../../../editing/useEditorClose.ts"
 import { KeyboardFrame, KeyboardScrollView, TextInput } from "../../../editing/keyboard.tsx"
 import { shape } from "../../../../shape.ts"
@@ -20,6 +21,7 @@ const newId = () => `log_${Date.now().toString(36)}_${Math.random().toString(36)
 
 /** Compact dated entry list. Legacy main/section text remains editable without a migration. */
 export function DailyLogEditor({ data, day, logs, blocked }: { data: Collections; day: string; logs: LogDrafts; blocked?: string }) {
+  const records = useRecordNavigation()
   const { mutate } = useWorkspace()
   const active = logs.activeSections[day] ?? null
   const setActive = (id: string | null) => logs.setActiveSections(current => ({ ...current, [day]: id }))
@@ -123,6 +125,7 @@ export function DailyLogEditor({ data, day, logs, blocked }: { data: Collections
     {legacyText.trim() ? row("legacy", legacyText, !!((selected ? selected.noteId : journal?.mainNoteId)), () => open(undefined, true)) : null}
     {items.map((item) => row(item.id, item.text, !!item.noteId, () => open(item)))}
     {!legacyText.trim() && !items.length ? <Text style={styles.empty}>No entries for this {selected ? "section" : "day"}.</Text> : null}
+    {data.tasks.filter(task => task.recordLinks?.some(link => link.kind === "log" && link.id === day)).map(task => <Pressable key={`task-${task.id}`} onPress={() => records.open({ kind: "task", id: task.id })} style={styles.row} accessibilityRole="button" accessibilityLabel={`Open linked task ${task.title}`}><Icon name="checkbox-outline" size={15} tint={c.accent} /><Text style={styles.rowText}>Task · {task.title}</Text><Icon name="chevron-forward" size={14} /></Pressable>)}
     {logs.failed[day] ? <Text style={styles.error}>Section changes haven't saved yet. <Text onPress={() => void logs.save(day)}>Try again</Text></Text> : null}
     <Modal visible={!!editor || quick} transparent animationType="fade" onRequestClose={() => close()}>
       <KeyboardFrame style={styles.backdrop}>

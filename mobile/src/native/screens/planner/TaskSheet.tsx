@@ -1,9 +1,10 @@
+import { useRecordNavigation } from "../../nav/record-navigation.tsx"
 import { useEditorClose } from "../../editing/useEditorClose.ts"
 import { KeyboardFrame, KeyboardScrollView, TextInput } from "../../editing/keyboard.tsx"
 import { shape } from "../../../shape.ts"
 import { useEffect, useState } from "react"
 import { Animated, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
-import { createTask, removeTask, updateTask, validDateKey, type Collections } from "../../../lib/shared.ts"
+import { createTask, reflectionToLog, removeTask, updateTask, validDateKey, type Collections } from "../../../lib/shared.ts"
 import { color } from "../../../theme.ts"
 import { plannerColor as c } from "../../planner-theme.ts"
 import { useWorkspace } from "../../data/WorkspaceProvider.tsx"
@@ -38,6 +39,8 @@ type SectionKey = "schedule" | "learning" | "reflection" | "links" | "records"
  * reason. Mount it only while open (it takes its starting values when it mounts).
  */
 export function TaskSheet({ editor, data, today, onClose, embedded = false, registerClose }: { editor: Editor; data: Collections; today: string; onClose: () => void; embedded?: boolean; registerClose?: (handler: (() => void) | null) => void }) {
+  const records = useRecordNavigation()
+  const copied = !!data.journal.find(entry => entry.id === today)?.entries?.some(entry => entry.id === `reflection_${editor.mode === "edit" ? editor.id : ""}`)
   const { mutate, message } = useWorkspace()
   const reduceMotion = useReduceMotion()
   const grow = useGrow(reduceMotion)
@@ -96,6 +99,19 @@ export function TaskSheet({ editor, data, today, onClose, embedded = false, regi
 
   const close = useEditorClose(dirty, busy, onClose, () => save(false))
   useEffect(() => { registerClose?.(() => close()); return () => registerClose?.(null) }, [registerClose, close])
+  async function addToLog() {
+    if (!task || busy) return
+    if (copied) return close(() => { onClose(); records.open({ kind: "log", id: today }) })
+    setShowErrors(true)
+    if (Object.keys(draftErrors(draft, start)).length) return
+    setBusy(true)
+    try {
+      const now = new Date().toISOString()
+      const ok = await mutate(["tasks", "journal"], data => reflectionToLog(data, task.id, today, buildPatch(draft, task, now), { now: () => now }))
+      setFailed(!ok)
+      if (ok) { onClose(); records.open({ kind: "log", id: today }) }
+    } catch { setFailed(true) } finally { setBusy(false) }
+  }
   const content = (
       <KeyboardFrame style={styles.fill} >
         <Pressable style={styles.backdrop} onPress={() => close()} accessibilityRole="button" accessibilityLabel="Close" />
@@ -173,12 +189,13 @@ export function TaskSheet({ editor, data, today, onClose, embedded = false, regi
               ) : null}
               {!event ? <Section title="Reflection" summary={reflectionSummary(x)} open={openSection === "reflection"} onToggle={() => toggleSection("reflection")} error={!!errors.reflection}>
                 <ReflectionSection value={x.reflection} onChange={(reflection) => setX({ reflection })} error={errors.reflection} />
+                {task ? <Pressable disabled={busy || (!copied && (!x.reflection.text.trim() && !Object.values(x.reflection.items).some(value => value.trim())))} onPress={() => void addToLog()} style={styles.linkedRow} accessibilityRole="button" accessibilityLabel={copied ? "Open daily log copy" : "Save reflection and add to today's daily log"}><Icon name="create-outline" size={16} tint={c.accent} /><Text style={styles.propertyText}>{copied ? "Open daily log copy" : "Add to daily log"} · {formatDay(today)}</Text></Pressable> : <Text style={shared.hint}>Save this task before adding its reflection to the daily log.</Text>}
               </Section> : null}
               <Section title="Linked documents" summary={linksSummary(x)} open={openSection === "links"} onToggle={() => toggleSection("links")} error={!!errors.links}>
                 <LinksSection links={x.links} onChange={(links) => setX({ links })} error={errors.links} />
               </Section>
               <Section title="Linked records" summary={recordsSummary(x)} open={openSection === "records"} onToggle={() => toggleSection("records")} error={!!errors.other}>
-                <RecordLinksSection links={x.recordLinks} onChange={(recordLinks) => setX({ recordLinks })} data={data} selfId={task?.id} today={today} />
+                <RecordLinksSection onOpen={link => close(() => { onClose(); records.open(link) })} links={x.recordLinks} onChange={(recordLinks) => setX({ recordLinks })} data={data} selfId={task?.id} today={today} />
               </Section>
               {errors.other ? <Text style={shared.error}>{errors.other}</Text> : null}
 
