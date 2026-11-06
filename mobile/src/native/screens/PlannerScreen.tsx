@@ -10,13 +10,12 @@ import { CalendarView } from "./planner/CalendarView.tsx"
 import { AddItemMenu } from "./planner/AddItemMenu.tsx"
 import { AddFab } from "./planner/AddFab.tsx"
 import { TaskSheet, type Editor } from "./planner/TaskSheet.tsx"
-import { LogView } from "./planner/log/LogView.tsx"
 import { useLogDrafts } from "./planner/log/useLogDrafts.ts"
 import { NotesView } from "./planner/notes/NotesView.tsx"
 import { editAccess } from "./planner/task-form.ts"
 import { TasksView } from "./planner/TasksView.tsx"
-type Mode = "tasks" | "calendar" | "log" | "notes"
-const MODES: { key: Mode; label: string }[] = [{ key: "tasks", label: "Tasks" }, { key: "calendar", label: "Calendar" }, { key: "log", label: "Log" }, { key: "notes", label: "Notes" }]
+type Mode = "tasks" | "calendar" | "notes"
+const MODES: { key: Mode; label: string }[] = [{ key: "tasks", label: "Tasks" }, { key: "calendar", label: "Calendar" }, { key: "notes", label: "Notes" }]
 export function PlannerScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
   const { data, status, message, refreshing, refresh, mutate } = useWorkspace()
   const [mode, setMode] = useState<Mode>("calendar"), [search, setSearch] = useState("")
@@ -33,7 +32,6 @@ export function PlannerScreen({ onOpenSettings }: { onOpenSettings: () => void }
   if (data) {
     body = floating ? <TasksView data={data} today={today} onEdit={edit} onCreateDue={setCreateDue} search={search} onSearchChange={setSearch} />
       : mode === "calendar" ? <CalendarView selected={selectedDay} onSelect={setSelectedDay} data={data} today={today} onEdit={edit} onCreateDue={setCreateDue} logs={logs} blocked={access.reason} />
-      : mode === "log" ? <LogView day={selectedDay} onDay={setSelectedDay} data={data} today={today} logs={logs} blocked={access.reason} onEditTask={edit} />
       : <NotesView data={data} blocked={access.reason} />
   } else if (status === "loading") {
     body = <View style={styles.loading}><ActivityIndicator color={c.accent} /><Text style={styles.note}>Loading your workspace…</Text></View>
@@ -73,4 +71,5 @@ const styles = StyleSheet.create({
   calendarButton: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: c.panel, elevation: 3 }, tabs: { flexDirection: "row", gap: 5 }, tab: { flex: 1, minHeight: 32, alignItems: "center", justifyContent: "center", backgroundColor: c.panel, borderRadius: 18, borderWidth: 1, borderColor: c.line, elevation: 2 }, tabOn: { backgroundColor: c.selected, borderColor: c.selectedBorder }, tabText: { color: c.muted, fontSize: 12, fontWeight: "500" }, tabTextOn: { color: c.accent },
   loading: { alignItems: "center", gap: 8, paddingVertical: 32 }, note: { color: c.text2, fontSize: 13, lineHeight: 19 },
 })
+
 
