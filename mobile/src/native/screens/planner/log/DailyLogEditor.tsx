@@ -103,7 +103,7 @@ export function DailyLogEditor({ data, day, logs, blocked }: { data: Collections
   const dirty = !!editor && (editor.text !== editor.initialText || (editor.kind === "entry" && editor.asNote !== editor.initialAsNote))
   const close = useEditorClose(dirty, saving, dismiss, () => save(false))
 
-  const row = (key: string, text: string, note: boolean, onPress: () => void) => <Pressable key={key} onPress={onPress} style={styles.row} accessibilityRole="button" accessibilityLabel={`Edit log entry: ${text}`}>
+  const row = (key: string, text: string, note: boolean, onPress: () => void) => <Pressable key={key} onPress={onPress} style={styles.row} accessibilityRole="button" accessibilityLabel={`Edit reflection: ${text}`}>
     <Icon name={note ? "document-text-outline" : "ellipse-outline"} size={13} tint={c.muted} />
     <Text style={styles.rowText} numberOfLines={2}>{text}</Text>
   </Pressable>
@@ -115,11 +115,11 @@ export function DailyLogEditor({ data, day, logs, blocked }: { data: Collections
   }
 
   return <View style={styles.root}>
-    <View style={styles.header}><Icon name="create-outline" tint={c.text2} size={17} /><Text style={styles.heading} accessibilityRole="header">Daily log</Text>
-      <Pressable disabled={!!blocked || saving} onPress={() => { setError(null); setQuick(true) }} style={styles.icon} accessibilityRole="button" accessibilityLabel="Daily log quick inserts"><Icon name="add" tint={c.accent} size={19} /></Pressable>
+    <View style={styles.header}><Icon name="create-outline" tint={c.text2} size={17} /><Text style={styles.heading} accessibilityRole="header">Reflections</Text>
+      <Pressable disabled={!!blocked || saving} onPress={() => { setError(null); setQuick(true) }} style={styles.icon} accessibilityRole="button" accessibilityLabel="Reflection quick inserts"><Icon name="add" tint={c.accent} size={19} /></Pressable>
     </View>
     {error && !editor && !quick ? <Text style={styles.error} accessibilityLiveRegion="polite">{error}</Text> : null}
-    {[{ id: null, title: "Log", text: shownText(logs.drafts, data.journal, day), noteId: journal?.mainNoteId }, ...sections].map(section => {
+    {[{ id: null, title: "Reflections", text: shownText(logs.drafts, data.journal, day), noteId: journal?.mainNoteId }, ...sections].map(section => {
       const entries = (journal?.entries ?? []).filter(entry => (entry.sectionId ?? null) === section.id)
       const expanded = active === section.id && !closed[`${day}/${section.id ?? ""}`]
       const count = entries.length + Number(!!section.text.trim())
@@ -148,9 +148,9 @@ export function DailyLogEditor({ data, day, logs, blocked }: { data: Collections
         {quick ? <View style={[styles.dialog, styles.quickDialog]} accessibilityViewIsModal>
           <View style={styles.header}><Text style={[styles.modalTitle, styles.grow]}>Quick inserts</Text><Pressable onPress={() => close()} style={styles.icon} accessibilityRole="button" accessibilityLabel="Close quick inserts"><Icon name="close" size={17} tint={c.muted} /></Pressable></View>
           {LOG_PROMPTS.map((label) => <Pressable key={label} onPress={() => template(label)} style={styles.quickRow} accessibilityRole="button" accessibilityLabel={`Insert ${label}`}><Icon name="text-outline" size={16} tint={c.accent} /><Text style={styles.quickText}>{label.charAt(0).toUpperCase() + label.slice(1)}</Text></Pressable>)}
-          {sections.length < MAX_LOG_SECTIONS ? <Pressable onPress={() => { setQuick(false); setEditor({ kind: "section", text: "", initialText: "" }) }} style={[styles.quickRow, styles.quickSection]} accessibilityRole="button" accessibilityLabel="Add daily log section"><Icon name="albums-outline" size={16} tint={c.accent} /><Text style={styles.quickText}>Add section</Text></Pressable> : null}
+          {sections.length < MAX_LOG_SECTIONS ? <Pressable onPress={() => { setQuick(false); setEditor({ kind: "section", text: "", initialText: "" }) }} style={[styles.quickRow, styles.quickSection]} accessibilityRole="button" accessibilityLabel="Add reflection section"><Icon name="albums-outline" size={16} tint={c.accent} /><Text style={styles.quickText}>Add section</Text></Pressable> : null}
         </View> : <View style={[styles.dialog, editor?.kind === "entry" && styles.entryDialog]} accessibilityViewIsModal>
-          <View style={styles.header}><View style={styles.titleBox}><Text style={styles.modalTitle}>{editor?.kind === "section" ? editor.id ? "Rename section" : "Add section" : editor?.legacy || items.some((item) => item.id === editor?.id) ? "Edit entry" : "Add entry"}</Text>{editor?.kind === "entry" ? <Text style={styles.modalSub} numberOfLines={1}>{`${formatDay(editor.day)} · ${sections.find((section) => section.id === editor.sectionId)?.title ?? "Log"}`}</Text> : null}</View><Pressable disabled={saving} onPress={() => close()} style={styles.icon} accessibilityRole="button" accessibilityLabel="Close log editor"><Icon name="close" size={17} tint={c.muted} /></Pressable></View>
+          <View style={styles.header}><View style={styles.titleBox}><Text style={styles.modalTitle}>{editor?.kind === "section" ? editor.id ? "Rename section" : "Add section" : editor?.legacy || items.some((item) => item.id === editor?.id) ? "Edit entry" : "Add entry"}</Text>{editor?.kind === "entry" ? <Text style={styles.modalSub} numberOfLines={1}>{`${formatDay(editor.day)} · ${sections.find((section) => section.id === editor.sectionId)?.title ?? "Reflections"}`}</Text> : null}</View><Pressable disabled={saving} onPress={() => close()} style={styles.icon} accessibilityRole="button" accessibilityLabel="Close reflection editor"><Icon name="close" size={17} tint={c.muted} /></Pressable></View>
           <KeyboardScrollView style={{ flexGrow: 0, flexShrink: 1 }} contentContainerStyle={{ gap: 9 }}>
           <TextInput value={editor?.text ?? ""} editable={!saving} onChangeText={(text) => setEditor((value) => value ? { ...value, text } : null)} maxLength={editor?.kind === "section" ? MAX_SECTION_TITLE : 1_000_000} multiline={editor?.kind === "entry"} textAlignVertical="top" placeholder={editor?.kind === "section" ? "Section name" : "What happened?"} placeholderTextColor={c.muted} style={[styles.input, editor?.kind === "entry" && styles.notes]} accessibilityLabel={editor?.kind === "section" ? "Section name" : "Log entry"} />
           {editor?.kind === "entry" ? <Pressable disabled={saving} onPress={() => setEditor((value) => value?.kind === "entry" ? { ...value, asNote: !value.asNote } : value)} style={styles.noteToggle} accessibilityRole="checkbox" accessibilityState={{ checked: editor.asNote }} accessibilityLabel="Also save as a Note"><Icon name={editor.asNote ? "checkbox-outline" : "square-outline"} size={17} tint={editor.asNote ? c.accent : c.muted} /><Text style={styles.tabText}>Also save as a Note</Text></Pressable> : null}
