@@ -61,7 +61,7 @@ export function SettingsScreen(p: Props) {
         : update.status === "current"
           ? "You're on the newest build."
           : update.status === "available"
-            ? `Version ${update.manifest.versionName} (build ${update.manifest.versionCode}) is ready.${update.manifest.notes ? ` ${update.manifest.notes}` : ""}`
+            ? `The latest Android build is ready (build ${update.manifest.versionCode}).${update.manifest.notes ? ` ${update.manifest.notes}` : ""}`
             : update.reason
 
   const close = () => {
@@ -186,7 +186,7 @@ export function SettingsScreen(p: Props) {
             </View>
             {available ? (
               <Row
-                label={installing ? "Downloading…" : `Update to ${available.manifest.versionName}`}
+                label={installing ? "Downloading…" : "Install latest available"}
                 hint="Downloads here, then Android asks to install"
                 onPress={() => void startInstall()}
                 disabled={installing}

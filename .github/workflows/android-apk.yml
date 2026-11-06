@@ -3,12 +3,18 @@ name: Android APK
 # Builds the installable Android app on GitHub's machines (no Mac needed) and attaches it,
 # with the android.json update manifest the in-app "Check for update" reads, to a prerelease:
 #   - on every pull request that changes mobile/ (tag apk-pr-<number>), so a PR can be tested on a phone;
+#   - after a mobile change is merged to main (tag apk-build-<number>);
 #   - on request (Actions -> Android APK -> Run workflow).
 # The APK is signed with the debug key Expo's generated project ships with: fine for your own
 # phone, not for the Play Store.
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/**"
+      - ".github/workflows/android-apk.yml"
   pull_request:
     paths:
       - "mobile/**"
@@ -43,6 +49,21 @@ jobs:
           distribution: temurin
           java-version: "21"
       - run: npm --prefix mobile ci --ignore-scripts
+      - name: Assign a new Android build number
+        working-directory: mobile
+        run: |
+          node -e '
+            const fs = require("fs")
+            const file = "app.json"
+            const app = JSON.parse(fs.readFileSync(file, "utf8"))
+            // Workflow run numbers increase across PR, manual and main builds. The offset
+            // keeps every generated build above the older hand-numbered APKs.
+            const code = 1000 + Number(process.env.GITHUB_RUN_NUMBER)
+            if (!Number.isSafeInteger(code) || code > 2100000000) throw Error("Invalid Android build number")
+            app.expo.android.versionCode = code
+            fs.writeFileSync(file, JSON.stringify(app, null, 2) + "\n")
+            console.log(`Android build ${code}`)
+          '
       - name: Generate the Android project
         working-directory: mobile
         run: npx expo prebuild --platform android --clean
