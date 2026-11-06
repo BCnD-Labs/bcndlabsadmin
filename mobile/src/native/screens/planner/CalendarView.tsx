@@ -37,13 +37,12 @@ export function CalendarView({ data, today, onEdit, onCreateDue, logs, blocked, 
 }) {
   const { mutate } = useWorkspace()
   const [prefs, setPrefs] = useCalendarPrefs(), [layout, setLayout] = useWorkspacePrefs()
-  const [view, setView] = useState<View_>("three"), [anchor, setAnchor] = useState(selected)
+  const [view, setView] = useState<View_>("month")
   const [settings, setSettings] = useState<{ top: number; right: number } | null>(null), [available, setAvailable] = useState(600), [chrome, setChrome] = useState(88)
   const [noteEditor, setNoteEditor] = useState<NoteEditor | null>(null)
   const reduceMotion = useReduceMotion()
   const { weekStartsOn: weekStart, timeFormat } = prefs
-  useEffect(() => setAnchor(selected), [selected])
-  const displayDate = view === "three" ? anchor : selected
+  const displayDate = selected
   const columns = useMemo(() => columnsFor(view, displayDate, weekStart), [view, displayDate, weekStart])
   const weeks = useMemo(() => view === "month" ? monthGrid(selected, weekStart) : [], [view, selected, weekStart])
   // The month view has a larger smallest size, so its week rows never get cramped.
@@ -79,13 +78,13 @@ export function CalendarView({ data, today, onEdit, onCreateDue, logs, blocked, 
   const agenda = useMemo(() => agendaItems(data.tasks, selected, today, data.courses).filter(t => layout.showCompleted || !t.done), [data.tasks, data.courses, selected, today, layout.showCompleted])
   const meta = useMemo(() => dayMeta(data.tasks, data.journal, selected), [data.tasks, data.journal, selected])
   const toggle = useCallback((id: string) => { if (!blocked) void mutate(["tasks"], d => toggleTask(d, id)) }, [mutate, blocked])
-  const step = useCallback((d: -1 | 1) => { const day = stepBy(view, displayDate, d); setAnchor(day); setSelected(day) }, [view, displayDate])
+  const step = useCallback((d: -1 | 1) => { setSelected(stepBy(view, displayDate, d)) }, [view, displayDate])
   const swipe = usePeriodSwipe(view === "month", step, reduceMotion)
   const linkedNotes = linkedNotesForDay(data, selected)
   const notes = orderNotes(linkedNotes, { search: "" })
   return <View style={styles.fill} onLayout={e => setAvailable(e.nativeEvent.layout.height)}>
     <Animated.View style={[styles.calendar, { height }]}>
-      <View onLayout={e => setChrome(e.nativeEvent.layout.height)}><CalendarHeader compact={available < 300} title={titleFor(view, displayDate, columns)} view={view} onView={v => { setAnchor(selected); setView(v) }} onStep={step} onToday={() => { setAnchor(today); setSelected(today) }} onSettings={anchor => setSettings(anchor ?? { top: 140, right: 12 })} /></View>
+      <View onLayout={e => setChrome(e.nativeEvent.layout.height)}><CalendarHeader compact={available < 300} title={titleFor(view, displayDate, columns)} view={view} onView={setView} onStep={step} onToday={() => setSelected(today) onSettings={anchor => setSettings(anchor ?? { top: 140, right: 12 })} /></View>
       <Animated.View {...swipe.panHandlers} style={[styles.fill, swipe.style]}>
       {view === "month" ? <MonthGrid weeks={weeks} month={selected} selected={selected} today={today} byDay={byDay} weekStart={weekStart} onSelect={setSelected} /> : <TimeGrid days={columns} byDay={byDay} today={today} selected={selected} format={timeFormat} compact={view === "week"} onSelectDay={setSelected} onEdit={onEdit} />}
       </Animated.View>
