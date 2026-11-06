@@ -2,18 +2,21 @@ import { Pressable, StyleSheet, Text, View } from "react-native"
 import { color, noteInk, notePaper } from "../../../../theme.ts"
 import { Icon } from "../../../ui.tsx"
 import { colorOf, noteTitle, notePreview, shortAgo, type CourseOption, type Note } from "./note-rules.ts"
+import { previewText } from "../TaskPeek.tsx"
+import { plannerColor as p } from "../../../planner-theme.ts"
 
 /**
  * One note as a line: paper-colour document tile, first line, a one-line preview, its course and age. A tap opens
- * it; the pin button on the right pins or unpins it (pinned notes also show on Home, as on the web).
+ * its read-only details; the pin button on the right pins or unpins it.
  */
-export function NoteRow({ note, course, now, onOpen, onPin, compact = false }: { note: Note; course?: CourseOption; now: Date; onOpen: () => void; onPin: () => void; compact?: boolean }) {
+export function NoteRow({ note, course, now, onOpen, onSelect, onPin, expanded = false, compact = false }: { note: Note; course?: CourseOption; now: Date; onOpen: () => void; onSelect: () => void; onPin: () => void; expanded?: boolean; compact?: boolean }) {
   const title = noteTitle(note.text)
   const preview = notePreview(note.text)
   const meta = [course?.label, shortAgo(note.updatedAt, now), note.links?.length ? `${note.links.length} link${note.links.length === 1 ? "" : "s"}` : ""].filter(Boolean).join(" · ")
   return (
+    <View>
     <View style={styles.row}>
-      <Pressable onPress={onOpen} style={({ pressed }) => [styles.body, compact && styles.compactBody, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={`${title}${note.pinned ? ", pinned" : ""}. Open note`}>
+      <Pressable onPress={onSelect} style={({ pressed }) => [styles.body, compact && styles.compactBody, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={`${title}${note.pinned ? ", pinned" : ""}. ${expanded ? "Hide preview" : "Preview note"}`} accessibilityState={{ expanded }}>
         <View style={[styles.noteIcon, { backgroundColor: notePaper[colorOf(note.color)] }]}><Icon name="document-text-outline" size={14} tint={noteInk} /></View>
         <View style={styles.text}>
           <Text style={[styles.title, compact && styles.compactTitle]} numberOfLines={1}>
@@ -31,10 +34,20 @@ export function NoteRow({ note, course, now, onOpen, onPin, compact = false }: {
         <Icon name={note.pinned ? "pin" : "pin-outline"} size={20} tint={note.pinned ? color.text : color.faint} />
       </Pressable>
     </View>
+    {expanded ? <View style={styles.detail}>
+      {notePreview(note.text) ? <Text style={styles.detailText} numberOfLines={2} ellipsizeMode="tail">{previewText(notePreview(note.text))}</Text> : <Text style={styles.detailText}>No additional text.</Text>}
+      <Text style={styles.meta}>{[course?.title, note.links?.length ? `${note.links.length} linked ${note.links.length === 1 ? "item" : "items"}` : undefined].filter(Boolean).join(" · ")}</Text>
+      <Pressable onPress={onOpen} style={styles.open} accessibilityRole="button" accessibilityLabel={`Open ${title}`}><Icon name="open-outline" size={14} tint={p.accent} /><Text style={styles.openText}>Open</Text></Pressable>
+    </View> : null}
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
+  detail: { marginBottom: 8, marginLeft: 30, padding: 9, gap: 7, borderLeftWidth: 3, borderLeftColor: p.accent, borderRadius: 8, backgroundColor: color.selected },
+  detailText: { color: color.muted, fontSize: 12, lineHeight: 17 },
+  open: { alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, minHeight: 34, borderRadius: 17, backgroundColor: color.panel },
+  openText: { color: p.accent, fontSize: 12, fontWeight: "600" },
   row: { flexDirection: "row", alignItems: "center", borderBottomWidth: 1, borderBottomColor: color.line },
   body: { flex: 1, flexDirection: "row", alignItems: "center", gap: 12, minHeight: 56, paddingVertical: 8 },
   compactBody: { minHeight: 44, paddingVertical: 4, gap: 8 },
