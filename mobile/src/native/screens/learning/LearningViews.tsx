@@ -31,11 +31,11 @@ function CourseRow({ course, tasks, onPress }: { course: Course; tasks: Task[]; 
   return <Pressable onPress={onPress} style={({ pressed }) => [s.courseRow, pressed && s.pressed]} accessibilityRole="button" accessibilityLabel={`Open ${course.title}. ${p.label}`}><View style={[s.kindMark, { backgroundColor: kindInfo(course).tint }]} /><View style={s.flex}><Text style={s.rowTitle} numberOfLines={2}>{course.title}</Text><Text style={s.meta} numberOfLines={1}>{[kindInfo(course).label, course.code, p.label].filter(Boolean).join(" · ")}</Text>{next ? <Text style={s.next} numberOfLines={1}>Due · {next.title} · {shortDay(next.due!)}</Text> : null}{p.measured ? <View style={s.track}><View style={[s.bar, { width: `${p.value * 100}%`, backgroundColor: kindInfo(course).tint }]} /></View> : null}</View><Icon name="chevron-forward" size={16} tint={c.muted} /></Pressable>
 }
 
-export function Today({ courses, tasks, today, onTask, onCourse, onAdd, onToggle }: { courses: Course[]; tasks: Task[]; today: string; onTask: (id: string) => void; onCourse: (id: string) => void; onAdd: () => void; onToggle: (task: Task) => void }) {
+export function Today({ courses, tasks, today, onTask, onCourse, onAddTask, onAddSession, onToggle }: { courses: Course[]; tasks: Task[]; today: string; onTask: (id: string) => void; onCourse: (id: string) => void; onAddTask: () => void; onAddSession: () => void; onToggle: (task: Task) => void }) {
   const day = learningToday(courses, tasks, today)
   const [prefs] = useCalendarPrefs()
   const sections = [{ title: "Today's schedule", rows: day.schedule }, { title: "Overdue", rows: day.overdue }, { title: "Due today", rows: day.due }]
-  return <><View style={s.sectionHead}><Text style={s.sectionTitle} accessibilityRole="header">Today · {shortDay(today)}</Text><SmallButton label="+ Learning" onPress={onAdd} /></View>
+  return <><View style={s.sectionHead}><Text style={s.sectionTitle} accessibilityRole="header">Today · {shortDay(today)}</Text><SmallButton label="+ Task" onPress={onAddTask} /><SmallButton label="+ Session" onPress={onAddSession} /></View>
     {sections.map(section => <View key={section.title} style={s.group}><Text accessibilityRole="header" style={[s.groupLabel, section.title === "Overdue" && s.error]}>{section.title} · {section.rows.length}</Text>{section.rows.map(task => {
       const course = courses.find(course => course.id === task.courseId)!
       const event = task.kind === "event" || task.learningType === "event"
@@ -91,4 +91,5 @@ const s = StyleSheet.create({
   body: { color: c.text2, fontSize: 13, lineHeight: 19 }, fact: { flexDirection: "row", gap: 9, borderBottomWidth: 1, borderColor: c.line, paddingVertical: 6 }, factLabel: { width: 66, color: c.muted, fontSize: 12 }, factValue: { flex: 1, color: c.text2, fontSize: 12 }, pages: { flexDirection: "row", alignItems: "center", gap: 7 }, pageInput: { width: 55, minHeight: 30, borderRadius: 9, borderWidth: 1, borderColor: c.line, color: c.text, textAlign: "center", fontSize: 13, paddingVertical: 3 },
   empty: { alignItems: "center", gap: 8, paddingVertical: 28 }, emptyTitle: { color: c.text, fontSize: 15, fontWeight: "700" }, emptyHint: { color: c.muted, fontSize: 13, lineHeight: 19, paddingVertical: 14 },
 })
+
 
