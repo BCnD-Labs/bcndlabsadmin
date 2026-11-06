@@ -1,3 +1,4 @@
+import { shape } from "../../../shape.ts"
 import { Pressable, StyleSheet, Text, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { plannerColor as c } from "../../planner-theme.ts"
@@ -16,6 +17,7 @@ export function AddItemMenu({ onChoose, onClose }: { onChoose: (kind: "task" | "
     </View>
 }
 const styles = StyleSheet.create({
-  fill: { flex: 1 }, menu: { position: "absolute", width: 140, borderRadius: 12, padding: 4, backgroundColor: c.raised, borderWidth: 1, borderColor: c.border, elevation: 12 },
+  fill: { flex: 1 }, menu: { position: "absolute", width: 140, borderRadius: shape.menu, padding: 4, backgroundColor: c.raised, borderWidth: 1, borderColor: c.border, elevation: 12 },
   heading: { color: c.muted, fontSize: 10, textTransform: "uppercase", paddingHorizontal: 8, paddingVertical: 5 }, row: { flexDirection: "row", alignItems: "center", gap: 8, minHeight: 32, paddingHorizontal: 8, borderRadius: 8 }, label: { color: c.text, fontSize: 12 },
 })
+

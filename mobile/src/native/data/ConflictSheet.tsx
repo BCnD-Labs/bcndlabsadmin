@@ -1,3 +1,4 @@
+import { shape } from "../../shape.ts"
 import { useState } from "react"
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
 import { color } from "../../theme.ts"
@@ -52,11 +53,12 @@ export function ConflictSheet({ visible, conflict, onClose }: { visible: boolean
 
 const styles = StyleSheet.create({
   backdrop: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.55)" },
-  sheet: { position: "absolute", left: 0, right: 0, bottom: 0, maxHeight: "80%", backgroundColor: color.panel, borderTopLeftRadius: 20, borderTopRightRadius: 20, borderWidth: 1, borderColor: color.edge, padding: 16, paddingBottom: 28, gap: 12 },
+  sheet: { position: "absolute", left: 0, right: 0, bottom: 0, maxHeight: "80%", backgroundColor: color.panel, borderTopLeftRadius: shape.dialog, borderTopRightRadius: shape.dialog, borderWidth: 1, borderColor: color.edge, padding: 16, paddingBottom: 28, gap: 12 },
   grabber: { alignSelf: "center", width: 40, height: 4, borderRadius: 2, backgroundColor: color.border },
   title: { color: color.text, fontSize: 18, fontWeight: "700" },
   lead: { color: color.text2, fontSize: 13, lineHeight: 19 },
-  list: { flexGrow: 0, maxHeight: 180, backgroundColor: color.well, borderRadius: 12, padding: 10 },
+  list: { flexGrow: 0, maxHeight: 180, backgroundColor: color.well, borderRadius: shape.card, padding: 10 },
   row: { color: color.text, fontSize: 14, paddingVertical: 4 },
   actions: { gap: 8 },
 })
+

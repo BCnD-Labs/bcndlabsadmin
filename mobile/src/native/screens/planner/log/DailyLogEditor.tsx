@@ -1,3 +1,4 @@
+import { shape } from "../../../../shape.ts"
 import { useEffect, useRef, useState } from "react"
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native"
 import { saveJournalItem, saveJournalLegacyText, type Collections } from "../../../../lib/shared.ts"
@@ -143,6 +144,7 @@ const styles = StyleSheet.create({
   tabsRow: { flexDirection: "row", alignItems: "center" }, tabs: { flexDirection: "row", gap: 5 }, tab: { minHeight: 28, justifyContent: "center", paddingHorizontal: 10, borderRadius: 15, backgroundColor: c.panel },
   selected: { backgroundColor: c.selected }, tabText: { color: c.text2, fontSize: 11 }, actionText: { color: c.accent, fontSize: 11, fontWeight: "600" },
   row: { flexDirection: "row", gap: 8, alignItems: "center", minHeight: 35, paddingVertical: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.line }, rowText: { flex: 1, color: c.text2, fontSize: 12, lineHeight: 17 }, empty: { color: c.muted, fontSize: 11, paddingVertical: 9 },
-  error: { color: "#ffa8a8", fontSize: 11 }, backdrop: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "rgba(0,0,0,0.45)" }, dialog: { alignSelf: "center", width: "100%", maxWidth: 350, maxHeight: "80%", padding: 12, borderRadius: 17, gap: 9, backgroundColor: c.raised },
+  error: { color: "#ffa8a8", fontSize: 11 }, backdrop: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "rgba(0,0,0,0.45)" }, dialog: { alignSelf: "center", width: "100%", maxWidth: 350, maxHeight: "80%", padding: 12, borderRadius: shape.dialog, gap: 9, backgroundColor: c.raised },
   modalTitle: { color: c.text, fontSize: 14, fontWeight: "600" }, input: { minHeight: 36, paddingHorizontal: 10, paddingVertical: 8, color: c.text, backgroundColor: c.panel, borderRadius: 10, fontSize: 12 }, notes: { minHeight: 220, maxHeight: 360, lineHeight: 19, fontSize: 13, paddingTop: 10 }, entryDialog: { maxWidth: 520 }, titleBox: { flex: 1, gap: 1 }, grow: { flex: 1 }, modalSub: { color: c.muted, fontSize: 11 }, noteToggle: { flexDirection: "row", alignItems: "center", gap: 7, minHeight: 28 }, actions: { flexDirection: "row", justifyContent: "flex-end", gap: 7 },
 })
+

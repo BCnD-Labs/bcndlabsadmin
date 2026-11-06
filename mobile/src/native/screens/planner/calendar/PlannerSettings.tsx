@@ -1,3 +1,4 @@
+import { shape } from "../../../../shape.ts"
 import { useState } from "react"
 import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -56,7 +57,7 @@ function Check({ label, value, onPress }: { label: string; value: boolean; onPre
 }
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.16)" },
-  sheet: { position: "absolute", backgroundColor: c.panel, borderRadius: 14, borderWidth: 1, borderColor: c.border, overflow: "hidden", elevation: 14, shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } },
+  sheet: { position: "absolute", backgroundColor: c.panel, borderRadius: shape.menu, borderWidth: 1, borderColor: c.border, overflow: "hidden", elevation: 14, shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } },
   head: { flexDirection: "row", alignItems: "center", gap: 7, minHeight: 36, paddingLeft: 11, paddingRight: 3, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.line },
   title: { flex: 1, color: c.text, fontSize: 13, fontWeight: "600" },
   tabs: { flexDirection: "row", gap: 4, padding: 6, paddingBottom: 0 }, tab: { flex: 1, alignItems: "center", justifyContent: "center", minHeight: 28, borderRadius: 14 }, tabOn: { backgroundColor: c.selected }, tabText: { color: c.muted, fontSize: 11, fontWeight: "600" }, activeText: { color: c.accent },
@@ -65,3 +66,4 @@ const styles = StyleSheet.create({
   label: { color: c.text2, fontSize: 12, flexShrink: 1 }, button: { width: 28, height: 28, justifyContent: "center", alignItems: "center", borderRadius: 14 }, disabled: { opacity: 0.25 },
   hint: { color: c.muted, fontSize: 10, marginTop: 5, marginBottom: 2 },
 })
+

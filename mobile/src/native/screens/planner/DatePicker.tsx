@@ -1,3 +1,4 @@
+import { shape } from "../../../shape.ts"
 import { useState } from "react"
 import { Pressable, StyleSheet, Text, View } from "react-native"
 import { color } from "../../../theme.ts"
@@ -71,7 +72,7 @@ export function DatePicker({ value, today, onChange }: { value: string; today: s
 }
 
 const styles = StyleSheet.create({
-  box: { gap: 6, padding: 10, borderRadius: 12, backgroundColor: color.well, borderWidth: 1, borderColor: color.edge },
+  box: { gap: 6, padding: 10, borderRadius: shape.card, backgroundColor: color.well, borderWidth: 1, borderColor: color.edge },
   quick: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 4 },
   head: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   arrow: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
@@ -85,3 +86,4 @@ const styles = StyleSheet.create({
   out: { color: color.faint, fontWeight: "400" },
   onText: { color: "#fff" },
 })
+

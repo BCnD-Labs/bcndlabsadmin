@@ -1,3 +1,4 @@
+import { shape } from "../../../../shape.ts"
 import type { ReactNode } from "react"
 import { Animated, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
 import { plannerColor as c } from "../../../planner-theme.ts"
@@ -42,8 +43,8 @@ export function SheetFrame({ title, onClose, onBackdrop, children, compact = fal
 const styles = StyleSheet.create({
   fill: { flex: 1, justifyContent: "center", alignItems: "center", padding: 16 },
   backdrop: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.55)" },
-  sheet: { maxHeight: "78%", width: "100%", maxWidth: 560, backgroundColor: color.panel, borderRadius: 22, borderWidth: 1, borderColor: color.edge },
-  compactSheet: { maxHeight: "65%", borderRadius: 17, borderColor: c.border },
+  sheet: { maxHeight: "78%", width: "100%", maxWidth: 560, backgroundColor: color.panel, borderRadius: shape.dialog, borderWidth: 1, borderColor: color.edge },
+  compactSheet: { maxHeight: "65%", borderRadius: shape.dialog, borderColor: c.border },
   grabber: { alignSelf: "center", width: 40, height: 4, borderRadius: 2, marginTop: 8, backgroundColor: color.border },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingLeft: 16, paddingRight: 4 },
   compactHeader: { paddingLeft: 12, paddingRight: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.line },
@@ -53,3 +54,4 @@ const styles = StyleSheet.create({
   body: { paddingHorizontal: 16, paddingBottom: 28, gap: 8 },
   compactBody: { paddingHorizontal: 12, paddingBottom: 12, gap: 6 },
 })
+

@@ -1,3 +1,4 @@
+import { shape } from "../../../shape.ts"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Animated, Easing, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
 import { toggleTask, type Collections } from "../../../lib/shared.ts"
@@ -103,7 +104,7 @@ export function CalendarView({ data, today, onEdit, onCreateDue, logs, blocked }
   </View>
 }
 const styles = StyleSheet.create({
-  fill: { flex: 1, minHeight: 0 }, calendar: { borderWidth: 1, borderColor: c.line, borderRadius: 16, overflow: "hidden", marginHorizontal: 10 },
+  fill: { flex: 1, minHeight: 0 }, calendar: { borderWidth: 1, borderColor: c.line, borderRadius: shape.card, overflow: "hidden", marginHorizontal: 10 },
   handle: { height: 24, alignItems: "center", justifyContent: "center" }, grip: { width: 36, height: 4, borderRadius: 2, backgroundColor: c.border },
   below: { paddingHorizontal: 16, paddingBottom: NAV_CLEARANCE, gap: 12 }, section: { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.line, paddingBottom: 12, gap: 8 },
   agendaSection: { paddingBottom: 0, gap: 0 },
@@ -111,3 +112,4 @@ const styles = StyleSheet.create({
   add: { minHeight: 36, minWidth: 36, justifyContent: "center", alignItems: "center" }, note: { flexDirection: "row", alignItems: "center", minHeight: 40, gap: 8 },
   noteTitle: { flex: 1, color: c.text2, fontSize: 14 }, muted: { color: c.muted, fontSize: 12 },
 })
+

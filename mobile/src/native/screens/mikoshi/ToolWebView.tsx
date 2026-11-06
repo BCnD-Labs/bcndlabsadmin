@@ -1,3 +1,4 @@
+import { shape } from "../../../shape.ts"
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react"
 import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, Text, View } from "react-native"
 import { WebView as RNWebView, type WebViewNavigation } from "react-native-webview"
@@ -116,7 +117,7 @@ const styles = StyleSheet.create({
   web: { flex: 1, backgroundColor: c.ground },
   loading: { ...StyleSheet.absoluteFill, backgroundColor: c.ground, alignItems: "center", justifyContent: "center" },
   errorWrap: { ...StyleSheet.absoluteFill, backgroundColor: c.ground, justifyContent: "center", padding: 16 },
-  card: { backgroundColor: c.panel, borderColor: c.line, borderWidth: 1, borderRadius: 14, padding: 16, gap: 8, maxWidth: 480, width: "100%", alignSelf: "center" },
+  card: { backgroundColor: c.panel, borderColor: c.line, borderWidth: 1, borderRadius: shape.card, padding: 16, gap: 8, maxWidth: 480, width: "100%", alignSelf: "center" },
   title: { color: c.text, fontSize: 16, fontWeight: "700" },
   detail: { color: c.text2, fontSize: 13, lineHeight: 19 },
   hint: { color: c.text, fontSize: 13, fontWeight: "600" },
@@ -124,3 +125,4 @@ const styles = StyleSheet.create({
   retry: { alignSelf: "flex-end", minHeight: 28, justifyContent: "center", paddingHorizontal: 14, borderRadius: 16, backgroundColor: c.action },
   retryText: { color: "#fff", fontSize: 12, fontWeight: "600" },
 })
+

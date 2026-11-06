@@ -1,10 +1,10 @@
 import { Pressable, StyleSheet, Text, View } from "react-native"
-import { color, notePaper } from "../../../../theme.ts"
+import { color, noteInk, notePaper } from "../../../../theme.ts"
 import { Icon } from "../../../ui.tsx"
 import { colorOf, noteTitle, notePreview, shortAgo, type CourseOption, type Note } from "./note-rules.ts"
 
 /**
- * One note as a line: paper-colour dot, first line, a one-line preview, its course and age. A tap opens
+ * One note as a line: paper-colour document tile, first line, a one-line preview, its course and age. A tap opens
  * it; the pin button on the right pins or unpins it (pinned notes also show on Home, as on the web).
  */
 export function NoteRow({ note, course, now, onOpen, onPin, compact = false }: { note: Note; course?: CourseOption; now: Date; onOpen: () => void; onPin: () => void; compact?: boolean }) {
@@ -14,7 +14,7 @@ export function NoteRow({ note, course, now, onOpen, onPin, compact = false }: {
   return (
     <View style={styles.row}>
       <Pressable onPress={onOpen} style={({ pressed }) => [styles.body, compact && styles.compactBody, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={`${title}${note.pinned ? ", pinned" : ""}. Open note`}>
-        <View style={[styles.dot, { backgroundColor: notePaper[colorOf(note.color)] }]} />
+        <View style={[styles.noteIcon, { backgroundColor: notePaper[colorOf(note.color)] }]}><Icon name="document-text-outline" size={14} tint={noteInk} /></View>
         <View style={styles.text}>
           <Text style={[styles.title, compact && styles.compactTitle]} numberOfLines={1}>
             {title}
@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
   body: { flex: 1, flexDirection: "row", alignItems: "center", gap: 12, minHeight: 56, paddingVertical: 8 },
   compactBody: { minHeight: 44, paddingVertical: 4, gap: 8 },
   pressed: { backgroundColor: color.raised },
-  dot: { width: 12, height: 12, borderRadius: 6 },
+  noteIcon: { width: 22, height: 24, borderRadius: 4, alignItems: "center", justifyContent: "center" },
   text: { flex: 1, gap: 2 },
   title: { color: color.text, fontSize: 15, fontWeight: "600" },
   compactTitle: { fontSize: 14 },
@@ -49,3 +49,4 @@ const styles = StyleSheet.create({
   pin: { width: 44, minHeight: 56, alignItems: "center", justifyContent: "center" },
   compactPin: { minHeight: 44 },
 })
+

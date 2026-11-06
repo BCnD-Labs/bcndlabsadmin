@@ -1,3 +1,4 @@
+import { shape } from "../../../shape.ts"
 import { useState } from "react"
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native"
 import { createService, removeService, updateService, type Collections } from "../../../lib/shared.ts"
@@ -90,7 +91,7 @@ export function ServiceEditor({ value, groups, onClose }: { value: Service | "ne
 
 const s = StyleSheet.create({
   backdrop: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.55)" },
-  sheet: { width: "92%", maxWidth: 480, maxHeight: "76%", borderRadius: 15, backgroundColor: c.panel, borderWidth: 1, borderColor: c.border, overflow: "hidden" },
+  sheet: { width: "92%", maxWidth: 480, maxHeight: "76%", borderRadius: shape.dialog, backgroundColor: c.panel, borderWidth: 1, borderColor: c.border, overflow: "hidden" },
   header: { minHeight: 34, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderColor: c.line },
   heading: { color: c.text, fontSize: 14, fontWeight: "600" }, scroll: { flexGrow: 0, flexShrink: 1 }, form: { padding: 11, gap: 6 },
   label: { color: c.muted, fontSize: 11 }, hint: { color: c.muted, fontSize: 11, lineHeight: 15 },
@@ -101,3 +102,4 @@ const s = StyleSheet.create({
   action: { minHeight: 28, borderRadius: 15, paddingHorizontal: 12, justifyContent: "center", backgroundColor: c.raised }, save: { backgroundColor: c.action }, disabled: { opacity: 0.5 },
   actionText: { color: c.text2, fontSize: 12 }, saveText: { color: "#fff", fontSize: 12, fontWeight: "600" }, remove: { minHeight: 28, paddingHorizontal: 8, justifyContent: "center" }, removeText: { color: "#ff8787", fontSize: 12 },
 })
+
