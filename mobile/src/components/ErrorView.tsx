@@ -1,3 +1,4 @@
+import { shape } from "../shape.ts"
 import { Pressable, StyleSheet, Text, View } from "react-native"
 import { color, mono } from "../theme.ts"
 
@@ -32,7 +33,7 @@ export function ErrorView({ error, onRetry, onSettings }: { error: LoadError; on
 
 const styles = StyleSheet.create({
   wrap: { ...StyleSheet.absoluteFill, backgroundColor: color.ground, justifyContent: "center", padding: 16 },
-  card: { backgroundColor: color.panel, borderColor: color.edge, borderWidth: 1, borderRadius: 12, padding: 20, gap: 10, maxWidth: 520, width: "100%", alignSelf: "center" },
+  card: { backgroundColor: color.panel, borderColor: color.edge, borderWidth: 1, borderRadius: shape.card, padding: 20, gap: 10, maxWidth: 520, width: "100%", alignSelf: "center" },
   title: { color: color.text, fontSize: 19, fontWeight: "700" },
   detail: { color: color.text2, fontSize: 14, lineHeight: 20 },
   hint: { color: color.text, fontSize: 14, fontWeight: "600" },
@@ -47,3 +48,4 @@ const styles = StyleSheet.create({
   quietPressed: { backgroundColor: color.raised },
   quietText: { color: color.text, fontSize: 15 },
 })
+

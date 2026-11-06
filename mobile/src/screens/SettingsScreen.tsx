@@ -1,3 +1,4 @@
+import { shape } from "../shape.ts"
 import Constants from "expo-constants"
 import { useState } from "react"
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
@@ -212,7 +213,7 @@ export function SettingsScreen(p: Props) {
 const styles = StyleSheet.create({
   ...rowStyles,
   backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.62)", alignItems: "center", justifyContent: "center" },
-  safe: { width: "92%", maxWidth: 560, maxHeight: "88%", backgroundColor: c.panel, borderColor: c.border, borderWidth: 1, borderRadius: 16, overflow: "hidden" },
+  safe: { width: "92%", maxWidth: 560, maxHeight: "88%", backgroundColor: c.panel, borderColor: c.border, borderWidth: 1, borderRadius: shape.dialog, overflow: "hidden" },
   scrollView: { flexGrow: 0, flexShrink: 1 },
   flex: { flex: 1 },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 12, minHeight: 38, borderBottomWidth: 1, borderBottomColor: c.line },
@@ -229,3 +230,4 @@ const styles = StyleSheet.create({
   fill: { height: 6, backgroundColor: c.blue },
   radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: c.blue },
 })
+

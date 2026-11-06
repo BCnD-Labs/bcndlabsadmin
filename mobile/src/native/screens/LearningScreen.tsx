@@ -1,3 +1,4 @@
+import { shape } from "../../shape.ts"
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { Animated, Easing, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native"
 import { toggleTask, type Collections } from "../../lib/shared.ts"
@@ -96,8 +97,9 @@ const s = StyleSheet.create({
   header: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 10, gap: 8, zIndex: 4 }, top: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }, topRight: { flexDirection: "row", alignItems: "center", gap: 7 }, breadcrumb: { color: c.text, fontSize: 13, fontWeight: "600" }, muted: { color: c.muted, fontWeight: "400" }, add: { width: 32, height: 32, borderRadius: 16, backgroundColor: c.panel, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: c.line },
   dismiss: { ...StyleSheet.absoluteFill, zIndex: 3 },
   tabs: { flexDirection: "row", gap: 5 }, pressed: { opacity: 0.72 },
-  menu: { position: "absolute", right: 14, top: 42, width: 206, padding: 6, borderRadius: 15, backgroundColor: c.raised, borderWidth: 1, borderColor: c.border, elevation: 8, zIndex: 8 }, menuLabel: { color: c.muted, fontSize: 10, fontWeight: "700", letterSpacing: 0.6, paddingHorizontal: 9, paddingVertical: 6 }, menuItem: { minHeight: 35, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 9, borderRadius: 9 }, menuText: { color: c.text, fontSize: 13 }, rule: { height: 1, backgroundColor: c.line, marginVertical: 4 },
+  menu: { position: "absolute", right: 14, top: 42, width: 206, padding: 6, borderRadius: shape.menu, backgroundColor: c.raised, borderWidth: 1, borderColor: c.border, elevation: 8, zIndex: 8 }, menuLabel: { color: c.muted, fontSize: 10, fontWeight: "700", letterSpacing: 0.6, paddingHorizontal: 9, paddingVertical: 6 }, menuItem: { minHeight: 35, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 9, borderRadius: 9 }, menuText: { color: c.text, fontSize: 13 }, rule: { height: 1, backgroundColor: c.line, marginVertical: 4 },
   search: { flexDirection: "row", alignItems: "center", gap: 8, minHeight: 36, borderRadius: 20, backgroundColor: c.panel, paddingHorizontal: 12, borderWidth: 1, borderColor: c.line }, searchInput: { flex: 1, color: c.text, fontSize: 13, paddingVertical: 5 }, filters: { gap: 6, paddingVertical: 1 },
   back: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start", minHeight: 28, gap: 2 }, accent: { color: c.accent, fontSize: 12 }, identity: { flexDirection: "row", alignItems: "center", gap: 9, paddingVertical: 2 }, identityTitle: { color: c.text, fontSize: 18, fontWeight: "700" }, kindMark: { width: 5, height: 30, borderRadius: 3 }, edit: { width: 32, minHeight: 34, alignItems: "center", justifyContent: "center" }, meta: { color: c.muted, fontSize: 12, lineHeight: 17 },
   empty: { alignItems: "center", gap: 8, paddingVertical: 28 }, emptyTitle: { color: c.text, fontSize: 15, fontWeight: "700" }, notice: { color: c.amber, fontSize: 12 }, error: { color: "#ff8787", fontSize: 12 },
 })
+

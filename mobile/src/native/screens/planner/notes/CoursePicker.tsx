@@ -1,3 +1,4 @@
+import { shape } from "../../../../shape.ts"
 import { useState } from "react"
 import { Pressable, StyleSheet, Text, View } from "react-native"
 import type { Collections } from "../../../../lib/shared.ts"
@@ -44,9 +45,10 @@ function Option({ label, selected, onPress }: { label: string; selected: boolean
 const styles = StyleSheet.create({
   gap: { gap: 6 },
   field: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, borderRadius: 12, borderWidth: 1, borderColor: color.border, backgroundColor: color.well, paddingHorizontal: 14 },
-  list: { borderRadius: 12, borderWidth: 1, borderColor: color.edge, backgroundColor: color.well, overflow: "hidden" },
+  list: { borderRadius: shape.card, borderWidth: 1, borderColor: color.edge, backgroundColor: color.well, overflow: "hidden" },
   option: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, paddingHorizontal: 14 },
   pressed: { backgroundColor: color.raised },
   value: { flex: 1, color: color.text, fontSize: 15 },
   placeholder: { flex: 1, color: color.faint, fontSize: 15 },
 })
+

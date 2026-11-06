@@ -1,3 +1,4 @@
+import { shape } from "../shape.ts"
 import { Ionicons } from "@expo/vector-icons"
 import type { ComponentProps, ReactNode } from "react"
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native"
@@ -145,7 +146,7 @@ export function Button({ label, onPress, primary }: { label: string; onPress: ()
 }
 
 export function SectionLabel({ children }: { children: string }) {
-  return <Text style={styles.sectionLabel}>{children}</Text>
+  return <Text style={styles.sectionLabel} accessibilityRole="header">{children}</Text>
 }
 
 export function Empty({ children }: { children: string }) {
@@ -160,9 +161,9 @@ const styles = StyleSheet.create({
   subtitle: { color: color.muted, fontSize: 13, marginTop: 2 },
   sample: { borderWidth: 1, borderColor: color.border, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, backgroundColor: color.well },
   sampleText: { color: color.faint, fontSize: 11, fontWeight: "600" },
-  card: { backgroundColor: color.panel, borderRadius: 16, borderWidth: 1, borderColor: color.edge, padding: 14, gap: 8 },
-  cardHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  cardTitle: { color: color.text, fontSize: 15, fontWeight: "700" },
+  card: { backgroundColor: color.panel, borderRadius: shape.card, borderWidth: 1, borderColor: color.edge, padding: 14, gap: 8 },
+  cardHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: color.line },
+  cardTitle: { flexShrink: 1, color: color.text, fontSize: 15, fontWeight: "700" },
   pressed: { backgroundColor: color.raised },
   chipScroll: { flexGrow: 0 },
   chipRow: { gap: 8, paddingVertical: 2 },
@@ -186,6 +187,7 @@ const styles = StyleSheet.create({
   buttonPrimary: { backgroundColor: color.red, borderColor: color.red },
   buttonQuiet: { backgroundColor: color.panel, borderColor: color.border },
   buttonText: { color: color.text, fontSize: 15, fontWeight: "700" },
-  sectionLabel: { color: color.faint, fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.6, marginTop: 4 },
+  sectionLabel: { color: color.text2, fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.6, marginTop: 4 },
   empty: { color: color.muted, fontSize: 13, paddingVertical: 8 },
 })
+

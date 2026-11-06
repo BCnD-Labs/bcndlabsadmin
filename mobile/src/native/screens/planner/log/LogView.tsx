@@ -1,3 +1,4 @@
+import { shape } from "../../../../shape.ts"
 import { useState } from "react"
 import { Pressable, StyleSheet, Text, View } from "react-native"
 import type { Collections } from "../../../../lib/shared.ts"
@@ -72,7 +73,7 @@ const styles = StyleSheet.create({
   todayText: { color: color.accent, fontSize: 12, fontWeight: "600" },
   title: { color: color.text, fontSize: 17, fontWeight: "700" },
   week: { flexDirection: "row", gap: 6 },
-  cell: { flex: 1, minHeight: 60, alignItems: "center", justifyContent: "center", gap: 2, borderRadius: 12, borderWidth: 1, borderColor: color.line, backgroundColor: color.panel },
+  cell: { flex: 1, minHeight: 60, alignItems: "center", justifyContent: "center", gap: 2, borderRadius: shape.card, borderWidth: 1, borderColor: color.line, backgroundColor: color.panel },
   cellOn: { backgroundColor: color.selected, borderColor: color.selected },
   cellToday: { borderColor: color.border },
   weekday: { color: color.muted, fontSize: 11, fontWeight: "600" },
@@ -84,3 +85,4 @@ const styles = StyleSheet.create({
   recentText: { color: color.muted, fontSize: 13 },
   pressed: { backgroundColor: color.raised },
 })
+

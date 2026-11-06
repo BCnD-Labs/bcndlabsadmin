@@ -1,3 +1,4 @@
+import { shape } from "../../../shape.ts"
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native"
 import { plannerColor as c } from "../../planner-theme.ts"
 const color = { ...c, edge: c.line, faint: c.muted }
@@ -31,10 +32,11 @@ export function QuickActionsSheet({ title, actions, onPick, onClose }: { title: 
 const styles = StyleSheet.create({
   fill: { flex: 1, justifyContent: "center", alignItems: "center", padding: 18 },
   backdrop: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.55)" },
-  sheet: { backgroundColor: color.panel, borderRadius: 22, width: "100%", maxWidth: 480, borderWidth: 1, borderColor: color.edge, paddingBottom: 16 },
+  sheet: { backgroundColor: color.panel, borderRadius: shape.dialog, width: "100%", maxWidth: 480, borderWidth: 1, borderColor: color.edge, paddingBottom: 16 },
   title: { color: color.muted, fontSize: 13, fontWeight: "700", paddingHorizontal: 20, paddingTop: 16, paddingBottom: 6 },
   action: { minHeight: 44, justifyContent: "center", paddingHorizontal: 20 },
   pressed: { backgroundColor: color.raised },
   label: { color: color.text, fontSize: 14 },
   destructive: { color: tone.red, fontWeight: "700" },
 })
+

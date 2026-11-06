@@ -1,3 +1,4 @@
+import { shape } from "../../shape.ts"
 import { useEffect, useRef, useState } from "react"
 import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native"
 import { color } from "../../theme.ts"
@@ -120,7 +121,7 @@ export function LauncherSheet({ visible, side, onSideChange, current, onSelect, 
 
 const styles = StyleSheet.create({
   backdrop: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0, 0, 0, 0.5)" },
-  sheet: { position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: color.panel, borderTopLeftRadius: 24, borderTopRightRadius: 24, borderWidth: 1, borderBottomWidth: 0, borderColor: color.border, elevation: 16 },
+  sheet: { position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: color.panel, borderTopLeftRadius: shape.dialog, borderTopRightRadius: shape.dialog, borderWidth: 1, borderBottomWidth: 0, borderColor: color.border, elevation: 16 },
   grabber: { alignSelf: "center", width: 36, height: 4, borderRadius: 2, marginTop: 8, backgroundColor: color.border },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingLeft: PAD, paddingRight: 4 },
   title: { color: color.text, fontSize: 18, fontWeight: "700" },
@@ -128,12 +129,13 @@ const styles = StyleSheet.create({
   body: { paddingHorizontal: PAD, paddingBottom: PAD + 8, gap: 12 },
   group: { gap: 8 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: GAP },
-  tile: { minHeight: 72, borderRadius: 16, alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: 6, backgroundColor: color.raised, borderWidth: 1, borderColor: color.edge },
+  tile: { minHeight: 72, borderRadius: shape.card, alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: 6, backgroundColor: color.raised, borderWidth: 1, borderColor: color.edge },
   sides: { flexDirection: "row", gap: GAP },
-  sideChip: { flex: 1, minHeight: 48, borderRadius: 16, alignItems: "center", justifyContent: "center", paddingHorizontal: 6, backgroundColor: color.raised, borderWidth: 1, borderColor: color.edge },
+  sideChip: { flex: 1, minHeight: 48, borderRadius: shape.card, alignItems: "center", justifyContent: "center", paddingHorizontal: 6, backgroundColor: color.raised, borderWidth: 1, borderColor: color.edge },
   tileActive: { backgroundColor: color.selected, borderColor: color.border },
   pressed: { backgroundColor: color.selected },
   tileLabel: { color: color.text2, fontSize: 13, fontWeight: "600" },
   tileLabelActive: { color: tone.red },
   note: { color: color.faint, fontSize: 12, paddingTop: 4 },
 })
+
