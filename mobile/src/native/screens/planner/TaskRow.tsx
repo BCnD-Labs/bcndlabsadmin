@@ -1,13 +1,18 @@
 import { Pressable, StyleSheet, Text, View } from "react-native"
+import type { Collections } from "../../../lib/shared.ts"
 import { plannerColor as color } from "../../planner-theme.ts"
 import { Icon, tone } from "../../ui.tsx"
 import { SwipeRow } from "./SwipeRow.tsx"
 import { TaskCheck } from "./TaskCheck.tsx"
+import { TaskPeek } from "./TaskPeek.tsx"
 import { rowMetrics, type Density } from "./density.ts"
 import type { PlannerRow } from "./rows.ts"
 
 interface Props {
   row: PlannerRow
+  task: Collections["tasks"][number]
+  expanded: boolean
+  onSelect: () => void
   density: Density
   /** Show a "Focus" tag on rows that are in today's focus (not needed inside the Focus group itself). */
   tagFocus?: boolean
@@ -23,7 +28,7 @@ interface Props {
  * quick actions), a star, and swipe shortcuts (SwipeRow). Compact packs one line of title; comfortable
  * wraps the title and shows the first line of the details. TalkBack gets the same actions as a menu.
  */
-export function TaskRow({ row, density, tagFocus, onToggle, onOpen, onStar, onDelete, onMenu }: Props) {
+export function TaskRow({ row, task, expanded, onSelect, density, tagFocus, onToggle, onOpen, onStar, onDelete, onMenu }: Props) {
   const m = rowMetrics(density)
   const actions = [
     { name: "complete", label: row.done ? "Reopen" : "Complete" },
@@ -43,11 +48,11 @@ export function TaskRow({ row, density, tagFocus, onToggle, onOpen, onStar, onDe
         {!row.done && (row.overdue || row.starred) ? <View style={[styles.priority, { backgroundColor: row.overdue ? tone.red : color.amber }]} /> : null}
         <TaskCheck checked={row.done} onPress={onToggle} label={`${row.done ? "Reopen" : "Complete"} ${row.title}`} />
         <Pressable
-          onPress={onOpen}
+          onPress={onSelect}
           onLongPress={onMenu}
           style={[styles.body, { paddingVertical: Math.max(2, m.vertical - 3) }]}
           accessibilityRole="button"
-          accessibilityLabel={`Edit ${row.title}`}
+          accessibilityLabel={`${expanded ? "Collapse preview for" : "Preview"} ${row.title}`}
           accessibilityActions={actions}
           onAccessibilityAction={(e) => onAction(e.nativeEvent.actionName)}
         >
@@ -69,6 +74,7 @@ export function TaskRow({ row, density, tagFocus, onToggle, onOpen, onStar, onDe
           <Icon name={row.starred ? "star" : "ellipsis-horizontal"} size={17} tint={row.starred ? tone.amber : color.muted} />
         </Pressable>
       </View>
+      {expanded ? <TaskPeek task={task} course={row.course} onOpen={onOpen} /> : null}
     </SwipeRow>
   )
 }
