@@ -1,5 +1,6 @@
+import { TextInput } from "../../editing/keyboard.tsx"
 import { useState } from "react"
-import { Pressable, Text, TextInput, View } from "react-native"
+import { Pressable, Text, View } from "react-native"
 import { validDateKey } from "../../../lib/shared.ts"
 import { color } from "../../../theme.ts"
 import { Icon } from "../../ui.tsx"
@@ -57,3 +58,4 @@ export function ScheduleSection({ x, set, today, errors, event = false }: { x: E
     </>
   )
 }
+

@@ -9,5 +9,6 @@ export function SmallButton({ label, onPress }: { label: string; onPress: () => 
 }
 const s = StyleSheet.create({
   pressed: { opacity: 0.72 }, tab: { flex: 1 }, pill: { minHeight: 32, paddingHorizontal: 12, borderRadius: 18, backgroundColor: c.panel, borderWidth: 1, borderColor: c.line, justifyContent: "center", alignItems: "center" }, pillOn: { backgroundColor: c.selected, borderColor: c.selectedBorder }, pillText: { color: c.muted, fontSize: 12, fontWeight: "500" }, pillTextOn: { color: c.accent },
-  smallButton: { minHeight: 27, borderRadius: 15, backgroundColor: c.selected, borderWidth: 1, borderColor: c.selectedBorder, paddingHorizontal: 11, alignItems: "center", justifyContent: "center", alignSelf: "flex-start" }, smallButtonText: { color: c.accent, fontSize: 12, fontWeight: "600" },
+  smallButton: { minHeight: 32, borderRadius: 15, backgroundColor: c.selected, borderWidth: 1, borderColor: c.selectedBorder, paddingHorizontal: 11, alignItems: "center", justifyContent: "center", alignSelf: "flex-start" }, smallButtonText: { color: c.accent, fontSize: 12, fontWeight: "600" },
 })
+

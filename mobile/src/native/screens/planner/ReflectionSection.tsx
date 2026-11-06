@@ -1,5 +1,6 @@
+import { TextInput } from "../../editing/keyboard.tsx"
 import { useState } from "react"
-import { Pressable, Text, TextInput, View } from "react-native"
+import { Pressable, Text, View } from "react-native"
 import { color } from "../../../theme.ts"
 import { Chip, Icon } from "../../ui.tsx"
 import { REFLECTION_KEYS, addItem, isOwnValue, reflectionLabel, reflectionOptions, removeItem, setItem, type ReflectionDraft, type ReflectionKey } from "./reflection.ts"
@@ -54,3 +55,4 @@ export function ReflectionSection({ value, onChange, error }: { value: Reflectio
     </>
   )
 }
+

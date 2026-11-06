@@ -1,5 +1,6 @@
+import { TextInput } from "../../editing/keyboard.tsx"
 import { useState } from "react"
-import { Linking, Pressable, StyleSheet, Text, TextInput, View } from "react-native"
+import { Linking, Pressable, StyleSheet, Text, View } from "react-native"
 import { updateCourse } from "../../../lib/shared.ts"
 import { plannerColor as c } from "../../planner-theme.ts"
 import { useWorkspace } from "../../data/WorkspaceProvider.tsx"
@@ -72,3 +73,4 @@ const s = StyleSheet.create({
   body: { color: c.text2, fontSize: 13, lineHeight: 19 }, fact: { flexDirection: "row", gap: 9, borderBottomWidth: 1, borderColor: c.line, paddingVertical: 6 }, factLabel: { width: 66, color: c.muted, fontSize: 12 }, factValue: { flex: 1, color: c.text2, fontSize: 12 }, pages: { flexDirection: "row", alignItems: "center", gap: 7 }, pageInput: { width: 55, minHeight: 30, borderRadius: 9, borderWidth: 1, borderColor: c.line, color: c.text, textAlign: "center", fontSize: 13, paddingVertical: 3 },
   empty: { alignItems: "center", gap: 8, paddingVertical: 28 }, emptyTitle: { color: c.text, fontSize: 15, fontWeight: "700" }, emptyHint: { color: c.muted, fontSize: 13, lineHeight: 19, paddingVertical: 14 },
 })
+

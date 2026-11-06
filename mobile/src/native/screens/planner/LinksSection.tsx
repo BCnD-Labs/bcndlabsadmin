@@ -1,4 +1,5 @@
-import { Pressable, Text, TextInput, View } from "react-native"
+import { TextInput } from "../../editing/keyboard.tsx"
+import { Pressable, Text, View } from "react-native"
 import { color } from "../../../theme.ts"
 import { Icon } from "../../ui.tsx"
 import { MAX_DOC_LINKS, isSafeLink, type DocLink } from "./doc-links.ts"
@@ -35,3 +36,4 @@ export function LinksSection({ links, onChange, error, hint = "Notes, specs or f
     </>
   )
 }
+

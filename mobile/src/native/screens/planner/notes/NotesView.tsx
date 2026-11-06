@@ -1,5 +1,6 @@
+import { TextInput } from "../../../editing/keyboard.tsx"
 import { useMemo, useState } from "react"
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native"
+import { Pressable, StyleSheet, Text, View } from "react-native"
 import { togglePin, type Collections } from "../../../../lib/shared.ts"
 import { color, notePaper } from "../../../../theme.ts"
 import { useWorkspace } from "../../../data/WorkspaceProvider.tsx"
@@ -111,3 +112,4 @@ const styles = StyleSheet.create({
   emptyTitle: { color: color.text, fontSize: 16, fontWeight: "700" },
   emptyText: { color: color.muted, fontSize: 13, textAlign: "center", marginBottom: 4 },
 })
+

@@ -1,5 +1,6 @@
+import { TextInput } from "../../editing/keyboard.tsx"
 import { useState } from "react"
-import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from "react-native"
+import { Keyboard, Pressable, StyleSheet, Text, View } from "react-native"
 import { createTask } from "../../../lib/shared.ts"
 import { plannerColor as color } from "../../planner-theme.ts"
 import { Icon, tone } from "../../ui.tsx"
@@ -83,3 +84,4 @@ const styles = StyleSheet.create({
   hint: { color: color.muted, fontSize: 11 },
   error: { color: tone.red, fontSize: 11 },
 })
+

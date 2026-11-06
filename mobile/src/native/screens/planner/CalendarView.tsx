@@ -1,3 +1,4 @@
+import { KeyboardFrame, KeyboardScrollView, useKeyboardTop } from "../../editing/keyboard.tsx"
 import { shape } from "../../../shape.ts"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Animated, Easing, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
@@ -30,24 +31,27 @@ import { noteTitle, orderNotes } from "./notes/note-rules.ts"
  * smallest and a largest height (nothing snaps; past either end it stretches a little and springs back). Swiping the
  * grid changes the period: up or down in the month view, left or right in the others.
  */
-export function CalendarView({ data, today, onEdit, onCreateDue, logs, blocked }: {
-  data: Collections; today: string; onEdit: (id: string) => void; onCreateDue: (due: string | undefined) => void
+export function CalendarView({ data, today, onEdit, onCreateDue, logs, blocked, selected, onSelect: setSelected }: {
+  data: Collections; today: string; selected: string; onSelect: (day: string) => void; onEdit: (id: string) => void; onCreateDue: (due: string | undefined) => void
   logs: LogDrafts; blocked?: string
 }) {
   const { mutate } = useWorkspace()
   const [prefs, setPrefs] = useCalendarPrefs(), [layout, setLayout] = useWorkspacePrefs()
-  const [view, setView] = useState<View_>("three"), [selected, setSelected] = useState(today), [anchor, setAnchor] = useState(today)
+  const [view, setView] = useState<View_>("three"), [anchor, setAnchor] = useState(selected)
   const [settings, setSettings] = useState<{ top: number; right: number } | null>(null), [available, setAvailable] = useState(600), [chrome, setChrome] = useState(88)
   const [noteEditor, setNoteEditor] = useState<NoteEditor | null>(null)
   const reduceMotion = useReduceMotion()
   const { weekStartsOn: weekStart, timeFormat } = prefs
+  useEffect(() => setAnchor(selected), [selected])
   const displayDate = view === "three" ? anchor : selected
   const columns = useMemo(() => columnsFor(view, displayDate, weekStart), [view, displayDate, weekStart])
   const weeks = useMemo(() => view === "month" ? monthGrid(selected, weekStart) : [], [view, selected, weekStart])
   // The month view has a larger smallest size, so its week rows never get cramped.
   const floor = view === "month" ? monthMinHeight(chrome, weeks.length) : undefined
   const bounds = useMemo(() => ({ min: calendarHeight(available, 0, floor), max: calendarHeight(available, 1, floor) }), [available, floor])
-  const target = calendarHeight(available, layout.fraction, floor)
+  const keyboardTop = useKeyboardTop()
+  const normalHeight = calendarHeight(available, layout.fraction, floor)
+  const target = keyboardTop == null ? normalHeight : Math.min(normalHeight, Math.max(0, available - 200))
   const height = useRef(new Animated.Value(target)).current
   const dragging = useRef(false)
   const live = useRef({ available, bounds, setLayout, reduceMotion })
@@ -87,7 +91,7 @@ export function CalendarView({ data, today, onEdit, onCreateDue, logs, blocked }
       </Animated.View>
     </Animated.View>
     <View {...resize.panHandlers} style={styles.handle} accessible accessibilityRole="adjustable" accessibilityLabel="Calendar height" accessibilityHint="Drag up or down to resize the calendar" accessibilityValue={{ min: 25, max: 80, now: Math.round(target / available * 100) }} accessibilityActions={[{ name: "increment", label: "Taller calendar" }, { name: "decrement", label: "Shorter calendar" }]} onAccessibilityAction={e => setLayout({ fraction: layout.fraction + (e.nativeEvent.actionName === "increment" ? 0.05 : -0.05) })}><View style={styles.grip} /></View>
-    <ScrollView style={styles.fill} contentContainerStyle={styles.below} keyboardShouldPersistTaps="handled">
+    <KeyboardScrollView style={styles.fill} contentContainerStyle={styles.below} keyboardShouldPersistTaps="handled">
       {layout.order.filter(s => !layout.hidden.includes(s) && (s !== "notes" || linkedNotes.length > 0)).map(section => <View key={section} style={[styles.section, section === "agenda" && styles.agendaSection]}>
         {section === "agenda" ? <DayAgenda day={selected} items={agenda} meta={meta} format={timeFormat} onEdit={onEdit} onToggle={toggle} showTimes={layout.showTimes} showCourses={layout.showCourses} /> : section === "log" ? <>
           <DailyLogEditor data={data} day={selected} logs={logs} blocked={blocked} />
@@ -98,7 +102,7 @@ export function CalendarView({ data, today, onEdit, onCreateDue, logs, blocked }
         </>}
       </View>)}
       {layout.hidden.length === 3 ? <Pressable onPress={() => setSettings({ top: 140, right: 12 })} style={styles.add} accessibilityRole="button"><Text style={styles.muted}>Choose sections in Planner settings</Text></Pressable> : null}
-    </ScrollView>
+    </KeyboardScrollView>
     {settings ? <PlannerSettings anchor={settings} onClose={() => setSettings(null)} prefs={layout} onChange={setLayout} calendar={prefs} onCalendar={setPrefs} /> : null}
     {noteEditor ? <NoteSheet editor={noteEditor} data={data} onClose={() => setNoteEditor(null)} /> : null}
   </View>
