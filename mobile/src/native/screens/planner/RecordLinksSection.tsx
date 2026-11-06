@@ -10,10 +10,9 @@ import { TextAction, shared } from "./sheet-parts.tsx"
 /**
  * Linked records: the notes, tasks and daily logs this task points at (shown by name, with a
  * "deleted" label if the target is gone), unlink with the x, and "Link existing" opens a picker
- * (type chips, search, tap to link) like the web's. Rows are display only: this editor doesn't
- * jump to the linked record.
+ * (type chips, search, tap to link) like the web's. Existing targets open through the owner screen after unsaved edits are handled.
  */
-export function RecordLinksSection({ links, onChange, data, selfId, today }: { links: RecordLink[]; onChange: (links: RecordLink[]) => void; data: Collections; selfId?: string; today: string }) {
+export function RecordLinksSection({ links, onChange, data, selfId, today, onOpen }: { links: RecordLink[]; onChange: (links: RecordLink[]) => void; data: Collections; selfId?: string; today: string; onOpen?: (link: RecordLink) => void }) {
   const [picking, setPicking] = useState(false)
   const [kind, setKind] = useState<LinkKind>("note")
   const [query, setQuery] = useState("")
@@ -26,9 +25,9 @@ export function RecordLinksSection({ links, onChange, data, selfId, today }: { l
         const v = describeLink(link, data)
         return (
           <View key={v.key} style={[shared.row, { minHeight: 44 }]}>
-            <Text style={[shared.value, { flex: 1 }, v.missing && { color: color.faint }]} numberOfLines={2}>
-              {v.label}
-            </Text>
+            <Pressable style={{ flex: 1 }} disabled={v.missing || !onOpen} onPress={() => onOpen?.(link)} accessibilityRole="button" accessibilityLabel={`Open ${v.label}`}><Text style={[shared.value, v.missing && { color: color.faint }]} numberOfLines={2}>
+              {v.label}{!v.missing && onOpen ? "  ›" : ""}
+            </Text></Pressable>
             <Pressable onPress={() => onChange(removeRecordLink(links, link))} style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }} accessibilityRole="button" accessibilityLabel={`Unlink ${v.label}`}>
               <Icon name="close" size={20} tint={color.text2} />
             </Pressable>
