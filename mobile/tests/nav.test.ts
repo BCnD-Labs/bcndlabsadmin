@@ -39,7 +39,7 @@ test("Settings sits in the App group, which comes last", () => {
   assert.equal(groups[groups.length - 1].group, "App")
   assert.deepEqual(
     groups.find((g) => g.group === "Daily")?.items.map((i) => i.key),
-    ["notes", "insights"],
+    ["journal", "notes", "insights"],
   )
 })
 
