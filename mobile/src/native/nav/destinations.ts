@@ -9,7 +9,7 @@ import type { IconName } from "../ui.tsx"
 export const NAV_CLEARANCE = 140
 
 /** Screens the shell can show. "settings" is an action (opens native Settings), not a screen. */
-export type ScreenKey = "home" | "planner" | "learning" | "dev" | "notes" | "insights" | "website" | "mikoshi"
+export type ScreenKey = "home" | "planner" | "journal" | "learning" | "dev" | "notes" | "insights" | "website" | "mikoshi"
 export type DestinationKey = ScreenKey | "settings"
 export type GroupName = "Daily" | "Build" | "Homelab" | "App"
 
@@ -26,11 +26,12 @@ export type Destination = {
 
 export const GROUP_ORDER: readonly GroupName[] = ["Daily", "Build", "Homelab", "App"]
 
-/** Destinations from later steps (Journal, Social, Mikoshi) are added here when they are built. */
+/** Destinations from later steps (Social, Mikoshi) are added here when they are built. */
 export const DESTINATIONS: readonly Destination[] = [
   { key: "home", label: "Home", icon: "home-outline", activeIcon: "home", primary: true },
   { key: "planner", label: "Planner", icon: "calendar-outline", activeIcon: "calendar", primary: true },
   { key: "learning", label: "Learning", icon: "school-outline", activeIcon: "school", primary: true },
+  { key: "journal", label: "Journal", icon: "book-outline", activeIcon: "book", group: "Daily" },
   { key: "dev", label: "Projects", icon: "folder-outline", activeIcon: "folder", primary: true },
   { key: "notes", label: "Notes", icon: "document-text-outline", activeIcon: "document-text", group: "Daily" },
   { key: "insights", label: "Insights", icon: "stats-chart-outline", activeIcon: "stats-chart", group: "Daily" },
@@ -40,7 +41,7 @@ export const DESTINATIONS: readonly Destination[] = [
 ]
 
 /** Screens that keep their state (open tools, scroll) while you visit another screen, once they have been opened. */
-export const KEEP_ALIVE: readonly ScreenKey[] = ["mikoshi", "planner", "learning"]
+export const KEEP_ALIVE: readonly ScreenKey[] = ["mikoshi", "planner", "learning", "journal"]
 
 /** The mini bar slots, in order. */
 export const PRIMARY: readonly Destination[] = DESTINATIONS.filter((d) => d.primary)
@@ -56,4 +57,5 @@ export function launcherGroups(): LauncherGroup[] {
 export function findDestination(key: DestinationKey): Destination {
   return DESTINATIONS.find((d) => d.key === key) ?? DESTINATIONS[0]
 }
+
 
