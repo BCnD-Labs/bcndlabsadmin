@@ -45,3 +45,31 @@ test("download progress is a whole percent and never leaves 0 to 100", () => {
   assert.equal(percent(-5, 100), 0)
   assert.equal(percent(Number.NaN, 100), 0)
 })
+
+
+test("the latest published identity can update the same Android version without looping or downgrading", async () => {
+  const manifest = { versionCode: 26, versionName: "0.26.0", file: "blackwall-android-26.apk", updateId: "b".repeat(64) }
+  assert.equal((await checkForUpdate("https://x.example.ts.net", 26, reply(200, manifest), "a".repeat(64))).status, "available")
+  assert.equal((await checkForUpdate("https://x.example.ts.net", 26, reply(200, manifest), "b".repeat(64))).status, "current")
+  assert.equal((await checkForUpdate("https://x.example.ts.net", 27, reply(200, manifest), "a".repeat(64))).status, "current")
+  assert.equal((await checkForUpdate("https://x.example.ts.net", 25, reply(200, manifest))).status, "available")
+})
+
+test("Expo and the APK publisher share a stable stamped update identity", async () => {
+  const { createRequire } = await import("node:module")
+  const require = createRequire(import.meta.url)
+  const configure = require("../app.config.js")
+  const config = require("../app.json").expo
+  const old = process.env.BLACKWALL_ANDROID_UPDATE_ID
+  try {
+    delete process.env.BLACKWALL_ANDROID_UPDATE_ID
+    const first = configure({ config }).extra.updateId
+    assert.match(first, /^[a-f0-9]{64}$/)
+    assert.equal(configure({ config: { ...config, _internal: {} } }).extra.updateId, first)
+    process.env.BLACKWALL_ANDROID_UPDATE_ID = "c".repeat(64)
+    assert.equal(configure({ config }).extra.updateId, "c".repeat(64))
+  } finally {
+    if (old === undefined) delete process.env.BLACKWALL_ANDROID_UPDATE_ID
+    else process.env.BLACKWALL_ANDROID_UPDATE_ID = old
+  }
+})

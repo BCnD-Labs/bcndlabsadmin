@@ -178,3 +178,17 @@ test("the higher build number wins between GitHub and the drop folder", () => {
   assert.equal(newestUpdatesDir([folder(), undefined]), undefined)
   assert.equal(newestUpdatesDir([path.join(tmpdir(), "bw-does-not-exist")]), undefined)
 })
+
+test("a newer publication with the same Android version replaces an older cached APK exactly once", async () => {
+  const old = androidRelease(25)
+  const newer = androidRelease(25, { tag: "apk-pr-63-build-25", apkBytes: Buffer.from("APK-new-25"), manifest: { sha256: sha(Buffer.from("APK-new-25")), updateId: "b".repeat(64) } })
+  newer.assets = newer.assets.map(asset => ({ ...asset, id: asset.id + 1000 }))
+  const { gh, cacheDir, updates } = setup([old, newer])
+  await updates.refresh()
+  assert.equal(readFileSync(path.join(cacheDir, "blackwall-android-25.apk"), "utf8"), "APK-new-25")
+  assert.equal(readUpdateManifest(cacheDir)?.updateId, "b".repeat(64))
+  const downloaded = gh.calls.filter(call => call.endsWith("/releases/assets/1251")).length
+  await updates.refresh()
+  assert.equal(gh.calls.filter(call => call.endsWith("/releases/assets/1251")).length, downloaded)
+  assert.equal(gh.calls.filter(call => call.endsWith("/releases/assets/251")).length, 0)
+})

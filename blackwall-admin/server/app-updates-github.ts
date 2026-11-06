@@ -129,19 +129,19 @@ export class GithubAppUpdates {
     const candidates = list
       .map((r) => releaseCandidate(r, this.o.platform ?? "android"))
       .filter((c): c is Candidate => !!c)
-      .sort((a, b) => b.build - a.build || b.at - a.at)
+      .sort((a, b) => this.spec.kind === ANDROID ? b.at - a.at || b.build - a.build : b.build - a.build || b.at - a.at)
       .slice(0, LOOK_AT)
 
     const have = readUpdateManifest(this.cacheDir, this.spec.kind)
     for (const c of candidates) {
-      if (have && have.versionCode >= c.build && this.hasApk(have)) return // already holding this build or a newer one
+      if (have && this.hasApk(have) && (this.spec.kind === ANDROID ? have.assetId === c.apk.id : have.versionCode >= c.build)) return // already holding this build or a newer one
       const manifest = parseUpdateManifest(JSON.parse(await (await this.get(`${api}/releases/assets/${c.manifest.id}`, "application/octet-stream", 15_000)).text()), this.spec.kind)
       if (!manifest || manifest.versionCode !== c.build || manifest.file !== c.apk.name || !manifest.sha256) {
         ;(this.o.log ?? console.log)(`[blackwall] skipped ${this.o.platform ?? "android"} build ${c.build}: its ${this.spec.kind.manifest} doesn't match its release`)
         continue
       }
       if (c.apk.size > this.spec.maxBytes) continue
-      await this.download(api, c.apk, manifest)
+      await this.download(api, c.apk, this.spec.kind === ANDROID ? { ...manifest, assetId: c.apk.id, ...(c.at > 0 && { publishedAt: new Date(c.at).toISOString() }) } : manifest)
       ;(this.o.log ?? console.log)(`[blackwall] ${this.o.platform ?? "android"} app update: build ${manifest.versionCode} (${manifest.versionName}) is ready from GitHub`)
       return
     }
