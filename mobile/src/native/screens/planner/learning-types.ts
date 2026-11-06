@@ -14,9 +14,9 @@ const t = (value: ItemType, label: string): TypeOption => ({ value, label })
 const KIND_TYPES: Record<Kind, TypeOption[]> = {
   course: [t("assignment", "Assignment"), t("exam", "Exam"), t("milestone", "Milestone"), t("event", "Event")],
   certification: [t("milestone", "Exam domain"), t("exam", "Practice test"), t("assignment", "Study task"), t("event", "Event")],
-  selfpaced: [t("milestone", "Section"), t("assignment", "Exercise")],
-  skill: [t("milestone", "Milestone"), t("assignment", "Practice")],
-  reading: [t("milestone", "Chapter"), t("assignment", "Reading goal")],
+  selfpaced: [t("milestone", "Section"), t("assignment", "Exercise"), t("event", "Study session")],
+  skill: [t("milestone", "Milestone"), t("assignment", "Practice"), t("event", "Practice session")],
+  reading: [t("milestone", "Chapter"), t("assignment", "Reading goal"), t("event", "Reading session")],
 }
 
 /** The types a kind offers, in the web's order. A missing or unknown kind is a course (older records). */
@@ -36,3 +36,4 @@ export const courseLabel = (c: Pick<Course, "code" | "title">): string => (c.cod
 
 /** The label of a type for a kind ("Exam domain"); the raw value when unknown. */
 export const typeLabel = (type: ItemType | "", kind?: Kind): string => typeOptions(kind).find((o) => o.value === type)?.label ?? (type || "")
+
