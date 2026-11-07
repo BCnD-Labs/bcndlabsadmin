@@ -8,6 +8,7 @@ import { todayKey } from "../data/sync-view.ts"
 import { plannerColor as c } from "../planner-theme.ts"
 import { Icon } from "../ui.tsx"
 import { previewText } from "./planner/TaskPeek.tsx"
+import { selectedItem } from "../selected-item.ts"
 
 type Entry = NonNullable<Collections["journal"][number]["entries"]>[number]
 export type LearningReflection = { date: string; item: Entry }
@@ -50,12 +51,12 @@ export function ReflectionList({ data, courseId, taskId, onEdit }: { data: Colle
       const source = task?.title ?? course?.title ?? "Linked item was deleted"
       const summary = readLearningReflection(entry.item.text)
       const preview = summary.clicked || summary.fuzzy || summary.next || summary.notes || "Learning reflection"
-      return <View key={entry.item.id} style={[s.item, selected === entry.item.id && s.itemOn]}>
+      return <View key={entry.item.id} style={[selectedItem.item, selected === entry.item.id && selectedItem.itemOn]}>
         <Pressable onPress={() => setSelected(id => id === entry.item.id ? null : entry.item.id)} accessibilityRole="button" accessibilityLabel={`Preview reflection for ${source}`} accessibilityState={{ expanded: selected === entry.item.id }} style={s.row}>
           <Text style={s.title} numberOfLines={1}>{source}</Text>
           <Text style={s.meta} numberOfLines={1}>{[task && course?.title, entry.date].filter(Boolean).join(" · ")}</Text>
         </Pressable>
-        {selected === entry.item.id ? <View style={s.peek}><Text style={s.preview} numberOfLines={2} ellipsizeMode="tail">{previewText(preview)}</Text><Pressable onPress={() => onEdit(entry)} style={s.open} accessibilityRole="button"><Text style={s.actionText}>Open reflection</Text></Pressable></View> : null}
+        {selected === entry.item.id ? <View style={selectedItem.preview}><Text style={s.preview} numberOfLines={2} ellipsizeMode="tail">{previewText(preview)}</Text><Pressable onPress={() => onEdit(entry)} style={selectedItem.action} accessibilityRole="button"><Text style={selectedItem.actionText}>Open reflection</Text></Pressable></View> : null}
       </View>
     })}
     {!entries.length ? <Text style={s.hint}>No learning reflections yet. A word or a short answer is enough to start.</Text> : null}
@@ -102,10 +103,10 @@ export function LearningReflectionSheet({ data, initialCourseId, initialTaskId, 
 }
 
 const s = StyleSheet.create({
-  list: { gap: 5 }, item: { borderBottomWidth: 1, borderColor: c.line, borderLeftWidth: 3, borderLeftColor: "transparent" }, itemOn: { backgroundColor: c.selected, borderLeftColor: c.accent, paddingRight: 6 },
-  row: { minHeight: 48, padding: 8, gap: 3 }, title: { color: c.text, fontSize: 14, fontWeight: "600" }, meta: { color: c.muted, fontSize: 11 }, hint: { color: c.muted, fontSize: 12, paddingVertical: 8 },
-  peek: { padding: 9, gap: 6 }, preview: { color: c.text2, fontSize: 12 }, open: { minHeight: 32, justifyContent: "center", alignSelf: "flex-start", paddingHorizontal: 10, borderRadius: 16, backgroundColor: c.panel }, actionText: { color: c.accent, fontSize: 12, fontWeight: "600" },
+  list: { gap: 2 },
+  row: { minHeight: 44, paddingHorizontal: 8, paddingVertical: 5, gap: 3 }, title: { color: c.text, fontSize: 14, fontWeight: "600" }, meta: { color: c.muted, fontSize: 11 }, hint: { color: c.muted, fontSize: 12, paddingVertical: 8 },
+  preview: { color: c.text2, fontSize: 12 },
   backdrop: { flex: 1, justifyContent: "center", padding: 16, backgroundColor: "rgba(0,0,0,0.55)" }, dialog: { maxHeight: "88%", padding: 14, borderRadius: shape.dialog, backgroundColor: c.raised, gap: 12 }, head: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }, dialogTitle: { color: c.text, fontSize: 16, fontWeight: "700" },
-  scroll: { flexShrink: 1 }, form: { gap: 10, paddingBottom: 10 }, label: { color: c.text, fontSize: 13, fontWeight: "600" }, field: { gap: 5 }, choices: { flexDirection: "row", gap: 6 }, choice: { minHeight: 34, maxWidth: 220, justifyContent: "center", borderRadius: 17, paddingHorizontal: 10, backgroundColor: c.panel, borderWidth: 1, borderColor: c.line }, choiceOn: { backgroundColor: c.selected, borderColor: c.accent }, choiceText: { color: c.text2, fontSize: 12 },
+  scroll: { flexShrink: 1 }, form: { gap: 10, paddingBottom: 10 }, label: { color: c.text, fontSize: 13, fontWeight: "600" }, field: { gap: 5 }, choices: { flexDirection: "row", gap: 6 }, choice: { minHeight: 32, maxWidth: 220, justifyContent: "center", borderRadius: 16, paddingHorizontal: 10, backgroundColor: c.panel }, choiceOn: { backgroundColor: c.selected }, choiceText: { color: c.text2, fontSize: 12 },
   input: { color: c.text, backgroundColor: c.panel, borderColor: c.line, borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, minHeight: 40, fontSize: 13 }, notes: { minHeight: 92, paddingTop: 10 }, save: { alignItems: "center", justifyContent: "center", minHeight: 40, borderRadius: 8, backgroundColor: c.action }, saveText: { color: "#fff", fontWeight: "700" }, disabled: { opacity: 0.45 }, error: { color: "#ff8787", fontSize: 12 },
 })
