@@ -35,21 +35,18 @@ export function NoteRow({ note, course, now, onOpen, onSelect, onPin, expanded =
         <Icon name={note.pinned ? "pin" : "pin-outline"} size={20} tint={note.pinned ? color.text : color.faint} />
       </Pressable>
     </View>
-    {expanded ? <View style={styles.detail}>
+    {expanded ? <View style={selectedItem.preview}>
       {notePreview(note.text) ? <Text style={styles.detailText} numberOfLines={2} ellipsizeMode="tail">{previewText(notePreview(note.text))}</Text> : <Text style={styles.detailText}>No additional text.</Text>}
       <Text style={styles.meta}>{[course?.title, note.links?.length ? `${note.links.length} linked ${note.links.length === 1 ? "item" : "items"}` : undefined].filter(Boolean).join(" · ")}</Text>
-      <Pressable onPress={onOpen} style={styles.open} accessibilityRole="button" accessibilityLabel={`Open ${title}`}><Icon name="open-outline" size={14} tint={p.accent} /><Text style={styles.openText}>Open</Text></Pressable>
+      <Pressable onPress={onOpen} style={selectedItem.action} accessibilityRole="button" accessibilityLabel={`Open ${title}`}><Icon name="open-outline" size={14} tint={p.accent} /><Text style={selectedItem.actionText}>Open</Text></Pressable>
     </View> : null}
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  detail: { marginBottom: 8, marginLeft: 30, padding: 9, gap: 7, borderLeftWidth: 3, borderLeftColor: p.accent, borderRadius: 8, backgroundColor: color.selected },
-  detailText: { color: color.muted, fontSize: 12, lineHeight: 17 },
-  open: { alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, minHeight: 34, borderRadius: 17, backgroundColor: color.panel },
-  openText: { color: p.accent, fontSize: 12, fontWeight: "600" },
-  row: { flexDirection: "row", alignItems: "center", borderBottomWidth: 1, borderBottomColor: color.line },
+  detailText: { color: p.text2, fontSize: 12, lineHeight: 17 },
+  row: { flexDirection: "row", alignItems: "center" },
   body: { flex: 1, flexDirection: "row", alignItems: "center", gap: 12, minHeight: 56, paddingVertical: 8 },
   compactBody: { minHeight: 44, paddingVertical: 4, gap: 8 },
   pressed: { backgroundColor: color.raised },
@@ -59,7 +56,7 @@ const styles = StyleSheet.create({
   compactTitle: { fontSize: 14 },
   preview: { color: color.muted, fontSize: 13 },
   compactPreview: { fontSize: 12 },
-  meta: { color: color.faint, fontSize: 11 },
+  meta: { color: p.muted, fontSize: 11 },
   pin: { width: 44, minHeight: 56, alignItems: "center", justifyContent: "center" },
   compactPin: { minHeight: 44 },
 })

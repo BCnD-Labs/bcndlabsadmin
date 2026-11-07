@@ -4,6 +4,7 @@ import { Linking, Modal, Pressable, StyleSheet, Text, View } from "react-native"
 import type { Collections } from "../../lib/shared.ts"
 import { useWorkspace } from "../data/WorkspaceProvider.tsx"
 import { plannerColor as c } from "../planner-theme.ts"
+import { selectedItem } from "../selected-item.ts"
 import { WorkspacePage, WorkspaceSection } from "../WorkspacePage.tsx"
 import { Icon } from "../ui.tsx"
 import { DraftEditor } from "./DraftEditor.tsx"
@@ -45,21 +46,21 @@ export function WebsiteScreen({ onOpenSettings }: { onOpenSettings: () => void }
           const drafts = data.drafts.filter(d => d.siteId === site.id)
           const expanded = open === site.id
           const url = publicUrl(site)
-          return <View key={site.id} style={s.site}>
+          return <View key={site.id} style={[selectedItem.item, expanded && selectedItem.itemOn]}>
             <Pressable onPress={() => setOpen(expanded ? null : site.id)} style={s.row} accessibilityRole="button" accessibilityState={{ expanded }} accessibilityLabel={site.name + ", " + pages.length + " pages"}>
               <View style={s.siteMark}><Icon name="globe-outline" size={17} tint={c.blue} /></View><View style={s.flex}><Text style={s.title} numberOfLines={1}>{site.name}</Text><Text style={s.meta} numberOfLines={1}>{site.domain || "No domain"} · {pages.length} pages · {drafts.length} drafts</Text></View><Icon name={expanded ? "chevron-up" : "chevron-down"} size={16} tint={c.muted} />
             </Pressable>
-            {expanded ? <View style={s.detail}>
-              <View style={s.summary}><Text style={s.meta}>{site.publishedAt ? "Published " + site.publishedAt.slice(0, 10) : "Not published yet"}</Text>{url && site.publishedAt ? <Pressable onPress={() => void Linking.openURL(url)} accessibilityRole="link" style={s.open}><Text style={s.openText}>Open site</Text><Icon name="open-outline" size={13} tint={c.accent} /></Pressable> : null}</View>
-              <Pressable onPress={() => editSite(site)} style={s.newDraft} accessibilityRole="button"><Text style={s.newDraftText}>Edit site details</Text></Pressable>
+            {expanded ? <View style={selectedItem.preview}>
+              <View style={s.summary}><Text style={s.meta}>{site.publishedAt ? "Published " + site.publishedAt.slice(0, 10) : "Not published yet"}</Text>{url && site.publishedAt ? <Pressable onPress={() => void Linking.openURL(url)} accessibilityRole="link" style={selectedItem.action}><Text style={selectedItem.actionText}>Open site</Text><Icon name="open-outline" size={13} tint={c.accent} /></Pressable> : null}</View>
+              <Pressable onPress={() => editSite(site)} style={selectedItem.action} accessibilityRole="button"><Text style={selectedItem.actionText}>Edit site details</Text></Pressable>
               {pages.map(page => <View key={page.id} style={s.subrow}><Icon name="document-outline" size={15} tint={c.muted} /><Text style={s.subTitle} numberOfLines={1}>{page.title}</Text><Text style={s.meta}>/{page.slug}</Text></View>)}
               {drafts.map(draft => <Pressable key={draft.id} onPress={() => edit(draft)} style={s.subrow} accessibilityRole="button" accessibilityLabel={`Edit ${draft.title}`}><Icon name="create-outline" size={15} tint={c.amber} /><Text style={s.subTitle} numberOfLines={1}>{draft.title}</Text><Text style={s.meta}>{draft.status}</Text></Pressable>)}
-              <Pressable onPress={() => edit("new", site.id)} style={s.newDraft} accessibilityRole="button"><Text style={s.newDraftText}>+ New draft for this site</Text></Pressable>
+              <Pressable onPress={() => edit("new", site.id)} style={selectedItem.action} accessibilityRole="button"><Text style={selectedItem.actionText}>+ New draft for this site</Text></Pressable>
               {!pages.length && !drafts.length ? <Text style={s.meta}>No pages or drafts yet.</Text> : null}
             </View> : null}
           </View>
         })}
-        {!data.sites.length ? <Pressable onPress={() => editSite("new")} style={s.newDraft} accessibilityRole="button"><Text style={s.newDraftText}>+ Create a site</Text></Pressable> : null}
+        {!data.sites.length ? <Pressable onPress={() => editSite("new")} style={selectedItem.action} accessibilityRole="button"><Text style={selectedItem.actionText}>+ Create a site</Text></Pressable> : null}
       </WorkspaceSection>
       {data.drafts.filter(d => !d.siteId || !data.sites.some(site => site.id === d.siteId)).length ? <WorkspaceSection title="Unassigned drafts" icon="create-outline" tint={c.amber}>{data.drafts.filter(d => !d.siteId || !data.sites.some(site => site.id === d.siteId)).map(d => <Pressable key={d.id} onPress={() => edit(d)} style={s.subrow} accessibilityRole="button" accessibilityLabel={`Edit ${d.title}`}><Icon name="create-outline" size={15} tint={c.amber} /><Text style={s.subTitle} numberOfLines={1}>{d.title}</Text><Text style={s.meta}>{d.status}</Text></Pressable>)}</WorkspaceSection> : null}
     </> : <Text style={s.empty}>{status === "signed-out" ? "Sign in under Settings to see your sites." : message ?? "Loading your workspace…"}</Text>}
@@ -69,5 +70,5 @@ export function WebsiteScreen({ onOpenSettings }: { onOpenSettings: () => void }
   </WorkspacePage>
 }
 
-const s = StyleSheet.create({ add: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: c.panel, borderWidth: 1, borderColor: c.line }, menuBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)" }, menuDismiss: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }, menu: { position: "absolute", top: 89, right: 16, width: 158, padding: 9, borderRadius: shape.menu, backgroundColor: c.panel, borderColor: c.border, borderWidth: 1 }, menuLabel: { color: c.muted, fontSize: 10, paddingHorizontal: 7, paddingBottom: 3 }, menuItem: { minHeight: 35, flexDirection: "row", alignItems: "center", gap: 9, paddingHorizontal: 7 }, menuText: { color: c.text, fontSize: 13 }, error: { color: "#ffa8a8", fontSize: 12 }, meta: { color: c.muted, fontSize: 11 }, site: { borderBottomWidth: 1, borderColor: c.line }, row: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: 9 }, siteMark: { width: 30, height: 30, borderRadius: 9, backgroundColor: "#2196f326", alignItems: "center", justifyContent: "center" }, flex: { flex: 1, gap: 3 }, title: { color: c.text, fontSize: 14, fontWeight: "600" }, detail: { paddingLeft: 39, paddingBottom: 8, gap: 7 }, summary: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, open: { flexDirection: "row", alignItems: "center", gap: 4 }, openText: { color: c.accent, fontSize: 11, fontWeight: "600" }, subrow: { minHeight: 29, flexDirection: "row", alignItems: "center", gap: 8 }, subTitle: { color: c.text2, fontSize: 12, flex: 1 }, newDraft: { minHeight: 27, alignSelf: "flex-start", justifyContent: "center" }, newDraftText: { color: c.accent, fontSize: 11, fontWeight: "600" }, empty: { color: c.muted, fontSize: 12, paddingVertical: 9 } })
+const s = StyleSheet.create({ add: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: c.panel, borderWidth: 1, borderColor: c.line }, menuBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)" }, menuDismiss: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }, menu: { position: "absolute", top: 89, right: 16, width: 158, padding: 9, borderRadius: shape.menu, backgroundColor: c.panel, borderColor: c.border, borderWidth: 1 }, menuLabel: { color: c.muted, fontSize: 10, paddingHorizontal: 7, paddingBottom: 3 }, menuItem: { minHeight: 35, flexDirection: "row", alignItems: "center", gap: 9, paddingHorizontal: 7 }, menuText: { color: c.text, fontSize: 13 }, error: { color: "#ffa8a8", fontSize: 12 }, meta: { color: c.muted, fontSize: 11 }, row: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 9 }, siteMark: { width: 26, height: 26, borderRadius: 8, backgroundColor: "#2196f326", alignItems: "center", justifyContent: "center" }, flex: { flex: 1, gap: 3 }, title: { color: c.text, fontSize: 14, fontWeight: "600" }, summary: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, subrow: { minHeight: 32, flexDirection: "row", alignItems: "center", gap: 8 }, subTitle: { color: c.text2, fontSize: 12, flex: 1 }, empty: { color: c.muted, fontSize: 12, paddingVertical: 9 } })
 

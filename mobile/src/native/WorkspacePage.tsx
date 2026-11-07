@@ -19,7 +19,7 @@ export function WorkspaceSection({ title, icon, tint = c.accent, count, children
 }
 
 const s = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: c.ground }, header: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 10, minHeight: 47, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }, crumb: { color: c.text, fontSize: 13, fontWeight: "600", flexShrink: 1 }, muted: { color: c.muted, fontWeight: "400" }, right: { flexDirection: "row", alignItems: "center", gap: 7 }, content: { padding: 14, paddingBottom: NAV_CLEARANCE }, body: { gap: 13 },
+  fill: { flex: 1, backgroundColor: c.ground }, header: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 10, minHeight: 47, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }, crumb: { color: c.text, fontSize: 13, fontWeight: "600", flexShrink: 1 }, muted: { color: c.muted, fontWeight: "400" }, right: { flexDirection: "row", alignItems: "center", gap: 7 }, content: { padding: 14, paddingBottom: NAV_CLEARANCE }, body: { gap: 10 },
   section: { gap: 3 }, sectionHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 32, gap: 8, marginBottom: 2, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: c.panel, borderRadius: shape.card, borderBottomWidth: 1, borderBottomColor: c.line }, sectionName: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 7 }, icon: { width: 25, height: 25, borderRadius: 8, alignItems: "center", justifyContent: "center" }, sectionTitle: { flexShrink: 1, color: c.text, fontSize: 14, fontWeight: "700", letterSpacing: 0.2 }, count: { color: c.muted, fontSize: 12 },
 })
 
