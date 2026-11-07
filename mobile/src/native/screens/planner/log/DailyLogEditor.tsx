@@ -33,7 +33,7 @@ export function DailyLogEditor({ data, day, logs, blocked }: { data: Collections
   const selected = sections.find((section) => section.id === active)
   const journal = data.journal.find((entry) => entry.id === day)
   const legacyText = selected ? selected.text : shownText(logs.drafts, data.journal, day)
-  const items = (journal?.entries ?? []).filter((entry) => (entry.sectionId ?? null) === active && !entry.id.startsWith("journal-"))
+  const items = (journal?.entries ?? []).filter((entry) => (entry.sectionId ?? null) === active && !entry.id.startsWith("journal-") && !entry.courseId && !entry.taskId)
   const draftKey = `${day}/${active ?? ""}`
   const draft = logs.entryDrafts[draftKey]
   const makeDraft = (): EntryDraft => { const id = newId(); return { id, text: "", asNote: false, noteId: `nte_${id}`, createdAt: new Date().toISOString() } }
@@ -120,7 +120,7 @@ export function DailyLogEditor({ data, day, logs, blocked }: { data: Collections
     </View>
     {error && !editor && !quick ? <Text style={styles.error} accessibilityLiveRegion="polite">{error}</Text> : null}
     {[{ id: null, title: "Reflections", text: shownText(logs.drafts, data.journal, day), noteId: journal?.mainNoteId }, ...sections].map(section => {
-      const entries = (journal?.entries ?? []).filter(entry => (entry.sectionId ?? null) === section.id && !entry.id.startsWith("journal-"))
+      const entries = (journal?.entries ?? []).filter(entry => (entry.sectionId ?? null) === section.id && !entry.id.startsWith("journal-") && !entry.courseId && !entry.taskId)
       const expanded = active === section.id && !closed[`${day}/${section.id ?? ""}`]
       const count = entries.length + Number(!!section.text.trim())
       return <View key={section.id ?? "main"} style={styles.group}>
