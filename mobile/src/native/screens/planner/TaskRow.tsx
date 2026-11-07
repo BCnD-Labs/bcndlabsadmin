@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native"
 import type { Collections } from "../../../lib/shared.ts"
 import { plannerColor as color } from "../../planner-theme.ts"
 import { Icon, tone } from "../../ui.tsx"
+import { selectedItem } from "../../selected-item.ts"
 import { SwipeRow } from "./SwipeRow.tsx"
 import { TaskCheck } from "./TaskCheck.tsx"
 import { TaskPeek } from "./TaskPeek.tsx"
@@ -44,6 +45,7 @@ export function TaskRow({ row, task, expanded, onSelect, density, tagFocus, onTo
   }
   return (
     <SwipeRow done={row.done} starred={row.starred} onComplete={onToggle} onStar={onStar} onDelete={onDelete}>
+      <View style={[selectedItem.item, expanded && selectedItem.itemOn]}>
       <View style={[styles.row, { minHeight: m.minHeight }]}>
         {!row.done && (row.overdue || row.starred) ? <View style={[styles.priority, { backgroundColor: row.overdue ? tone.red : color.amber }]} /> : null}
         <TaskCheck checked={row.done} onPress={onToggle} label={`${row.done ? "Reopen" : "Complete"} ${row.title}`} />
@@ -75,6 +77,7 @@ export function TaskRow({ row, task, expanded, onSelect, density, tagFocus, onTo
         </Pressable>
       </View>
       {expanded ? <TaskPeek task={task} course={row.course} onOpen={onOpen} /> : null}
+      </View>
     </SwipeRow>
   )
 }

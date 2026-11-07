@@ -21,6 +21,7 @@ import { usePeriodSwipe } from "./calendar/usePeriodSwipe.ts"
 import { useWorkspacePrefs } from "./calendar/useWorkspacePrefs.ts"
 import { calendarHeight } from "./calendar/workspace-prefs.ts"
 import { DailyLogEditor } from "./log/DailyLogEditor.tsx"
+import { selectedItem } from "../../selected-item.ts"
 import { TaskPeek, previewText } from "./TaskPeek.tsx"
 import type { LogDrafts } from "./log/useLogDrafts.ts"
 import { NoteSheet, type NoteEditor } from "./notes/NoteSheet.tsx"
@@ -101,7 +102,7 @@ export function CalendarView({ data, today, onEdit, onCreateDue, logs, blocked, 
           <DailyLogEditor data={data} day={selected} logs={logs} blocked={blocked} />
         </> : <>
           <View style={styles.sectionHead}><Icon name="document-text-outline" tint={c.text2} /><Text style={styles.heading}>Notes · {linkedNotes.length}</Text></View>
-          {[...notes.pinned, ...notes.others].map(n => <View key={n.id}><Pressable style={styles.note} onPress={() => setNotePreviewId(value => value === n.id ? null : n.id)} accessibilityRole="button" accessibilityLabel={`Preview ${noteTitle(n.text)}`} accessibilityState={{ expanded: notePreviewId === n.id }}><Text style={styles.noteTitle} numberOfLines={1}>{noteTitle(n.text)}</Text><Icon name={notePreviewId === n.id ? "chevron-up" : "chevron-down"} size={16} tint={c.muted} /></Pressable>{notePreviewId === n.id ? <View style={styles.notePeek}><Text style={styles.noteText} numberOfLines={2} ellipsizeMode="tail">{previewText(n.text, 120)}</Text><Pressable onPress={() => setNoteEditor({ mode: "edit", id: n.id })} accessibilityRole="button" accessibilityLabel={`Open ${noteTitle(n.text)}`} style={styles.noteOpen}><Text style={styles.noteOpenText}>Open</Text></Pressable></View> : null}</View>)}
+          {[...notes.pinned, ...notes.others].map(n => <View key={n.id} style={[selectedItem.item, notePreviewId === n.id && selectedItem.itemOn]}><Pressable style={styles.note} onPress={() => setNotePreviewId(value => value === n.id ? null : n.id)} accessibilityRole="button" accessibilityLabel={`Preview ${noteTitle(n.text)}`} accessibilityState={{ expanded: notePreviewId === n.id }}><Text style={styles.noteTitle} numberOfLines={1}>{noteTitle(n.text)}</Text><Icon name={notePreviewId === n.id ? "chevron-up" : "chevron-down"} size={16} tint={c.muted} /></Pressable>{notePreviewId === n.id ? <View style={styles.notePeek}><Text style={styles.noteText} numberOfLines={2} ellipsizeMode="tail">{previewText(n.text, 120)}</Text><Pressable onPress={() => setNoteEditor({ mode: "edit", id: n.id })} accessibilityRole="button" accessibilityLabel={`Open ${noteTitle(n.text)}`} style={styles.noteOpen}><Text style={styles.noteOpenText}>Open</Text></Pressable></View> : null}</View>)}
 
         </>}
       </View>)}

@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native"
 import type { Collections } from "../../../../lib/shared.ts"
 import { plannerColor as color } from "../../../planner-theme.ts"
 import { Empty, Icon, tone } from "../../../ui.tsx"
+import { selectedItem } from "../../../selected-item.ts"
 import { TaskCheck } from "../TaskCheck.tsx"
 import { TaskPeek } from "../TaskPeek.tsx"
 import { durationText, formatTime, longDay, type TimeFormat } from "./format.ts"
@@ -36,7 +37,7 @@ export function DayAgenda({ day, items, tasks, meta, format, onEdit, onToggle, s
       {note ? <Text style={styles.note}>{note}</Text> : null}
       {items.length === 0 ? <Empty>Nothing is scheduled or due on this day.</Empty> : null}
       {items.map((item) => (
-        <View key={item.id}>
+        <View key={item.id} style={[selectedItem.item, previewKey === `${day}/${item.id}` && selectedItem.itemOn]}>
         <View style={styles.row}>
           {item.event ? <View style={{ width: 32, alignItems: "center" }}><Icon name="calendar-outline" size={16} tint={color.accent} /></View> : <TaskCheck compact checked={item.done} onPress={() => onToggle(item.id)} label={`${item.done ? "Reopen" : "Complete"} ${item.title}`} />}
           <Pressable onPress={() => setPreviewKey(value => value === `${day}/${item.id}` ? null : `${day}/${item.id}`)} style={styles.body} accessibilityRole="button" accessibilityLabel={`Preview ${item.title}`} accessibilityState={{ expanded: previewKey === `${day}/${item.id}` }}>
