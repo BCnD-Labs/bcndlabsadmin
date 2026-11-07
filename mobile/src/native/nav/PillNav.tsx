@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { Animated, Easing, Keyboard, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native"
 import { plannerColor as c } from "../planner-theme.ts"
 import { Icon } from "../ui.tsx"
+import { navLayout } from "./layout.ts"
 import { DESTINATIONS, PRIMARY, type Destination, type ScreenKey } from "./destinations.ts"
 import { useReduceMotion } from "./useReduceMotion.ts"
 
@@ -29,7 +30,7 @@ export function PillNav({ current, moreOpen, onMoreOpen, onSelect, onOpenSetting
   const ready = useRef(false)
   const primary = PRIMARY.some((d) => d.key === current)
   const selected = moreOpen || !primary ? "more" : current
-  const barWidth = Math.min(width - 40, 300)
+  const { barWidth, barLeft } = navLayout(width)
   const barHeight = Math.max(HEIGHT, 24 + Math.min(fontScale, 2) * 14)
   const selectedSlot = slots[selected]
 
@@ -61,7 +62,7 @@ export function PillNav({ current, moreOpen, onMoreOpen, onSelect, onOpenSetting
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       {moreOpen ? <Pressable style={StyleSheet.absoluteFill} onPress={() => onMoreOpen(false)} accessibilityRole="button" accessibilityLabel="Close More menu" /> : null}
-      <View style={[styles.anchor, { width: barWidth, left: (width - barWidth) / 2 }]} pointerEvents="box-none">
+      <View style={[styles.anchor, { width: barWidth, left: barLeft }]} pointerEvents="box-none">
         {moreOpen ? (
           <View style={[styles.menu, { bottom: barHeight + 8, maxHeight: Math.max(80, height - barHeight - 48) }]} accessibilityViewIsModal>
             <Text style={styles.menuTitle} accessibilityRole="header">More</Text>

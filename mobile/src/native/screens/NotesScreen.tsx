@@ -14,8 +14,7 @@ export function NotesScreen({ onOpenSettings }: { onOpenSettings: () => void }) 
   const [editor, setEditor] = useState<NoteEditor | null>(null)
   const [notice, setNotice] = useState<string>()
   const blocked = status === "conflict"
-  const add = <Pressable onPress={() => data && !blocked ? setEditor({ mode: "create" }) : setNotice(blocked ? "Resolve the sync conflict before editing." : "Load your workspace first.")} style={s.add} accessibilityRole="button" accessibilityLabel="Add note"><Icon name="add" size={20} tint={c.accent} /></Pressable>
-  return <WorkspacePage page="Notes" onOpenSettings={onOpenSettings} action={add} onRefresh={() => void refresh()} refreshing={refreshing}>
+  return <WorkspacePage page="Notes" onOpenSettings={onOpenSettings} onRefresh={() => void refresh()} refreshing={refreshing}>
     {notice ? <Text style={s.error}>{notice}</Text> : null}
     {data ? <NotesView data={data} compact hideAdd controlledEditor={editor} onEditorChange={setEditor} blocked={blocked ? "Choose which edits to keep first." : undefined} /> : <View style={s.empty}><Text style={s.title}>{status === "signed-out" ? "Sign in to use Notes" : "Loading your workspace"}</Text><Text style={s.meta}>{message ?? "Your notes will appear here."}</Text>{status === "signed-out" ? <SmallButton label="Sign in" onPress={onOpenSettings} /> : null}</View>}
   </WorkspacePage>

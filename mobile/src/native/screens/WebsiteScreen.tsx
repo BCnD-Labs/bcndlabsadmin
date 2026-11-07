@@ -24,7 +24,6 @@ export function WebsiteScreen({ onOpenSettings }: { onOpenSettings: () => void }
   const [pageOpen, setPageOpen] = useState<string | null>(null)
   const [editor, setEditor] = useState<{ value: Draft | "new"; siteId?: string } | null>(null)
   const [siteEditor, setSiteEditor] = useState<Site | "new" | null>(null)
-  const [addOpen, setAddOpen] = useState(false)
   const [notice, setNotice] = useState("")
   function edit(value: Draft | "new", siteId?: string) {
     if (status === "conflict") setNotice("Resolve the sync conflict before editing.")
@@ -36,8 +35,7 @@ export function WebsiteScreen({ onOpenSettings }: { onOpenSettings: () => void }
     else if (!data) setNotice("Load your workspace first.")
     else { setNotice(""); setSiteEditor(value) }
   }
-  const add = <Pressable onPress={() => setAddOpen(true)} style={s.add} accessibilityRole="button" accessibilityLabel="Add website item"><Icon name="add" size={20} tint={c.accent} /></Pressable>
-  return <WorkspacePage page="Website" onOpenSettings={onOpenSettings} action={add} onRefresh={() => void refresh()} refreshing={refreshing}>
+  return <WorkspacePage page="Website" onOpenSettings={onOpenSettings} onRefresh={() => void refresh()} refreshing={refreshing}>
     {notice ? <Text style={s.error}>{notice}</Text> : null}
     {data ? <>
       <Text style={s.meta}>{data.sites.length} {data.sites.length === 1 ? "site" : "sites"} · {data.pages.length} {data.pages.length === 1 ? "page" : "pages"} · {data.drafts.length} {data.drafts.length === 1 ? "draft" : "drafts"}</Text>
@@ -87,7 +85,6 @@ export function WebsiteScreen({ onOpenSettings }: { onOpenSettings: () => void }
     </> : <Text style={s.empty}>{status === "signed-out" ? "Sign in under Settings to see your sites." : message ?? "Loading your workspace…"}</Text>}
     {data && editor ? <DraftEditor key={editor.value === "new" ? `new-${editor.siteId ?? "none"}` : editor.value.id} value={editor.value} siteId={editor.siteId} data={data} onClose={() => setEditor(null)} /> : null}
     {siteEditor ? <SiteEditor key={siteEditor === "new" ? "new" : siteEditor.id} value={siteEditor} onClose={() => setSiteEditor(null)} /> : null}
-    <Modal visible={addOpen} transparent animationType="fade" onRequestClose={() => setAddOpen(false)}><View style={s.menuBackdrop}><Pressable style={s.menuDismiss} onPress={() => setAddOpen(false)} accessibilityLabel="Close add menu" /><View style={s.menu}><Text style={s.menuLabel}>CREATE</Text><Pressable onPress={() => { setAddOpen(false); edit("new", data?.sites.length === 1 ? data.sites[0]?.id : undefined) }} style={s.menuItem} accessibilityRole="button"><Icon name="create-outline" size={17} tint={c.amber} /><Text style={s.menuText}>Draft</Text></Pressable><Pressable onPress={() => { setAddOpen(false); editSite("new") }} style={s.menuItem} accessibilityRole="button"><Icon name="globe-outline" size={17} tint={c.blue} /><Text style={s.menuText}>Site</Text></Pressable></View></View></Modal>
   </WorkspacePage>
 }
 

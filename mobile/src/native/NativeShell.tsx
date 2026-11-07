@@ -3,12 +3,13 @@ import { BackHandler, StyleSheet, View } from "react-native"
 import { color } from "../theme.ts"
 import { WorkspaceProvider } from "./data/WorkspaceProvider.tsx"
 import { PillNav } from "./nav/PillNav.tsx"
+import { QuickAdd, QuickAddProvider } from "./quickadd/QuickAdd.tsx"
 import { KEEP_ALIVE, type ScreenKey } from "./nav/destinations.ts"
 import { SCREENS } from "./nav/screens.tsx"
 import { SnackHost } from "./snack/SnackHost.tsx"
 import type { NativeHomeProps } from "./index.ts"
 
-/** Shared screen host with a persistent floating pill and an anchored More menu. */
+/** Shared screen host with a persistent floating pill, an anchored More menu and the quick-add button. */
 export function NativeShell({ address, onOpenSettings }: NativeHomeProps) {
   const [current, setCurrent] = useState<ScreenKey>("home")
   const [moreOpen, setMoreOpen] = useState(false)
@@ -29,6 +30,7 @@ export function NativeShell({ address, onOpenSettings }: NativeHomeProps) {
 
   return (
     <WorkspaceProvider key={address} address={address}>
+      <QuickAddProvider>
       <View style={styles.root}>
         <View style={styles.page} accessibilityElementsHidden={moreOpen} importantForAccessibility={moreOpen ? "no-hide-descendants" : "auto"}>
           {KEEP_ALIVE.includes(current) ? null : <Current onOpenSettings={onOpenSettings} />}
@@ -36,7 +38,9 @@ export function NativeShell({ address, onOpenSettings }: NativeHomeProps) {
           <SnackHost />
         </View>
         <PillNav current={current} moreOpen={moreOpen} onMoreOpen={setMoreOpen} onSelect={setCurrent} onOpenSettings={onOpenSettings} />
+        <QuickAdd />
       </View>
+      </QuickAddProvider>
     </WorkspaceProvider>
   )
 }
