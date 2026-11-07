@@ -1,5 +1,6 @@
 /** Bottom-edge layout for the pill nav and the quick-add button. Pure so node tests can load it. */
-export const FAB = 48
+/** Same height as the nav pill, so the two sit as a pair on the bottom edge. */
+export const FAB = 42
 export const FAB_EDGE = 12
 const GAP = 8
 const NAV_MAX = 300
