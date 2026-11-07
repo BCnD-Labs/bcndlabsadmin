@@ -43,7 +43,7 @@ export function JournalScreen({ onOpenSettings }: { onOpenSettings: () => void }
   const saved = data?.journal.find(entry => entry.id === anchor)?.entries?.find(item => item.id === key)
   const form = drafts[key] ?? (saved ? readCheckIn(saved.text) : EMPTY_CHECK_IN)
   const end = nextPeriod(period, anchor, 1)
-  const entries = data?.journal.filter(entry => entry.id >= anchor && entry.id < end && (entry.text.trim() || entry.sections?.length || entry.entries?.length)) ?? []
+  const entries = data?.journal.filter(entry => entry.id >= anchor && entry.id < end && (entry.text.trim() || entry.sections?.length || entry.entries?.some(item => !item.courseId && !item.taskId))) ?? []
   const label = period === "daily" ? formatDay(anchor) : period === "weekly" ? weekRangeLabel(anchor) : period === "monthly" ? new Date(`${anchor}T12:00:00Z`).toLocaleDateString(undefined, { month: "long", year: "numeric", timeZone: "UTC" }) : anchor.slice(0, 4)
 
   function update(patch: Partial<CheckIn>) { setError(null); setDrafts(current => ({ ...current, [key]: { ...(current[key] ?? form), ...patch } })) }
@@ -74,7 +74,7 @@ export function JournalScreen({ onOpenSettings }: { onOpenSettings: () => void }
         </View>
         {period === "daily" ? <LogView data={data} today={today} day={day} onDay={setDay} logs={logs} blocked={access.reason} onEditTask={setTaskId} /> : <>
           <Text style={s.sectionTitle}>Entries in this {period.slice(0, -2) || "day"} · {entries.length}</Text>
-          {entries.length ? entries.slice().reverse().slice(0, 20).map(entry => <View key={entry.id} style={s.entry}><Text style={s.entryDay}>{shortDay(entry.id)}</Text><Text style={s.preview} numberOfLines={3}>{[entry.text, ...(entry.entries ?? []).map(item => item.text)].filter(Boolean).join("\n") || "Section entries"}</Text></View>) : <Text style={s.hint}>No entries in this period yet.</Text>}
+          {entries.length ? entries.slice().reverse().slice(0, 20).map(entry => <View key={entry.id} style={s.entry}><Text style={s.entryDay}>{shortDay(entry.id)}</Text><Text style={s.preview} numberOfLines={3}>{[entry.text, ...(entry.entries ?? []).filter(item => !item.courseId && !item.taskId).map(item => item.text)].filter(Boolean).join("\n") || "Section entries"}</Text></View>) : <Text style={s.hint}>No entries in this period yet.</Text>}
         </>}</>}
       </>}
     </KeyboardScrollView>
