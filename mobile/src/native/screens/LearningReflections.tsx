@@ -76,7 +76,7 @@ export function LearningReflectionSheet({ data, initialCourseId, initialTaskId, 
     if (!canSave) return
     setSaving(true); setError("")
     const now = new Date().toISOString()
-    const item: Entry = { id, text: writeLearningReflection(answers), createdAt: entry?.item.createdAt ?? now, updatedAt: now, courseId, ...(taskId && { taskId }) }
+    const item: Entry = { id, text: writeLearningReflection(answers), createdAt: entry?.item.createdAt ?? now, updatedAt: now, courseId, taskId: taskId || undefined }
     try {
       const ok = await mutate(["journal"], current => saveJournalItem(current, entry?.date ?? todayKey(), item))
       if (ok) onClose()
