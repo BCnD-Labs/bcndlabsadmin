@@ -8,7 +8,7 @@ export function SmallButton({ label, onPress }: { label: string; onPress: () => 
   return <Pressable onPress={onPress} style={({ pressed }) => [s.smallButton, pressed && s.pressed]} accessibilityRole="button"><Text style={s.smallButtonText}>{label}</Text></Pressable>
 }
 const s = StyleSheet.create({
-  pressed: { opacity: 0.72 }, tab: { flex: 1 }, pill: { minHeight: 32, paddingHorizontal: 12, borderRadius: 18, backgroundColor: c.panel, borderWidth: 1, borderColor: c.line, justifyContent: "center", alignItems: "center" }, pillOn: { backgroundColor: c.selected, borderColor: c.selectedBorder }, pillText: { color: c.muted, fontSize: 12, fontWeight: "500" }, pillTextOn: { color: c.accent },
-  smallButton: { minHeight: 32, borderRadius: 15, backgroundColor: c.selected, borderWidth: 1, borderColor: c.selectedBorder, paddingHorizontal: 11, alignItems: "center", justifyContent: "center", alignSelf: "flex-start" }, smallButtonText: { color: c.accent, fontSize: 12, fontWeight: "600" },
+  pressed: { opacity: 0.72 }, tab: { flex: 1 }, pill: { minHeight: 32, paddingHorizontal: 10, borderRadius: 16, backgroundColor: c.panel, justifyContent: "center", alignItems: "center" }, pillOn: { backgroundColor: c.selected }, pillText: { color: c.text2, fontSize: 12, fontWeight: "500" }, pillTextOn: { color: c.accent, fontWeight: "600" },
+  smallButton: { minHeight: 32, borderRadius: 16, backgroundColor: c.panel, paddingHorizontal: 10, alignItems: "center", justifyContent: "center", alignSelf: "flex-start" }, smallButtonText: { color: c.accent, fontSize: 12, fontWeight: "600" },
 })
 

@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
   title: { flex: 1, color: color.text, fontSize: 12, fontWeight: "600" },
   count: { color: color.muted, fontSize: 11 },
   note: { color: color.muted, fontSize: 11, marginTop: 2 },
-  row: { flexDirection: "row", alignItems: "center", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.line, gap: 2, paddingVertical: 2 },
+  row: { flexDirection: "row", alignItems: "center", gap: 2, paddingVertical: 2 },
   body: { flex: 1, justifyContent: "center", gap: 1, paddingVertical: 0 },
   rowTitle: { color: color.text, fontSize: 14, lineHeight: 18, includeFontPadding: false, fontWeight: "500" },
   done: { color: color.muted, textDecorationLine: "line-through" },

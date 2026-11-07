@@ -47,7 +47,7 @@ export function TaskRow({ row, task, expanded, onSelect, density, tagFocus, onTo
     <SwipeRow done={row.done} starred={row.starred} onComplete={onToggle} onStar={onStar} onDelete={onDelete}>
       <View style={[selectedItem.item, expanded && selectedItem.itemOn]}>
       <View style={[styles.row, { minHeight: m.minHeight }]}>
-        {!row.done && (row.overdue || row.starred) ? <View style={[styles.priority, { backgroundColor: row.overdue ? tone.red : color.amber }]} /> : null}
+        {!expanded && !row.done && (row.overdue || row.starred) ? <View style={[styles.priority, { backgroundColor: row.overdue ? tone.red : color.amber }]} /> : null}
         <TaskCheck checked={row.done} onPress={onToggle} label={`${row.done ? "Reopen" : "Complete"} ${row.title}`} />
         <Pressable
           onPress={onSelect}
@@ -84,7 +84,7 @@ export function TaskRow({ row, task, expanded, onSelect, density, tagFocus, onTo
 
 const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 2, paddingHorizontal: 0 },
-  priority: { position: "absolute", left: 0, top: 9, bottom: 9, width: 3, borderRadius: 3 },
+  priority: { position: "absolute", left: 0, top: 9, bottom: 9, width: 3 },
   body: { flex: 1, minWidth: 0, gap: 4, minHeight: 44, justifyContent: "center" },
   title: { color: color.text, fontSize: 14, lineHeight: 19, fontWeight: "500" },
   starredTitle: { color: color.amber },
