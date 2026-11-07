@@ -168,7 +168,7 @@ test("individual same-day log items and optional Notes survive a workspace-clien
 
 test("learning reflections stay out of the daily log indicators and recent entries", () => {
   const stamp = "2026-11-04T10:00:00.000Z"
-  const reflection = { id: "lrn_1", text: "## Learning reflection\\nClicked: Wind", courseId: "course-1", createdAt: stamp, updatedAt: stamp }
+  const reflection = { id: "lrn_1", text: "## Learning reflection\nClicked: Wind", courseId: "course-1", createdAt: stamp, updatedAt: stamp }
   const journal = [{ id: today, text: "", entries: [reflection], createdAt: stamp, updatedAt: stamp }]
   assert.equal(saveState(today, journal, {}, {}, {}), "idle")
   assert.equal(weekStrip(today, today, journal, {}).find(day => day.key === today)?.has, false)
