@@ -9,7 +9,8 @@ import { useWorkspace } from "../../data/WorkspaceProvider.tsx"
 import { useReduceMotion } from "../../nav/useReduceMotion.ts"
 import { CalendarHeader } from "./calendar/CalendarHeader.tsx"
 import { DayAgenda } from "./calendar/DayAgenda.tsx"
-import { titleFor } from "./calendar/format.ts"
+import { WorkspaceSection } from "../../WorkspacePage.tsx"
+import { longDay, titleFor } from "./calendar/format.ts"
 import { columnsFor, monthGrid, stepBy, type CalendarView as View_ } from "./calendar/grid.ts"
 import { monthMinHeight, rubberBand } from "./calendar/month-density.ts"
 import { MonthGrid } from "./calendar/MonthGrid.tsx"
@@ -97,15 +98,15 @@ export function CalendarView({ data, today, onEdit, onCreateDue, logs, blocked, 
     </Animated.View>
     <View {...resize.panHandlers} style={styles.handle} accessible accessibilityRole="adjustable" accessibilityLabel="Calendar height" accessibilityHint="Drag up or down to resize the calendar" accessibilityValue={{ min: 25, max: 80, now: Math.round(target / available * 100) }} accessibilityActions={[{ name: "increment", label: "Taller calendar" }, { name: "decrement", label: "Shorter calendar" }]} onAccessibilityAction={e => setLayout({ fraction: layout.fraction + (e.nativeEvent.actionName === "increment" ? 0.05 : -0.05) })}><View style={styles.grip} /></View>
     <KeyboardScrollView style={styles.fill} contentContainerStyle={styles.below} keyboardShouldPersistTaps="handled">
-      {layout.order.filter(s => !layout.hidden.includes(s) && (s !== "notes" || linkedNotes.length > 0)).map(section => <View key={section} style={[styles.section, section === "agenda" && styles.agendaSection]}>
-        {section === "agenda" ? <DayAgenda day={selected} items={agenda} tasks={data.tasks} meta={meta} format={timeFormat} onEdit={onEdit} onToggle={toggle} showTimes={layout.showTimes} showCourses={layout.showCourses} /> : section === "log" ? <>
-          <DailyLogEditor data={data} day={selected} logs={logs} blocked={blocked} />
-        </> : <>
-          <View style={styles.sectionHead}><Icon name="document-text-outline" tint={c.text2} /><Text style={styles.heading}>Notes · {linkedNotes.length}</Text></View>
+      {layout.order.filter(s => !layout.hidden.includes(s) && (s !== "notes" || linkedNotes.length > 0)).map(section => section === "agenda"
+        ? <WorkspaceSection key={section} title={longDay(selected)} icon="calendar-outline" tint={c.accent} count={agenda.length ? `${agenda.length} ${agenda.length === 1 ? "item" : "items"}` : "none"} flush>
+          <DayAgenda day={selected} items={agenda} tasks={data.tasks} meta={meta} format={timeFormat} onEdit={onEdit} onToggle={toggle} showTimes={layout.showTimes} showCourses={layout.showCourses} />
+        </WorkspaceSection>
+        : section === "log"
+        ? <WorkspaceSection key={section} title="Log" icon="book-outline" tint={c.accent}><DailyLogEditor data={data} day={selected} logs={logs} blocked={blocked} heading="Log" embedded /></WorkspaceSection>
+        : <WorkspaceSection key={section} title="Notes" icon="document-text-outline" tint={c.blue} count={String(linkedNotes.length)} flush>
           {[...notes.pinned, ...notes.others].map(n => <View key={n.id} style={[selectedItem.item, notePreviewId === n.id && selectedItem.itemOn]}><Pressable style={styles.note} onPress={() => setNotePreviewId(value => value === n.id ? null : n.id)} accessibilityRole="button" accessibilityLabel={`Preview ${noteTitle(n.text)}`} accessibilityState={{ expanded: notePreviewId === n.id }}><Text style={styles.noteTitle} numberOfLines={1}>{noteTitle(n.text)}</Text><Icon name={notePreviewId === n.id ? "chevron-up" : "chevron-down"} size={16} tint={c.muted} /></Pressable>{notePreviewId === n.id ? <View style={selectedItem.preview}><Text style={styles.noteText} numberOfLines={2} ellipsizeMode="tail">{previewText(n.text, 120)}</Text><Pressable onPress={() => setNoteEditor({ mode: "edit", id: n.id })} accessibilityRole="button" accessibilityLabel={`Open ${noteTitle(n.text)}`} style={selectedItem.action}><Text style={selectedItem.actionText}>Open</Text></Pressable></View> : null}</View>)}
-
-        </>}
-      </View>)}
+        </WorkspaceSection>)}
       {layout.hidden.length === 3 ? <Pressable onPress={() => setSettings({ top: 140, right: 12 })} style={styles.add} accessibilityRole="button"><Text style={styles.muted}>Choose sections in Planner settings</Text></Pressable> : null}
     </KeyboardScrollView>
     <Modal visible={!!previewTask} transparent animationType="fade" onRequestClose={() => setPreviewId(null)}><View style={styles.peekBackdrop}><View style={styles.peekDialog}><View style={styles.peekHead}><Text style={styles.peekTitle} numberOfLines={2}>{previewTask?.title}</Text><Pressable onPress={() => setPreviewId(null)} accessibilityRole="button" accessibilityLabel="Close preview"><Icon name="close" tint={c.muted} /></Pressable></View>{previewTask ? <TaskPeek task={previewTask} course={previewCourse?.title} onOpen={() => { const id = previewTask.id; setPreviewId(null); onEdit(id) }} /> : null}</View></View></Modal>
@@ -119,7 +120,7 @@ const styles = StyleSheet.create({
   below: { paddingHorizontal: 16, paddingBottom: NAV_CLEARANCE, gap: 12 }, section: { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.line, paddingBottom: 12, gap: 8 },
   agendaSection: { paddingBottom: 0, gap: 0 },
   sectionHead: { flexDirection: "row", alignItems: "center", gap: 8 }, heading: { flex: 1, color: c.text, fontSize: 15, fontWeight: "600" },
-  add: { minHeight: 36, minWidth: 36, justifyContent: "center", alignItems: "center" }, note: { flexDirection: "row", alignItems: "center", minHeight: 40, gap: 8 },
+  add: { minHeight: 36, minWidth: 36, justifyContent: "center", alignItems: "center" }, note: { flexDirection: "row", alignItems: "center", minHeight: 40, gap: 8, paddingHorizontal: 10 },
   noteTitle: { flex: 1, color: c.text2, fontSize: 14 }, muted: { color: c.muted, fontSize: 12 },
   noteText: { color: c.text2, fontSize: 12, lineHeight: 17 },   peekBackdrop: { flex: 1, justifyContent: "center", padding: 20, backgroundColor: "rgba(0,0,0,0.55)" }, peekDialog: { padding: 14, borderRadius: 10, backgroundColor: c.raised, gap: 10 }, peekHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }, peekTitle: { flex: 1, color: c.text, fontWeight: "700", fontSize: 16 },
 })

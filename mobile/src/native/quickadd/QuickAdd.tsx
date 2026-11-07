@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { BackHandler, Keyboard, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
 import { shape } from "../../shape.ts"
-import { mono } from "../../theme.ts"
 import { useWorkspace } from "../data/WorkspaceProvider.tsx"
 import { todayKey } from "../data/sync-view.ts"
 import { KeyboardFrame, TextInput } from "../editing/keyboard.tsx"
@@ -79,15 +78,15 @@ export function QuickAdd() {
         {QUICK_GROUPS.map(group => <View key={group}>
           <Text style={s.group} accessibilityRole="header">{group.toUpperCase()}</Text>
           {QUICK_ACTIONS.filter(a => a.group === group).map(a => <Pressable key={a.kind} onPress={() => choose(a.kind)} style={({ pressed }) => [s.row, pressed && s.pressed]} accessibilityRole="button" accessibilityLabel={`${a.label}. ${a.hint}`}>
-            <View style={s.rowIcon}><Icon name={a.icon} size={16} tint={c.accent} /></View>
+            <View style={s.rowIcon}><Icon name={a.icon} size={17} tint={c.text2} /></View>
             <View style={s.rowText}><Text style={s.rowLabel}>{a.label}</Text><Text style={s.rowHint} numberOfLines={1}>{a.hint}</Text></View>
           </Pressable>)}
         </View>)}
       </ScrollView>
       {notice ? <Text style={s.notice} accessibilityLiveRegion="polite">{notice}</Text> : null}
     </View> : null}
-    {keyboard && !menu ? null : <Pressable onPress={open} style={({ pressed }) => [s.fab, pressed && s.fabPressed]} accessibilityRole="button" accessibilityLabel="Quick add" accessibilityState={{ expanded: menu }}>
-      <Icon name={menu ? "close" : "add"} size={26} tint="#fff" />
+    {keyboard && !menu ? null : <Pressable onPress={open} hitSlop={4} style={({ pressed }) => [s.fab, (menu || pressed) && s.fabOn]} accessibilityRole="button" accessibilityLabel="Quick add" accessibilityState={{ expanded: menu }}>
+      <Icon name={menu ? "close" : "add"} size={22} tint={c.accent} />
     </Pressable>}
     {data && (active === "task" || active === "event") ? <TaskSheet key={active} editor={{ mode: "create", kind: active, due: active === "event" ? dueCtx.get() ?? today : dueCtx.get() }} data={data} today={today} onClose={close} /> : null}
     {data && active === "note" ? <NoteSheet key="note" editor={{ mode: "create" }} data={data} onClose={close} /> : null}
@@ -121,12 +120,13 @@ function ReflectOn({ data, onClose, onPick }: { data: NonNullable<ReturnType<typ
 }
 
 const s = StyleSheet.create({
-  fab: { position: "absolute", right: FAB_EDGE, bottom: FAB_EDGE, width: FAB, height: FAB, borderRadius: FAB / 2, alignItems: "center", justifyContent: "center", backgroundColor: c.action, borderWidth: 1, borderColor: c.selectedBorder, elevation: 10, shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
-  fabPressed: { backgroundColor: c.actionPressed },
-  menu: { position: "absolute", right: FAB_EDGE, bottom: FAB_EDGE + FAB + 8, width: 248, maxHeight: "70%", borderRadius: shape.menu, padding: 4, backgroundColor: c.raised, borderWidth: 1, borderColor: c.border, elevation: 14 },
-  menuScroll: { flexGrow: 0 }, group: { color: c.muted, fontFamily: mono, fontSize: 9, fontWeight: "700", letterSpacing: 1, paddingHorizontal: 8, paddingTop: 8, paddingBottom: 3 },
-  row: { minHeight: 40, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 6, borderRadius: 9 }, pressed: { backgroundColor: c.selected },
-  rowIcon: { width: 26, height: 26, borderRadius: 7, alignItems: "center", justifyContent: "center", backgroundColor: c.panel, borderWidth: 1, borderColor: c.line }, rowText: { flex: 1, minWidth: 0 }, rowLabel: { color: c.text, fontSize: 13, fontWeight: "600" }, rowHint: { color: c.muted, fontSize: 11 },
+  // Same surface as the nav pill: panel fill, thin line, accent icon.
+  fab: { position: "absolute", right: FAB_EDGE, bottom: FAB_EDGE, width: FAB, height: FAB, borderRadius: FAB / 2, alignItems: "center", justifyContent: "center", backgroundColor: c.panel, borderWidth: 1, borderColor: c.line, elevation: 10, shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 12, shadowOffset: { width: 0, height: 5 } },
+  fabOn: { backgroundColor: c.selected, borderColor: c.selectedBorder },
+  menu: { position: "absolute", right: FAB_EDGE, bottom: FAB_EDGE + FAB + 8, width: 232, maxHeight: "70%", borderRadius: 14, padding: 4, backgroundColor: c.raised, borderWidth: 1, borderColor: c.border, elevation: 14, shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 12, shadowOffset: { width: 0, height: 5 } },
+  menuScroll: { flexGrow: 0 }, group: { color: c.muted, fontSize: 10, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.6, paddingHorizontal: 8, paddingTop: 7, paddingBottom: 3 },
+  row: { minHeight: 36, flexDirection: "row", alignItems: "center", gap: 9, paddingHorizontal: 8, borderRadius: 9 }, pressed: { backgroundColor: c.selected },
+  rowIcon: { width: 20, alignItems: "center", justifyContent: "center" }, rowText: { flex: 1, minWidth: 0 }, rowLabel: { color: c.text, fontSize: 12.5 }, rowHint: { color: c.muted, fontSize: 11 },
   notice: { color: "#ffa8a8", fontSize: 12, padding: 8 },
   backdrop: { flex: 1, justifyContent: "center", padding: 16, backgroundColor: "rgba(0,0,0,0.55)" }, dialog: { maxHeight: "86%", padding: 14, borderRadius: shape.dialog, backgroundColor: c.raised, gap: 10 }, head: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }, dialogTitle: { color: c.text, fontSize: 16, fontWeight: "700" },
   search: { flexDirection: "row", alignItems: "center", gap: 8, minHeight: 38, borderRadius: 20, backgroundColor: c.panel, paddingHorizontal: 12, borderWidth: 1, borderColor: c.line }, searchInput: { flex: 1, color: c.text, fontSize: 13, paddingVertical: 5 },
