@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native"
 import { color, noteInk, notePaper } from "../../../../theme.ts"
 import { Icon } from "../../../ui.tsx"
 import { colorOf, noteTitle, notePreview, shortAgo, type CourseOption, type Note } from "./note-rules.ts"
+import { selectedItem } from "../../../selected-item.ts"
 import { previewText } from "../TaskPeek.tsx"
 import { plannerColor as p } from "../../../planner-theme.ts"
 
@@ -14,7 +15,7 @@ export function NoteRow({ note, course, now, onOpen, onSelect, onPin, expanded =
   const preview = notePreview(note.text)
   const meta = [course?.label, shortAgo(note.updatedAt, now), note.links?.length ? `${note.links.length} link${note.links.length === 1 ? "" : "s"}` : ""].filter(Boolean).join(" · ")
   return (
-    <View>
+    <View style={[selectedItem.item, expanded && selectedItem.itemOn]}>
     <View style={styles.row}>
       <Pressable onPress={onSelect} style={({ pressed }) => [styles.body, compact && styles.compactBody, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={`${title}${note.pinned ? ", pinned" : ""}. ${expanded ? "Hide preview" : "Preview note"}`} accessibilityState={{ expanded }}>
         <View style={[styles.noteIcon, { backgroundColor: notePaper[colorOf(note.color)] }]}><Icon name="document-text-outline" size={14} tint={noteInk} /></View>
