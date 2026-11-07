@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native"
 import type { Collections } from "../../lib/shared.ts"
 import { useWorkspace } from "../data/WorkspaceProvider.tsx"
+import { selectedItem } from "../selected-item.ts"
 import { plannerColor as c } from "../planner-theme.ts"
 import { WorkspacePage, WorkspaceSection } from "../WorkspacePage.tsx"
 import { Icon } from "../ui.tsx"
@@ -32,7 +33,7 @@ export function DevScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
         {projects.map(project => {
           const repos = data.repos.filter(r => r.projectId === project.id)
           const expanded = open === project.id
-          return <View key={project.id} style={s.item}>
+          return <View key={project.id} style={[s.item, selectedItem.item, expanded && selectedItem.itemOn]}>
             <Pressable onPress={() => setOpen(expanded ? null : project.id)} style={s.row} accessibilityRole="button" accessibilityState={{ expanded }} accessibilityLabel={project.name + ", " + project.status + ", " + repos.length + " repositories"}>
               <View style={[s.marker, { backgroundColor: projectTint[project.color] }]} /><View style={s.body}><Text style={s.title} numberOfLines={1}>{project.name}</Text><Text style={s.meta}>{project.code || "Project"} · {repos.length} repos</Text></View><Text style={[s.status, { color: statusTint[project.status] }]}>{project.status}</Text><Icon name={expanded ? "chevron-up" : "chevron-down"} size={15} tint={c.muted} />
             </Pressable>
