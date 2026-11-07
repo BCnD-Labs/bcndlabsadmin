@@ -1,7 +1,7 @@
 import { KeyboardFrame, KeyboardScrollView, useKeyboardTop } from "../../editing/keyboard.tsx"
 import { shape } from "../../../shape.ts"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Animated, Easing, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
+import { Animated, Easing, Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
 import { toggleTask, type Collections } from "../../../lib/shared.ts"
 import { plannerColor as c } from "../../planner-theme.ts"
 import { NAV_CLEARANCE, Icon } from "../../ui.tsx"
@@ -21,6 +21,7 @@ import { usePeriodSwipe } from "./calendar/usePeriodSwipe.ts"
 import { useWorkspacePrefs } from "./calendar/useWorkspacePrefs.ts"
 import { calendarHeight } from "./calendar/workspace-prefs.ts"
 import { DailyLogEditor } from "./log/DailyLogEditor.tsx"
+import { TaskPeek, previewText } from "./TaskPeek.tsx"
 import type { LogDrafts } from "./log/useLogDrafts.ts"
 import { NoteSheet, type NoteEditor } from "./notes/NoteSheet.tsx"
 import { linkedNotesForDay } from "./notes/calendar-notes.ts"
@@ -40,6 +41,8 @@ export function CalendarView({ data, today, onEdit, onCreateDue, logs, blocked, 
   const [view, setView] = useState<View_>("month")
   const [settings, setSettings] = useState<{ top: number; right: number } | null>(null), [available, setAvailable] = useState(600), [chrome, setChrome] = useState(88)
   const [noteEditor, setNoteEditor] = useState<NoteEditor | null>(null)
+  const [previewId, setPreviewId] = useState<string | null>(null)
+  const [notePreviewId, setNotePreviewId] = useState<string | null>(null)
   const reduceMotion = useReduceMotion()
   const { weekStartsOn: weekStart, timeFormat } = prefs
   const displayDate = selected
@@ -80,28 +83,31 @@ export function CalendarView({ data, today, onEdit, onCreateDue, logs, blocked, 
   const toggle = useCallback((id: string) => { if (!blocked) void mutate(["tasks"], d => toggleTask(d, id)) }, [mutate, blocked])
   const step = useCallback((d: -1 | 1) => { setSelected(stepBy(view, displayDate, d)) }, [view, displayDate])
   const swipe = usePeriodSwipe(view === "month", step, reduceMotion)
+  const previewTask = data.tasks.find(t => t.id === previewId)
+  const previewCourse = previewTask?.courseId ? data.courses.find(c => c.id === previewTask.courseId) : undefined
   const linkedNotes = linkedNotesForDay(data, selected)
   const notes = orderNotes(linkedNotes, { search: "" })
   return <View style={styles.fill} onLayout={e => setAvailable(e.nativeEvent.layout.height)}>
     <Animated.View style={[styles.calendar, { height }]}>
       <View onLayout={e => setChrome(e.nativeEvent.layout.height)}><CalendarHeader compact={available < 300} title={titleFor(view, displayDate, columns)} view={view} onView={setView} onStep={step} onToday={() => setSelected(today)} onSettings={anchor => setSettings(anchor ?? { top: 140, right: 12 })} /></View>
       <Animated.View {...swipe.panHandlers} style={[styles.fill, swipe.style]}>
-      {view === "month" ? <MonthGrid weeks={weeks} month={selected} selected={selected} today={today} byDay={byDay} weekStart={weekStart} onSelect={setSelected} /> : <TimeGrid days={columns} byDay={byDay} today={today} selected={selected} format={timeFormat} compact={view === "week"} onSelectDay={setSelected} onEdit={onEdit} />}
+      {view === "month" ? <MonthGrid weeks={weeks} month={selected} selected={selected} today={today} byDay={byDay} weekStart={weekStart} onSelect={setSelected} /> : <TimeGrid days={columns} byDay={byDay} today={today} selected={selected} format={timeFormat} compact={view === "week"} onSelectDay={setSelected} onPreview={(id, day) => { setSelected(day); setPreviewId(id) }} />}
       </Animated.View>
     </Animated.View>
     <View {...resize.panHandlers} style={styles.handle} accessible accessibilityRole="adjustable" accessibilityLabel="Calendar height" accessibilityHint="Drag up or down to resize the calendar" accessibilityValue={{ min: 25, max: 80, now: Math.round(target / available * 100) }} accessibilityActions={[{ name: "increment", label: "Taller calendar" }, { name: "decrement", label: "Shorter calendar" }]} onAccessibilityAction={e => setLayout({ fraction: layout.fraction + (e.nativeEvent.actionName === "increment" ? 0.05 : -0.05) })}><View style={styles.grip} /></View>
     <KeyboardScrollView style={styles.fill} contentContainerStyle={styles.below} keyboardShouldPersistTaps="handled">
       {layout.order.filter(s => !layout.hidden.includes(s) && (s !== "notes" || linkedNotes.length > 0)).map(section => <View key={section} style={[styles.section, section === "agenda" && styles.agendaSection]}>
-        {section === "agenda" ? <DayAgenda day={selected} items={agenda} meta={meta} format={timeFormat} onEdit={onEdit} onToggle={toggle} showTimes={layout.showTimes} showCourses={layout.showCourses} /> : section === "log" ? <>
+        {section === "agenda" ? <DayAgenda day={selected} items={agenda} tasks={data.tasks} meta={meta} format={timeFormat} onEdit={onEdit} onToggle={toggle} showTimes={layout.showTimes} showCourses={layout.showCourses} /> : section === "log" ? <>
           <DailyLogEditor data={data} day={selected} logs={logs} blocked={blocked} />
         </> : <>
           <View style={styles.sectionHead}><Icon name="document-text-outline" tint={c.text2} /><Text style={styles.heading}>Notes · {linkedNotes.length}</Text></View>
-          {[...notes.pinned, ...notes.others].map(n => <Pressable key={n.id} style={styles.note} onPress={() => setNoteEditor({ mode: "edit", id: n.id })} accessibilityRole="button"><Text style={styles.noteTitle} numberOfLines={1}>{noteTitle(n.text)}</Text><Icon name="chevron-forward" size={16} tint={c.muted} /></Pressable>)}
+          {[...notes.pinned, ...notes.others].map(n => <View key={n.id}><Pressable style={styles.note} onPress={() => setNotePreviewId(value => value === n.id ? null : n.id)} accessibilityRole="button" accessibilityLabel={`Preview ${noteTitle(n.text)}`} accessibilityState={{ expanded: notePreviewId === n.id }}><Text style={styles.noteTitle} numberOfLines={1}>{noteTitle(n.text)}</Text><Icon name={notePreviewId === n.id ? "chevron-up" : "chevron-down"} size={16} tint={c.muted} /></Pressable>{notePreviewId === n.id ? <View style={styles.notePeek}><Text style={styles.noteText} numberOfLines={2} ellipsizeMode="tail">{previewText(n.text, 120)}</Text><Pressable onPress={() => setNoteEditor({ mode: "edit", id: n.id })} accessibilityRole="button" accessibilityLabel={`Open ${noteTitle(n.text)}`} style={styles.noteOpen}><Text style={styles.noteOpenText}>Open</Text></Pressable></View> : null}</View>)}
 
         </>}
       </View>)}
       {layout.hidden.length === 3 ? <Pressable onPress={() => setSettings({ top: 140, right: 12 })} style={styles.add} accessibilityRole="button"><Text style={styles.muted}>Choose sections in Planner settings</Text></Pressable> : null}
     </KeyboardScrollView>
+    <Modal visible={!!previewTask} transparent animationType="fade" onRequestClose={() => setPreviewId(null)}><View style={styles.peekBackdrop}><View style={styles.peekDialog}><View style={styles.peekHead}><Text style={styles.peekTitle} numberOfLines={2}>{previewTask?.title}</Text><Pressable onPress={() => setPreviewId(null)} accessibilityRole="button" accessibilityLabel="Close preview"><Icon name="close" tint={c.muted} /></Pressable></View>{previewTask ? <TaskPeek task={previewTask} course={previewCourse?.title} onOpen={() => { const id = previewTask.id; setPreviewId(null); onEdit(id) }} /> : null}</View></View></Modal>
     {settings ? <PlannerSettings anchor={settings} onClose={() => setSettings(null)} prefs={layout} onChange={setLayout} calendar={prefs} onCalendar={setPrefs} /> : null}
     {noteEditor ? <NoteSheet editor={noteEditor} data={data} onClose={() => setNoteEditor(null)} /> : null}
   </View>
@@ -114,5 +120,7 @@ const styles = StyleSheet.create({
   sectionHead: { flexDirection: "row", alignItems: "center", gap: 8 }, heading: { flex: 1, color: c.text, fontSize: 15, fontWeight: "600" },
   add: { minHeight: 36, minWidth: 36, justifyContent: "center", alignItems: "center" }, note: { flexDirection: "row", alignItems: "center", minHeight: 40, gap: 8 },
   noteTitle: { flex: 1, color: c.text2, fontSize: 14 }, muted: { color: c.muted, fontSize: 12 },
+  notePeek: { paddingHorizontal: 12, paddingBottom: 8, gap: 6, backgroundColor: c.selected, borderRadius: 8 }, noteText: { color: c.text2, fontSize: 12, lineHeight: 17 }, noteOpen: { alignSelf: "flex-start", minHeight: 32, justifyContent: "center", paddingHorizontal: 10, borderRadius: 16, backgroundColor: c.panel }, noteOpenText: { color: c.accent, fontWeight: "600", fontSize: 12 },
+  peekBackdrop: { flex: 1, justifyContent: "center", padding: 20, backgroundColor: "rgba(0,0,0,0.55)" }, peekDialog: { padding: 14, borderRadius: 16, backgroundColor: c.raised, gap: 10 }, peekHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }, peekTitle: { flex: 1, color: c.text, fontWeight: "700", fontSize: 16 },
 })
 

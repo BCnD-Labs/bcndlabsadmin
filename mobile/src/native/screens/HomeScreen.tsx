@@ -81,11 +81,11 @@ function Line({ title, subtitle, icon, chips = [], detail, selected, onSelect, o
   return <View style={[s.item, selected && s.itemOn]}>
     <View style={s.row}>
       {onComplete ? <TaskCheck checked={false} compact onPress={onComplete} label={`Complete ${title}`} /> : <View style={s.simpleIcon}><Icon name={icon ?? "document-text-outline"} size={17} tint={c.accent} /></View>}
-      <Pressable onPress={selected ? onOpen : onSelect} style={s.rowBody} accessibilityRole="button" accessibilityState={{ selected }} accessibilityLabel={selected ? `Open ${title}` : `Select ${title}`}><Text style={s.rowTitle} numberOfLines={2}>{title}</Text>{subtitle ? <Text style={s.meta} numberOfLines={1}>{subtitle}</Text> : null}</Pressable>
+      <Pressable onPress={onSelect} style={s.rowBody} accessibilityRole="button" accessibilityState={{ selected }} accessibilityLabel={selected ? `Selected ${title}. Use Open to edit` : `Preview ${title}`}><Text style={s.rowTitle} numberOfLines={2}>{title}</Text>{subtitle ? <Text style={s.meta} numberOfLines={1}>{subtitle}</Text> : null}</Pressable>
     </View>
     {selected ? <View style={s.strip}>
       {chips.length ? <View style={s.chips}>{chips.map(chip => <View key={chip.key} style={[s.chip, chipFill[chip.kind]]}><Text style={[s.chipText, { color: chipInk[chip.kind] }]} numberOfLines={1}>{chip.label}</Text></View>)}</View> : null}
-      {detail ? <Text style={s.detail} numberOfLines={2}>{detail}</Text> : null}
+      {detail ? <Text style={s.detail} numberOfLines={2} ellipsizeMode="tail">{detail.length > 120 ? `${detail.slice(0, 120).trimEnd()}…` : detail}</Text> : null}
       <View style={s.stripActions}>
         <Pressable onPress={onOpen} style={s.pill} accessibilityRole="button" accessibilityLabel={`Open ${title}`}><Icon name="open-outline" size={12} tint={c.accent} /><Text style={s.pillText}>Open</Text></Pressable>
         {onComplete ? <Pressable onPress={onComplete} style={s.pill} accessibilityRole="button" accessibilityLabel={`Complete ${title}`}><Icon name="checkmark" size={12} tint={c.accent} /><Text style={s.pillText}>Done</Text></Pressable> : null}
