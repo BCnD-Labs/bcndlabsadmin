@@ -1,6 +1,7 @@
 import { Award, BookOpen, BookOpenCheck, CalendarDays, ClipboardList, Flag, GraduationCap, ListChecks, MonitorPlay, Zap, type LucideIcon } from "lucide-react"
 import { daysUntil, todayKey } from "@/lib/dates"
 import type { Course, CourseColor, LearningItemType, LearningKind, Task } from "@/lib/types"
+import { compareCoursework, type TypeLabel } from "./coursework-view"
 
 /** Coursework kinds. Every one is a task with `courseId` + `learningType`, so it shares Tasks and the calendar. */
 export const LEARNING_TYPES: { value: LearningItemType; label: string; plural: string; icon: LucideIcon; dateLabel: string }[] = [
@@ -134,13 +135,16 @@ export function courseProgress(items: Task[], only?: LearningItemType): CoursePr
   }
 }
 
-/** By date and time, undated last; done items after open ones. */
-export function compareCoursework(a: Task, b: Task): number {
-  if (a.done !== b.done) return a.done ? 1 : -1
-  const ad = `${a.due ?? "9999-99-99"} ${a.time ?? "99:99"}`
-  const bd = `${b.due ?? "9999-99-99"} ${b.time ?? "99:99"}`
-  return ad.localeCompare(bd) || a.createdAt.localeCompare(b.createdAt)
+export { compareCoursework }
+
+/** Every item type as this kind names it: the kind's own types first (in its order), then the rest. */
+export function typeLabels(kind?: LearningKind): TypeLabel[] {
+  const own = kindInfo(kind).types.map((t) => ({ value: t.value, label: t.label, plural: t.plural }))
+  return [...own, ...LEARNING_TYPES.filter((t) => !own.some((o) => o.value === t.value)).map((t) => ({ value: t.value, label: t.label, plural: t.plural }))]
 }
+
+/** The types this kind of learning uses, named its way. */
+export const kindTypeLabels = (kind?: LearningKind): TypeLabel[] => typeLabels(kind).slice(0, kindInfo(kind).types.length)
 
 /** "CS 2110" from a title when no code was given: initials of the first words. */
 export const courseLabel = (c: Pick<Course, "code" | "title">) => c.code.trim() || c.title.trim().split(/\s+/).slice(0, 3).map((w) => w[0]).join("").toUpperCase()

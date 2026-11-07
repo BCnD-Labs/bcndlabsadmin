@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils"
 import { useUi } from "@/stores/ui"
 import { usePrefs } from "@/stores/prefs"
-import { useNav, isActive, type NavDestination, activeChild } from "./nav-config"
+import { useNav, activeIn, type NavDestination, activeChild } from "./nav-config"
 import { useNavHints } from "./nav-hints"
 
 /** Hover-intent timings (ms). */
@@ -27,6 +27,7 @@ const CLOSE_DELAY = 220 // leaving the expanded item
 export function NavRail({ focusMain }: { focusMain: () => void }) {
   const NAV = useNav()
   const { pathname, search } = useLocation()
+  const activeId = activeIn(NAV, pathname)?.id
   const navigate = useNavigate()
   const expanded = usePrefs((s) => s.navExpanded)
   const setPrefs = usePrefs((s) => s.set)
@@ -132,7 +133,7 @@ export function NavRail({ focusMain }: { focusMain: () => void }) {
   }
 
   const renderItem = (d: NavDestination) => {
-    const current = isActive(d, pathname)
+    const current = d.id === activeId
     const open = openId === d.id
     const h = hints[d.id]
     const hasSubs = !!d.children?.length
@@ -209,7 +210,7 @@ export function NavRail({ focusMain }: { focusMain: () => void }) {
           >
             <ul role="menu" aria-label={`${d.label} pages`} className="min-h-0 overflow-hidden py-1.5">
               {d.children!.map((c) => {
-                const here = activeChild(d, pathname, search) === c
+                const here = current && activeChild(d, pathname, search) === c
                 const count = h?.subs?.[c.to]
                 return (
                   <li key={c.to} role="none">
@@ -341,32 +342,28 @@ const TREE_ROW =
 const TREE_FILL = "bg-red-soft font-semibold text-ink hover:bg-red-soft"
 
 /**
- * The full sidebar: every destination as a row. Sections with pages open and close
- * on click like folders (→ / ← too); the one you're in starts open.
+ * The full sidebar: every destination as a row. Sections with pages are a single-open
+ * accordion: opening one (click, or →) closes the other; clicking the open one (or ←) closes
+ * it, so all can be closed. Navigating into a section opens it and closes the previous one.
  */
 function NavTree() {
   const NAV = useNav()
   const { pathname, search } = useLocation()
   const hints = useNavHints()
-  const activeId = NAV.find((d) => isActive(d, pathname))?.id
-  const [open, setOpen] = useState<Set<string>>(() => new Set(activeId ? [activeId] : []))
+  const active = activeIn(NAV, pathname)
+  const activeId = active?.id
+  const [openId, setOpenId] = useState<string | null>(() => (active?.children?.length ? active.id : null))
   const [seen, setSeen] = useState(activeId)
   if (activeId !== seen) {
     setSeen(activeId)
-    if (activeId && !open.has(activeId)) setOpen(new Set(open).add(activeId))
+    if (active?.children?.length) setOpenId(active.id)
   }
-  const setFolder = (id: string, to: boolean) =>
-    setOpen((o) => {
-      const n = new Set(o)
-      if (to) n.add(id)
-      else n.delete(id)
-      return n
-    })
+  const setFolder = (id: string, to: boolean) => setOpenId((o) => (to ? id : o === id ? null : o))
 
   return (
     <ul className="mt-4 -mr-1 flex min-h-0 flex-col gap-1 overflow-y-auto pr-1" aria-label="Destinations">
       {NAV.map((d) => {
-        const current = isActive(d, pathname)
+        const current = d.id === activeId
         const h = hints[d.id]
         if (!d.children?.length) {
           return (
@@ -379,7 +376,7 @@ function NavTree() {
             </li>
           )
         }
-        const isOpen = open.has(d.id)
+        const isOpen = openId === d.id
         const fill = current && !isOpen
         return (
           <li key={d.id}>
@@ -413,7 +410,7 @@ function NavTree() {
             >
               <ul className="ml-[19px] min-h-0 overflow-hidden border-l border-line pl-2" aria-label={`${d.label} pages`}>
                 {d.children.map((c, i) => {
-                  const here = activeChild(d, pathname, search) === c
+                  const here = current && activeChild(d, pathname, search) === c
                   const count = h?.subs?.[c.to]
                   return (
                     <li key={c.to} className={cn(i === 0 && "pt-1", i === d.children!.length - 1 && "pb-1")}>

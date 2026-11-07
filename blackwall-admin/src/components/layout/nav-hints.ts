@@ -1,5 +1,7 @@
 import { daysUntil } from "@/lib/dates"
 import { learningHref, plannerHref, postsHref, projectsHref } from "@/lib/routes"
+import { KINDS } from "@/features/learning/learning-utils"
+import { learningKindHref } from "./nav-model"
 import { useWorkspace } from "@/stores/workspace"
 
 export interface NavHints {
@@ -18,7 +20,10 @@ export function useNavHints(): Record<string, NavHints> {
   const projects = useWorkspace((s) => s.projects.length)
   const repos = useWorkspace((s) => s.repos.length)
   const drafts = useWorkspace((s) => s.drafts.length)
-  const courses = useWorkspace((s) => s.courses.length)
+  // How many records of each kind, as a stable key ("course:2,certification:1").
+  const kindKey = useWorkspace((s) => KINDS.map((k) => `${k.value}:${s.courses.filter((c) => (c.kind ?? "course") === k.value).length}`).join(","))
+  const kindCounts = Object.fromEntries(kindKey.split(",").map((pair) => pair.split(":")).map(([k, v]) => [k, Number(v)]))
+  const courses = Object.values(kindCounts).reduce((a, b) => a + b, 0)
   // Coursework due in the next 7 days (or overdue).
   const dueSoon = useWorkspace((s) => s.tasks.filter((t) => t.courseId && !t.done && t.due && daysUntil(t.due) <= 7).length)
 
@@ -29,7 +34,14 @@ export function useNavHints(): Record<string, NavHints> {
       subs: {
         [plannerHref]: n(open),
         [projectsHref]: n(projects),
+      },
+    },
+    // Learning's children are derived from the same records (see learningChildren), so every kind shown has a count.
+    learning: {
+      hint: dueSoon ? `${dueSoon} due` : courses ? String(courses) : undefined,
+      subs: {
         [learningHref]: dueSoon ? `${dueSoon} due` : n(courses),
+        ...Object.fromEntries(KINDS.map((k) => [learningKindHref(k.value), n(kindCounts[k.value] ?? 0)])),
       },
     },
     development: { hint: repos ? `${repos} repos` : undefined },

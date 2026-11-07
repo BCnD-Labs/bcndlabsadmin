@@ -4,6 +4,7 @@ import { createJSONStorage, persist } from "zustand/middleware"
 import { DEFAULT_SLOTS, OLD_DEFAULT_SLOTS, type PanelType } from "@/lib/home-slots"
 import { safeLocalStorage } from "./storage"
 import { DEFAULT_LAYOUT, layoutFromSlots, sanitizeLayout, type LayoutItem } from "@/lib/home-layout"
+import { normalizeCoursePanels, type CoursePanels } from "@/lib/course-panels"
 
 export type Theme = "dim" | "dark"
 export type UiFont = "sans" | "mono"
@@ -69,6 +70,8 @@ interface PrefsState {
   navHidden: string[]
   /** On phone-sized screens: the responsive layout (default) or the dedicated mobile view. */
   layoutMode: LayoutMode
+  /** Learning: per course id, the item types whose extra focused card is on (all off by default). */
+  coursePanels: CoursePanels
   set: (patch: Partial<Omit<PrefsState, "set" | "reset">>) => void
   /** Back to the defaults below (workspace data isn't touched). */
   reset: () => void
@@ -78,7 +81,7 @@ type Persisted = Omit<PrefsState, "set" | "reset">
 /** Older stored shapes, read only by the migration. */
 type Legacy = Partial<Persisted> & { homeSlots?: PanelType[]; showHomeProjects?: boolean; showHomeLog?: boolean }
 
-export const PREFS_VERSION = 6
+export const PREFS_VERSION = 7
 
 const DEFAULT_PREFS = (): Persisted => ({
   categoryColors: true,
@@ -105,6 +108,7 @@ const DEFAULT_PREFS = (): Persisted => ({
   navLabels: {},
   navHidden: [],
   layoutMode: "responsive",
+  coursePanels: {},
 })
 
 export const usePrefs = create<PrefsState>()(
@@ -131,6 +135,15 @@ export const usePrefs = create<PrefsState>()(
         // v5 → v6: the four-slot fields are gone (Home layout replaced them); new options take their defaults.
         const { homeSlots: _a, showHomeProjects: _b, showHomeLog: _c, ...rest } = p as Legacy & { homeSizing?: unknown }
         delete (rest as Record<string, unknown>).homeSizing
+        // v6 → v7: Learning becomes its own sidebar section ("learning"), visible by default. No saved
+        // name or hidden flag could exist for it yet; clear any so it starts as Learning, shown.
+        if (version < 7) {
+          if (Array.isArray(rest.navHidden)) rest.navHidden = rest.navHidden.filter((id) => id !== "learning")
+          if (rest.navLabels && typeof rest.navLabels === "object") {
+            const { learning: _l, ...labels } = rest.navLabels as Record<string, string>
+            rest.navLabels = labels
+          }
+        }
         return rest
       },
       // Never trust stored values blindly: unknown panel types or bad numbers fall back to defaults.
@@ -159,6 +172,7 @@ export const usePrefs = create<PrefsState>()(
           accent: (ACCENTS as readonly unknown[]).includes(p.accent) ? (p.accent as Accent) : "red",
           density: p.density === "compact" ? "compact" : "comfortable",
           layoutMode: p.layoutMode === "mobile" ? "mobile" : "responsive",
+          coursePanels: normalizeCoursePanels(p.coursePanels),
           navLabels: sanitizeLabels(p.navLabels),
           navHidden: Array.isArray(p.navHidden) ? p.navHidden.filter((v): v is string => typeof v === "string" && v !== "home").slice(0, 20) : [],
         }

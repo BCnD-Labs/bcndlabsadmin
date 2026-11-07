@@ -1,6 +1,6 @@
 import { DocLinksList } from "@/components/common/doc-links"
 import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
-import { CalendarRange, ChevronDown, Clock, ExternalLink, GraduationCap, Mail, MapPin, Pencil, Plus, StickyNote as NoteIcon, Tag, UserRound } from "lucide-react"
+import { ArrowRight, CalendarRange, ChevronDown, Clock, ExternalLink, GraduationCap, Mail, MapPin, PanelsTopLeft, Pencil, Plus, StickyNote as NoteIcon, Tag, UserRound } from "lucide-react"
 import { useState, type ReactNode } from "react"
 import { Link, useParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -14,23 +14,27 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Textarea } from "@/components/ui/textarea"
 import { EmptyState } from "@/components/common/empty-state"
+import { FilterChips } from "@/components/common/filter-chips"
 import { ListGroupLabel } from "@/components/common/list"
 import { PageHeader } from "@/components/common/page-header"
-import { Panel } from "@/components/common/panel"
+import { Panel, PanelFooter } from "@/components/common/panel"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Switch } from "@/components/ui/switch"
+import { coursePanelsFor, toggleCoursePanel } from "@/lib/course-panels"
+import { usePrefs } from "@/stores/prefs"
 import { SegmentedTabs } from "@/components/common/segmented-tabs"
 import { StickyNote } from "@/features/notes/sticky-note"
-import { daysUntil } from "@/lib/dates"
+import { daysUntil, todayKey } from "@/lib/dates"
 import { parseQuickAdd } from "@/lib/quick-add"
 import { learningHref, notesHref } from "@/lib/routes"
 import type { Course, LearningItemType, Task } from "@/lib/types"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
 import { Input } from "@/components/ui/input"
-import { CourseworkRow, KindIcon } from "./coursework"
+import { CourseworkRow, KindIcon, TypeChip } from "./coursework"
 import { ProgressBar, ProgressRing, dateRange, kindSubtitle } from "./learning-page"
-import { COURSE_STATUS_LABEL, compareCoursework, courseStatus, kindInfo, kindOf, kindProgress, learningType } from "./learning-utils"
-
-type View = "open" | "done" | "all"
+import { COURSE_STATUS_LABEL, compareCoursework, courseProgress, courseStatus, kindInfo, kindOf, kindProgress, kindTypeLabels, learningType, typeLabels } from "./learning-utils"
+import { courseworkGroups, itemType, nextItem, typeCounts, typeOptions, type CourseworkGroupBy, type CourseworkView } from "./coursework-view"
 
 function AddItem({ course }: { course: Course }) {
   const openForm = useUi((s) => s.openForm)
@@ -61,77 +65,186 @@ function AddItem({ course }: { course: Course }) {
   )
 }
 
-/** Open items grouped by when; done items newest first. */
+/** What the main item list is called for each kind. */
 const ITEMS_TITLE: Record<string, string> = { course: "Coursework", certification: "Study plan", selfpaced: "Sections", skill: "Milestones", reading: "Chapters" }
 
-function Coursework({ course, items }: { course: Course; items: Task[] }) {
+/** Quick add for one item type: a title, optionally ending in a day ("fri") for the date. */
+function QuickAdd({ course, type }: { course: Course; type: LearningItemType }) {
   const create = useWorkspace((s) => s.create)
-  const info = kindInfo(kindOf(course))
-  const first = info.types[0]
-  const firstLabel = first.label.toLowerCase()
-  const article = /^[aeiou]/.test(firstLabel) ? "an" : "a"
-  const [view, setView] = useState<View>("open")
   const [quick, setQuick] = useState("")
-  const open = items.filter((t) => !t.done).sort(compareCoursework)
-  const done = items.filter((t) => t.done).sort((a, b) => (b.completedAt ?? "").localeCompare(a.completedAt ?? ""))
-
-  const groups =
-    view === "done"
-      ? [{ label: "Done", items: done }]
-      : [
-          { label: "Overdue", tone: "warn" as const, items: open.filter((t) => t.due && daysUntil(t.due) < 0) },
-          { label: "Next 7 days", items: open.filter((t) => t.due && daysUntil(t.due) >= 0 && daysUntil(t.due) <= 7) },
-          { label: "Later", items: open.filter((t) => t.due && daysUntil(t.due) > 7) },
-          { label: "No date", items: open.filter((t) => !t.due) },
-          ...(view === "all" ? [{ label: "Done", items: done }] : []),
-        ]
-  const shown = groups.filter((g) => g.items.length)
-
+  const label = learningType(type, kindOf(course)).label
+  const lower = label.toLowerCase()
+  const article = /^[aeiou]/.test(lower) ? "an" : "a"
+  const id = `course-quick-add-${type}`
   const add = () => {
     const { title, due } = parseQuickAdd(quick)
     if (!title) return
-    create("tasks", { title, due, courseId: course.id, learningType: first.value, starred: false, done: false })
+    create("tasks", { title, due, courseId: course.id, learningType: type, starred: false, done: false })
     setQuick("")
-    toast.success(due ? `${first.label} added for ${due}` : `${first.label} added`)
+    toast.success(due ? `${label} added for ${due}` : `${label} added`)
   }
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        add()
+      }}
+      className="flex items-center gap-2 border-b border-line px-3.5 py-2"
+    >
+      <Plus className="size-3.5 shrink-0 text-faint" aria-hidden />
+      <label htmlFor={id} className="sr-only">Add {article} {lower}</label>
+      <input
+        id={id}
+        value={quick}
+        onChange={(e) => setQuick(e.target.value)}
+        placeholder={`Add ${article} ${lower} · end with “fri” to set a date`}
+        className="h-8 min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-faint"
+      />
+      {quick.trim() && <Button type="submit" size="sm">Add</Button>}
+    </form>
+  )
+}
+
+/**
+ * "Panels": a switch per item type this kind uses. Each one adds a focused card for that type
+ * next to the main list (extra views; items stay in the list). Saved per browser and course.
+ */
+function PanelsControl({ course }: { course: Course }) {
+  const coursePanels = usePrefs((s) => s.coursePanels)
+  const set = usePrefs((s) => s.set)
+  const kind = kindOf(course)
+  const types = kindTypeLabels(kind)
+  const on = coursePanelsFor(coursePanels, course.id, types.map((t) => t.value))
+  const toggle = (type: LearningItemType, value: boolean) =>
+    set({ coursePanels: toggleCoursePanel(usePrefs.getState().coursePanels, course.id, type, value, useWorkspace.getState().courses.map((c) => c.id)) })
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="quiet" size="sm" className="text-muted-foreground" aria-label={`Panels${on.length ? `, ${on.length} on` : ""}`}>
+          <PanelsTopLeft /> Panels{on.length > 0 && <span className="rounded-full bg-ink-2/10 px-1.5 text-[10px] leading-4 font-semibold text-ink-2 tabular-nums">{on.length}</span>}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-64 gap-1 p-2">
+        <p className="bw-label px-1.5 pt-1">Extra panels</p>
+        <p className="px-1.5 pb-1 text-[11px] leading-snug text-muted-foreground">A focused card per type. Items stay in {ITEMS_TITLE[kind]}. Saved in this browser.</p>
+        {types.map((t) => {
+          const id = `panel-${course.id}-${t.value}`
+          return (
+            <label key={t.value} htmlFor={id} className="flex min-h-[var(--bw-control-h)] cursor-pointer items-center gap-2 rounded-[var(--bw-control-radius)] px-1.5 hover:bg-selected">
+              <TypeChip type={t.value} kind={kind} />
+              <span className="min-w-0 flex-1 truncate text-[13px] text-ink">{t.plural}</span>
+              <Switch id={id} checked={on.includes(t.value)} onCheckedChange={(v) => toggle(t.value, v)} />
+            </label>
+          )
+        })}
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+/**
+ * One item type's focused card: its count, progress (not for events), every item of that type
+ * by date with the next one emphasized, and a quick add. A view, not a move: the same items stay
+ * in the main list.
+ */
+function TypePanel({ course, items, type }: { course: Course; items: Task[]; type: LearningItemType }) {
+  const openForm = useUi((s) => s.openForm)
+  const kind = kindOf(course)
+  const label = learningType(type, kind)
+  const own = items.filter((t) => itemType(t) === type).sort(compareCoursework)
+  const open = own.filter((t) => !t.done).length
+  const progress = type === "event" ? undefined : courseProgress(own, type)
+  const next = nextItem(own, todayKey())
+  return (
+    <Panel category="learning" title={label.plural} tool="course" command={type} meta={`${open} open · ${own.length - open} done`}>
+      {progress && progress.total > 0 && (
+        <div className="grid gap-1.5 border-b border-line-soft px-3.5 py-2.5">
+          <div className="flex items-baseline justify-between text-xs text-muted-foreground">
+            <span><span className="font-semibold text-ink tabular-nums">{progress.done}</span> of {progress.total} done</span>
+            <span className="tabular-nums">{progress.pct}%</span>
+          </div>
+          <ProgressBar pct={progress.pct} label={`${label.plural} progress`} />
+        </div>
+      )}
+      <QuickAdd course={course} type={type} />
+      {own.length ? (
+        <ul aria-label={label.plural}>
+          {own.map((t) => (
+            <CourseworkRow key={t.id} task={t} course={course} next={t.id === next?.id} />
+          ))}
+        </ul>
+      ) : (
+        <EmptyState icon={label.icon} title={`No ${label.plural.toLowerCase()} yet`} />
+      )}
+      <PanelFooter left={type === "event" ? "Not counted in progress" : undefined}>
+        <button type="button" className="bw-action-link" onClick={() => openForm({ kind: "task", defaults: { courseId: course.id, learningType: type } })}>
+          Add with details <ArrowRight className="size-3.5" aria-hidden />
+        </button>
+      </PanelFooter>
+    </Panel>
+  )
+}
+
+/** Every item of a course in one list: To do / Done / All, type filter chips, grouped by when or by type. */
+function Coursework({ course, items }: { course: Course; items: Task[] }) {
+  const kind = kindOf(course)
+  const info = kindInfo(kind)
+  const first = info.types[0]
+  const [view, setView] = useState<CourseworkView>("open")
+  const [types, setTypes] = useState<string[]>([])
+  const [groupBy, setGroupBy] = useState<CourseworkGroupBy>("when")
+  const openCount = items.filter((t) => !t.done).length
+  const doneCount = items.length - openCount
+  const options = typeOptions(items, kindTypeLabels(kind), (t) => typeLabels(kind).find((x) => x.value === t)!)
+  const counts = typeCounts(items, view)
+  const chosen = types.filter((t): t is LearningItemType => options.some((o) => o.value === t))
+  const shown = courseworkGroups(items, { view, types: chosen, groupBy, labels: options, today: todayKey() })
 
   return (
-    <Panel category="learning" title={ITEMS_TITLE[info.value]} tool={course.code ? course.code.toLowerCase().replace(/\s+/g, "") : "course"} command="coursework" meta={`${open.length} open · ${done.length} done`}>
-      <div className="flex flex-wrap items-center gap-2 border-b border-line px-3.5 py-2.5">
-        <SegmentedTabs
-          label={`Show ${ITEMS_TITLE[info.value].toLowerCase()}`}
-          value={view}
-          onChange={setView}
-          tabClassName="px-3"
-          tabs={[
-            { value: "open", label: "To do", count: open.length },
-            { value: "done", label: "Done", count: done.length },
-            { value: "all", label: "All" },
-          ]}
-        />
+    <Panel category="learning" title={ITEMS_TITLE[info.value]} tool={course.code ? course.code.toLowerCase().replace(/\s+/g, "") : "course"} command="coursework" meta={`${openCount} open · ${doneCount} done`} actions={<PanelsControl course={course} />}>
+      <div className="grid gap-2 border-b border-line px-3.5 py-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <SegmentedTabs
+            label={`Show ${ITEMS_TITLE[info.value].toLowerCase()}`}
+            value={view}
+            onChange={setView}
+            tabClassName="px-3"
+            tabs={[
+              { value: "open", label: "To do", count: openCount },
+              { value: "done", label: "Done", count: doneCount },
+              { value: "all", label: "All" },
+            ]}
+          />
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-medium tracking-[0.04em] text-faint uppercase" aria-hidden>Group by</span>
+            <SegmentedTabs
+              label="Group by"
+              value={groupBy}
+              onChange={setGroupBy}
+              tabClassName="flex-none px-2.5"
+              tabs={[{ value: "when", label: "When" }, { value: "type", label: "Type" }]}
+            />
+          </div>
+        </div>
+        {options.length > 1 && (
+          <FilterChips
+            wrap
+            label="Type"
+            value={chosen}
+            onChange={setTypes}
+            allCount={counts.all}
+            options={options.map((o) => {
+              const Icon = learningType(o.value, kind).icon
+              return { value: o.value, label: o.plural, count: counts[o.value], icon: <Icon data-item-type={o.value} className="size-3 text-[var(--bw-type)]" aria-hidden /> }
+            })}
+          />
+        )}
       </div>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          add()
-        }}
-        className="flex items-center gap-2 border-b border-line px-3.5 py-2"
-      >
-        <Plus className="size-3.5 shrink-0 text-faint" aria-hidden />
-        <label htmlFor="course-quick-add" className="sr-only">Add {article} {firstLabel}</label>
-        <input
-          id="course-quick-add"
-          value={quick}
-          onChange={(e) => setQuick(e.target.value)}
-          placeholder={`Add ${article} ${firstLabel} · end with “fri” to set a date`}
-          className="h-8 min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-faint"
-        />
-        {quick.trim() && <Button type="submit" size="sm">Add</Button>}
-      </form>
+      <QuickAdd course={course} type={first.value} />
       {shown.length ? (
         shown.map((g) => (
-          <section key={g.label} aria-label={g.label}>
-            <ListGroupLabel tone={"tone" in g ? g.tone : undefined}>
+          <section key={g.key} aria-label={g.label}>
+            <ListGroupLabel tone={g.tone}>
               {g.label} <span className="text-faint">· {g.items.length}</span>
             </ListGroupLabel>
             <ul>
@@ -141,8 +254,12 @@ function Coursework({ course, items }: { course: Course; items: Task[] }) {
             </ul>
           </section>
         ))
+      ) : chosen.length ? (
+        <EmptyState icon={learningType(chosen[0], kind).icon} title="Nothing of this type here">
+          {view === "done" ? "Nothing of the chosen types is done yet." : "Try All, or another tab."}
+        </EmptyState>
       ) : (
-        <EmptyState icon={learningType(first.value, info.value).icon} title={view === "done" ? "Nothing finished yet" : "Nothing to do"}>
+        <EmptyState icon={learningType(first.value, kind).icon} title={view === "done" ? "Nothing finished yet" : "Nothing to do"}>
           {view === "done" ? "Check items off and they land here." : `Add ${first.plural.toLowerCase()} above${info.types.length > 1 ? `, or ${info.types.slice(1).map((t) => t.plural.toLowerCase()).join(", ")} from the Add menu` : ""}.`}
         </EmptyState>
       )}
@@ -334,6 +451,7 @@ export function CourseDetail() {
   const course = useWorkspace((s) => s.courses.find((c) => c.id === id))
   const tasks = useWorkspace((s) => s.tasks)
   const openForm = useUi((s) => s.openForm)
+  const coursePanels = usePrefs((s) => s.coursePanels)
 
   if (!course) {
     return (
@@ -359,6 +477,7 @@ export function CourseDetail() {
   const items = tasks.filter((t) => t.courseId === course.id)
   const status = courseStatus(course)
   const kind = kindOf(course)
+  const panels = coursePanelsFor(coursePanels, course.id, kindInfo(kind).types.map((t) => t.value))
   const sub = kind === "course" ? [course.instructor, course.term || dateRange(course)].filter(Boolean).join(" · ") : kindSubtitle(course)
 
   return (
@@ -386,6 +505,12 @@ export function CourseDetail() {
         <GridItem span={2}>
           <Coursework course={course} items={items} />
         </GridItem>
+        {/* Optional type cards (Panels): one narrow column after the main list, stacked at their own heights. */}
+        {panels.length > 0 && (
+          <GridItem data-testid="type-panels" className="gap-[var(--bw-grid-gap)]">
+            {panels.map((type) => <TypePanel key={type} course={course} items={items} type={type} />)}
+          </GridItem>
+        )}
         <GridItem><CourseInfo course={course} items={items} /></GridItem>
         <GridItem><CourseNotes course={course} /></GridItem>
       </WorkspaceGrid>

@@ -1,6 +1,6 @@
 import { CategoryIcon } from "@/components/common/category-icon"
 import { Settings } from "lucide-react"
-import { NavLink, useLocation } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
 import {
   Sheet,
   SheetContent,
@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { useUi } from "@/stores/ui"
-import { useNav, isActive, activeChild } from "./nav-config"
+import { useNav, activeIn, activeChild } from "./nav-config"
 
 /** Small screens: conventional menu button + sheet with the full tree. */
 export function MobileNav() {
@@ -19,6 +19,7 @@ export function MobileNav() {
   const setOpen = useUi((s) => s.setMobileNavOpen)
   const openSettings = useUi((s) => s.openSettings)
   const { pathname, search } = useLocation()
+  const activeId = activeIn(NAV, pathname)?.id
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -33,12 +34,11 @@ export function MobileNav() {
         <nav aria-label="Main navigation" className="flex-1 overflow-y-auto p-2">
           <ul className="flex flex-col gap-0.5">
             {NAV.map((d) => {
-              const current = isActive(d, pathname)
+              const current = d.id === activeId
               return (
                 <li key={d.id}>
-                  <NavLink
+                  <Link
                     to={d.to}
-                    end={d.to === "/"}
                     onClick={() => setOpen(false)}
                     className={cn(
                       "flex h-11 items-center gap-3 rounded-[8px] px-3 text-sm font-medium text-ink-2 hover:bg-raised",
@@ -48,24 +48,27 @@ export function MobileNav() {
                   >
                     <CategoryIcon category={d.category} />
                     {d.label}
-                  </NavLink>
+                  </Link>
                   {d.children && d.children.length > 1 && (
                     <ul className="mb-1 ml-7 border-l border-line pl-2">
-                      {d.children.map((c) => (
-                        <li key={c.to}>
-                          <NavLink
-                            to={c.to}
-                            onClick={() => setOpen(false)}
-                            className={cn(
-                              "flex h-10 items-center gap-2 rounded-[6px] px-3 text-[13px] text-muted-foreground hover:bg-raised hover:text-white",
-                              activeChild(d, pathname, search) === c &&
-                                "text-white before:size-1.5 before:rounded-[1.5px] before:bg-red before:content-['']",
-                            )}
-                          >
-                            {c.label}
-                          </NavLink>
-                        </li>
-                      ))}
+                      {d.children.map((c) => {
+                        const here = current && activeChild(d, pathname, search) === c
+                        return (
+                          <li key={c.to}>
+                            <Link
+                              to={c.to}
+                              onClick={() => setOpen(false)}
+                              aria-current={here ? "page" : undefined}
+                              className={cn(
+                                "flex h-10 items-center gap-2 rounded-[6px] px-3 text-[13px] text-muted-foreground hover:bg-raised hover:text-white",
+                                here && "text-white before:size-1.5 before:rounded-[1.5px] before:bg-red before:content-['']",
+                              )}
+                            >
+                              {c.label}
+                            </Link>
+                          </li>
+                        )
+                      })}
                     </ul>
                   )}
                 </li>

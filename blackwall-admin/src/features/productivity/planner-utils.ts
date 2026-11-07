@@ -17,11 +17,14 @@ export function minuteOfDay(time: string) {
   return hour * 60 + minute
 }
 
-/** Overlapping calendar items get separate lanes; an event never hides another. */
+/**
+ * Overlapping calendar items get separate lanes; an event never hides another. Only items with
+ * a real start time on `date` are timed: end-of-day deadlines (23:45+) go to the All-day / Due row.
+ */
 export function timedLanes(tasks: Task[], date: string) {
-  const items = tasks.filter((task) => { const slot = taskSlot(task); return slot.date === date && !!slot.time })
+  const items = tasks.filter((task) => isTimedOn(task, date))
     .map((task) => {
-      const start = minuteOfDay(taskSlot(task).time!)
+      const start = minuteOfDay(startTimeOn(task, date)!)
       return { task, start, end: Math.min(1440, start + Math.max(60, task.durationMinutes ?? 60)), lane: 0, lanes: 1 }
     }).sort((a, b) => a.start - b.start || a.end - b.end || a.task.id.localeCompare(b.task.id))
   let group: typeof items = []
@@ -55,6 +58,19 @@ export function startTimeOn(task: Task, date: string) {
   if (slot.date !== date || !slot.time) return undefined
   if (!task.scheduledDate && isEndOfDay(slot.time)) return undefined
   return slot.time
+}
+
+/** Week/Day view: the item sits in the timed grid on `date` (a scheduled slot or a real due time). */
+export function isTimedOn(task: Task, date: string) {
+  return !!startTimeOn(task, date)
+}
+
+/**
+ * Week/Day view: the item sits in the All-day / Due row on `date`. That's an all-day slot, a
+ * deadline on a day other than its scheduled one, or an end-of-day due time, as in Month view.
+ */
+export function isAllDayOn(task: Task, date: string) {
+  return taskOnDate(task, date) && !isTimedOn(task, date)
 }
 
 /** Due on `date` without a real start time there: shown as a deadline. */
