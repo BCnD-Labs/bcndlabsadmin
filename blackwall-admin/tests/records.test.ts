@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { createNote, createTask, defaultMakeId, moveJournal, removeCourseRecords, removeNote, removeTask, saveJournal, toggleStar, togglePin, toggleTask, updateNote, updateTask } from "../shared/records.ts"
+import { createNote, createTask, defaultMakeId, moveJournal, removeCourseRecords, removeNote, removeTask, saveJournal, saveJournalItem, toggleStar, togglePin, toggleTask, updateNote, updateTask } from "../shared/records.ts"
 import { emptyWorkspace, validWorkspace } from "../shared/workspace.ts"
 import type { Note, Task } from "../src/lib/types.ts"
 
@@ -113,6 +113,15 @@ test("saveJournal upserts by date and deletes on blank text", () => {
   assert.deepEqual(data, before)
 })
 
+test("older journal text edits preserve learning links unless explicitly cleared", () => {
+  const original = { id: "lrn_1", text: "Clicked: Wind", courseId: "course-1", taskId: "task-1", createdAt: T0, updatedAt: T0 }
+  const data = { ...emptyWorkspace(), journal: [{ id: "2026-11-02", text: "", entries: [original], createdAt: T0, updatedAt: T0 }] }
+  const edited = saveJournalItem(data, "2026-11-02", { id: original.id, text: "Clicked: Gas", createdAt: T0, updatedAt: T1 }, false, opts())
+  assert.equal(edited.journal[0].entries?.[0].courseId, "course-1")
+  assert.equal(edited.journal[0].entries?.[0].taskId, "task-1")
+  const unlinked = saveJournalItem(edited, "2026-11-02", { id: original.id, text: "Clicked: Gas", createdAt: T0, updatedAt: T1, courseId: "course-1", taskId: undefined }, false, opts())
+  assert.equal(unlinked.journal[0].entries?.[0].taskId, undefined)
+})
 test("moveJournal moves, appends onto an existing day, and ignores bad moves", () => {
   const entry = (id: string, text: string) => ({ id, text, createdAt: T0, updatedAt: T0 })
   const data = { journal: [entry("2026-11-01", "a"), entry("2026-11-02", "b")] }
