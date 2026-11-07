@@ -19,7 +19,7 @@ type Editor = Compose | Naming
 const newId = () => `log_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
 
 /** Compact dated entry list. Legacy main/section text remains editable without a migration. */
-export function DailyLogEditor({ data, day, logs, blocked }: { data: Collections; day: string; logs: LogDrafts; blocked?: string }) {
+export function DailyLogEditor({ data, day, logs, blocked, heading = "Reflections" }: { data: Collections; day: string; logs: LogDrafts; blocked?: string; heading?: string }) {
   const { mutate } = useWorkspace()
   const active = logs.activeSections[day] ?? null
   const setActive = (id: string | null) => logs.setActiveSections(current => ({ ...current, [day]: id }))
@@ -115,11 +115,11 @@ export function DailyLogEditor({ data, day, logs, blocked }: { data: Collections
   }
 
   return <View style={styles.root}>
-    <View style={styles.header}><Icon name="create-outline" tint={c.text2} size={17} /><Text style={styles.heading} accessibilityRole="header">Reflections</Text>
+    <View style={styles.header}><Icon name="create-outline" tint={c.text2} size={17} /><Text style={styles.heading} accessibilityRole="header">{heading}</Text>
       <Pressable disabled={!!blocked || saving} onPress={() => { setError(null); setQuick(true) }} style={styles.icon} accessibilityRole="button" accessibilityLabel="Reflection quick inserts"><Icon name="add" tint={c.accent} size={19} /></Pressable>
     </View>
     {error && !editor && !quick ? <Text style={styles.error} accessibilityLiveRegion="polite">{error}</Text> : null}
-    {[{ id: null, title: "Reflections", text: shownText(logs.drafts, data.journal, day), noteId: journal?.mainNoteId }, ...sections].map(section => {
+    {[{ id: null, title: heading, text: shownText(logs.drafts, data.journal, day), noteId: journal?.mainNoteId }, ...sections].map(section => {
       const entries = (journal?.entries ?? []).filter(entry => (entry.sectionId ?? null) === section.id && !entry.id.startsWith("journal-") && !entry.courseId && !entry.taskId)
       const expanded = active === section.id && !closed[`${day}/${section.id ?? ""}`]
       const count = entries.length + Number(!!section.text.trim())

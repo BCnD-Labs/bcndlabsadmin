@@ -14,7 +14,9 @@ import { formatDay, shortDay, weekRangeLabel } from "./planner/dates.ts"
 import { LogView } from "./planner/log/LogView.tsx"
 import { useLogDrafts } from "./planner/log/useLogDrafts.ts"
 import { LearningReflectionSheet, ReflectionList, type LearningReflection } from "./LearningReflections.tsx"
-import { CHECKS, CHECK_LABELS, EMPTY_CHECK_IN, SLOTS, checkInSummary, formWording, hasCheckIn, nextPeriod, periodStart, readCheckIn, reviewId, slotForHour, writeCheckIn, type CheckIn, type Period, type Slot } from "./journal-review.ts"
+import { CHECKS, CHECK_LABELS, EMPTY_CHECK_IN, SLOTS, checkInSummary, formWording, hasAnswers, hasCheckIn, nextPeriod, periodStart, readCheckIn, readSlotCheckIn, reviewId, slotForHour, slotForm, slotLabel, slotSummary, writeCheckIn, writeSlotCheckIn, type Answers, type CheckIn, type Period, type Slot } from "./journal-review.ts"
+import { CheckInForm } from "./CheckInForm.tsx"
+import { compareTasks, isForToday } from "../../lib/shared.ts"
 import { chipTone, kit } from "../kit/tokens.ts"
 import { PropChip } from "../kit/PropChip.tsx"
 import { WorkspaceSection } from "../WorkspacePage.tsx"
@@ -34,6 +36,7 @@ export function JournalScreen({ onOpenSettings }: { onOpenSettings: () => void }
   const [target, setTarget] = useState<{ slot?: Slot } | null>(null)
   const [taskId, setTaskId] = useState<string | null>(null)
   const [drafts, setDrafts] = useState<Record<string, CheckIn>>({})
+  const [slotDrafts, setSlotDrafts] = useState<Record<string, Answers>>({})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const today = todayKey(), access = editAccess(status, true)
@@ -44,22 +47,28 @@ export function JournalScreen({ onOpenSettings }: { onOpenSettings: () => void }
   const key = reviewId(period, anchor, target?.slot)
   const saved = target ? savedFor(target.slot) : undefined
   const form = drafts[key] ?? (saved ? readCheckIn(saved.text) : EMPTY_CHECK_IN)
-  const words = formWording(period, target?.slot)
+  const words = formWording(period)
+  const slot = period === "daily" ? target?.slot : undefined
+  const slotAnswers = slot ? slotDrafts[key] ?? (saved ? readSlotCheckIn(slot, saved.text) : {}) : {}
+  const todayTitles = (data?.tasks ?? []).filter(t => t.kind !== "event" && !t.done && isForToday(t, today)).sort(compareTasks).slice(0, 6).map(t => t.title.trim().replace(/\s+/g, " ")).filter(Boolean)
+  const canSave = slot ? hasAnswers(slotAnswers) : hasCheckIn(form)
   const nowSlot = day === today ? slotForHour(new Date().getHours()) : undefined
   const end = nextPeriod(period, anchor, 1)
   const entries = data?.journal.filter(entry => entry.id >= anchor && entry.id < end && (entry.text.trim() || entry.sections?.length || entry.entries?.some(item => !item.courseId && !item.taskId))) ?? []
   const label = period === "daily" ? formatDay(anchor) : period === "weekly" ? weekRangeLabel(anchor) : period === "monthly" ? new Date(`${anchor}T12:00:00Z`).toLocaleDateString(undefined, { month: "long", year: "numeric", timeZone: "UTC" }) : anchor.slice(0, 4)
 
+  function answer(id: string, value: string) { setError(null); setSlotDrafts(current => ({ ...current, [key]: { ...(current[key] ?? slotAnswers), [id]: value } })) }
   function update(patch: Partial<CheckIn>) { setError(null); setDrafts(current => ({ ...current, [key]: { ...(current[key] ?? form), ...patch } })) }
   function open(slot?: Slot) { setError(null); setTarget({ slot }) }
   async function save() {
-    if (!data || !access.ok || !target || !hasCheckIn(form) || saving) return
+    if (!data || !access.ok || !target || !canSave || saving) return
     setSaving(true); setError(null)
-    const now = new Date().toISOString(), value = { id: key, text: writeCheckIn(period, form, target?.slot), createdAt: saved?.createdAt ?? now, updatedAt: now }
+    const now = new Date().toISOString(), value = { id: key, text: slot ? writeSlotCheckIn(slot, slotAnswers) : writeCheckIn(period, form), createdAt: saved?.createdAt ?? now, updatedAt: now }
     try {
       const ok = await mutate(["journal"], current => saveJournalItem(current, anchor, value, false))
       if (!ok) { setError("Couldn't save. Your answers are still here."); return }
       setDrafts(current => { const next = { ...current }; delete next[key]; return next })
+      setSlotDrafts(current => { const next = { ...current }; delete next[key]; return next })
       setTarget(null)
     } catch { setError("Couldn't save. Your answers are still here.") }
     finally { setSaving(false) }
@@ -74,16 +83,16 @@ export function JournalScreen({ onOpenSettings }: { onOpenSettings: () => void }
         {reflections ? <><View style={s.cardHead}><Text style={s.sectionTitle}>Learning reflections</Text><Pressable onPress={() => setLearningEditor("new")} disabled={!access.ok} accessibilityRole="button"><Text style={s.accent}>+ Reflect</Text></Pressable></View><ReflectionList data={data} onEdit={setLearningEditor} /></> : <><View style={s.nav}><Pressable onPress={() => setDay(nextPeriod(period, anchor, -1))} style={s.arrow} accessibilityRole="button" accessibilityLabel={`Previous ${period}`}><Icon name="chevron-back" tint={c.text2} /></Pressable><Text style={s.title} accessibilityRole="header">{label}</Text><Pressable onPress={() => setDay(nextPeriod(period, anchor, 1))} style={s.arrow} accessibilityRole="button" accessibilityLabel={`Next ${period}`}><Icon name="chevron-forward" tint={c.text2} /></Pressable><Pressable onPress={() => setDay(today)} style={s.today} accessibilityRole="button"><Text style={s.accent}>Today</Text></Pressable></View>
         {period === "daily" ? <WorkspaceSection title="Check-ins" icon="checkmark-circle-outline" tint={chipTone.status.ink} count={`${SLOTS.filter(x => savedFor(x.key)).length} of 3 done`}>
           <View style={s.slots}>
-            <Text style={s.hint}>Three short check-ins a day. Tap one to answer a few quick questions. It turns green once it is saved.</Text>
-            {SLOTS.map(x => <CheckInButton key={x.key} title={x.label} blurb={x.blurb} icon={x.key === "morning" ? "sunny-outline" : x.key === "afternoon" ? "partly-sunny-outline" : "moon-outline"} saved={savedFor(x.key)} draft={!!drafts[reviewId(period, anchor, x.key)]} now={nowSlot === x.key} disabled={!access.ok} onPress={() => open(x.key)} />)}
-            {savedFor() ? <CheckInButton title="Earlier check-in" blurb="Saved before the three daily check-ins" icon="time-outline" saved={savedFor()} draft={!!drafts[reviewId(period, anchor)]} disabled={!access.ok} onPress={() => open()} /> : null}
+            <Text style={s.hint}>Three quick check-ins a day, mostly taps. Tap one to answer. It turns green once it is saved.</Text>
+            {SLOTS.map(x => <CheckInButton key={x.key} title={x.label} blurb={x.blurb} icon={x.key === "morning" ? "sunny-outline" : x.key === "afternoon" ? "partly-sunny-outline" : "moon-outline"} summary={savedFor(x.key) ? slotSummary(x.key, readSlotCheckIn(x.key, savedFor(x.key)!.text)) : undefined} saved={!!savedFor(x.key)} draft={!!slotDrafts[reviewId(period, anchor, x.key)]} now={nowSlot === x.key} disabled={!access.ok} onPress={() => open(x.key)} />)}
+            {savedFor() ? <CheckInButton title="Earlier check-in" blurb="Saved before the three daily check-ins" icon="time-outline" summary={savedFor() ? checkInSummary(readCheckIn(savedFor()!.text)) : undefined} saved={!!savedFor()} draft={!!drafts[reviewId(period, anchor)]} disabled={!access.ok} onPress={() => open()} /> : null}
           </View>
         </WorkspaceSection> : <WorkspaceSection title={formWording(period).title} icon="checkmark-circle-outline" tint={chipTone.status.ink}>
           <View style={s.slots}>
-            <CheckInButton title={formWording(period).title} blurb={`A short look back at the ${period.slice(0, -2)}`} icon="create-outline" saved={savedFor()} draft={!!drafts[reviewId(period, anchor)]} disabled={!access.ok} onPress={() => open()} />
+            <CheckInButton title={formWording(period).title} blurb={`A short look back at the ${period.slice(0, -2)}`} icon="create-outline" summary={savedFor() ? checkInSummary(readCheckIn(savedFor()!.text)) : undefined} saved={!!savedFor()} draft={!!drafts[reviewId(period, anchor)]} disabled={!access.ok} onPress={() => open()} />
           </View>
         </WorkspaceSection>}
-        {period === "daily" ? <WorkspaceSection title="Daily log" icon="book-outline" tint={c.accent}><View style={s.slots}><Text style={s.hint}>Free writing for the day, plus what you finished and what is due.</Text><LogView data={data} today={today} day={day} onDay={setDay} logs={logs} blocked={access.reason} onEditTask={setTaskId} hideNav /></View></WorkspaceSection> : <>
+        {period === "daily" ? <WorkspaceSection title="Log" icon="book-outline" tint={c.accent}><View style={s.slots}><Text style={s.hint}>Type anything, any time of day. Entries are saved under the day shown above.</Text><LogView data={data} today={today} day={day} onDay={setDay} logs={logs} blocked={access.reason} onEditTask={setTaskId} hideNav heading="Log" /></View></WorkspaceSection> : <>
           <Text style={s.sectionTitle}>Entries in this {period.slice(0, -2) || "day"} · {entries.length}</Text>
           {entries.length ? entries.slice().reverse().slice(0, 20).map(entry => <View key={entry.id} style={s.entry}><Text style={s.entryDay}>{shortDay(entry.id)}</Text><Text style={s.preview} numberOfLines={3}>{[entry.text, ...(entry.entries ?? []).filter(item => !item.courseId && !item.taskId).map(item => item.text)].filter(Boolean).join("\n") || "Section entries"}</Text></View>) : <Text style={s.hint}>No entries in this period yet.</Text>}
         </>}</>}
@@ -92,24 +101,25 @@ export function JournalScreen({ onOpenSettings }: { onOpenSettings: () => void }
     {data && learningEditor ? <LearningReflectionSheet key={learningEditor === "new" ? "new" : learningEditor.item.id} data={data} entry={learningEditor === "new" ? undefined : learningEditor} onClose={() => setLearningEditor(null)} /> : null}
     {data && taskId ? <TaskSheet key={taskId} editor={{ mode: "edit", id: taskId }} data={data} today={today} onClose={() => setTaskId(null)} /> : null}
     <Modal visible={!!target} transparent animationType="fade" onRequestClose={() => setTarget(null)}>
-      <KeyboardFrame style={s.backdrop}><View style={s.dialog} accessibilityViewIsModal><View style={s.cardHead}><View style={s.flex}><Text style={s.cardTitle}>{words.title}</Text><Text style={s.hint}>{label}</Text></View><Pressable onPress={() => setTarget(null)} accessibilityRole="button" accessibilityLabel={`Close ${words.title.toLowerCase()}`}><Icon name="close" tint={c.text2} /></Pressable></View>
+      <KeyboardFrame style={s.backdrop}><View style={s.dialog} accessibilityViewIsModal><View style={s.cardHead}><View style={s.flex}><Text style={s.cardTitle}>{slot ? `${slotLabel(slot)} check-in` : words.title}</Text><Text style={s.hint}>{label}</Text></View><Pressable onPress={() => setTarget(null)} accessibilityRole="button" accessibilityLabel="Close check-in"><Icon name="close" tint={c.text2} /></Pressable></View>
         <KeyboardScrollView style={s.formScroll} contentContainerStyle={s.form} keyboardShouldPersistTaps="handled">
+          {slot ? <CheckInForm fields={slotForm(slot, todayTitles)} answers={slotAnswers} onChange={answer} /> : <>
           <View style={s.field}><Text style={s.question}>{words.mood}</Text><Text style={s.qhint}>Pick one</Text><View style={s.choices}>{MOODS.map(value => <Choice key={value} label={value} selected={form.mood === value} onPress={() => update({ mood: form.mood === value ? "" : value })} />)}</View></View>
           <View style={s.field}><Text style={s.question}>{words.energy}</Text><Text style={s.qhint}>Pick one</Text><View style={s.choices}>{ENERGY.map(value => <Choice key={value} label={value} selected={form.energy === value} onPress={() => update({ energy: form.energy === value ? "" : value })} />)}</View></View>
           <View style={s.field}><Text style={s.question}>{words.checks}</Text><Text style={s.qhint}>Pick any</Text><View style={s.choices}>{CHECKS.map(value => <Choice key={value} label={CHECK_LABELS[value]} selected={form.checks.includes(value)} onPress={() => update({ checks: form.checks.includes(value) ? form.checks.filter(x => x !== value) : [...form.checks, value] })} />)}</View></View>
-          {words.prompts.map(prompt => <View key={prompt.key} style={s.field}><Text style={s.question}>{prompt.question}</Text><Text style={s.qhint}>Optional</Text><TextInput value={form[prompt.key]} onChangeText={value => update({ [prompt.key]: value })} placeholder={prompt.placeholder} placeholderTextColor={c.muted} style={s.input} accessibilityLabel={prompt.question} /></View>)}
+          {words.prompts.map(prompt => <View key={prompt.key} style={s.field}><Text style={s.question}>{prompt.question}</Text><Text style={s.qhint}>Optional</Text><TextInput value={form[prompt.key]} onChangeText={value => update({ [prompt.key]: value })} placeholder="A few words is plenty" placeholderTextColor={c.muted} style={s.input} accessibilityLabel={prompt.question} /></View>)}
           <View style={s.field}><Text style={s.question}>{words.notes}</Text><TextInput value={form.notes} onChangeText={value => update({ notes: value })} multiline textAlignVertical="top" placeholder="Write as much or as little as you like…" placeholderTextColor={c.muted} style={[s.input, s.notes]} accessibilityLabel={words.notes} /></View>
+          </>}
           {error ? <Text style={s.error} accessibilityLiveRegion="polite">{error}</Text> : null}
-        </KeyboardScrollView><Pressable onPress={() => void save()} disabled={!hasCheckIn(form) || !access.ok || saving} style={[s.save, (!hasCheckIn(form) || saving) && s.disabled]} accessibilityRole="button"><Text style={s.saveText}>{saving ? "Saving…" : words.save}</Text></Pressable>
+        </KeyboardScrollView><Pressable onPress={() => void save()} disabled={!canSave || !access.ok || saving} style={[s.save, (!canSave || saving) && s.disabled]} accessibilityRole="button"><Text style={s.saveText}>{saving ? "Saving…" : slot ? `Save ${slot} check-in` : words.save}</Text></Pressable>
       </View></KeyboardFrame>
     </Modal>
   </KeyboardFrame>
 }
 
 /** One check-in as a full-width button. Grey while empty; green with a check once it has been saved. */
-function CheckInButton({ title, blurb, icon, saved, draft, now, disabled, onPress }: { title: string; blurb: string; icon: "sunny-outline" | "partly-sunny-outline" | "moon-outline" | "time-outline" | "create-outline"; saved?: { text: string }; draft: boolean; now?: boolean; disabled: boolean; onPress: () => void }) {
-  const done = !!saved
-  const summary = saved ? checkInSummary(readCheckIn(saved.text)) : ""
+function CheckInButton({ title, blurb, icon, saved, summary, draft, now, disabled, onPress }: { title: string; blurb: string; icon: "sunny-outline" | "partly-sunny-outline" | "moon-outline" | "time-outline" | "create-outline"; saved: boolean; summary?: string; draft: boolean; now?: boolean; disabled: boolean; onPress: () => void }) {
+  const done = saved
   return <Pressable onPress={onPress} disabled={disabled} style={({ pressed }) => [s.slot, done && s.slotDone, pressed && s.slotPressed, disabled && s.disabled]} accessibilityRole="button" accessibilityLabel={`${title}, ${done ? "done. Tap to edit" : "not done yet. Tap to add"}`}>
     <View style={[s.slotIcon, done && s.slotIconDone]}><Icon name={icon} size={18} tint={done ? chipTone.status.ink : c.accent} /></View>
     <View style={s.flex}>
