@@ -65,9 +65,9 @@ export function MikoshiScreen({ onOpenSettings, focused = true }: ScreenProps) {
   return (
     <View style={s.fill}>
       <View style={active ? s.hidden : s.fill}>
-        <WorkspacePage page="Mikoshi" onOpenSettings={onOpenSettings} onRefresh={() => { void refresh(); void live.check() }} refreshing={refreshing} action={data ? <Pressable onPress={() => setEditor("new")} style={s.add} accessibilityRole="button" accessibilityLabel="Add tool"><Icon name="add" size={19} tint={c.accent} /></Pressable> : undefined}>
+        <WorkspacePage page="Mikoshi" onOpenSettings={onOpenSettings} onRefresh={() => { void refresh(); void live.check() }} refreshing={refreshing}>
           {!data ? <View style={s.empty}><Text style={s.title}>{status === "signed-out" ? "Sign in to use Mikoshi" : "Loading your workspace"}</Text><Text style={s.meta}>{status === "signed-out" ? "Your tools will appear here after sign-in." : message ?? "Pull down to try again."}</Text></View> : null}
-          {data && !services.length ? <View style={s.empty}><Text style={s.title}>No tools yet</Text><Text style={s.meta}>Tap + to add your first tool.</Text></View> : null}
+          {data && !services.length ? <View style={s.empty}><Text style={s.title}>No tools yet</Text><Text style={s.meta}>Use the + button to add your first tool.</Text></View> : null}
           {data && services.length ? <Text style={s.meta}>{summaryText(summary, live.checkedAt)}</Text> : null}
           {live.error ? <Text style={s.error}>{live.error}</Text> : null}
           {groupServices(services).map(({ group, items }) => (

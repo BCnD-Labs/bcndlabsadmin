@@ -71,7 +71,8 @@ export function LearningReflectionSheet({ data, initialCourseId, initialTaskId, 
   const [answers, setAnswers] = useState<Answers>(() => entry ? readLearningReflection(entry.item.text) : { ...empty })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
-  const canSave = !!courseId && !!(answers.clicked.trim() || answers.fuzzy.trim() || answers.next.trim() || answers.notes.trim()) && status !== "conflict" && !saving
+  const linked = data.tasks.find(t => t.id === taskId)
+  const canSave = !!(courseId || taskId) && !!(answers.clicked.trim() || answers.fuzzy.trim() || answers.next.trim() || answers.notes.trim()) && status !== "conflict" && !saving
   const tasks = data.tasks.filter(t => t.courseId === courseId && t.kind !== "event")
   const set = (key: keyof Answers, value: string) => { setError(""); setAnswers(a => ({ ...a, [key]: value })) }
   async function save() {
@@ -90,7 +91,8 @@ export function LearningReflectionSheet({ data, initialCourseId, initialTaskId, 
     <KeyboardFrame style={s.backdrop}><View style={s.dialog} accessibilityViewIsModal>
       <View style={s.head}><Text style={s.dialogTitle}>Learning reflection</Text><Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close reflection"><Icon name="close" tint={c.text2} /></Pressable></View>
       <KeyboardScrollView style={s.scroll} contentContainerStyle={s.form} keyboardShouldPersistTaps="handled">
-        <Text style={s.label}>Linked learning item</Text>
+        {taskId && !courseId ? <><Text style={s.label}>Reflecting on</Text><View style={s.choices}><View style={[s.choice, s.choiceOn]}><Text style={s.choiceText} numberOfLines={1}>{linked?.title ?? "Linked item was deleted"}</Text></View></View></> : null}
+        <Text style={s.label}>{taskId && !courseId ? "Also link a learning item (optional)" : "Linked learning item"}</Text>
         <ScrollView horizontal keyboardShouldPersistTaps="handled" contentContainerStyle={s.choices}>{data.courses.map(course => <Pressable key={course.id} onPress={() => { setCourseId(course.id); setTaskId("") }} style={[s.choice, courseId === course.id && s.choiceOn]} accessibilityRole="button" accessibilityState={{ selected: courseId === course.id }}><Text style={s.choiceText}>{course.title}</Text></Pressable>)}</ScrollView>
         {courseId ? <><Text style={s.label}>Assignment or step (optional)</Text><ScrollView horizontal keyboardShouldPersistTaps="handled" contentContainerStyle={s.choices}><Pressable onPress={() => setTaskId("")} style={[s.choice, !taskId && s.choiceOn]}><Text style={s.choiceText}>Whole item</Text></Pressable>{tasks.map(task => <Pressable key={task.id} onPress={() => setTaskId(task.id)} style={[s.choice, taskId === task.id && s.choiceOn]}><Text style={s.choiceText}>{task.title}</Text></Pressable>)}</ScrollView></> : null}
         {([["clicked", "What clicked?"], ["fuzzy", "Still fuzzy?"], ["next", "Next small step?"]] as const).map(([key, label]) => <View key={key} style={s.field}><Text style={s.label}>{label}</Text><TextInput value={answers[key]} onChangeText={v => set(key, v)} placeholder="A word or short phrase" placeholderTextColor={c.muted} style={s.input} accessibilityLabel={label} /></View>)}

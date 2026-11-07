@@ -149,6 +149,19 @@ Ordinary dates are unfilled, day buttons stay 32px, and week gaps are 4px. A six
 - Channels per event (Settings → Notifications): Bell (the header feed), Phone (ntfy connection: server + topic + optional token) and Email (SMTP connection via nodemailer). Each event has defaults; your choices are stored on the server (`app_state`), along with the feed (last 200) and the engine's memory.
 - The summary goes out at a chosen hour in a chosen time zone (defaults to the device's).
 
+## Native panel kit and quick add (Nov 2026, owner approved)
+
+The Android app reads as a compact pocket-PC tool, not a stock mobile app. Native screens share one kit in `mobile/src/native/kit/`; reuse it rather than adding page-specific widths, chips or charts.
+
+- **Panels.** `WorkspaceSection` is a bordered panel with a darker title bar: a small icon tile in the page's hue (Productivity blue, Learning violet, Projects pink, Website orange), a mono uppercase title, a count, and an optional collapse chevron. `flush` removes the body padding so table rows run edge to edge.
+- **Rows.** Lists are tables with a small column header (TITLE / DUE / TAG). The first tap selects a row (blue bar, highlighted fill, detail underneath); a second tap or "Open" opens the editor.
+- **Property chips.** `PropChip` shows an optional darker KEY half over the value (Due, Time, Course, Focus, Source, Status…). Tones: date amber, overdue red, course violet, tag blue, project pink, status green, neutral grey. A property always says what it is.
+- **Charts.** Rings, sparklines, mini bars, stacked bars, week bars (with the daily average), a streak strip and a 5-week heat grid, all from `kit/charts.tsx`. Numbers come from `kit/stats.ts`, which is pure and tested. Dates use the phone's local day.
+- **Data honesty.** A chart appears only when the saved records can back it: a ring needs something to count, and project cards show no task progress because tasks are not linked to projects. Empty states say so plainly.
+- **Navigation.** The floating pill sits left of the quick-add button (`nav/layout.ts`), so the two never overlap.
+- **Quick add.** One round **+** at the bottom right replaces every screen's top-right **+**. Its menu is not tied to the open screen: Task, Event, Note, Learning item, Add reflection, Reflect on…, Project, Website draft, Site, Tool. Each opens the same editor its own screen uses, so saved records are identical. The one exception is the Planner, which tells quick add which day it is showing so a new task or event starts on that day. **Add reflection** opens the Learning reflection sheet to write one now; **Reflect on…** lets you search open tasks, events, learning items and finished work, then opens the same sheet linked to the pick. A reflection can link to a task alone (a task that is not part of a learning item).
+- Buttons inside a page that add something specific to that page (a course's "+ Add" for typed work, "+ Task" / "+ Session" in Learning Today, a draft for one site) stay where they are.
+
 ## Learning
 
 - Learning is general learning, not only school. Five kinds share one record type (`Course` with `kind`): Course, Certification, Self-paced, Skill, Reading. Older records with no kind are courses.

@@ -29,8 +29,7 @@ export function DevScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
   const [notice, setNotice] = useState("")
   const projects = data?.projects.filter(p => filter === "all" || p.status === filter) ?? []
   const unassigned = data?.repos.filter(r => !r.projectId || !data.projects.some(p => p.id === r.projectId)) ?? []
-  const add = <Pressable onPress={() => data && status !== "conflict" ? setEditor("new") : setNotice(status === "conflict" ? "Resolve the sync conflict before editing." : "Load your workspace first.")} style={s.add} accessibilityRole="button" accessibilityLabel="Add project"><Icon name="add" size={20} tint={c.accent} /></Pressable>
-  return <WorkspacePage page="Projects" onOpenSettings={onOpenSettings} action={add} onRefresh={() => void refresh()} refreshing={refreshing}>
+  return <WorkspacePage page="Projects" onOpenSettings={onOpenSettings} onRefresh={() => void refresh()} refreshing={refreshing}>
     {notice ? <Text style={s.error}>{notice}</Text> : null}
     {data ? <>
       <StatStrip>
@@ -55,7 +54,7 @@ export function DevScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
               {project.description ? <Text style={s.description} numberOfLines={2} ellipsizeMode="tail">{project.description.trim().length > 120 ? `${project.description.trim().slice(0, 120).trimEnd()}…` : project.description}</Text> : null}{repos.map(repo => <RepoRow key={repo.id} repo={repo} />)}{!repos.length ? <Text style={s.meta}>No repositories linked.</Text> : null}<Pressable onPress={() => status === "conflict" ? setNotice("Resolve the sync conflict before editing.") : setEditor(project)} style={selectedItem.action} accessibilityRole="button"><Text style={selectedItem.actionText}>Edit project</Text></Pressable></View> : null}
           </View>
         })}
-        {!projects.length ? <Text style={s.empty}>{data.projects.length ? "No projects match this status." : "No projects yet. Tap + to create one."}</Text> : null}
+        {!projects.length ? <Text style={s.empty}>{data.projects.length ? "No projects match this status." : "No projects yet. Use the + button to create one."}</Text> : null}
       </WorkspaceSection>
       {unassigned.length ? <WorkspaceSection title="Other repositories" icon="git-branch-outline" tint={kit.hue.projects} count={String(unassigned.length)}>{unassigned.map(repo => <RepoRow key={repo.id} repo={repo} />)}</WorkspaceSection> : null}
     </> : <Text style={s.empty}>{status === "signed-out" ? "Sign in under Settings to see your projects." : message ?? "Loading your workspace…"}</Text>}

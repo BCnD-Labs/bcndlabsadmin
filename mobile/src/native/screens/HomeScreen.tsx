@@ -59,8 +59,7 @@ export function HomeScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
   }
   const dueCell = (t: { due?: string }, focused: boolean): DueCell => t.due && t.due < today ? { text: shortDay(t.due), tone: "overdue" } : t.due === today ? { text: "Today", tone: "today" } : t.due ? { text: shortDay(t.due), tone: "plain" } : { text: focused ? "Focus" : "Star", tone: "today" }
   const openRow = (show: () => void) => { setSel(null); show() }
-  const add = <Pressable onPress={() => data && !blocked ? setEditor({ mode: "create" }) : setNotice(blocked ? "Resolve the sync conflict before editing." : "Load your workspace first.")} accessibilityRole="button" accessibilityLabel="Add task" style={s.add}><Icon name="add" size={20} tint={c.accent} /></Pressable>
-  return <WorkspacePage page="Home" onOpenSettings={onOpenSettings} action={add} onRefresh={() => void refresh()} refreshing={refreshing}>
+  return <WorkspacePage page="Home" onOpenSettings={onOpenSettings} onRefresh={() => void refresh()} refreshing={refreshing}>
     {!data ? <View style={s.empty}><Text style={s.title}>{status === "signed-out" ? "Sign in to use Blackwall" : "Loading your workspace"}</Text><Text style={s.meta}>{status === "signed-out" ? "Your records will appear here after sign-in." : message ?? "Pull down to try again."}</Text>{status === "signed-out" ? <MiniAction label="Sign in" onPress={onOpenSettings} /> : null}</View> : null}
     {notice || (data && status !== "ok" && message) ? <Text style={s.error}>{notice ?? message}</Text> : null}
     {data ? <>

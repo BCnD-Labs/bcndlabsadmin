@@ -7,8 +7,7 @@ import { todayKey } from "../data/sync-view.ts"
 import { useWorkspace } from "../data/WorkspaceProvider.tsx"
 import { Button, Card, Icon, NAV_CLEARANCE } from "../ui.tsx"
 import { CalendarView } from "./planner/CalendarView.tsx"
-import { AddItemMenu } from "./planner/AddItemMenu.tsx"
-import { AddFab } from "./planner/AddFab.tsx"
+import { useQuickAddDue } from "../quickadd/QuickAdd.tsx"
 import { TaskSheet, type Editor } from "./planner/TaskSheet.tsx"
 import { useLogDrafts } from "./planner/log/useLogDrafts.ts"
 import { NotesView } from "./planner/notes/NotesView.tsx"
@@ -16,16 +15,16 @@ import { editAccess } from "./planner/task-form.ts"
 import { TasksView } from "./planner/TasksView.tsx"
 type Mode = "tasks" | "calendar" | "notes"
 const MODES: { key: Mode; label: string }[] = [{ key: "tasks", label: "Tasks" }, { key: "calendar", label: "Calendar" }, { key: "notes", label: "Notes" }]
-export function PlannerScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
+export function PlannerScreen({ onOpenSettings, focused = true }: { onOpenSettings: () => void; focused?: boolean }) {
   const { data, status, message, refreshing, refresh, mutate } = useWorkspace()
   const [mode, setMode] = useState<Mode>("calendar"), [search, setSearch] = useState("")
-  const [createOpen, setCreateOpen] = useState(false)
   const [headerHeight, setHeaderHeight] = useState(136)
   const taskClose = useRef<(() => void) | null>(null)
   const [selectedDay, setSelectedDay] = useState(() => todayKey())
   const [editor, setEditor] = useState<Editor | null>(null), [createDue, setCreateDue] = useState<string | undefined>()
   const edit = useCallback((id: string) => setEditor({ mode: "edit", id }), [])
   const today = todayKey(), access = editAccess(status, true)
+  useQuickAddDue(createDue, focused && mode !== "notes")
   const logs = useLogDrafts(data?.journal, mutate, access.ok)
   const floating = mode === "tasks"
   let body
@@ -56,9 +55,7 @@ export function PlannerScreen({ onOpenSettings }: { onOpenSettings: () => void }
       {body}
     </KeyboardScrollView>}
     {floating ? header : null}
-    {data && (floating || mode === "calendar") ? <AddFab enabled={access.ok} onPress={() => setCreateOpen(true)} /> : null}
-    {createOpen || (data && editor) ? <Modal visible transparent animationType="fade" statusBarTranslucent navigationBarTranslucent onRequestClose={() => { if (editor) taskClose.current?.(); else setCreateOpen(false) }}>
-    {createOpen ? <AddItemMenu onClose={() => setCreateOpen(false)} onChoose={kind => { setCreateOpen(false); setEditor({ mode: "create", due: createDue ?? (kind === "event" ? today : undefined), kind }) }} /> : null}
+    {data && editor ? <Modal visible transparent animationType="fade" statusBarTranslucent navigationBarTranslucent onRequestClose={() => taskClose.current?.()}>
     {data && editor ? <TaskSheet key={editor.mode === "edit" ? editor.id : "new"} registerClose={handler => { taskClose.current = handler }} embedded editor={editor} data={data} today={today} onClose={() => setEditor(null)} /> : null}
     </Modal> : null}
   </KeyboardFrame>
