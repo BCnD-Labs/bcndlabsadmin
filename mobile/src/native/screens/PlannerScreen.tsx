@@ -10,11 +10,10 @@ import { CalendarView } from "./planner/CalendarView.tsx"
 import { useQuickAddDue } from "../quickadd/QuickAdd.tsx"
 import { TaskSheet, type Editor } from "./planner/TaskSheet.tsx"
 import { useLogDrafts } from "./planner/log/useLogDrafts.ts"
-import { NotesView } from "./planner/notes/NotesView.tsx"
 import { editAccess } from "./planner/task-form.ts"
 import { TasksView } from "./planner/TasksView.tsx"
-type Mode = "tasks" | "calendar" | "notes"
-const MODES: { key: Mode; label: string }[] = [{ key: "tasks", label: "Tasks" }, { key: "calendar", label: "Calendar" }, { key: "notes", label: "Notes" }]
+type Mode = "tasks" | "calendar"
+const MODES: { key: Mode; label: string }[] = [{ key: "tasks", label: "Tasks" }, { key: "calendar", label: "Calendar" }]
 export function PlannerScreen({ onOpenSettings, focused = true }: { onOpenSettings: () => void; focused?: boolean }) {
   const { data, status, message, refreshing, refresh, mutate } = useWorkspace()
   const [mode, setMode] = useState<Mode>("calendar"), [search, setSearch] = useState("")
@@ -24,14 +23,13 @@ export function PlannerScreen({ onOpenSettings, focused = true }: { onOpenSettin
   const [editor, setEditor] = useState<Editor | null>(null), [createDue, setCreateDue] = useState<string | undefined>()
   const edit = useCallback((id: string) => setEditor({ mode: "edit", id }), [])
   const today = todayKey(), access = editAccess(status, true)
-  useQuickAddDue(createDue, focused && mode !== "notes")
+  useQuickAddDue(createDue, focused)
   const logs = useLogDrafts(data?.journal, mutate, access.ok)
   const floating = mode === "tasks"
   let body
   if (data) {
     body = floating ? <TasksView data={data} today={today} onEdit={edit} onCreateDue={setCreateDue} search={search} onSearchChange={setSearch} />
-      : mode === "calendar" ? <CalendarView selected={selectedDay} onSelect={setSelectedDay} data={data} today={today} onEdit={edit} onCreateDue={setCreateDue} logs={logs} blocked={access.reason} />
-      : <NotesView data={data} blocked={access.reason} />
+      : <CalendarView selected={selectedDay} onSelect={setSelectedDay} data={data} today={today} onEdit={edit} onCreateDue={setCreateDue} logs={logs} blocked={access.reason} />
   } else if (status === "loading") {
     body = <View style={styles.loading}><ActivityIndicator color={c.accent} /><Text style={styles.note}>Loading your workspace…</Text></View>
   } else if (status === "signed-out") {
