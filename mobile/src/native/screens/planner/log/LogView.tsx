@@ -14,13 +14,13 @@ import type { LogDrafts } from "./useLogDrafts.ts"
  * that have an entry, an inline composer with explicit Save entry, custom section tabs, the tasks done
  * and due that day, and the latest entries. Text stays in a draft until the workspace holds it.
  */
-export function LogView({ data, today, logs, day, onDay: setDay, blocked, onEditTask }: { data: Collections; today: string; day: string; onDay: (day: string) => void; logs: LogDrafts; blocked?: string; onEditTask: (id: string) => void }) {
+export function LogView({ data, today, logs, day, onDay: setDay, blocked, onEditTask, hideNav = false }: { hideNav?: boolean; data: Collections; today: string; day: string; onDay: (day: string) => void; logs: LogDrafts; blocked?: string; onEditTask: (id: string) => void }) {
   const { drafts } = logs
   const recent = recentEntries(data.journal, drafts)
 
   return (
     <View style={styles.gap}>
-      <View style={styles.nav}>
+      {hideNav ? null : <View style={styles.nav}>
         <Pressable onPress={() => setDay(shiftDay(day, -1))} style={styles.arrow} accessibilityRole="button" accessibilityLabel="Previous day">
           <Icon name="chevron-back" size={22} tint={color.text2} />
         </Pressable>
@@ -33,7 +33,7 @@ export function LogView({ data, today, logs, day, onDay: setDay, blocked, onEdit
           <Icon name="chevron-forward" size={22} tint={color.text2} />
         </Pressable>
         <Pressable onPress={() => setDay(today)} style={[styles.today, day === today && styles.cellOn]} accessibilityRole="button" accessibilityLabel="Today"><Text style={styles.todayText}>Today</Text></Pressable>
-      </View>
+      </View>}
 
       <View style={styles.week} accessibilityLabel="This week">
         {weekStrip(day, today, data.journal, drafts).map((d) => (
