@@ -23,6 +23,6 @@ export function validJournalItems(value: unknown, sections: readonly JournalSect
   return value.every((item) => {
     if (!item || typeof item !== "object" || typeof item.id !== "string" || !item.id || item.id.length > 100 || ids.has(item.id)) return false
     ids.add(item.id)
-    return typeof item.text === "string" && item.text.length <= 1_000_000 && typeof item.createdAt === "string" && typeof item.updatedAt === "string" && validOptionalId(item.noteId) && validOptionalId(item.sectionId) && (item.sectionId === undefined || sections.some((section) => section.id === item.sectionId))
+    return typeof item.text === "string" && item.text.length <= 1_000_000 && typeof item.createdAt === "string" && typeof item.updatedAt === "string" && validOptionalId(item.noteId) && validOptionalId(item.sectionId) && validOptionalId(item.courseId) && validOptionalId(item.taskId) && (item.sectionId === undefined || sections.some((section) => section.id === item.sectionId))
   })
 }
