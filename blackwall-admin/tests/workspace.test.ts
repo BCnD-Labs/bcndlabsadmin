@@ -40,6 +40,14 @@ test("learning kinds: valid kinds and numbers pass; unknown kinds and non-numeri
   assert.ok(!validWorkspace({ ...emptyWorkspace(), courses: [course({ kind: "reading", pagesRead: "12" })] }))
   assert.ok(!validWorkspace({ ...emptyWorkspace(), tasks: [task({ score: "71" })] }))
 })
+test("learning reflection links are optional and older journal entries still load", () => {
+  const ts = "2026-11-01T00:00:00Z"
+  const base = { id: "2026-11-01", text: "", createdAt: ts, updatedAt: ts }
+  const item = { id: "learn-1", text: "## Learning reflection\\nClicked: Wind energy", createdAt: ts, updatedAt: ts }
+  assert.ok(validWorkspace({ ...emptyWorkspace(), journal: [{ ...base, entries: [item] }] }))
+  assert.ok(validWorkspace({ ...emptyWorkspace(), journal: [{ ...base, entries: [{ ...item, courseId: "c", taskId: "t" }] }] }))
+  assert.ok(!validWorkspace({ ...emptyWorkspace(), journal: [{ ...base, entries: [{ ...item, courseId: 1 }] }] }))
+})
 test("authenticated API persists across restarts and rejects stale or malformed writes", async () => {
   const root = mkdtempSync(path.join(tmpdir(), "bw-workspace-test-"))
   const workspace = new FileWorkspaceStore(root)
