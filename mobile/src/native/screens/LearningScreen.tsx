@@ -13,12 +13,13 @@ import { CourseEditor } from "./learning/CourseEditor.tsx"
 import { Pill, SmallButton } from "./learning/LearningControls.tsx"
 import { KINDS, kindInfo, type Course, type Kind, type Task } from "./learning/learning-view.ts"
 import { Library, Today, Upcoming, Overview, Work, LinkedNotes, Progress, type WorkTab } from "./learning/LearningViews.tsx"
+import { LearningReflectionSheet, ReflectionList, type LearningReflection } from "./LearningReflections.tsx"
 import { TaskSheet, type Editor } from "./planner/TaskSheet.tsx"
 import { typeOptions } from "./planner/learning-types.ts"
 import { NoteSheet, type NoteEditor } from "./planner/notes/NoteSheet.tsx"
 
 type CollectionTab = "today" | "library" | "upcoming"
-type DetailTab = "overview" | "work" | "notes"
+type DetailTab = "overview" | "work" | "notes" | "reflections"
 
 /** Native Learning uses the same workspace records as Planner, with a compact tabbed layout. */
 export function LearningScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
@@ -36,6 +37,7 @@ export function LearningScreen({ onOpenSettings }: { onOpenSettings: () => void 
   const [taskEditor, setTaskEditor] = useState<Editor | null>(null)
   const [coursePicker, setCoursePicker] = useState<"task" | "session" | null>(null)
   const [noteEditor, setNoteEditor] = useState<NoteEditor | null>(null)
+  const [reflectionEditor, setReflectionEditor] = useState<{ courseId: string; taskId?: string; entry?: LearningReflection } | null>(null)
   const course = data?.courses.find(x => x.id === openId)
   const blocked = status === "conflict"
   const today = todayKey()
@@ -60,7 +62,7 @@ export function LearningScreen({ onOpenSettings }: { onOpenSettings: () => void 
     setTaskEditor({ mode: "create", courseId: selected.id, learningType: coursePicker === "session" ? "event" : typeOptions(selected.kind)[0].value, ...(coursePicker === "session" && { kind: "event" as const, due: today }) })
     setCoursePicker(null)
   }
-  const tabs = course ? ["overview", "work", "notes"] as const : ["today", "upcoming", "library"] as const
+  const tabs = course ? ["overview", "work", "notes", "reflections"] as const : ["today", "upcoming", "library"] as const
   return <KeyboardFrame style={s.fill}>
     <View style={s.header}>
       <View style={s.top}><Text style={s.breadcrumb}>Blackwall <Text style={s.muted}>/ Learning</Text></Text><View style={s.topRight}><SyncStatus onOpenSettings={onOpenSettings} /><Pressable onPress={() => setMenu(v => !v)} style={s.add} accessibilityRole="button" accessibilityLabel={course ? `Add to ${course.title}` : "Add learning item"} accessibilityState={{ expanded: menu }}><Icon name="add" size={20} tint={c.accent} /></Pressable></View></View>
@@ -76,14 +78,16 @@ export function LearningScreen({ onOpenSettings }: { onOpenSettings: () => void 
         <View style={s.identity}><View style={[s.kindMark, { backgroundColor: kindInfo(course).tint }]} /><View style={s.flex}><Text style={s.identityTitle}>{course.title}</Text><Text style={s.meta}>{[kindInfo(course).label, course.code, course.term].filter(Boolean).join(" · ")}</Text></View><Pressable onPress={() => edit(() => setCourseEditor(course))} style={s.edit} accessibilityRole="button" accessibilityLabel={`Edit ${course.title}`}><Icon name="create-outline" size={19} tint={c.muted} /></Pressable></View>
         <Progress course={course} tasks={data.tasks.filter(t => t.courseId === course.id)} />
         {detail === "overview" ? <Overview key={course.id} course={course} tasks={data.tasks.filter(t => t.courseId === course.id)} blocked={blocked} mutate={mutate} onError={setNotice} /> : null}
-        {detail === "work" ? <Work course={course} tasks={data.tasks.filter(t => t.courseId === course.id)} tab={workTab} onTab={setWorkTab} onAdd={() => setMenu(true)} onOpen={id => setTaskEditor({ mode: "edit", id })} onToggle={complete} /> : null}
+        {detail === "work" ? <Work course={course} tasks={data.tasks.filter(t => t.courseId === course.id)} data={data} tab={workTab} onTab={setWorkTab} onAdd={() => setMenu(true)} onOpen={id => setTaskEditor({ mode: "edit", id })} onToggle={complete} onReflect={taskId => edit(() => setReflectionEditor({ courseId: course.id, taskId }))} onEditReflection={entry => edit(() => setReflectionEditor({ courseId: course.id, entry }))} /> : null}
+        {detail === "reflections" ? <><View style={s.reflectionHead}><Text style={s.reflectionTitle}>Learning reflections</Text><SmallButton label="+ Reflect" onPress={() => edit(() => setReflectionEditor({ courseId: course.id }))} /></View><ReflectionList data={data} courseId={course.id} onEdit={entry => edit(() => setReflectionEditor({ courseId: course.id, entry }))} /></> : null}
         {detail === "notes" ? <LinkedNotes notes={data.notes.filter(n => n.courseId === course.id)} onAdd={() => edit(() => setNoteEditor({ mode: "create", courseId: course.id }))} onOpen={id => setNoteEditor({ mode: "edit", id })} /> : null}
       </MotionPane> : data ? <MotionPane motionKey={collection} reduce={reduceMotion}>
         <View style={s.search}><Icon name="search-outline" size={16} tint={c.muted} /><TextInput value={search} onChangeText={setSearch} placeholder="Find learning…" placeholderTextColor={c.muted} style={s.searchInput} accessibilityLabel="Find learning" returnKeyType="search" />{search ? <Pressable onPress={() => setSearch("")} accessibilityRole="button" accessibilityLabel="Clear search"><Icon name="close-circle" size={17} tint={c.muted} /></Pressable> : null}</View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filters}><Pill label="All" selected={kind === "all"} onPress={() => setKind("all")} />{KINDS.map(k => <Pill key={k.value} label={k.label} selected={kind === k.value} onPress={() => setKind(k.value)} />)}</ScrollView>
-        {collection === "today" ? <Today courses={shown} tasks={data.tasks} today={today} onTask={id => setTaskEditor({ mode: "edit", id })} onCourse={id => { const course = data.courses.find(course => course.id === id); if (course) openCourse(course) }} onAddTask={() => edit(() => setCoursePicker("task"))} onAddSession={() => edit(() => setCoursePicker("session"))} onToggle={complete} /> : collection === "library" ? <Library courses={shown} tasks={data.tasks} notes={data.notes} total={data.courses.length} onOpen={openCourse} onAdd={() => edit(() => setCourseEditor("new"))} /> : <Upcoming courses={shown} tasks={data.tasks} today={today} onTask={id => setTaskEditor({ mode: "edit", id })} onCourse={id => { const found = data.courses.find(x => x.id === id); if (found) openCourse(found) }} />}
+        {collection === "today" ? <Today courses={shown} tasks={data.tasks} data={data} today={today} onTask={id => setTaskEditor({ mode: "edit", id })} onCourse={id => { const course = data.courses.find(course => course.id === id); if (course) openCourse(course) }} onAddTask={() => edit(() => setCoursePicker("task"))} onAddSession={() => edit(() => setCoursePicker("session"))} onToggle={complete} onReflect={task => edit(() => setReflectionEditor({ courseId: task.courseId!, taskId: task.id }))} onEditReflection={entry => edit(() => setReflectionEditor({ courseId: entry.item.courseId ?? "", entry }))} /> : collection === "library" ? <Library courses={shown} tasks={data.tasks} notes={data.notes} total={data.courses.length} onOpen={openCourse} onAdd={() => edit(() => setCourseEditor("new"))} /> : <Upcoming courses={shown} tasks={data.tasks} data={data} today={today} onTask={id => setTaskEditor({ mode: "edit", id })} onCourse={id => { const found = data.courses.find(x => x.id === id); if (found) openCourse(found) }} onReflect={task => edit(() => setReflectionEditor({ courseId: task.courseId!, taskId: task.id }))} onEditReflection={entry => edit(() => setReflectionEditor({ courseId: entry.item.courseId ?? "", entry }))} />}
       </MotionPane> : null}
     </KeyboardScrollView>
+    {data && reflectionEditor ? <LearningReflectionSheet key={reflectionEditor.entry?.item.id ?? `${reflectionEditor.courseId}/${reflectionEditor.taskId ?? "course"}`} data={data} initialCourseId={reflectionEditor.courseId} initialTaskId={reflectionEditor.taskId} entry={reflectionEditor.entry} onClose={() => setReflectionEditor(null)} /> : null}
     {data && courseEditor ? <CourseEditor key={courseEditor === "new" ? "new" : courseEditor.id} value={courseEditor} onClose={() => setCourseEditor(null)} /> : null}
     {data && taskEditor ? <TaskSheet key={taskEditor.mode === "edit" ? taskEditor.id : `new-${taskEditor.courseId}-${taskEditor.learningType}`} editor={taskEditor} data={data} today={today} onClose={() => setTaskEditor(null)} /> : null}
     {data && noteEditor ? <NoteSheet key={noteEditor.mode === "edit" ? noteEditor.id : `new-${noteEditor.courseId}`} editor={noteEditor} data={data} onClose={() => setNoteEditor(null)} compact /> : null}
@@ -100,6 +104,7 @@ function MenuItem({ label, icon, onPress }: { label: string; icon: "calendar-out
   return <Pressable onPress={onPress} style={({ pressed }) => [s.menuItem, pressed && s.pressed]} accessibilityRole="button"><Icon name={icon} size={17} tint={c.accent} /><Text style={s.menuText}>{label}</Text></Pressable>
 }
 const s = StyleSheet.create({
+  reflectionHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }, reflectionTitle: { color: c.text, fontSize: 14, fontWeight: "700" },
   fill: { flex: 1, backgroundColor: c.ground }, flex: { flex: 1, minWidth: 0 }, pane: { gap: 10 }, content: { padding: 14, paddingBottom: NAV_CLEARANCE, gap: 10 },
   header: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 10, gap: 8, zIndex: 4 }, top: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }, topRight: { flexDirection: "row", alignItems: "center", gap: 7 }, breadcrumb: { color: c.text, fontSize: 13, fontWeight: "600" }, muted: { color: c.muted, fontWeight: "400" }, add: { width: 32, height: 32, borderRadius: 16, backgroundColor: c.panel, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: c.line },
   dismiss: { ...StyleSheet.absoluteFill, zIndex: 3 },
