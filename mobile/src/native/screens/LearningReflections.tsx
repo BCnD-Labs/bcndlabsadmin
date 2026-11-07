@@ -13,9 +13,9 @@ export type LearningReflection = { date: string; item: Entry }
 type Answers = { clicked: string; fuzzy: string; next: string; notes: string }
 const empty: Answers = { clicked: "", fuzzy: "", next: "", notes: "" }
 
-export function learningReflections(data: Collections, courseId?: string): LearningReflection[] {
+export function learningReflections(data: Collections, courseId?: string, taskId?: string): LearningReflection[] {
   return data.journal.flatMap(day => (day.entries ?? []).filter(item =>
-    (item.courseId || item.taskId) && (!courseId || item.courseId === courseId || data.tasks.some(task => task.id === item.taskId && task.courseId === courseId))
+    (item.courseId || item.taskId) && (!taskId || item.taskId === taskId) && (!courseId || item.courseId === courseId || data.tasks.some(task => task.id === item.taskId && task.courseId === courseId))
   ).map(item => ({ date: day.id, item }))).sort((a, b) => b.item.createdAt.localeCompare(a.item.createdAt))
 }
 
@@ -39,9 +39,9 @@ export function readLearningReflection(text: string): Answers {
   return a
 }
 
-export function ReflectionList({ data, courseId, onEdit }: { data: Collections; courseId?: string; onEdit: (entry: LearningReflection) => void }) {
+export function ReflectionList({ data, courseId, taskId, onEdit }: { data: Collections; courseId?: string; taskId?: string; onEdit: (entry: LearningReflection) => void }) {
   const [selected, setSelected] = useState<string | null>(null)
-  const entries = learningReflections(data, courseId)
+  const entries = learningReflections(data, courseId, taskId)
   return <View style={s.list}>
     {entries.map(entry => {
       const task = data.tasks.find(t => t.id === entry.item.taskId)
