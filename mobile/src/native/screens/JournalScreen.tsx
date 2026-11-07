@@ -12,6 +12,7 @@ import { editAccess } from "./planner/task-form.ts"
 import { formatDay, shortDay, weekRangeLabel } from "./planner/dates.ts"
 import { LogView } from "./planner/log/LogView.tsx"
 import { useLogDrafts } from "./planner/log/useLogDrafts.ts"
+import { LearningReflectionSheet, ReflectionList, type LearningReflection } from "./LearningReflections.tsx"
 import { CHECKS, EMPTY_CHECK_IN, hasCheckIn, nextPeriod, periodStart, readCheckIn, reviewId, writeCheckIn, type CheckIn, type Period } from "./journal-review.ts"
 
 const PERIODS: Period[] = ["daily", "weekly", "monthly", "yearly"]
@@ -28,6 +29,8 @@ const QUESTIONS: Record<Period, { win: string; hard: string; grateful: string }>
 export function JournalScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
   const { data, status, message, refreshing, refresh, mutate } = useWorkspace()
   const [period, setPeriod] = useState<Period>("daily")
+  const [reflections, setReflections] = useState(false)
+  const [learningEditor, setLearningEditor] = useState<LearningReflection | "new" | null>(null)
   const [day, setDay] = useState(() => todayKey())
   const [editing, setEditing] = useState(false)
   const [taskId, setTaskId] = useState<string | null>(null)
@@ -60,11 +63,11 @@ export function JournalScreen({ onOpenSettings }: { onOpenSettings: () => void }
 
   return <KeyboardFrame style={s.fill}>
     <View style={s.header}><Text style={s.breadcrumb}>Blackwall <Text style={s.muted}>/ Journal</Text></Text><SyncStatus onOpenSettings={onOpenSettings} /></View>
-    <View style={s.tabs} accessibilityRole="tablist">{PERIODS.map(p => <Pressable key={p} onPress={() => { setPeriod(p); setError(null) }} style={[s.tab, period === p && s.tabOn]} accessibilityRole="tab" accessibilityState={{ selected: period === p }}><Text style={[s.tabText, period === p && s.accent]}>{p[0].toUpperCase() + p.slice(1)}</Text></Pressable>)}</View>
+    <View style={s.tabs} accessibilityRole="tablist">{PERIODS.map(p => <Pressable key={p} onPress={() => { setPeriod(p); setReflections(false); setError(null) }} style={[s.tab, period === p && !reflections && s.tabOn]} accessibilityRole="tab" accessibilityState={{ selected: period === p && !reflections }}><Text style={[s.tabText, period === p && !reflections && s.accent]}>{p[0].toUpperCase() + p.slice(1)}</Text></Pressable>)}<Pressable onPress={() => setReflections(true)} style={[s.tab, reflections && s.tabOn]} accessibilityRole="tab" accessibilityState={{ selected: reflections }}><Text style={[s.tabText, reflections && s.accent]}>Reflections</Text></Pressable></View>
     <KeyboardScrollView style={s.fill} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={c.accent} colors={[c.accent]} />}>
       {!data ? <Text style={s.hint}>{status === "signed-out" ? "Sign in from Settings to use Journal." : message ?? "Loading Journal…"}</Text> : <>
         {message && status !== "ok" ? <Text style={s.hint}>{message}</Text> : null}
-        <View style={s.nav}><Pressable onPress={() => setDay(nextPeriod(period, anchor, -1))} style={s.arrow} accessibilityRole="button" accessibilityLabel={`Previous ${period}`}><Icon name="chevron-back" tint={c.text2} /></Pressable><Text style={s.title} accessibilityRole="header">{label}</Text><Pressable onPress={() => setDay(nextPeriod(period, anchor, 1))} style={s.arrow} accessibilityRole="button" accessibilityLabel={`Next ${period}`}><Icon name="chevron-forward" tint={c.text2} /></Pressable><Pressable onPress={() => setDay(today)} style={s.today} accessibilityRole="button"><Text style={s.accent}>Today</Text></Pressable></View>
+        {reflections ? <><View style={s.cardHead}><Text style={s.sectionTitle}>Learning reflections</Text><Pressable onPress={() => setLearningEditor("new")} disabled={!access.ok} accessibilityRole="button"><Text style={s.accent}>+ Reflect</Text></Pressable></View><ReflectionList data={data} onEdit={setLearningEditor} /></> : <><View style={s.nav}><Pressable onPress={() => setDay(nextPeriod(period, anchor, -1))} style={s.arrow} accessibilityRole="button" accessibilityLabel={`Previous ${period}`}><Icon name="chevron-back" tint={c.text2} /></Pressable><Text style={s.title} accessibilityRole="header">{label}</Text><Pressable onPress={() => setDay(nextPeriod(period, anchor, 1))} style={s.arrow} accessibilityRole="button" accessibilityLabel={`Next ${period}`}><Icon name="chevron-forward" tint={c.text2} /></Pressable><Pressable onPress={() => setDay(today)} style={s.today} accessibilityRole="button"><Text style={s.accent}>Today</Text></Pressable></View>
         <View style={s.card}><View style={s.cardHead}><Text style={s.cardTitle}>{period === "daily" ? "Daily check-in" : `${period[0].toUpperCase()}${period.slice(1)} review`}</Text><Pressable disabled={!access.ok} onPress={open} style={s.action} accessibilityRole="button" accessibilityLabel={saved ? "Edit guided check-in" : "Add guided check-in"}><Text style={s.accent}>{saved ? "Edit" : "+ Check in"}</Text></Pressable></View>
           {saved ? <Text style={s.preview}>{saved.text}</Text> : <Text style={s.hint}>A few taps or one word is enough. Writing more is optional.</Text>}
           {drafts[key] ? <Text style={s.hint}>Unsaved answers kept on this screen.</Text> : null}
@@ -72,9 +75,10 @@ export function JournalScreen({ onOpenSettings }: { onOpenSettings: () => void }
         {period === "daily" ? <LogView data={data} today={today} day={day} onDay={setDay} logs={logs} blocked={access.reason} onEditTask={setTaskId} /> : <>
           <Text style={s.sectionTitle}>Entries in this {period.slice(0, -2) || "day"} · {entries.length}</Text>
           {entries.length ? entries.slice().reverse().slice(0, 20).map(entry => <View key={entry.id} style={s.entry}><Text style={s.entryDay}>{shortDay(entry.id)}</Text><Text style={s.preview} numberOfLines={3}>{[entry.text, ...(entry.entries ?? []).map(item => item.text)].filter(Boolean).join("\n") || "Section entries"}</Text></View>) : <Text style={s.hint}>No entries in this period yet.</Text>}
-        </>}
+        </>}</>}
       </>}
     </KeyboardScrollView>
+    {data && learningEditor ? <LearningReflectionSheet key={learningEditor === "new" ? "new" : learningEditor.item.id} data={data} entry={learningEditor === "new" ? undefined : learningEditor} onClose={() => setLearningEditor(null)} /> : null}
     {data && taskId ? <TaskSheet key={taskId} editor={{ mode: "edit", id: taskId }} data={data} today={today} onClose={() => setTaskId(null)} /> : null}
     <Modal visible={editing} transparent animationType="fade" onRequestClose={() => setEditing(false)}>
       <KeyboardFrame style={s.backdrop}><View style={s.dialog} accessibilityViewIsModal><View style={s.cardHead}><Text style={s.cardTitle}>Your {period} check-in</Text><Pressable onPress={() => setEditing(false)} accessibilityRole="button" accessibilityLabel="Close check-in"><Icon name="close" tint={c.text2} /></Pressable></View>
