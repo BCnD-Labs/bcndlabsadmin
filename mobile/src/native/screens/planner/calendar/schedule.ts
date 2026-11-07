@@ -128,7 +128,7 @@ export function localKeyOf(timestamp: string): string | undefined {
 /** What the day's header notes beside the item count: a written daily log and tasks completed that day. */
 export function dayMeta(tasks: readonly Task[], journal: Journal, date: string): { logged: boolean; completed: number } {
   return {
-    logged: journal.some((j) => j.id === date && (j.text.trim() !== "" || (j.sections ?? []).some(s => !!s.text.trim()) || (j.entries ?? []).some(e => !!e.text.trim()))),
+    logged: journal.some((j) => j.id === date && (j.text.trim() !== "" || (j.sections ?? []).some(s => !!s.text.trim()) || (j.entries ?? []).some(e => !e.courseId && !e.taskId && !!e.text.trim()))),
     completed: tasks.filter((t) => t.kind !== "event" && t.done && !!t.completedAt && localKeyOf(t.completedAt) === date).length,
   }
 }
