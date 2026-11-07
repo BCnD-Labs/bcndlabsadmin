@@ -6,7 +6,14 @@ import { Linking, Pressable, StyleSheet, Text, View } from "react-native"
 import { updateCourse, type Collections } from "../../../lib/shared.ts"
 import { plannerColor as c } from "../../planner-theme.ts"
 import { useWorkspace } from "../../data/WorkspaceProvider.tsx"
+import { mono } from "../../../theme.ts"
 import { Icon } from "../../ui.tsx"
+import { todayKey } from "../../data/sync-view.ts"
+import { WorkspaceSection } from "../../WorkspacePage.tsx"
+import { Ring } from "../../kit/charts.tsx"
+import { PropChip } from "../../kit/PropChip.tsx"
+import { dateParts } from "../../kit/stats.ts"
+import { kit, type ChipKind } from "../../kit/tokens.ts"
 import { shortDay } from "../planner/dates.ts"
 import { typeLabel } from "../planner/learning-types.ts"
 import { TaskCheck } from "../planner/TaskCheck.tsx"
@@ -27,16 +34,51 @@ export function Progress({ course, tasks }: { course: Course; tasks: Task[] }) {
 
 export function Library({ courses, tasks, notes, total, onOpen, onAdd }: { courses: Course[]; tasks: Task[]; notes: Note[]; total: number; onOpen: (course: Course) => void; onAdd: () => void }) {
   const [selected, setSelected] = useState<string | null>(null)
-  return <><View style={s.sectionHead}><Text style={s.sectionTitle}>Library</Text><Text style={s.meta}>{courses.length} items</Text></View>{courses.map(x => <View key={x.id} style={[selectedItem.item, selected === x.id && selectedItem.itemOn]}><CourseRow course={x} selected={selected === x.id} tasks={tasks.filter(t => t.courseId === x.id)} onPress={() => setSelected(id => id === x.id ? null : x.id)} />{selected === x.id ? <CoursePeek course={x} tasks={tasks} noteCount={notes.filter(n => n.courseId === x.id).length} onOpen={() => onOpen(x)} /> : null}</View>)}{!courses.length ? <View style={s.empty}><Text style={s.emptyTitle}>{total ? "No matches" : "Your learning library is empty"}</Text><Text style={s.meta}>{total ? "Try a different search or kind." : "Add a course, certification, skill, book, or self-paced track."}</Text>{!total ? <SmallButton label="+ Add learning" onPress={onAdd} /> : null}</View> : null}</>
+  return <>
+    <WorkspaceSection title="Library" icon="school-outline" tint={kit.hue.learning} count={`${courses.length} ${courses.length === 1 ? "item" : "items"}`} flush>
+      {courses.map(x => <View key={x.id} style={[selectedItem.item, selected === x.id && selectedItem.itemOn]}><CourseRow course={x} selected={selected === x.id} tasks={tasks.filter(t => t.courseId === x.id)} onPress={() => setSelected(id => id === x.id ? null : x.id)} />{selected === x.id ? <CoursePeek course={x} tasks={tasks} noteCount={notes.filter(n => n.courseId === x.id).length} onOpen={() => onOpen(x)} /> : null}</View>)}
+      {!courses.length ? <View style={s.empty}><Text style={s.emptyTitle}>{total ? "No matches" : "Your learning library is empty"}</Text><Text style={s.meta}>{total ? "Try a different search or kind." : "Add a course, certification, skill, book, or self-paced track."}</Text>{!total ? <SmallButton label="+ Add learning" onPress={onAdd} /> : null}</View> : null}
+    </WorkspaceSection>
+    {courses.length ? <Text style={s.foot}>Rings show finished tasks. Certifications, self-paced tracks and books count milestones or pages. Items with nothing to count have no ring.</Text> : null}
+  </>
 }
 function CourseRow({ course, selected, tasks, onPress }: { course: Course; selected: boolean; tasks: Task[]; onPress: () => void }) {
   const p = learningProgress(course, tasks)
+  const tint = kindInfo(course).tint
+  const today = todayKey()
   const next = tasks.filter(t => !t.done && t.kind !== "event" && t.learningType !== "event" && t.due).sort((a, b) => a.due!.localeCompare(b.due!))[0]
-  return <Pressable onPress={onPress} style={({ pressed }) => [s.courseRow, pressed && s.pressed]} accessibilityRole="button" accessibilityLabel={`Preview ${course.title}. ${p.label}`}>{!selected ? <View style={[s.kindMark, { backgroundColor: kindInfo(course).tint }]} /> : null}<View style={s.flex}><Text style={s.rowTitle} numberOfLines={2}>{course.title}</Text><Text style={s.meta} numberOfLines={1}>{[kindInfo(course).label, course.code, p.label].filter(Boolean).join(" · ")}</Text>{next ? <Text style={s.next} numberOfLines={1}>Due · {next.title} · {shortDay(next.due!)}</Text> : null}{p.measured ? <View style={s.track}><View style={[s.bar, { width: `${p.value * 100}%`, backgroundColor: kindInfo(course).tint }]} /></View> : null}</View><Icon name="chevron-down" size={16} tint={c.muted} /></Pressable>
+  return <Pressable onPress={onPress} style={({ pressed }) => [s.courseRow, pressed && s.pressed]} accessibilityRole="button" accessibilityState={{ expanded: selected }} accessibilityLabel={`Preview ${course.title}. ${p.label}`}>
+    {p.measured ? <Ring value={p.value} size={36} tint={tint} label={`${course.title}, ${Math.round(p.value * 100)} percent`} /> : <View style={s.noRing} accessible={false}><Text style={s.noRingText}>–</Text></View>}
+    <View style={s.flex}>
+      <Text style={s.rowTitle} numberOfLines={2}>{course.title}</Text>
+      <View style={s.chipRow}>
+        <PropChip kind="course" value={kindInfo(course).label.toUpperCase()} />
+        {course.code ? <PropChip kind="neutral" label="Code" value={course.code} /> : null}
+        {next ? <PropChip kind={next.due! < today ? "overdue" : "date"} label="Next" value={shortDay(next.due!)} /> : null}
+      </View>
+      <Text style={s.meta} numberOfLines={1}>{p.label}</Text>
+    </View>
+    <Icon name={selected ? "chevron-up" : "chevron-down"} size={16} tint={c.muted} />
+  </Pressable>
 }
 function CoursePeek({ course, tasks, noteCount = 0, onOpen }: { course: Course; tasks: Task[]; noteCount?: number; onOpen: () => void }) {
   const open = tasks.filter(t => t.courseId === course.id && !t.done).length
-  return <View style={selectedItem.preview}>{course.description ? <Text style={s.peekText} numberOfLines={2} ellipsizeMode="tail">{previewText(course.description)}</Text> : null}<Text style={s.meta} numberOfLines={2}>{[course.schedule, course.location, `${open} open`, noteCount ? `${noteCount} linked notes` : "", course.links?.length ? `${course.links.length} resources` : ""].filter(Boolean).join(" · ")}</Text><SmallButton label="Open" onPress={onOpen} /></View>
+  const when = [course.startDate && shortDay(course.startDate), course.endDate && shortDay(course.endDate)].filter(Boolean).join(" – ")
+  const source = course.kind === "reading" ? "Author" : course.kind === "certification" ? "Vendor" : "Source"
+  type Chip = { key: string; kind: ChipKind; label?: string; value: string }
+  const list: (Chip | undefined)[] = [
+    course.instructor ? { key: "source", kind: "neutral", label: source, value: course.instructor } : undefined,
+    course.term ? { key: "term", kind: "neutral", label: "Term", value: course.term } : undefined,
+    when ? { key: "when", kind: "date", label: course.kind === "certification" ? "Exam" : "When", value: when } : undefined,
+    course.schedule ? { key: "schedule", kind: "neutral", label: "Schedule", value: course.schedule } : undefined,
+    course.location ? { key: "location", kind: "neutral", label: "Where", value: course.location } : undefined,
+    ...(course.tags ?? []).map((tag): { key: string; kind: ChipKind; label: string; value: string } => ({ key: `tag-${tag}`, kind: "tag", label: "Tag", value: tag })),
+    { key: "open", kind: "status", label: "Open", value: String(open) },
+    noteCount ? { key: "notes", kind: "neutral", label: "Notes", value: String(noteCount) } : undefined,
+    course.links?.length ? { key: "links", kind: "neutral", label: "Links", value: String(course.links.length) } : undefined,
+  ]
+  const chips = list.filter((x): x is Chip => !!x)
+  return <View style={selectedItem.preview}>{course.description ? <Text style={s.peekText} numberOfLines={2} ellipsizeMode="tail">{previewText(course.description)}</Text> : null}<View style={s.chipRow}>{chips.map(chip => <PropChip key={chip.key} kind={chip.kind} label={chip.label} value={chip.value} />)}</View><Pressable onPress={onOpen} style={s.openPill} accessibilityRole="button" accessibilityLabel={`Open ${course.title}`}><Icon name="open-outline" size={12} tint="#fff" /><Text style={s.openPillText}>Open</Text></Pressable></View>
 }
 
 export function Today({ courses, tasks, data, today, onTask, onCourse, onAddTask, onAddSession, onToggle, onReflect, onEditReflection }: { courses: Course[]; tasks: Task[]; data: Collections; today: string; onTask: (id: string) => void; onCourse: (id: string) => void; onAddTask: () => void; onAddSession: () => void; onToggle: (task: Task) => void; onReflect: (task: Task) => void; onEditReflection: (entry: LearningReflection) => void }) {
@@ -62,14 +104,19 @@ export function Upcoming({ courses, tasks, data, today, onTask, onCourse, onRefl
   const rows = upcomingLearning(courses, tasks, today)
   return <><View style={s.sectionHead}><Text style={s.sectionTitle}>Upcoming</Text><Text style={s.meta}>{rows.length} dated items</Text></View>{(["Overdue", "Next 7 days", "Later"] as const).map(group => { const part = rows.filter(x => dueGroup(x.due, today) === group); return part.length ? <View key={group} style={s.group}><Text style={[s.groupLabel, group === "Overdue" && s.error]}>{group} · {part.length}</Text>{part.map(x => {
     const course = courses.find(y => y.id === x.courseId)
-    return <View key={x.id} style={[selectedItem.item, selected === x.id && selectedItem.itemOn]}><Pressable onPress={() => setSelected(id => id === x.id ? null : x.id)} style={({ pressed }) => [s.upcomingRow, pressed && s.pressed]} accessibilityRole="button" accessibilityLabel={`Preview ${x.title}`}><View style={s.dateBox}><Text style={s.dateText}>{shortDay(x.due)}</Text></View><View style={s.flex}><Text style={s.rowTitle} numberOfLines={2}>{x.title}</Text><Text style={s.meta} numberOfLines={1}>{course?.title} · {x.occasion ? `${x.occasion === "planned" ? "Planned work" : "Session / event"}${x.time ? ` · ${formatTime(x.time, prefs.timeFormat)}` : " · All day"}` : x.task ? typeLabel(x.task.learningType ?? "", course?.kind) : "Exam date"}</Text></View><Icon name="chevron-down" size={16} tint={c.muted} /></Pressable>{selected === x.id ? x.task ? <><TaskPeek task={x.task} course={course?.title} onOpen={() => onTask(x.task!.id)} />{course ? <TaskReflectionLinks data={data} task={x.task} course={course} onReflect={() => onReflect(x.task!)} onEdit={onEditReflection} /> : null}</> : course ? <CoursePeek course={course} tasks={tasks} onOpen={() => onCourse(course.id)} /> : null : null}</View>
+    return <View key={x.id} style={[selectedItem.item, selected === x.id && selectedItem.itemOn]}><Pressable onPress={() => setSelected(id => id === x.id ? null : x.id)} style={({ pressed }) => [s.upcomingRow, pressed && s.pressed]} accessibilityRole="button" accessibilityLabel={`Preview ${x.title}`}><UpcomingDate due={x.due} /><View style={s.flex}><Text style={s.rowTitle} numberOfLines={2}>{x.title}</Text><Text style={s.meta} numberOfLines={1}>{course?.title} · {x.occasion ? `${x.occasion === "planned" ? "Planned work" : "Session / event"}${x.time ? ` · ${formatTime(x.time, prefs.timeFormat)}` : " · All day"}` : x.task ? typeLabel(x.task.learningType ?? "", course?.kind) : "Exam date"}</Text></View><Icon name="chevron-down" size={16} tint={c.muted} /></Pressable>{selected === x.id ? x.task ? <><TaskPeek task={x.task} course={course?.title} onOpen={() => onTask(x.task!.id)} />{course ? <TaskReflectionLinks data={data} task={x.task} course={course} onReflect={() => onReflect(x.task!)} onEdit={onEditReflection} /> : null}</> : course ? <CoursePeek course={course} tasks={tasks} onOpen={() => onCourse(course.id)} /> : null : null}</View>
   })}</View> : null })}{rows.length === 0 ? <Text style={s.emptyHint}>No dated learning work yet. Add a deadline or schedule a session.</Text> : null}</>
+}
+
+function UpcomingDate({ due }: { due: string }) {
+  const parts = dateParts(due)
+  return <View style={s.dateBox} accessible accessibilityLabel={`${parts.month} ${parts.day}`}><Text style={s.dateMonth}>{parts.month}</Text><Text style={s.dateText}>{parts.day}</Text></View>
 }
 
 export function Work({ course, tasks, data, tab, onTab, onAdd, onOpen, onToggle, onReflect, onEditReflection }: { course: Course; tasks: Task[]; data: Collections; tab: WorkTab; onTab: (tab: WorkTab) => void; onAdd: () => void; onOpen: (id: string) => void; onToggle: (task: Task) => void; onReflect: (id: string) => void; onEditReflection: (entry: LearningReflection) => void }) {
   const [selected, setSelected] = useState<string | null>(null)
   const shown = tasks.filter(t => tab === "all" || (tab === "done") === t.done).sort((a, b) => Number(a.done) - Number(b.done) || (a.due ?? "9999").localeCompare(b.due ?? "9999"))
-  return <><View style={s.sectionHead}><Text style={s.sectionTitle}>Work</Text><SmallButton label="+ Add" onPress={onAdd} /></View><View style={s.smallTabs}>{(["open", "done", "all"] as const).map(x => <Pill key={x} label={x[0].toUpperCase() + x.slice(1)} selected={tab === x} onPress={() => { setSelected(null); onTab(x) }} />)}</View>{shown.map(t => <View key={t.id} style={[selectedItem.item, selected === t.id && selectedItem.itemOn]}><View style={s.workRow}>{t.kind === "event" || t.learningType === "event" ? <Icon name="calendar-outline" size={18} tint={c.accent} /> : <TaskCheck checked={t.done} onPress={() => onToggle(t)} label={`${t.done ? "Reopen" : "Complete"} ${t.title}`} />}<Pressable onPress={() => setSelected(id => id === t.id ? null : t.id)} style={s.flex} accessibilityRole="button" accessibilityLabel={`Preview ${t.title}`}><Text style={[s.rowTitle, t.done && s.done]} numberOfLines={2}>{t.title}</Text><Text style={s.meta}>{[typeLabel(t.learningType ?? "", course.kind), t.due ? shortDay(t.due) : "", t.score != null ? `Score ${t.score}%` : ""].filter(Boolean).join(" · ")}</Text></Pressable><Pressable onPress={() => setSelected(id => id === t.id ? null : t.id)} style={s.iconTouch} accessibilityRole="button" accessibilityLabel={`Preview ${t.title}`}><Icon name="chevron-down" size={17} tint={c.muted} /></Pressable></View>{selected === t.id ? <><TaskPeek task={t} course={course.title} onOpen={() => onOpen(t.id)} /><TaskReflectionLinks data={data} task={t} course={course} onReflect={() => onReflect(t.id)} onEdit={onEditReflection} /></> : null}</View>)}{!shown.length ? <Text style={s.emptyHint}>{tab === "done" ? "Completed work will appear here." : "No work here yet. Add a step when you’re ready."}</Text> : null}</>
+  return <><View style={s.sectionHead}><Text style={s.sectionTitle}>Work</Text><SmallButton label="+ Add" onPress={onAdd} /></View><View style={s.smallTabs}>{(["open", "done", "all"] as const).map(x => <Pill key={x} label={x[0].toUpperCase() + x.slice(1)} selected={tab === x} onPress={() => { setSelected(null); onTab(x) }} />)}</View>{shown.map(t => <View key={t.id} style={[selectedItem.item, selected === t.id && selectedItem.itemOn]}><View style={s.workRow}>{t.kind === "event" || t.learningType === "event" ? <Icon name="calendar-outline" size={18} tint={c.accent} /> : <TaskCheck checked={t.done} onPress={() => onToggle(t)} label={`${t.done ? "Reopen" : "Complete"} ${t.title}`} />}<Pressable onPress={() => setSelected(id => id === t.id ? null : t.id)} style={s.flex} accessibilityRole="button" accessibilityLabel={`Preview ${t.title}`}><Text style={[s.rowTitle, t.done && s.done]} numberOfLines={2}>{t.title}</Text><View style={s.chipRow}><PropChip kind="tag" value={typeLabel(t.learningType ?? "", course.kind)} />{t.due ? <PropChip kind={!t.done && t.due < todayKey() ? "overdue" : "date"} label="Due" value={shortDay(t.due)} /> : null}{t.score != null ? <PropChip kind="status" label="Score" value={`${t.score}%`} /> : null}</View></Pressable><Pressable onPress={() => setSelected(id => id === t.id ? null : t.id)} style={s.iconTouch} accessibilityRole="button" accessibilityLabel={`Preview ${t.title}`}><Icon name="chevron-down" size={17} tint={c.muted} /></Pressable></View>{selected === t.id ? <><TaskPeek task={t} course={course.title} onOpen={() => onOpen(t.id)} /><TaskReflectionLinks data={data} task={t} course={course} onReflect={() => onReflect(t.id)} onEdit={onEditReflection} /></> : null}</View>)}{!shown.length ? <Text style={s.emptyHint}>{tab === "done" ? "Completed work will appear here." : "No work here yet. Add a step when you’re ready."}</Text> : null}</>
 }
 
 function TaskReflectionLinks({ data, task, course, onReflect, onEdit }: { data: Collections; task: Task; course: Course; onReflect: () => void; onEdit: (entry: LearningReflection) => void }) {
@@ -107,9 +154,12 @@ const s = StyleSheet.create({
   reflectionRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingLeft: 36, paddingRight: 10, paddingBottom: 6 },
   flex: { flex: 1, minWidth: 0 }, pressed: { opacity: 0.72 }, sectionHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 32 }, sectionTitle: { color: c.text, fontSize: 14, fontWeight: "700" }, meta: { color: c.muted, fontSize: 12, lineHeight: 17 },
   progress: { gap: 4, paddingVertical: 2 }, progressText: { color: c.text2, fontSize: 12 }, track: { width: "100%", height: 3, borderRadius: 2, backgroundColor: c.raised, overflow: "hidden", marginTop: 3 }, bar: { height: 3, borderRadius: 2 },
-  courseRow: { flexDirection: "row", alignItems: "center", gap: 9, paddingVertical: 6 }, kindMark: { width: 5, height: 30, borderRadius: 3 }, rowTitle: { color: c.text, fontSize: 14, lineHeight: 19, fontWeight: "600" }, next: { color: c.text2, fontSize: 11, lineHeight: 16 },
+  courseRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8, paddingHorizontal: 8 }, kindMark: { width: 5, height: 30, borderRadius: 3 },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginVertical: 3 }, noRing: { width: 36, height: 36, borderRadius: 18, borderWidth: 3, borderColor: "#232426", alignItems: "center", justifyContent: "center" }, noRingText: { color: c.muted, fontSize: 12 },
+  openPill: { alignSelf: "flex-start", minHeight: 30, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, borderRadius: 15, backgroundColor: c.action, borderWidth: 1, borderColor: c.selectedBorder }, openPillText: { color: "#fff", fontSize: 11.5, fontWeight: "600" },
+  foot: { color: c.muted, fontSize: 11, lineHeight: 16, paddingHorizontal: 2 }, rowTitle: { color: c.text, fontSize: 14, lineHeight: 19, fontWeight: "600" }, next: { color: c.text2, fontSize: 11, lineHeight: 16 },
   peekText: { color: c.text2, fontSize: 12, lineHeight: 17 },
-  group: { gap: 1 }, groupLabel: { color: c.muted, fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.4, paddingVertical: 5 }, error: { color: "#ff8787" }, upcomingRow: { flexDirection: "row", alignItems: "center", gap: 9, minHeight: 44 }, dateBox: { minWidth: 46, paddingHorizontal: 5, paddingVertical: 5, borderRadius: 8, backgroundColor: c.raised, alignItems: "center" }, dateText: { color: c.dateText, fontSize: 11 },
+  group: { gap: 1 }, groupLabel: { color: c.muted, fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.4, paddingVertical: 5 }, error: { color: "#ff8787" }, upcomingRow: { flexDirection: "row", alignItems: "center", gap: 9, minHeight: 44 }, dateBox: { width: 36, height: 36, borderRadius: 6, backgroundColor: "#3b3220", alignItems: "center", justifyContent: "center" }, dateMonth: { color: "#ffcc80", fontFamily: mono, fontSize: 8, fontWeight: "700", letterSpacing: 0.8 }, dateText: { color: "#ffcc80", fontSize: 14, fontWeight: "700", lineHeight: 16 },
   smallTabs: { flexDirection: "row", gap: 6 }, workRow: { flexDirection: "row", alignItems: "center", gap: 8, minHeight: 44, paddingVertical: 2 }, done: { color: c.green, textDecorationLine: "line-through" }, iconTouch: { width: 32, minHeight: 34, alignItems: "center", justifyContent: "center" }, recordRow: { flexDirection: "row", alignItems: "center", gap: 9, minHeight: 40 },
   body: { color: c.text2, fontSize: 13, lineHeight: 19 }, fact: { flexDirection: "row", gap: 9, borderBottomWidth: 1, borderColor: c.line, paddingVertical: 6 }, factLabel: { width: 66, color: c.muted, fontSize: 12 }, factValue: { flex: 1, color: c.text2, fontSize: 12 }, pages: { flexDirection: "row", alignItems: "center", gap: 7 }, pageInput: { width: 55, minHeight: 30, borderRadius: 9, borderWidth: 1, borderColor: c.line, color: c.text, textAlign: "center", fontSize: 13, paddingVertical: 3 },
   empty: { alignItems: "center", gap: 8, paddingVertical: 28 }, emptyTitle: { color: c.text, fontSize: 15, fontWeight: "700" }, emptyHint: { color: c.muted, fontSize: 13, lineHeight: 19, paddingVertical: 14 },
