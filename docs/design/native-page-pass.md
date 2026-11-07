@@ -16,4 +16,4 @@ The Android launcher and Settings were reviewed as page bones. This is a coverag
 | Mikoshi | Saved tools, service status and in-app/browser opening | On-device tool stack review |
 | Settings | Server, account, view mode, updates and data controls | On-device text and keyboard review |
 
-The first pass keeps existing records and navigation intact. New page bones read the shared workspace, label Web-only actions plainly, and do not invent external-service data. Native controls retain at least 32dp touch targets. Review selection edges, the last scroll row above navigation, long labels and large text on an Android device before calling the visual pass final.
+The first pass keeps existing records and navigation intact. New page bones read the shared workspace, label Web-only actions plainly, and do not invent external-service data. Controls changed in this pass retain at least 32dp touch targets. Review selection edges, the last scroll row above navigation, long labels and large text on an Android device before calling the visual pass final.

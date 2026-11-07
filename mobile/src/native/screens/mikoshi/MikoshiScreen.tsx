@@ -164,7 +164,7 @@ const s = StyleSheet.create({
   barButton: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: c.panel },
   chipScroll: { flex: 1 }, chips: { gap: 5, alignItems: "center", paddingHorizontal: 2 },
   chip: { minHeight: 32, flexDirection: "row", alignItems: "center", borderRadius: 16, backgroundColor: c.panel }, chipOn: { backgroundColor: c.selected },
-  chipMain: { minHeight: 26, justifyContent: "center", paddingHorizontal: 11, maxWidth: 150 }, chipText: { color: c.text2, fontSize: 12, fontWeight: "500" }, chipTextOn: { color: c.accent, fontWeight: "600" },
-  chipClose: { width: 24, height: 26, alignItems: "center", justifyContent: "center", marginLeft: -6 },
+  chipMain: { minHeight: 32, justifyContent: "center", paddingHorizontal: 11, maxWidth: 150 }, chipText: { color: c.text2, fontSize: 12, fontWeight: "500" }, chipTextOn: { color: c.accent, fontWeight: "600" },
+  chipClose: { width: 32, height: 32, alignItems: "center", justifyContent: "center", marginLeft: -6 },
   stack: { flex: 1 },
 })
