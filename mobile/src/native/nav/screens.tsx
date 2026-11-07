@@ -8,6 +8,7 @@ import { MikoshiScreen } from "../screens/mikoshi/MikoshiScreen.tsx"
 import { NotesScreen } from "../screens/NotesScreen.tsx"
 import { PlannerScreen } from "../screens/PlannerScreen.tsx"
 import { WebsiteScreen } from "../screens/WebsiteScreen.tsx"
+import { SocialScreen } from "../screens/SocialScreen.tsx"
 import type { ScreenKey } from "./destinations.ts"
 
 /** `focused` is false while a screen that stays mounted in the background (see KEEP_ALIVE) is not the one on show. */
@@ -23,6 +24,7 @@ export const SCREENS: Record<ScreenKey, ComponentType<ScreenProps>> = {
   notes: NotesScreen,
   insights: InsightsScreen,
   website: WebsiteScreen,
+  social: SocialScreen,
   mikoshi: MikoshiScreen,
 }
 
