@@ -6,7 +6,7 @@
 import { addDaysToKey, daysBetween, weekdayOfKey } from "../../../../lib/shared.ts"
 
 export type WeekStart = 0 | 1
-export type CalendarView = "day" | "three" | "week" | "month"
+export type CalendarView = "day" | "week" | "month"
 
 /** `n` days after `key`. An invalid key comes back unchanged so a bad value can never crash a screen. */
 export const shift = (key: string, n: number): string => addDaysToKey(key, n) ?? key
@@ -58,10 +58,10 @@ export function monthGrid(key: string, weekStart: WeekStart): string[][] {
 
 /** One step of the header arrows: a day, a week or a month. */
 export function stepBy(view: CalendarView, key: string, direction: 1 | -1): string {
-  return view === "month" ? addMonths(key, direction) : shift(key, direction * (view === "week" ? 7 : view === "three" ? 3 : 1))
+  return view === "month" ? addMonths(key, direction) : shift(key, direction * (view === "week" ? 7 : 1))
 }
 
 /** The days a view lays out as columns. */
 export function columnsFor(view: CalendarView, key: string, weekStart: WeekStart): string[] {
-  return view === "day" ? [key] : view === "three" ? [key, shift(key, 1), shift(key, 2)] : weekOf(key, weekStart)
+  return view === "day" ? [key] : weekOf(key, weekStart)
 }

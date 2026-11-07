@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-na
 import { plannerColor as c } from "../../../planner-theme.ts"
 import { Icon } from "../../../ui.tsx"
 import type { CalendarView } from "./grid.ts"
-const VIEWS = [{ key: "day", label: "Day" }, { key: "three", label: "3 days" }, { key: "week", label: "Week" }, { key: "month", label: "Month" }] as const
+const VIEWS = [{ key: "month", label: "Month" }, { key: "week", label: "7-day" }, { key: "day", label: "Day" }] as const
 export function CalendarHeader({ title, view, onView, onStep, onToday, onSettings, compact = false }: {
   compact?: boolean; title: string; view: CalendarView; onView: (v: CalendarView) => void; onStep: (d: -1 | 1) => void; onToday: () => void; onSettings: (anchor?: { top: number; right: number }) => void
 }) {
@@ -11,9 +11,9 @@ export function CalendarHeader({ title, view, onView, onStep, onToday, onSetting
   const { width } = useWindowDimensions()
   return <View style={styles.wrap}>
     <View style={styles.row}>
-      <Pressable style={styles.icon} onPress={() => onStep(-1)} accessibilityRole="button" accessibilityLabel={`Previous ${view === "three" ? "three days" : view}`}><Icon name="chevron-back" tint={c.text2} /></Pressable>
+      <Pressable style={styles.icon} onPress={() => onStep(-1)} accessibilityRole="button" accessibilityLabel={`Previous ${view === "week" ? "seven days" : view}`}><Icon name="chevron-back" tint={c.text2} /></Pressable>
       <Text style={styles.title} numberOfLines={1} accessibilityRole="header">{title}</Text>
-      <Pressable style={styles.icon} onPress={() => onStep(1)} accessibilityRole="button" accessibilityLabel={`Next ${view === "three" ? "three days" : view}`}><Icon name="chevron-forward" tint={c.text2} /></Pressable>
+      <Pressable style={styles.icon} onPress={() => onStep(1)} accessibilityRole="button" accessibilityLabel={`Next ${view === "week" ? "seven days" : view}`}><Icon name="chevron-forward" tint={c.text2} /></Pressable>
       <Pressable style={styles.today} onPress={onToday} accessibilityRole="button"><Text style={styles.todayText}>Today</Text></Pressable>
     </View>
     {!compact ? <View style={styles.row}>
