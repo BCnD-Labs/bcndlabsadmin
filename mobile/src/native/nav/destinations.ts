@@ -9,7 +9,7 @@ import type { IconName } from "../ui.tsx"
 export const NAV_CLEARANCE = 140
 
 /** Screens the shell can show. "settings" is an action (opens native Settings), not a screen. */
-export type ScreenKey = "home" | "planner" | "journal" | "learning" | "dev" | "notes" | "insights" | "website" | "mikoshi"
+export type ScreenKey = "home" | "planner" | "journal" | "learning" | "dev" | "notes" | "insights" | "website" | "social" | "mikoshi"
 export type DestinationKey = ScreenKey | "settings"
 export type GroupName = "Daily" | "Build" | "Homelab" | "App"
 
@@ -26,7 +26,7 @@ export type Destination = {
 
 export const GROUP_ORDER: readonly GroupName[] = ["Daily", "Build", "Homelab", "App"]
 
-/** Destinations from later steps (Social, Mikoshi) are added here when they are built. */
+/** Registered native destinations; Settings is the launcher action. */
 export const DESTINATIONS: readonly Destination[] = [
   { key: "home", label: "Home", icon: "home-outline", activeIcon: "home", primary: true },
   { key: "planner", label: "Planner", icon: "calendar-outline", activeIcon: "calendar", primary: true },
@@ -36,6 +36,7 @@ export const DESTINATIONS: readonly Destination[] = [
   { key: "notes", label: "Notes", icon: "document-text-outline", activeIcon: "document-text", group: "Daily" },
   { key: "insights", label: "Insights", icon: "stats-chart-outline", activeIcon: "stats-chart", group: "Daily" },
   { key: "website", label: "Website", icon: "globe-outline", activeIcon: "globe", group: "Build" },
+  { key: "social", label: "Social", icon: "megaphone-outline", activeIcon: "megaphone", group: "Build" },
   { key: "mikoshi", label: "Mikoshi", icon: "server-outline", activeIcon: "server", group: "Homelab" },
   { key: "settings", label: "Settings", icon: "settings-outline", activeIcon: "settings", group: "App" },
 ]

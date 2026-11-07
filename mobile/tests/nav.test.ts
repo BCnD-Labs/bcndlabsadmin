@@ -41,6 +41,7 @@ test("Settings sits in the App group, which comes last", () => {
     groups.find((g) => g.group === "Daily")?.items.map((i) => i.key),
     ["journal", "notes", "insights"],
   )
+  assert.deepEqual(groups.find((g) => g.group === "Build")?.items.map((i) => i.key), ["website", "social"])
 })
 
 test("findDestination falls back to the first destination", () => {

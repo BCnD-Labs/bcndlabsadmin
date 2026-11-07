@@ -9,4 +9,6 @@ export { defaultMakeId, toggleTask, createTask, updateTask, removeTask, toggleSt
 export type { NewTask, NewNote, NewCourse, NewService } from "../../../blackwall-admin/shared/records.ts"
 export { GROUP_ORDER, TASK_TABS, compareTasks, groupOf, inTab, isForToday, isOverdue, matchesSearch, normalizeSearch, taskGroups, taskRows, parseQuickAdd } from "../../../blackwall-admin/shared/task-rules.ts"
 export type { TaskGroup, TaskTab } from "../../../blackwall-admin/shared/task-rules.ts"
+export { postAccounts, postState } from "../../../blackwall-admin/shared/social.ts"
+export type { PostState } from "../../../blackwall-admin/shared/social.ts"
 export { addDaysToKey, dayNumber, daysBetween, weekdayOfKey } from "../../../blackwall-admin/shared/date-keys.ts"

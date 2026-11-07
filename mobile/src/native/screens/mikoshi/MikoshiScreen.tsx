@@ -4,6 +4,7 @@ import type { ServiceStatus } from "../../../lib/service-status.ts"
 import { useWorkspace } from "../../data/WorkspaceProvider.tsx"
 import type { Collections } from "../../../lib/shared.ts"
 import { plannerColor as c } from "../../planner-theme.ts"
+import { selectedItem } from "../../selected-item.ts"
 import type { ScreenProps } from "../../nav/screens.tsx"
 import { WorkspacePage, WorkspaceSection } from "../../WorkspacePage.tsx"
 import { Icon, type IconName } from "../../ui.tsx"
@@ -108,7 +109,7 @@ function ToolRow({ name, description, url, status, isOpen, selected, onPress, on
   const target = toolTarget(url)
   const label = !status ? "not checked yet" : status.up ? `up${status.ms != null ? `, ${status.ms} milliseconds` : ""}` : "down"
   return (
-    <View style={[s.item, selected && s.itemOn]}>
+    <View style={[selectedItem.item, selected && selectedItem.itemOn]}>
       <View style={s.rowWrap}><Pressable onPress={onPress} style={s.row} accessibilityRole="button" accessibilityLabel={`${name}, ${label}${isOpen ? ", open" : ""}${target.kind === "app" ? "" : ", opens in the browser"}`}>
         <View style={s.badge}><Text style={s.badgeText}>{name.trim().charAt(0).toUpperCase() || "?"}</Text></View>
         <View style={s.rowBody}>
@@ -120,9 +121,9 @@ function ToolRow({ name, description, url, status, isOpen, selected, onPress, on
         <View style={[s.dot, { backgroundColor: !status ? c.muted : status.up ? c.green : "#ff8787" }]} />
       </Pressable><Pressable onPress={onEdit} style={s.edit} accessibilityRole="button" accessibilityLabel={`Edit ${name}`}><Icon name="create-outline" size={15} tint={c.muted} /></Pressable></View>
       {selected ? (
-        <View style={s.strip}>
+        <View style={selectedItem.preview}>
           <Text style={s.detail}>{target.kind === "browser" ? "Plain http:// isn't loaded inside the app yet." : "This isn't a web address. Tap the edit button to fix it."}</Text>
-          {target.kind === "browser" ? <Pressable onPress={() => void Linking.openURL(target.url).catch(() => undefined)} style={s.pill} accessibilityRole="button" accessibilityLabel={`Open ${name} in the browser`}><Icon name="open-outline" size={12} tint={c.accent} /><Text style={s.pillText}>Open in browser</Text></Pressable> : null}
+          {target.kind === "browser" ? <Pressable onPress={() => void Linking.openURL(target.url).catch(() => undefined)} style={selectedItem.action} accessibilityRole="button" accessibilityLabel={`Open ${name} in the browser`}><Icon name="open-outline" size={12} tint={c.accent} /><Text style={selectedItem.actionText}>Open in browser</Text></Pressable> : null}
         </View>
       ) : null}
     </View>
@@ -154,18 +155,16 @@ const s = StyleSheet.create({
   fill: { flex: 1, backgroundColor: c.ground }, hidden: { display: "none" },
   add: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: c.panel, borderWidth: 1, borderColor: c.line },
   empty: { gap: 8, paddingVertical: 16 }, title: { color: c.text, fontSize: 15, fontWeight: "700" }, meta: { color: c.muted, fontSize: 11, lineHeight: 16 }, error: { color: "#ffa8a8", fontSize: 12 },
-  item: { borderBottomWidth: 1, borderColor: c.line, borderLeftWidth: 3, borderLeftColor: "transparent" }, itemOn: { backgroundColor: c.selected, borderLeftColor: c.accent },
   rowWrap: { flexDirection: "row", alignItems: "center" }, row: { flex: 1, minHeight: 46, flexDirection: "row", alignItems: "center", gap: 9, paddingVertical: 4 }, edit: { width: 32, height: 32, alignItems: "center", justifyContent: "center" }, rowBody: { flex: 1, minWidth: 0 }, rowTitle: { color: c.text, fontSize: 14, fontWeight: "600" },
   badge: { width: 28, height: 28, borderRadius: 8, backgroundColor: c.raised, borderWidth: 1, borderColor: c.line, alignItems: "center", justifyContent: "center" }, badgeText: { color: c.accent, fontSize: 13, fontWeight: "700" },
   tag: { color: c.dateText, fontSize: 10, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8, backgroundColor: c.dateFill }, tagOn: { color: c.accent, fontSize: 10, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8, backgroundColor: c.tagFill },
   dot: { width: 9, height: 9, borderRadius: 5, marginRight: 4 },
-  strip: { gap: 6, paddingLeft: 37, paddingBottom: 8, paddingRight: 6 }, detail: { color: c.text2, fontSize: 12, lineHeight: 17 },
-  pill: { minHeight: 26, alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, borderRadius: 14, backgroundColor: c.panel }, pillText: { color: c.accent, fontSize: 11, fontWeight: "600" },
+  detail: { color: c.text2, fontSize: 12, lineHeight: 17 },
   bar: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingTop: 8, paddingBottom: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.line },
   barButton: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: c.panel },
   chipScroll: { flex: 1 }, chips: { gap: 5, alignItems: "center", paddingHorizontal: 2 },
-  chip: { minHeight: 28, flexDirection: "row", alignItems: "center", borderRadius: 15, backgroundColor: c.panel, borderWidth: 1, borderColor: c.line }, chipOn: { backgroundColor: c.selected, borderColor: c.selectedBorder },
-  chipMain: { minHeight: 26, justifyContent: "center", paddingHorizontal: 11, maxWidth: 150 }, chipText: { color: c.muted, fontSize: 12, fontWeight: "500" }, chipTextOn: { color: c.accent },
-  chipClose: { width: 24, height: 26, alignItems: "center", justifyContent: "center", marginLeft: -6 },
+  chip: { minHeight: 32, flexDirection: "row", alignItems: "center", borderRadius: 16, backgroundColor: c.panel }, chipOn: { backgroundColor: c.selected },
+  chipMain: { minHeight: 32, justifyContent: "center", paddingHorizontal: 11, maxWidth: 150 }, chipText: { color: c.text2, fontSize: 12, fontWeight: "500" }, chipTextOn: { color: c.accent, fontWeight: "600" },
+  chipClose: { width: 32, height: 32, alignItems: "center", justifyContent: "center", marginLeft: -6 },
   stack: { flex: 1 },
 })
