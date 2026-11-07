@@ -3,6 +3,7 @@ import type { Collections } from "../../../lib/shared.ts"
 import { plannerColor as color } from "../../planner-theme.ts"
 import { Icon, tone } from "../../ui.tsx"
 import { selectedItem } from "../../selected-item.ts"
+import { PropChip } from "../../kit/PropChip.tsx"
 import { SwipeRow } from "./SwipeRow.tsx"
 import { TaskCheck } from "./TaskCheck.tsx"
 import { TaskPeek } from "./TaskPeek.tsx"
@@ -62,9 +63,10 @@ export function TaskRow({ row, task, expanded, onSelect, density, tagFocus, onTo
             {row.title}
           </Text>
           {row.dueText !== "No date" || row.time || row.course || (tagFocus && row.focused && !row.done) ? <View style={styles.meta}>
-            {row.dueText !== "No date" || row.time ? <View style={[styles.badge, styles.dueBadge]}><Icon name="calendar-outline" size={11} tint={row.overdue ? tone.red : color.dateText} /><Text numberOfLines={1} style={[styles.badgeText, styles.dueText, row.overdue && styles.overdue]}>{[row.dueText !== "No date" && row.dueText, row.time].filter(Boolean).join(" · ")}</Text></View> : null}
-            {row.course ? <View style={[styles.badge, styles.courseBadge]}><Text numberOfLines={1} style={[styles.badgeText, styles.courseText]}>{row.course}</Text></View> : null}
-            {tagFocus && row.focused && !row.done ? <View style={[styles.badge, styles.focusBadge]}><Text style={[styles.badgeText, styles.focusText]}>Focus</Text></View> : null}
+            {row.dueText !== "No date" ? <PropChip kind={row.overdue && !row.done ? "overdue" : "date"} label="Due" value={row.dueText} /> : null}
+            {row.time ? <PropChip kind="date" label="Time" value={row.time} /> : null}
+            {row.course ? <PropChip kind="course" label="Course" value={row.course} /> : null}
+            {tagFocus && row.focused && !row.done ? <PropChip kind="neutral" label="Focus" value="On" /> : null}
           </View> : null}
           {m.showDetails && row.details ? (
             <Text style={styles.details} numberOfLines={1}>

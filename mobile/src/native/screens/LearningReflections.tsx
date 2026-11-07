@@ -9,6 +9,7 @@ import { plannerColor as c } from "../planner-theme.ts"
 import { Icon } from "../ui.tsx"
 import { previewText } from "./planner/TaskPeek.tsx"
 import { selectedItem } from "../selected-item.ts"
+import { PropChip } from "../kit/PropChip.tsx"
 
 type Entry = NonNullable<Collections["journal"][number]["entries"]>[number]
 export type LearningReflection = { date: string; item: Entry }
@@ -54,7 +55,7 @@ export function ReflectionList({ data, courseId, taskId, onEdit }: { data: Colle
       return <View key={entry.item.id} style={[selectedItem.item, selected === entry.item.id && selectedItem.itemOn]}>
         <Pressable onPress={() => setSelected(id => id === entry.item.id ? null : entry.item.id)} accessibilityRole="button" accessibilityLabel={`Preview reflection for ${source}`} accessibilityState={{ expanded: selected === entry.item.id }} style={s.row}>
           <Text style={s.title} numberOfLines={1}>{source}</Text>
-          <Text style={s.meta} numberOfLines={1}>{[task && course?.title, entry.date].filter(Boolean).join(" · ")}</Text>
+          <View style={s.chips}>{task && course ? <PropChip kind="course" label="Course" value={course.title} /> : null}<PropChip kind="date" label="Written" value={entry.date} /></View>
         </Pressable>
         {selected === entry.item.id ? <View style={selectedItem.preview}><Text style={s.preview} numberOfLines={2} ellipsizeMode="tail">{previewText(preview)}</Text><Pressable onPress={() => onEdit(entry)} style={selectedItem.action} accessibilityRole="button"><Text style={selectedItem.actionText}>Open reflection</Text></Pressable></View> : null}
       </View>
@@ -106,7 +107,7 @@ export function LearningReflectionSheet({ data, initialCourseId, initialTaskId, 
 
 const s = StyleSheet.create({
   list: { gap: 2 },
-  row: { minHeight: 44, paddingHorizontal: 8, paddingVertical: 5, gap: 3 }, title: { color: c.text, fontSize: 14, fontWeight: "600" }, meta: { color: c.muted, fontSize: 11 }, hint: { color: c.muted, fontSize: 12, paddingVertical: 8 },
+  row: { minHeight: 48, paddingHorizontal: 10, paddingVertical: 6, gap: 4 }, chips: { flexDirection: "row", flexWrap: "wrap", gap: 4 }, title: { color: c.text, fontSize: 14, fontWeight: "600" }, meta: { color: c.muted, fontSize: 11 }, hint: { color: c.muted, fontSize: 12, padding: 10 },
   preview: { color: c.text2, fontSize: 12 },
   backdrop: { flex: 1, justifyContent: "center", padding: 16, backgroundColor: "rgba(0,0,0,0.55)" }, dialog: { maxHeight: "88%", padding: 14, borderRadius: shape.dialog, backgroundColor: c.raised, gap: 12 }, head: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }, dialogTitle: { color: c.text, fontSize: 16, fontWeight: "700" },
   scroll: { flexShrink: 1 }, form: { gap: 10, paddingBottom: 10 }, label: { color: c.text, fontSize: 13, fontWeight: "600" }, field: { gap: 5 }, choices: { flexDirection: "row", gap: 6 }, choice: { minHeight: 32, maxWidth: 220, justifyContent: "center", borderRadius: 16, paddingHorizontal: 10, backgroundColor: c.panel }, choiceOn: { backgroundColor: c.selected }, choiceText: { color: c.text2, fontSize: 12 },

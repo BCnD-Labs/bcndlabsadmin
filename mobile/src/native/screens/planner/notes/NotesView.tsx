@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
   compactAdd: { width: 32, height: 32, borderRadius: 16, backgroundColor: color.selected, borderWidth: 1, borderColor: "#1976d2" },
   off: { opacity: 0.45 },
   search: { flexDirection: "row", alignItems: "center", gap: 8, minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: color.border, backgroundColor: color.well, paddingHorizontal: 12 },
-  compactSearch: { minHeight: 36, borderRadius: 20, backgroundColor: color.panel, borderColor: color.line },
+  compactSearch: { minHeight: 38, borderRadius: 8, backgroundColor: color.panel, borderColor: color.line },
   searchInput: { flex: 1, color: color.text, fontSize: 15, paddingVertical: 8 },
   compactSearchInput: { fontSize: 13, paddingVertical: 5 },
   error: { color: color.errorText, fontSize: 13 },

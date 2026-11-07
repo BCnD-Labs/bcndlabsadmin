@@ -3,6 +3,7 @@ import { useState } from "react"
 import { Keyboard, Pressable, StyleSheet, Text, View } from "react-native"
 import { createTask } from "../../../lib/shared.ts"
 import { plannerColor as color } from "../../planner-theme.ts"
+import { shape } from "../../../shape.ts"
 import { Icon, tone } from "../../ui.tsx"
 import { useWorkspace } from "../../data/WorkspaceProvider.tsx"
 import { dueText } from "./rows.ts"
@@ -73,11 +74,11 @@ export function QuickAdd({ today, defaultDue }: { today: string; defaultDue?: st
 
 const styles = StyleSheet.create({
   wrap: { gap: 4 },
-  opener: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start", gap: 5, minHeight: 32, paddingHorizontal: 9, borderRadius: 16, backgroundColor: color.panel },
+  opener: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start", gap: 5, minHeight: 32, paddingHorizontal: 9, borderRadius: shape.card, backgroundColor: color.panel, borderWidth: 1, borderColor: color.line },
   openerText: { color: color.accent, fontSize: 11, fontWeight: "500" },
   row: { flexDirection: "row", alignItems: "center", gap: 6 },
-  input: { flex: 1, minHeight: 40, borderRadius: 20, backgroundColor: color.panel, color: color.text, paddingHorizontal: 12, paddingVertical: 6, fontSize: 14 },
-  add: { minWidth: 44, minHeight: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: color.action, paddingHorizontal: 10 },
+  input: { flex: 1, minHeight: 40, borderRadius: shape.card, borderWidth: 1, borderColor: color.line, backgroundColor: color.panel, color: color.text, paddingHorizontal: 12, paddingVertical: 6, fontSize: 14 },
+  add: { minWidth: 44, minHeight: 40, borderRadius: shape.card, alignItems: "center", justifyContent: "center", backgroundColor: color.action, paddingHorizontal: 10 },
   addOff: { opacity: 0.4 },
   addText: { color: "#fff", fontSize: 13, fontWeight: "600" },
   close: { width: 32, height: 40, alignItems: "center", justifyContent: "center" },

@@ -3,7 +3,8 @@ import { useState } from "react"
 import { Pressable, StyleSheet, Text, View } from "react-native"
 import type { Collections } from "../../../../lib/shared.ts"
 import { plannerColor as color } from "../../../planner-theme.ts"
-import { Empty, Icon, SectionLabel, tone } from "../../../ui.tsx"
+import { Icon, tone } from "../../../ui.tsx"
+import { WorkspaceSection } from "../../../WorkspacePage.tsx"
 import { DailyLogEditor } from "./DailyLogEditor.tsx"
 import { LogLists } from "./LogLists.tsx"
 import { dayTitle, recentEntries, shiftDay, weekStrip } from "./log-rules.ts"
@@ -14,7 +15,7 @@ import type { LogDrafts } from "./useLogDrafts.ts"
  * that have an entry, an inline composer with explicit Save entry, custom section tabs, the tasks done
  * and due that day, and the latest entries. Text stays in a draft until the workspace holds it.
  */
-export function LogView({ data, today, logs, day, onDay: setDay, blocked, onEditTask, hideNav = false, heading }: { hideNav?: boolean; heading?: string; data: Collections; today: string; day: string; onDay: (day: string) => void; logs: LogDrafts; blocked?: string; onEditTask: (id: string) => void }) {
+export function LogView({ data, today, logs, day, onDay: setDay, blocked, onEditTask, hideNav = false, intro }: { hideNav?: boolean; /** A line of explanation at the top of the Log panel. */ intro?: string; data: Collections; today: string; day: string; onDay: (day: string) => void; logs: LogDrafts; blocked?: string; onEditTask: (id: string) => void }) {
   const { drafts } = logs
   const recent = recentEntries(data.journal, drafts)
 
@@ -45,20 +46,24 @@ export function LogView({ data, today, logs, day, onDay: setDay, blocked, onEdit
         ))}
       </View>
 
-      <DailyLogEditor data={data} day={day} logs={logs} blocked={blocked} heading={heading} />
+      <WorkspaceSection title="Log" icon="book-outline" tint={color.accent}>
+        {intro ? <Text style={styles.intro}>{intro}</Text> : null}
+        <DailyLogEditor data={data} day={day} logs={logs} blocked={blocked} embedded />
+      </WorkspaceSection>
 
       <LogLists tasks={data.tasks} day={day} onEditTask={onEditTask} />
 
-      <SectionLabel>Recent entries</SectionLabel>
-      {recent.length === 0 ? <Empty>No entries yet. Your dated entries appear here.</Empty> : null}
-      {recent.map((e) => (
-        <Pressable key={e.day} onPress={() => setDay(e.day)} style={({ pressed }) => [styles.recent, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={`Open the log for ${e.day}`}>
-          <Text style={styles.recentDay}>{dayTitle(e.day, today)}</Text>
-          <Text style={styles.recentText} numberOfLines={1}>
-            {e.preview}
-          </Text>
-        </Pressable>
-      ))}
+      <WorkspaceSection title="Recent entries" icon="time-outline" tint={color.accent} count={recent.length ? String(recent.length) : undefined} collapsible flush>
+        {recent.length === 0 ? <Text style={styles.intro}>No entries yet. Your dated entries appear here.</Text> : null}
+        {recent.map((e) => (
+          <Pressable key={e.day} onPress={() => setDay(e.day)} style={({ pressed }) => [styles.recent, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={`Open the log for ${e.day}`}>
+            <Text style={styles.recentDay}>{dayTitle(e.day, today)}</Text>
+            <Text style={styles.recentText} numberOfLines={1}>
+              {e.preview}
+            </Text>
+          </Pressable>
+        ))}
+      </WorkspaceSection>
     </View>
   )
 }
@@ -68,7 +73,7 @@ const styles = StyleSheet.create({
   nav: { flexDirection: "row", alignItems: "center", gap: 4 },
   arrow: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   titleBox: { flex: 1 },
-  today: { minHeight: 34, justifyContent: "center", paddingHorizontal: 12, borderRadius: 18, backgroundColor: color.panel },
+  today: { minHeight: 34, justifyContent: "center", paddingHorizontal: 12, borderRadius: 8, backgroundColor: color.panel, borderWidth: 1, borderColor: color.line },
   todayText: { color: color.accent, fontSize: 12, fontWeight: "600" },
   title: { color: color.text, fontSize: 17, fontWeight: "700" },
   week: { flexDirection: "row", gap: 6 },
@@ -79,7 +84,8 @@ const styles = StyleSheet.create({
   num: { color: color.text, fontSize: 16, fontWeight: "700" },
   onSelected: { color: color.text },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "transparent" },
-  recent: { minHeight: 52, justifyContent: "center", gap: 2, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: color.line },
+  intro: { color: color.muted, fontSize: 12, lineHeight: 18, paddingVertical: 6 },
+  recent: { minHeight: 52, justifyContent: "center", gap: 2, paddingVertical: 6, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: color.line },
   recentDay: { color: color.text, fontSize: 14, fontWeight: "600" },
   recentText: { color: color.muted, fontSize: 13 },
   pressed: { backgroundColor: color.raised },

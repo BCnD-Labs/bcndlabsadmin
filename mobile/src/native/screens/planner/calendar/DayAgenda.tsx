@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native"
 import type { Collections } from "../../../../lib/shared.ts"
 import { plannerColor as color } from "../../../planner-theme.ts"
 import { Empty, Icon, tone } from "../../../ui.tsx"
+import { PropChip } from "../../../kit/PropChip.tsx"
 import { selectedItem } from "../../../selected-item.ts"
 import { TaskCheck } from "../TaskCheck.tsx"
 import { TaskPeek } from "../TaskPeek.tsx"
@@ -28,14 +29,8 @@ export function DayAgenda({ day, items, tasks, meta, format, onEdit, onToggle, s
   const note = [meta.logged && "Daily log written", meta.completed > 0 && `${meta.completed} completed`].filter(Boolean).join(" · ")
   return (
     <View style={styles.card} accessibilityLabel={`Items on ${longDay(day)}`}>
-      <View style={styles.head}>
-        <Text style={styles.title} accessibilityRole="header">
-          {longDay(day)}
-        </Text>
-        <Text style={styles.count}>{items.length ? `${items.length} ${items.length === 1 ? "item" : "items"}` : "Nothing scheduled"}</Text>
-      </View>
       {note ? <Text style={styles.note}>{note}</Text> : null}
-      {items.length === 0 ? <Empty>Nothing is scheduled or due on this day.</Empty> : null}
+      {items.length === 0 ? <Text style={styles.empty}>Nothing is scheduled or due on this day.</Text> : null}
       {items.map((item) => (
         <View key={item.id} style={[selectedItem.item, previewKey === `${day}/${item.id}` && selectedItem.itemOn]}>
         <View style={styles.row}>
@@ -44,11 +39,12 @@ export function DayAgenda({ day, items, tasks, meta, format, onEdit, onToggle, s
             <Text style={[styles.rowTitle, item.done && styles.done]} numberOfLines={2}>
               {item.title}
             </Text>
-            <Text style={styles.sub} numberOfLines={1}>
-              {item.event ? "Event · " : ""}{item.time ? (showTimes ? `${formatTime(item.time, format)}${item.duration ? ` · ${durationText(item.duration)}` : ""}` : "") : item.deadline ? "Due" : "All day"}
-              {item.overdue ? <Text style={styles.overdue}>{" · Overdue"}</Text> : null}
-              {showCourses && item.course ? ` · ${item.course}` : ""}
-            </Text>
+            <View style={styles.chips}>
+              {item.event ? <PropChip kind="tag" value="EVENT" /> : null}
+              <PropChip kind="date" label={item.time ? "Time" : item.deadline ? "Due" : "When"} value={item.time ? (showTimes ? `${formatTime(item.time, format)}${item.duration ? ` · ${durationText(item.duration)}` : ""}` : "Set") : item.deadline ? "This day" : "All day"} />
+              {item.overdue ? <PropChip kind="overdue" value="OVERDUE" /> : null}
+              {showCourses && item.course ? <PropChip kind="course" label="Course" value={item.course} /> : null}
+            </View>
           </Pressable>
           {!item.event && item.deadline && !item.done ? <Icon name="flag-outline" size={16} tint={item.overdue ? tone.amber : color.muted} /> : null}
         </View>
@@ -64,8 +60,8 @@ const styles = StyleSheet.create({
   head: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 6 },
   title: { flex: 1, color: color.text, fontSize: 12, fontWeight: "600" },
   count: { color: color.muted, fontSize: 11 },
-  note: { color: color.muted, fontSize: 11, marginTop: 2 },
-  row: { flexDirection: "row", alignItems: "center", gap: 2, paddingVertical: 2 },
+  note: { color: color.muted, fontSize: 11, paddingHorizontal: 10, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: color.line }, empty: { color: color.muted, fontSize: 12, padding: 10 }, chips: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 3 },
+  row: { flexDirection: "row", alignItems: "center", gap: 2, paddingVertical: 4, paddingRight: 8 },
   body: { flex: 1, justifyContent: "center", gap: 1, paddingVertical: 0 },
   rowTitle: { color: color.text, fontSize: 14, lineHeight: 18, includeFontPadding: false, fontWeight: "500" },
   done: { color: color.muted, textDecorationLine: "line-through" },

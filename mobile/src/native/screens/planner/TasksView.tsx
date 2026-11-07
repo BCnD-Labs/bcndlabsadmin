@@ -5,7 +5,10 @@ import { TASK_TABS, removeTask, toggleStar, toggleTask, type Collections, type T
 import { plannerColor as color } from "../../planner-theme.ts"
 import { useWorkspace } from "../../data/WorkspaceProvider.tsx"
 import { showSnack } from "../../snack/snack-store.ts"
-import { Button, ChipRow, Empty, Icon, tone } from "../../ui.tsx"
+import { Button, Empty, Icon, tone } from "../../ui.tsx"
+import { Tabs } from "../../kit/Tabs.tsx"
+import { WorkspaceSection } from "../../WorkspacePage.tsx"
+import { shape } from "../../../shape.ts"
 import { QuickActionsSheet } from "./QuickActionsSheet.tsx"
 import { QuickAdd } from "./QuickAdd.tsx"
 import { TaskRow } from "./TaskRow.tsx"
@@ -91,31 +94,15 @@ export function TasksView({ data, today, onEdit, onCreateDue, search: query, onS
     <TaskRow key={r.id} row={r} task={data.tasks.find(t => t.id === r.id)!} expanded={previewId === r.id} onSelect={() => setPreviewId(value => value === r.id ? null : r.id)} density={density} tagFocus={tagFocus} onToggle={() => toggle(r.id)} onOpen={() => onEdit(r.id)} onStar={() => star(r.id)} onDelete={() => remove(r.id)} onMenu={() => setMenuId(r.id)} />
   )
   const renderSection = (s: PlannerSection, tagFocus: boolean) => (
-    <View key={s.key} accessibilityLabel={s.title ?? "Completed"}>
-      {s.title ? (
-        <Pressable style={styles.head} onPress={() => setCollapsed((all) => { const next = new Set(all); if (next.has(s.key)) next.delete(s.key); else next.add(s.key); return next })} accessibilityRole="button" accessibilityLabel={`${collapsed.has(s.key) ? "Expand" : "Collapse"} ${s.title}`} accessibilityState={{ expanded: !collapsed.has(s.key) }}>
-          <Icon name={collapsed.has(s.key) ? "chevron-forward" : "chevron-down"} size={15} tint={color.muted} />
-          <Text style={[styles.sectionTitle, s.warn && styles.warn]} accessibilityRole="header">{s.title}</Text>
-          <View style={styles.countBubble}><Text style={styles.count}>{s.count}</Text></View>
-        </Pressable>
-      ) : null}
-      {!s.title || !collapsed.has(s.key) ? <View style={styles.list}>{s.rows.map((r) => renderRow(r, tagFocus))}</View> : null}
-    </View>
+    <WorkspaceSection key={s.key} title={s.title ?? "Completed"} icon={s.warn ? "alert-circle-outline" : tagFocus ? "checkbox-outline" : "flash-outline"} tint={s.warn ? tone.red : color.accent} count={String(s.count)} collapsible={!!s.title} flush>
+      {s.rows.map((r) => renderRow(r, tagFocus))}
+    </WorkspaceSection>
   )
 
   return (
     <>
       <View style={styles.filters}>
-        <View style={styles.tabs}>
-          <ChipRow>
-            {TASK_TABS.map((t) => (
-              <Pressable key={t.value} onPress={() => changeTab(t.value)} style={[styles.filter, tab === t.value && styles.filterOn]} accessibilityRole="button" accessibilityLabel={t.label} accessibilityState={{ selected: tab === t.value }}>
-                <Text style={[styles.filterText, tab === t.value && styles.filterTextOn]}>{t.label}</Text>
-                {t.value !== "done" ? <Text style={[styles.filterCount, tab === t.value && styles.filterTextOn]}>{counts[t.value]}</Text> : null}
-              </Pressable>
-            ))}
-          </ChipRow>
-        </View>
+        <View style={styles.tabs}><Tabs label="Task lists" items={TASK_TABS.map(x => ({ key: x.value, label: x.label, count: x.value !== "done" ? counts[x.value] : undefined }))} value={tab} onChange={changeTab} /></View>
         <Pressable onPress={() => setStarredOnly((v) => !v)} style={[styles.tool, starredOnly && styles.toolOn]} accessibilityRole="button" accessibilityLabel="Starred only" accessibilityState={{ selected: starredOnly }}>
           <Icon name={starredOnly ? "star" : "star-outline"} size={17} tint={starredOnly ? tone.amber : color.text2} />
         </Pressable>
@@ -158,8 +145,8 @@ const styles = StyleSheet.create({
   filterText: { color: color.text2, fontSize: 12, fontWeight: "600" },
   filterCount: { color: color.muted, fontSize: 10 },
   filterTextOn: { color: color.accent },
-  input: { minHeight: 38, borderRadius: 20, backgroundColor: color.panel, color: color.text, paddingHorizontal: 14, paddingVertical: 6, fontSize: 14 },
-  tool: { width: 34, height: 34, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: color.panel },
+  input: { minHeight: 38, borderRadius: shape.card, borderWidth: 1, borderColor: color.line, backgroundColor: color.panel, color: color.text, paddingHorizontal: 14, paddingVertical: 6, fontSize: 14 },
+  tool: { width: 34, height: 34, borderRadius: shape.card, alignItems: "center", justifyContent: "center", backgroundColor: color.panel, borderWidth: 1, borderColor: color.line },
   toolOn: { backgroundColor: "#423722" },
   empty: { gap: 8 },
   fabRoom: { height: 12 },
