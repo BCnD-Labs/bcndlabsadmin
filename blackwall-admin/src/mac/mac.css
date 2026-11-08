@@ -211,9 +211,9 @@ html[data-runtime="mac-native"] .mac-tool-empty { padding: 8px 6px; color: var(-
 html[data-runtime="mac-native"] .mac-task-list { margin: 2px 0 0; padding: 0; list-style: none; }
 html[data-runtime="mac-native"] .mac-task { display: flex; align-items: center; gap: 7px; min-height: 28px; padding: 2px 4px; border-radius: 3px; font-size: 12px; }
 html[data-runtime="mac-native"] .mac-task:hover { background: var(--bw-raised); }
-html[data-runtime="mac-native"] .mac-task button { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
-html[data-runtime="mac-native"] .mac-task[data-done="true"] button { color: var(--bw-muted); text-decoration: line-through; }
-html[data-runtime="mac-native"] .mac-task[data-late="true"] button { color: var(--bw-amber, #e0a03a); }
+html[data-runtime="mac-native"] .mac-task button:not([role="checkbox"]) { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+html[data-runtime="mac-native"] .mac-task[data-done="true"] button:not([role="checkbox"]) { color: var(--bw-muted); text-decoration: line-through; }
+html[data-runtime="mac-native"] .mac-task[data-late="true"] button:not([role="checkbox"]) { color: var(--bw-amber, #e0a03a); }
 html[data-runtime="mac-native"] .mac-task-tag { font-size: 10px; color: var(--bw-muted); }
 html[data-runtime="mac-native"] .mac-log-tool { padding-bottom: 5px; }
 html[data-runtime="mac-native"] .mac-log-groups { display: grid; gap: 3px; margin: 4px; }
