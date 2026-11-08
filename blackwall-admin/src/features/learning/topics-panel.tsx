@@ -18,6 +18,7 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`
 /** A course's modules (units, chapters, topics). Open one to see its work, add work to it, and tick the ones you know. */
 export function TopicsPanel({ course }: { course: Course }) {
   const tasks = useWorkspace((s) => s.tasks)
+  const allNotes = useWorkspace((s) => s.notes)
   const courses = useWorkspace((s) => s.courses)
   const update = useWorkspace((s) => s.update)
   const [editing, setEditing] = useState(false)
@@ -62,6 +63,7 @@ export function TopicsPanel({ course }: { course: Course }) {
                     {work.length ? <ul className="grid gap-0.5">{work.map((x) => (
                       <li key={x.id} className="flex min-h-8 items-center gap-2 text-[12.5px]"><Checkbox checked={x.done} aria-label={`${x.title}: done`} onCheckedChange={() => useWorkspace.getState().toggleTask(x.id)} /><span className={cn("min-w-0 flex-1 truncate text-ink-2", x.done && "line-through text-faint")}>{x.title}</span><span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">{x.due ?? ""}</span></li>
                     ))}</ul> : <p className="text-xs text-muted-foreground">Nothing in this module yet.</p>}
+                    {(() => { const mine = allNotes.filter((n) => n.courseId === course.id && n.topicIds?.includes(t.id)); return mine.length ? <ul className="mt-1.5 grid gap-0.5 border-t border-line-soft pt-1.5">{mine.map((n) => <li key={n.id} className="truncate text-[12px] text-ink-2" title={n.text}>📝 {n.text.split("\n")[0]}</li>)}</ul> : null })()}
                     <Button variant="outline" size="xs" className="mt-1.5" onClick={() => setAdding(t.id)}><Plus /> Add work</Button>
                   </div>
                 )}

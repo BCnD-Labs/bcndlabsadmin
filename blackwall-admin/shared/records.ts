@@ -120,14 +120,15 @@ export function removeSubtask<T extends TaskData>(data: T, taskId: string, stepI
   return { ...data, tasks: data.tasks.map((task) => (task.id === taskId && task.subtasks ? { ...task, subtasks: task.subtasks.filter((s) => s.id !== stepId), updatedAt: t } : task)) }
 }
 
-/** Removes a course topic and unlinks it from the course's work, rather than deleting that work. */
-export function removeCourseTopic<T extends TaskData & Pick<Collections, "courses">>(data: T, courseId: string, topicId: string, opts: RecordOptions = {}): T {
+/** Removes a course module and unlinks it from the course's work and notes, rather than deleting them. */
+export function removeCourseTopic<T extends TaskData & Pick<Collections, "courses"> & Partial<Pick<Collections, "notes">>>(data: T, courseId: string, topicId: string, opts: RecordOptions = {}): T {
   const t = (opts.now ?? defaultNow)()
   return {
     ...data,
     courses: data.courses.map((c) => (c.id === courseId ? { ...c, topics: (c.topics ?? []).filter((x) => x.id !== topicId), updatedAt: t } : c)),
     tasks: data.tasks.map((task) => task.courseId === courseId && (task.topicIds?.includes(topicId) || task.subtasks?.some((s) => s.topicId === topicId))
       ? { ...task, topicIds: task.topicIds?.filter((x) => x !== topicId), subtasks: task.subtasks?.map((s) => (s.topicId === topicId ? { ...s, topicId: undefined } : s)), updatedAt: t } : task),
+    ...(data.notes ? { notes: data.notes.map((n) => (n.courseId === courseId && n.topicIds?.includes(topicId) ? { ...n, topicIds: n.topicIds.filter((x) => x !== topicId), updatedAt: t } : n)) } : {}),
   }
 }
 

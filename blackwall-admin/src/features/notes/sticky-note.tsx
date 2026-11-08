@@ -1,11 +1,13 @@
-import { Pin, PinOff, Trash2 } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { Layers, Link2, Pin, PinOff, Trash2 } from "lucide-react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { timeAgo } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import type { Note, NoteColor } from "@/lib/types"
+import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
+import { modulesOf, tasksOfNote } from "@shared/links"
 import { NOTE_COLORS, noteColor } from "./note-colors"
 import { courseHref } from "@/lib/routes"
 import { courseLabel } from "@/features/learning/learning-utils"
@@ -40,6 +42,10 @@ export function StickyNote({ note, autoFocus, compact }: { note: Note; autoFocus
   const remove = useWorkspace((s) => s.remove)
   const togglePin = useWorkspace((s) => s.togglePin)
   const course = useWorkspace((s) => (note.courseId ? s.courses.find((c) => c.id === note.courseId) : undefined))
+  const allTasks = useWorkspace((s) => s.tasks)
+  const openForm = useUi((s) => s.openForm)
+  const linked = useMemo(() => tasksOfNote({ tasks: allTasks }, note.id), [allTasks, note.id])
+  const modules = modulesOf(course, note)
   const [text, setText] = useState(note.text)
   const [focused, setFocused] = useState(false)
   const ref = useRef<HTMLTextAreaElement>(null)
@@ -91,6 +97,12 @@ export function StickyNote({ note, autoFocus, compact }: { note: Note; autoFocus
         rows={compact ? 2 : 3}
         className="w-full resize-none bg-transparent text-sm leading-relaxed font-medium outline-none placeholder:text-black/45"
       />
+      {(modules.length > 0 || linked.length > 0) && (
+        <div className="mt-1 flex flex-wrap gap-1" data-testid="note-links">
+          {modules.map((m) => <span key={m.id} className="inline-flex max-w-full items-center gap-1 rounded-full bg-black/10 px-1.5 text-[11px] font-semibold text-black/80"><Layers className="size-2.5 shrink-0" aria-hidden /><span className="truncate">{m.title}</span></span>)}
+          {linked.map((t) => <button key={t.id} type="button" onClick={() => openForm({ kind: "task", id: t.id })} title={`Open ${t.title}`} className="inline-flex max-w-full items-center gap-1 rounded-full bg-black/10 px-1.5 text-[11px] text-black/80 hover:bg-black/15"><Link2 className="size-2.5 shrink-0" aria-hidden /><span className="truncate">{t.title}</span></button>)}
+        </div>
+      )}
       <div className={cn("mt-1 flex items-center gap-1 text-xs text-black/75 [&_button:hover]:bg-black/10 [&_button:hover]:text-black", !focused && "opacity-80 group-hover:opacity-100")}>
         <span className="mr-auto flex min-w-0 items-center gap-1.5">
           {course && !compact && (
@@ -113,6 +125,7 @@ export function StickyNote({ note, autoFocus, compact }: { note: Note; autoFocus
             ))}
           </span>
         )}
+        <Button variant="quiet" size="icon-sm" aria-label="Link to work or a module" title="Link to an assignment, task or module" className="text-black/60" onClick={() => openForm({ kind: "note", id: note.id })}><Link2 /></Button>
         <Button
           variant="quiet"
           size="icon-sm"

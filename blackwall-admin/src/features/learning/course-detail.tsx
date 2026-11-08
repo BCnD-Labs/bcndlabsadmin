@@ -30,6 +30,7 @@ import { daysLabel, meetingKindLabel } from "@shared/learning"
 import { formatTime } from "@/lib/dates"
 import { CourseworkRow, KindIcon } from "./coursework"
 import { TopicsPanel } from "./topics-panel"
+import { TopicChips } from "@/components/forms/topics-field"
 import { ProgressBar, ProgressRing, dateRange, kindSubtitle } from "./learning-page"
 import { COURSE_STATUS_LABEL, compareCoursework, courseStatus, kindInfo, kindOf, kindProgress, learningType } from "./learning-utils"
 
@@ -324,11 +325,13 @@ function CourseNotes({ course }: { course: Course }) {
   const notes = useWorkspace((s) => s.notes)
   const create = useWorkspace((s) => s.create)
   const [text, setText] = useState("")
+  const [noteModules, setNoteModules] = useState<string[]>([])
   const linked = notes.filter((n) => n.courseId === course.id).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
   const add = () => {
     if (!text.trim()) return
-    create("notes", { text: text.trim(), color: "blue", pinned: false, courseId: course.id })
+    create("notes", { text: text.trim(), color: "blue", pinned: false, courseId: course.id, topicIds: noteModules.length ? noteModules : undefined })
     setText("")
+    setNoteModules([])
   }
   return (
     <Panel
@@ -365,6 +368,7 @@ function CourseNotes({ course }: { course: Course }) {
           }}
           placeholder={kindOf(course) === "course" ? "Lecture notes, reminders, questions for office hours…" : "Notes, reminders, questions…"}
         />
+        {!!course.topics?.length && <div className="grid gap-1"><span className="text-[11px] text-muted-foreground">Module (optional)</span><TopicChips topics={course.topics} value={noteModules} onChange={setNoteModules} /></div>}
         <div className="flex items-center justify-between gap-2">
           <span className="text-[11px] text-faint">Also on the Notes page · ⌘/Ctrl + Enter</span>
           <Button type="submit" size="sm" disabled={!text.trim()}>

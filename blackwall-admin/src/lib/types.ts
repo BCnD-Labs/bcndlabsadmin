@@ -97,6 +97,8 @@ export interface Note {
   pinned: boolean
   /** Linked course (Productivity → Learning). */
   courseId?: ID
+  /** Modules of that course this note belongs to. */
+  topicIds?: ID[]
   createdAt: Timestamp
   updatedAt: Timestamp
 }

@@ -97,3 +97,23 @@ test("quizzes and an assignment type: older records load, long types are refused
   assert.equal(plan.at(-1)?.title, "Final review")
   assert.equal(plan.at(-1)?.date, "2026-11-11")
 })
+
+test("notes, tasks and modules link both ways from one stored field", async () => {
+  const { notesOfTask, tasksOfNote, tasksLinkingTask, setNoteTaskLinks, withLink, modulesOf } = await import("../shared/links.ts")
+  const note = { id: "n1", text: "Recursion cheat sheet\nbase case first", color: "plain" as const, pinned: false, courseId: "crs_a", topicIds: ["tp1"], createdAt: ts, updatedAt: ts }
+  const a = task({ id: "a" }), b = task({ id: "b", recordLinks: [{ kind: "task", id: "a" }] })
+  let data = { ...emptyWorkspace(), courses: [course({ topics })], tasks: [a, b], notes: [note] }
+  assert.ok(validWorkspace(data))
+  data = setNoteTaskLinks(data, "n1", ["a", "b"], ts)
+  assert.deepEqual(tasksOfNote(data, "n1").map((t) => t.id), ["a", "b"], "a link made from the note shows on both tasks")
+  assert.deepEqual(notesOfTask(data, data.tasks[0]).map((n) => n.id), ["n1"], "and the task sees the note")
+  assert.deepEqual(tasksLinkingTask(data, "a").map((t) => t.id), ["b"], "linked from")
+  data = setNoteTaskLinks(data, "n1", ["b"], ts)
+  assert.equal(data.tasks[0].recordLinks, undefined, "unlinking empties the field")
+  assert.equal(data.tasks[0].updatedAt, ts)
+  assert.equal(withLink(undefined, { kind: "note", id: "n1" }, true).length, 1)
+  assert.deepEqual(modulesOf(data.courses[0], note).map((m) => m.title), ["Recursion"])
+  const gone = removeCourseTopic(data, "crs_a", "tp1")
+  assert.deepEqual(gone.notes[0].topicIds, [], "deleting a module unlinks its notes too")
+  assert.ok(!validWorkspace({ ...data, notes: [{ ...note, topicIds: [3] as never }] }))
+})

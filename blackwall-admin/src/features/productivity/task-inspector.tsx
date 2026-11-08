@@ -8,7 +8,10 @@ import { SegmentedTabs } from "@/components/common/segmented-tabs"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import type { RecordLink, ReflectionItem, Task, TaskReflection } from "@/lib/types"
+import type { Course, RecordLink, ReflectionItem, Task, TaskReflection } from "@/lib/types"
+import { ModuleChip } from "@/features/learning/module-chip"
+import { toggleSubtask } from "@shared/records"
+import { stepProgress } from "@shared/steps"
 import { parseKey } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import { useWorkspace } from "@/stores/workspace"
@@ -45,12 +48,29 @@ export function TaskInspector({ task, date, tab, onTab, onDate, onSelect }: {
           <div><h3 className="bw-label mb-1">Task details</h3><p className="whitespace-pre-wrap text-sm text-ink-2">{task.details || "No instructions added."}</p></div>
           <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground"><span>Due: {task.due ? format(parseKey(task.due), "MMM d, yyyy") : "No deadline"}{task.time ? ` · ${task.time}` : ""}</span><DocLinksMenu links={task.links} /></div>
           <label className="flex items-center gap-2 text-sm"><Checkbox checked={task.focusDate === date} onCheckedChange={(checked) => update("tasks", task.id, { focusDate: checked ? date : undefined })} />Focus on {format(parseKey(date), "MMM d")}</label>
+          <TaskParts task={task} course={course} />
           <ScheduleFields key={task.id} task={task} />
         </div> : <ReflectionEditor key={task.id} task={task} date={date} onDone={() => onTab("details")} />}
       </div>
       <LinkedRecords task={task} date={date} onDate={onDate} onSelect={onSelect} />
     </>}
   </Panel>
+}
+
+/** What the Learning pages add to a task: its module, its own type, and its steps. The same ones, ticked the same way. */
+function TaskParts({ task, course }: { task: Task; course?: Course }) {
+  const toggle = (stepId: string) => useWorkspace.setState((s) => toggleSubtask({ tasks: s.tasks }, task.id, stepId))
+  const steps = task.subtasks ?? []
+  if (!steps.length && !task.workType && !task.topicIds?.length) return null
+  return (
+    <div className="space-y-2 border-t border-line-soft pt-3" data-testid="inspector-parts">
+      {(task.workType || !!task.topicIds?.length) && <div className="flex flex-wrap items-center gap-1.5 text-xs">{task.workType && <span className="rounded-full bg-ink-2/10 px-2 py-0.5 text-ink-2">{task.workType}</span>}<ModuleChip task={task} course={course} /></div>}
+      {steps.length > 0 && <>
+        <h3 className="bw-label">Steps · {stepProgress(task).done}/{stepProgress(task).total}</h3>
+        <ul className="space-y-1">{steps.map((st) => <li key={st.id} className="flex items-center gap-2 text-sm"><Checkbox checked={st.done} aria-label={`${st.title}: done`} onCheckedChange={() => toggle(st.id)} /><span className={cn("min-w-0 flex-1", st.done && "text-faint line-through")}>{st.title}</span>{st.date && <span className="shrink-0 text-[11px] text-muted-foreground">{format(parseKey(st.date), "MMM d")}</span>}</li>)}</ul>
+      </>}
+    </div>
+  )
 }
 
 function ScheduleFields({ task }: { task: Task }) {

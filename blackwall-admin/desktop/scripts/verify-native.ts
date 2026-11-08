@@ -144,6 +144,12 @@ server.listen(0, "127.0.0.1", () => {
     await clickAt("button[aria-label='Create new']", "")
     await clickAt("[role=menuitem]", "Task")
     assert(await wc!.executeJavaScript("!!document.querySelector('#task-title') && !document.body.innerText.includes('Something broke')"), "Create → Task opens the task form without crashing")
+    assert(await wc!.executeJavaScript("!!document.querySelector('[data-testid=linked-records] select')"), "The task form can link notes and tasks")
+    await wc!.executeJavaScript("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))")
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    await clickAt("button[aria-label='Create new']", "")
+    await clickAt("[role=menuitem]", "Note")
+    assert(await wc!.executeJavaScript("!!document.querySelector('#note-text') && !!document.querySelector('select[aria-label=\"Link a task\"]') && !document.body.innerText.includes('Something broke')"), "Create → Note opens the note form with linked work")
     await wc!.executeJavaScript("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))")
     await new Promise((resolve) => setTimeout(resolve, 300))
     // Rail names: the toggle writes the names beside the icons and moves the windows over.

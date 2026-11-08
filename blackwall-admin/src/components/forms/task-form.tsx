@@ -13,6 +13,8 @@ import { useWorkspace } from "@/stores/workspace"
 import { CourseSelect, Field, OptionSelect } from "./fields"
 import { FormFrame } from "./form-frame"
 import { StepsField } from "./steps-field"
+import { LinkedRecordsField } from "./linked-records-field"
+import { tasksLinkingTask } from "@shared/links"
 import { TopicChips } from "./topics-field"
 import { StudyPlanButton } from "@/features/learning/study-plan"
 
@@ -41,6 +43,7 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
     workType: base?.workType ?? "",
     subtasks: (base?.subtasks ?? []) as Subtask[],
     topicIds: base?.topicIds ?? [],
+    recordLinks: base?.recordLinks ?? [],
   })
   const set = (patch: Partial<typeof draft>) => setDraft((d) => ({ ...d, ...patch }))
 
@@ -73,6 +76,7 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
       subtasks: draft.subtasks.filter((s) => s.title.trim()).length ? draft.subtasks.filter((s) => s.title.trim()).map((s) => ({ ...s, title: s.title.trim() })) : undefined,
       topicIds: draft.courseId && draft.topicIds.length ? draft.topicIds.filter((id) => course?.topics?.some((t) => t.id === id)) : undefined,
       links: cleanLinks(draft.links),
+      recordLinks: draft.recordLinks.length ? draft.recordLinks : undefined,
       score: draft.courseId && scored ? score : undefined,
     }
     if (existing) {
@@ -187,6 +191,9 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
       {existing && (draft.learningType === "exam" || draft.learningType === "quiz") && !!draft.courseId && !draft.done && !!draft.due && (
         <div><StudyPlanButton taskId={existing.id} draft={{ task: { ...existing, due: draft.due || undefined, learningType: draft.learningType, topicIds: draft.topicIds, subtasks: draft.subtasks }, onChange: (t) => set({ subtasks: t.subtasks ?? [] }) }} /></div>
       )}
+      <Field label="Linked notes and tasks" htmlFor="task-records" hint="Notes and other tasks that belong with this. The links show on both sides.">
+        <LinkedRecordsField value={draft.recordLinks} onChange={(recordLinks) => set({ recordLinks })} selfId={existing?.id} backlinks={existing ? tasksLinkingTask({ tasks: allTasks }, existing.id) : []} />
+      </Field>
       <Field label="Linked documents" htmlFor="task-links" hint="Notes, specs or files that live elsewhere. They open in their own app.">
         <DocLinksField value={draft.links} onChange={(links) => set({ links })} />
       </Field>

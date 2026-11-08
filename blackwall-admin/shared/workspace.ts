@@ -71,6 +71,7 @@ export function validWorkspace(value: unknown): value is Collections {
       if (key === "courses" && !validMeetings(row.meetings)) return false
       if (key === "courses" && !validTopics(row.topics)) return false
       if (key === "tasks" && (!validSubtasks(row.subtasks) || !validTopicIds(row.topicIds))) return false
+      if (key === "notes" && !validTopicIds(row.topicIds)) return false
       if (key === "courses" && ["syllabus", "policies"].some((field) => typeof row[field] === "string" && row[field].length > 100_000)) return false
       if (key === "journal" && row.sections !== undefined && !validJournalSections(row.sections)) return false
       if (key === "journal" && row.entries !== undefined && !validJournalItems(row.entries, row.sections ?? [])) return false

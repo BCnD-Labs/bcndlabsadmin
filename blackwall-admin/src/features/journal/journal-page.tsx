@@ -10,6 +10,7 @@ import { Panel } from "@/components/common/panel"
 import { SegmentedTabs } from "@/components/common/segmented-tabs"
 import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { compareTasks } from "@/features/work/task-utils"
 import { newId } from "@/lib/ids"
@@ -48,6 +49,19 @@ function CheckInCard({ title, blurb, icon: Icon, summary, saved, now, onClick }:
       {now && !saved && <span className="rounded-full bg-[#64b5f622] px-2 py-0.5 text-[10px] font-semibold text-[var(--bw-blue,#64b5f6)]">Now</span>}
       {saved ? <CheckCircle2 className="size-5 text-green" aria-hidden /> : <Go className="size-4 text-faint" aria-hidden />}
     </button>
+  )
+}
+
+/** The work on this day, so the Journal and the Planner say the same thing: what was due, and what got done. */
+function DayWork({ day }: { day: string }) {
+  const tasks = useWorkspace((s) => s.tasks)
+  const toggle = useWorkspace((s) => s.toggleTask)
+  const rows = tasks.filter((t) => t.kind !== "event" && (t.due === day || (t.done && t.completedAt && t.completedAt.slice(0, 10) === day))).sort((a, b) => Number(a.done) - Number(b.done) || a.title.localeCompare(b.title))
+  if (!rows.length) return <p className="text-xs text-muted-foreground">Nothing was due or finished on {periodLabel("daily", day)}.</p>
+  return (
+    <ul className="grid gap-0.5" aria-label="Work on this day">{rows.slice(0, 8).map((t) => (
+      <li key={t.id} className="flex min-h-8 items-center gap-2 text-[13px]"><Checkbox checked={t.done} aria-label={t.done ? `Reopen ${t.title}` : `Complete ${t.title}`} onCheckedChange={() => toggle(t.id)} /><span className={cn("min-w-0 flex-1 truncate text-ink-2", t.done && "text-faint line-through")}>{t.title}</span><span className="shrink-0 text-[11px] text-muted-foreground">{t.due === day ? "due" : "done"}</span></li>
+    ))}{rows.length > 8 && <li className="text-[11px] text-faint">…and {rows.length - 8} more in the Planner</li>}</ul>
   )
 }
 
@@ -132,7 +146,7 @@ export function JournalPage() {
             <>
             <GridItem>
               <Panel category="journal" title="This day" tool="journal" command="day" bodyClassName="grid gap-2 p-3">
-                <p className="text-xs text-muted-foreground">{periodLabel("daily", day)}. Use the arrows above to change day. Days you have written in show a dot on the Planner calendar.</p>
+                <DayWork day={day} />
                 <Button variant="outline" size="sm" asChild><Link to={logHref(day)}>See this day in the Planner</Link></Button>
               </Panel>
             </GridItem>
