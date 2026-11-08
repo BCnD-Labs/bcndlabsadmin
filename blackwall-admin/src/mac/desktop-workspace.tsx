@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useRoutes } from "react-router-dom"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import { createStore, useStore, type StoreApi } from "zustand"
-import { BarChart3, CalendarDays, Code2, FileText, Folder, Globe, GraduationCap, Home, LayoutDashboard, Maximize2, Pin, Search, Server, Settings2, Share2, X } from "lucide-react"
+import { BarChart3, CalendarDays, Code2, FileText, Folder, Globe, GraduationCap, Home, LayoutDashboard, ListTodo, Maximize2, Pin, Search, Server, Settings2, Share2, X } from "lucide-react"
 import { blackwallPages } from "@/app-routes"
 import { QuickCreate } from "@/components/layout/quick-create"
 import { Notifications } from "@/components/layout/notifications"
@@ -17,16 +17,16 @@ import { moveAroundLocked, overlaps, placeOutsideLocked, resizeAroundLocked, typ
 import "./desktop-workspace.css"
 
 const APP = {
-  home: { title: "Home", route: "/", icon: Home },
-  planner_app: { title: "Planner", route: "/productivity", icon: CalendarDays },
-  learning: { title: "Learning", route: "/productivity/learning", icon: GraduationCap },
-  projects: { title: "Projects", route: "/productivity/projects", icon: Folder },
-  insights: { title: "Insights", route: "/productivity/insights", icon: BarChart3 },
-  development: { title: "GitHub activity", route: "/development", icon: Code2 },
-  website: { title: "Website", route: "/cms", icon: Globe },
-  social: { title: "Social", route: "/social", icon: Share2 },
-  mikoshi: { title: "Mikoshi", route: "/mikoshi", icon: Server },
-  settings: { title: "Settings", route: "/settings", icon: Settings2 },
+  home: { title: "Home", route: "/", icon: Home, tone: "neutral" },
+  planner_app: { title: "Planner", route: "/productivity", icon: CalendarDays, tone: "productivity" },
+  learning: { title: "Learning", route: "/productivity/learning", icon: GraduationCap, tone: "learning" },
+  projects: { title: "Projects", route: "/productivity/projects", icon: Folder, tone: "projects" },
+  insights: { title: "Insights", route: "/productivity/insights", icon: BarChart3, tone: "insights" },
+  development: { title: "GitHub activity", route: "/development", icon: Code2, tone: "github" },
+  website: { title: "Website", route: "/cms", icon: Globe, tone: "website" },
+  social: { title: "Social", route: "/social", icon: Share2, tone: "neutral" },
+  mikoshi: { title: "Mikoshi", route: "/mikoshi", icon: Server, tone: "neutral" },
+  settings: { title: "Settings", route: "/settings", icon: Settings2, tone: "neutral" },
 } as const
 type AppId = keyof typeof APP
 type Id = "planner" | "notes" | AppId
@@ -194,7 +194,7 @@ export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
     const pinBlocked = isWidget(id) && !value.pinned && IDS.some(other => other !== id && isWidget(other) && windows[other].open && overlaps(visibleRect(value), visibleRect(windows[other])))
     const widgetFront = Math.max(windows.planner.z, windows.notes.z)
     const appRank = APP_IDS.filter(app => windows[app].open).sort((a, b) => windows[a].z - windows[b].z).indexOf(id as AppId)
-    return <section key={id} className="mac-dw-window" data-kind={isWidget(id) ? "widget" : "app"} data-collapsed={value.collapsed} aria-label={`${isWidget(id) ? id : APP[id].title} window`}
+    return <section key={id} className="mac-dw-window" data-kind={isWidget(id) ? "widget" : "app"} data-tone={isWidget(id) ? "productivity" : APP[id].tone} data-collapsed={value.collapsed} aria-label={`${isWidget(id) ? id : APP[id].title} window`}
       style={{ left: value.x, top: value.y, width: value.width, height: value.collapsed ? 30 : value.height, zIndex: isWidget(id) ? value.z === widgetFront ? 11 : 10 : 20 + appRank }} onPointerDown={event => { if (!(event.target as Element).closest(".mac-dw-title, .mac-dw-edge")) focus(id) }}>
       <header className="mac-dw-title" onPointerDown={event => start(event, id)} onPointerMove={move} onPointerUp={end} onPointerCancel={end} onDoubleClick={() => isWidget(id) && update(id, current => ({ ...current, collapsed: !current.collapsed }))}>
         <span className="mac-dw-icon">{icon}</span><strong>{title}</strong><span className="mac-dw-spacer" />
@@ -216,7 +216,7 @@ export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
         const widget = isWidget(id)
         const label = widget ? id === "planner" ? "Planner widget" : "Notes widget" : APP[id].title
         const Icon = widget ? id === "planner" ? CalendarDays : FileText : APP[id].icon
-        return <button key={id} title={label} aria-label={`Open ${label}`} aria-pressed={windows[id].open} onClick={() => widget ? open(id) : launch(id)}><Icon size={16} /></button>
+        return <button key={id} data-tone={widget ? "productivity" : APP[id].tone} title={label} aria-label={`Open ${label}`} aria-pressed={windows[id].open} onClick={() => widget ? open(id) : launch(id)}><Icon size={16} /></button>
       })}
       <span className="mac-dw-flex" />
       <button title="Classic workspace (⌥⌘D)" aria-label="Open classic workspace" onClick={onClassic}><LayoutDashboard size={16} /></button>
@@ -231,7 +231,7 @@ export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
     </div>
     {ready && <>
       {frame("notes", "Notes", <FileText size={16} />, <LiveNotes />)}
-      {frame("planner", "Planner", <CalendarDays size={16} />, <div className="mac-dw-planner"><div><h2>Calendar</h2><LiveCalendar /></div><div><h2>Tasks</h2><LiveTasks /></div><div><h2>Daily log</h2><LiveLog /></div></div>)}
+      {frame("planner", "Planner", <CalendarDays size={16} />, <div className="mac-dw-planner"><div><h2><CalendarDays size={14} />Calendar</h2><LiveCalendar /></div><div><h2><ListTodo size={14} />Tasks</h2><LiveTasks /></div><div><h2><FileText size={14} />Daily log</h2><LiveLog /></div></div>)}
       {APP_IDS.map(id => {
         const Icon = APP[id].icon
         return frame(id, <WindowTitle store={appStores[id]} fallback={APP[id].title} />, <Icon size={16} />, <AppPage path={windows[id].path ?? APP[id].route} store={appStores[id]} />)

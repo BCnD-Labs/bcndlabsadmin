@@ -1,17 +1,39 @@
 html[data-runtime="mac-native"] .mac-dw-desktop {
+  --bw-ground: #28292b;
+  --bw-panel: #303134;
+  --bw-raised: #3a3b3e;
+  --bw-selected: #243e60;
+  --bw-titlebar: #242527;
+  --bw-well: #26272a;
+  --bw-line: #48494c;
+  --bw-line-soft: #3e3f42;
+  --bw-border: #606065;
+  --bw-text: #f2f3f5;
+  --bw-text-2: #d9dce1;
+  --bw-muted: #b4b8c0;
+  --bw-blue: #64b5f6;
+  --bw-green: #66bb6a;
+  --bw-amber: #ffa726;
+  --background: var(--bw-ground);
+  --card: var(--bw-panel);
+  --secondary: var(--bw-raised);
+  --muted: var(--bw-raised);
+  --accent: var(--bw-raised);
+  --border: var(--bw-line);
+  --input: var(--bw-border);
   position: relative;
   width: 100%;
   height: 100dvh;
   overflow: clip;
-  background: radial-gradient(ellipse at 55% 42%, #2a3037, #20252b 50%, #181c21);
+  background: var(--bw-ground);
 }
 html[data-runtime="mac-native"] .mac-dw-desktop::before {
   content: "";
   position: absolute;
   inset: 0;
-  opacity: .11;
+  opacity: .025;
   pointer-events: none;
-  background-image: linear-gradient(#8b969f 1px, transparent 1px), linear-gradient(90deg, #8b969f 1px, transparent 1px);
+  background-image: linear-gradient(#b4b8c0 1px, transparent 1px), linear-gradient(90deg, #b4b8c0 1px, transparent 1px);
   background-size: 24px 24px;
 }
 html[data-runtime="mac-native"] .mac-dw-dragbar { position: absolute; inset: 0 0 auto; height: 42px; -webkit-app-region: drag; }
@@ -25,37 +47,52 @@ html[data-runtime="mac-native"] .mac-dw-rail {
   flex-direction: column;
   gap: 6px;
   padding: 12px 5px 10px;
-  border-right: 1px solid #424b54;
-  background: linear-gradient(90deg, #181c20, #22282e);
+  border-right: 1px solid var(--bw-line);
+  background: var(--bw-titlebar);
   overflow-y: auto;
   scrollbar-width: none;
   -webkit-app-region: no-drag;
 }
 html[data-runtime="mac-native"] .mac-dw-rail::-webkit-scrollbar { display: none; }
-html[data-runtime="mac-native"] .mac-dw-mark { display: grid; place-items: center; width: 30px; min-height: 29px; margin: 2px 0 17px; border-bottom: 2px solid #4ca6e8; color: #f3f7fa; font-size: 13px; font-weight: 800; letter-spacing: -.08em; }
+html[data-runtime="mac-native"] .mac-dw-mark { display: grid; place-items: center; width: 30px; min-height: 29px; margin: 2px 0 17px; border-bottom: 2px solid var(--bw-blue); color: var(--bw-text); font-size: 13px; font-weight: 800; letter-spacing: -.08em; }
+html[data-runtime="mac-native"] .mac-dw-rail > button[data-tone="productivity"],
+html[data-runtime="mac-native"] .mac-dw-window[data-tone="productivity"] { --dw-hue: #64b5f6; }
+html[data-runtime="mac-native"] .mac-dw-rail > button[data-tone="learning"],
+html[data-runtime="mac-native"] .mac-dw-window[data-tone="learning"] { --dw-hue: #b39ddb; }
+html[data-runtime="mac-native"] .mac-dw-rail > button[data-tone="projects"],
+html[data-runtime="mac-native"] .mac-dw-window[data-tone="projects"] { --dw-hue: #f2649f; }
+html[data-runtime="mac-native"] .mac-dw-rail > button[data-tone="insights"],
+html[data-runtime="mac-native"] .mac-dw-window[data-tone="insights"] { --dw-hue: #66bb6a; }
+html[data-runtime="mac-native"] .mac-dw-rail > button[data-tone="github"],
+html[data-runtime="mac-native"] .mac-dw-window[data-tone="github"] { --dw-hue: #1fc8e0; }
+html[data-runtime="mac-native"] .mac-dw-rail > button[data-tone="website"],
+html[data-runtime="mac-native"] .mac-dw-window[data-tone="website"] { --dw-hue: #ff8a4d; }
+html[data-runtime="mac-native"] .mac-dw-rail > button[data-tone="neutral"],
+html[data-runtime="mac-native"] .mac-dw-window[data-tone="neutral"] { --dw-hue: #b4b8c0; }
 html[data-runtime="mac-native"] .mac-dw-rail > button,
 html[data-runtime="mac-native"] .mac-dw-rail [data-testid="workspace-status"] { display: grid; place-items: center; flex: none; width: 31px; height: 31px; padding: 0; border: 1px solid transparent; border-radius: 4px; color: #afbac3; }
 html[data-runtime="mac-native"] .mac-dw-rail > button:hover,
-html[data-runtime="mac-native"] .mac-dw-rail [data-testid="workspace-status"]:hover { color: #eef6fb; background: #303b44; }
-html[data-runtime="mac-native"] .mac-dw-rail > button[aria-pressed="true"] { color: #68b8f5; background: #24445d; border-color: #38658a; }
+html[data-runtime="mac-native"] .mac-dw-rail [data-testid="workspace-status"]:hover { color: var(--bw-text); background: var(--bw-raised); }
+html[data-runtime="mac-native"] .mac-dw-rail > button[aria-pressed="true"] { color: var(--dw-hue); background: color-mix(in srgb, var(--dw-hue) 16%, var(--bw-titlebar)); border-color: color-mix(in srgb, var(--dw-hue) 38%, var(--bw-line)); }
 html[data-runtime="mac-native"] .mac-dw-flex { flex: 1; min-height: 12px; }
 html[data-runtime="mac-native"] .mac-dw-top { position: absolute; z-index: 40; top: 9px; right: 10px; display: flex; align-items: center; gap: 5px; -webkit-app-region: no-drag; }
 html[data-runtime="mac-native"] .mac-dw-top > button,
-html[data-runtime="mac-native"] .mac-dw-top > time { display: flex; align-items: center; justify-content: center; gap: 4px; height: 27px; min-width: 27px; padding: 0 7px; border: 1px solid #505b65; border-radius: 3px; background: linear-gradient(#343d45, #283139); color: #dbe5ec; font-size: 12px; font-weight: 550; white-space: nowrap; }
-html[data-runtime="mac-native"] .mac-dw-top > button:hover { border-color: #78b4dc; color: white; }
+html[data-runtime="mac-native"] .mac-dw-top > time { display: flex; align-items: center; justify-content: center; gap: 4px; height: 27px; min-width: 27px; padding: 0 7px; border: 1px solid var(--bw-line); border-radius: 5px; background: var(--bw-panel); color: var(--bw-text-2); font-size: 12px; font-weight: 550; white-space: nowrap; }
+html[data-runtime="mac-native"] .mac-dw-top > button:hover { border-color: var(--bw-blue); color: var(--bw-text); }
 html[data-runtime="mac-native"] .mac-dw-top > time { min-width: 68px; padding: 0 9px; }
-html[data-runtime="mac-native"] .mac-dw-window { position: absolute; display: flex; flex-direction: column; min-width: 230px; border: 1px solid #5b6771; border-radius: 5px; overflow: hidden; background: #20262d; box-shadow: 0 1px 0 #87929b65 inset, 0 16px 34px #05080ba3, 0 1px 0 #000; }
-html[data-runtime="mac-native"] .mac-dw-title { display: flex; align-items: center; gap: 7px; flex: none; height: 30px; padding: 0 5px 0 9px; border-bottom: 1px solid #5b6570; background: linear-gradient(#394149, #303840); color: #eaf0f4; cursor: grab; user-select: none; touch-action: none; }
+html[data-runtime="mac-native"] .mac-dw-window { position: absolute; display: flex; flex-direction: column; min-width: 230px; border: 1px solid var(--bw-border); border-radius: 6px; overflow: hidden; background: var(--bw-panel); box-shadow: 0 12px 30px #0008, 0 1px 0 #ffffff12 inset; }
+html[data-runtime="mac-native"] .mac-dw-title { display: flex; align-items: center; gap: 7px; flex: none; height: 30px; padding: 0 5px 0 7px; border-bottom: 1px solid var(--bw-line); background: var(--bw-titlebar); color: var(--bw-text); cursor: grab; user-select: none; touch-action: none; }
 html[data-runtime="mac-native"] .mac-dw-title:active { cursor: grabbing; }
-html[data-runtime="mac-native"] .mac-dw-title strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 650; letter-spacing: .025em; text-transform: uppercase; }
-html[data-runtime="mac-native"] .mac-dw-icon { color: #75beef; flex: none; }
+html[data-runtime="mac-native"] .mac-dw-title strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 650; }
+html[data-runtime="mac-native"] .mac-dw-icon { display: grid; place-items: center; flex: none; width: 22px; height: 22px; border: 1px solid color-mix(in srgb, var(--dw-hue) 38%, transparent); border-radius: 6px; background: color-mix(in srgb, var(--dw-hue) 15%, transparent); color: var(--dw-hue); }
+html[data-runtime="mac-native"] .mac-dw-icon svg { width: 14px; height: 14px; }
 html[data-runtime="mac-native"] .mac-dw-spacer { flex: 1; }
 html[data-runtime="mac-native"] .mac-dw-title button { display: grid; place-items: center; flex: none; width: 25px; height: 24px; border: 1px solid transparent; border-radius: 3px; color: #c2ccd4; }
-html[data-runtime="mac-native"] .mac-dw-title button:hover { background: #4a5661; color: white; border-color: #697782; }
-html[data-runtime="mac-native"] .mac-dw-title button[aria-pressed="true"] { color: #72bded; }
+html[data-runtime="mac-native"] .mac-dw-title button:hover { background: var(--bw-raised); color: var(--bw-text); border-color: var(--bw-border); }
+html[data-runtime="mac-native"] .mac-dw-title button[aria-pressed="true"] { color: var(--dw-hue); }
 html[data-runtime="mac-native"] .mac-dw-title button:disabled { opacity: .4; cursor: not-allowed; }
 html[data-runtime="mac-native"] .mac-dw-window[data-collapsed="true"] .mac-dw-title { border-bottom: 0; }
-html[data-runtime="mac-native"] .mac-dw-content { flex: 1; min-height: 0; overflow: hidden; background: linear-gradient(120deg, #252b32, #1d2329); }
+html[data-runtime="mac-native"] .mac-dw-content { flex: 1; min-height: 0; overflow: hidden; background: var(--bw-ground); }
 html[data-runtime="mac-native"] .mac-dw-edge { position: absolute; z-index: 2; touch-action: none; }
 html[data-runtime="mac-native"] .mac-dw-edge.edge-n,
 html[data-runtime="mac-native"] .mac-dw-edge.edge-s { left: 8px; right: 8px; height: 5px; cursor: ns-resize; }
@@ -70,22 +107,26 @@ html[data-runtime="mac-native"] .mac-dw-edge.edge-ne { top: 0; right: 0; cursor:
 html[data-runtime="mac-native"] .mac-dw-edge.edge-nw { top: 0; left: 0; cursor: nwse-resize; }
 html[data-runtime="mac-native"] .mac-dw-edge.edge-se { bottom: 0; right: 0; cursor: nwse-resize; }
 html[data-runtime="mac-native"] .mac-dw-edge.edge-sw { bottom: 0; left: 0; cursor: nesw-resize; }
-html[data-runtime="mac-native"] .mac-dw-planner { display: grid; grid-template-columns: 1fr 1.1fr 1fr; height: 100%; }
-html[data-runtime="mac-native"] .mac-dw-planner > div { min-width: 0; overflow: auto; padding: 8px; border-right: 1px solid #46515b; }
-html[data-runtime="mac-native"] .mac-dw-planner > div:last-child { border-right: 0; }
-html[data-runtime="mac-native"] .mac-dw-planner h2 { height: 26px; margin: 0; border-bottom: 1px solid #48535c; color: #eef3f6; font-size: 12px; line-height: 25px; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; }
+html[data-runtime="mac-native"] .mac-dw-planner { display: grid; grid-template-columns: 1fr 1.1fr 1fr; gap: 6px; height: 100%; padding: 7px; }
+html[data-runtime="mac-native"] .mac-dw-planner > div { min-width: 0; overflow: auto; border: 1px solid var(--bw-line); border-radius: 8px; background: var(--bw-panel); }
+html[data-runtime="mac-native"] .mac-dw-planner h2 { display: flex; align-items: center; gap: 7px; height: 31px; margin: 0; padding: 0 7px; border-bottom: 1px solid var(--bw-line); background: var(--bw-titlebar); color: var(--bw-text); font: 700 11px/1 var(--font-mono); letter-spacing: .07em; text-transform: uppercase; }
+html[data-runtime="mac-native"] .mac-dw-planner h2 svg { box-sizing: content-box; flex: none; width: 14px; height: 14px; padding: 3px; border: 1px solid color-mix(in srgb, var(--bw-blue) 38%, transparent); border-radius: 6px; background: color-mix(in srgb, var(--bw-blue) 15%, transparent); color: var(--bw-blue); }
+html[data-runtime="mac-native"] .mac-dw-planner > div > div:not(h2) { padding: 2px 5px; }
 html[data-runtime="mac-native"] .mac-dw-planner [role="grid"] { padding: 2px; }
 html[data-runtime="mac-native"] .mac-dw-planner [role="columnheader"] { font-size: 11px; }
 html[data-runtime="mac-native"] .mac-dw-planner [role="gridcell"] { height: 28px; }
 html[data-runtime="mac-native"] .mac-dw-planner [role="gridcell"] > span:first-child { height: 23px; min-width: 23px; font-size: 12px; }
-html[data-runtime="mac-native"] .mac-dw-planner .mac-log { min-height: 140px; }
-html[data-runtime="mac-native"] .mac-dw-app-toolbar { display: flex; align-items: center; gap: 9px; min-height: 32px; padding: 3px 10px; border-bottom: 1px solid #46515b; color: var(--bw-muted); font-size: 11px; }
+html[data-runtime="mac-native"] .mac-dw-app-toolbar { display: flex; align-items: center; gap: 9px; min-height: 32px; padding: 3px 10px; border-bottom: 1px solid var(--bw-line); background: var(--bw-panel); color: var(--bw-muted); font-size: 11px; }
 html[data-runtime="mac-native"] .mac-dw-app-toolbar:empty { display: none; }
-html[data-runtime="mac-native"] .mac-dw-app-toolbar > a { color: #77bdeb; }
+html[data-runtime="mac-native"] .mac-dw-app-toolbar > a { color: var(--bw-blue); }
 html[data-runtime="mac-native"] .mac-dw-actions { display: flex; align-items: center; gap: 5px; margin-left: auto; }
 html[data-runtime="mac-native"] .mac-dw-actions button { min-height: 26px; }
 html[data-runtime="mac-native"] .mac-dw-app-main { height: 100%; min-width: 0; overflow: auto; padding: 10px 12px 18px; outline: none; }
 html[data-runtime="mac-native"] .mac-dw-window[data-kind="app"] .mac-dw-content { display: flex; flex-direction: column; }
 html[data-runtime="mac-native"] .mac-dw-window[data-kind="app"] .mac-dw-app-main { flex: 1; height: auto; }
 html[data-runtime="mac-native"] .mac-dw-window[data-kind="widget"] .mac-notes-tool { height: 100%; overflow: auto; padding: 6px; }
+html[data-runtime="mac-native"] .mac-dw-window[data-kind="app"] .bw-panel { border-color: var(--bw-line); border-radius: 8px; background: var(--bw-panel); }
+html[data-runtime="mac-native"] .mac-dw-window[data-kind="app"] .bw-panel-title { font: 700 12px/1 var(--font-mono); letter-spacing: .05em; text-transform: uppercase; }
+html[data-runtime="mac-native"] .mac-dw-desktop [data-slot="button"]:is([data-variant="default"], [data-variant="primary"]) { border-color: #1976d2; background: #1565c0; color: white; }
+html[data-runtime="mac-native"] .mac-dw-desktop [data-slot="button"]:is([data-variant="default"], [data-variant="primary"]):hover { background: #0d47a1; }
 @media (max-width: 760px) { html[data-runtime="mac-native"] .mac-dw-top > time:first-of-type { display: none; } }
