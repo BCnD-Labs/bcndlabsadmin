@@ -34,6 +34,10 @@ export interface Task {
   /** Coursework: the course it belongs to and what kind of item it is. */
   courseId?: ID
   learningType?: LearningItemType
+  /** Where a piece of coursework is in its life. Absent on older records: derive it from `done`. */
+  status?: WorkStatus
+  /** How big the work feels; sets how many days ahead the planner suggests starting. */
+  effort?: WorkEffort
   /** Practice tests (certifications): the score, 0–100. */
   score?: number
   starred: boolean
@@ -286,6 +290,22 @@ export type LearningItemType = "assignment" | "exam" | "milestone" | "event"
 /** What kind of learning a record is. Older records have no kind and are courses. */
 export type LearningKind = "course" | "certification" | "selfpaced" | "skill" | "reading"
 
+/** Not started, working on it, handed in, marked. Submitted and graded both mean the task is done. */
+export type WorkStatus = "not_started" | "in_progress" | "submitted" | "graded"
+export type WorkEffort = "quick" | "medium" | "big"
+
+export type MeetingKind = "class" | "lab" | "office" | "other"
+/** A weekly meeting time. It repeats on `days` (0 = Sunday) between the course's start and end dates. */
+export interface ClassMeeting {
+  id: ID
+  kind: MeetingKind
+  days: number[]
+  /** `HH:mm` */
+  start: string
+  end: string
+  location?: string
+}
+
 export type CourseColor = "red" | "amber" | "teal" | "blue" | "violet" | "green" | "slate"
 
 /**
@@ -316,6 +336,13 @@ export interface Course {
   location: string
   /** Course site or LMS page. */
   url: string
+  /** Structured weekly class and office-hour times; they appear on the calendar. `schedule` stays as free text. */
+  meetings?: ClassMeeting[]
+  /** Syllabus and policies, as notes the writer keeps with the course. */
+  syllabus?: string
+  policies?: string
+  /** The class's code repository. */
+  repoUrl?: string
   credits?: number
   description: string
   tags: string[]
