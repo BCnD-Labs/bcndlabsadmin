@@ -33,27 +33,27 @@ html[data-runtime="mac-native"] .mac-dw-rail {
 }
 html[data-runtime="mac-native"] .mac-dw-rail::-webkit-scrollbar { display: none; }
 html[data-runtime="mac-native"] .mac-dw-mark { display: grid; place-items: center; width: 30px; min-height: 29px; margin: 2px 0 17px; border-bottom: 2px solid var(--bw-blue); color: var(--bw-text); font-size: 13px; font-weight: 800; letter-spacing: -.08em; }
-html[data-runtime="mac-native"] .mac-dw-rail > button[data-tone="productivity"],
+html[data-runtime="mac-native"] .mac-dw-rail button:not(.mac-dw-rail-close)[data-tone="productivity"],
 html[data-runtime="mac-native"] .mac-dw-window[data-tone="productivity"] { --dw-hue: #64b5f6; }
-html[data-runtime="mac-native"] .mac-dw-rail > button[data-tone="learning"],
+html[data-runtime="mac-native"] .mac-dw-rail button:not(.mac-dw-rail-close)[data-tone="learning"],
 html[data-runtime="mac-native"] .mac-dw-window[data-tone="learning"] { --dw-hue: #b39ddb; }
-html[data-runtime="mac-native"] .mac-dw-rail > button[data-tone="projects"],
+html[data-runtime="mac-native"] .mac-dw-rail button:not(.mac-dw-rail-close)[data-tone="projects"],
 html[data-runtime="mac-native"] .mac-dw-window[data-tone="projects"] { --dw-hue: #f2649f; }
-html[data-runtime="mac-native"] .mac-dw-rail > button[data-tone="insights"],
+html[data-runtime="mac-native"] .mac-dw-rail button:not(.mac-dw-rail-close)[data-tone="insights"],
 html[data-runtime="mac-native"] .mac-dw-window[data-tone="insights"] { --dw-hue: #66bb6a; }
-html[data-runtime="mac-native"] .mac-dw-rail > button[data-tone="github"],
+html[data-runtime="mac-native"] .mac-dw-rail button:not(.mac-dw-rail-close)[data-tone="github"],
 html[data-runtime="mac-native"] .mac-dw-window[data-tone="github"] { --dw-hue: #1fc8e0; }
-html[data-runtime="mac-native"] .mac-dw-rail > button[data-tone="website"],
+html[data-runtime="mac-native"] .mac-dw-rail button:not(.mac-dw-rail-close)[data-tone="website"],
 html[data-runtime="mac-native"] .mac-dw-window[data-tone="website"] { --dw-hue: #ff8a4d; }
-html[data-runtime="mac-native"] .mac-dw-rail > button[data-tone="neutral"],
+html[data-runtime="mac-native"] .mac-dw-rail button:not(.mac-dw-rail-close)[data-tone="neutral"],
 html[data-runtime="mac-native"] .mac-dw-window[data-tone="neutral"] { --dw-hue: #b4b8c0; }
-html[data-runtime="mac-native"] .mac-dw-rail > button,
+html[data-runtime="mac-native"] .mac-dw-rail button:not(.mac-dw-rail-close),
 html[data-runtime="mac-native"] .mac-dw-rail [data-testid="workspace-status"] { display: grid; place-items: center; flex: none; width: 31px; height: 31px; padding: 0; border: 1px solid transparent; border-radius: 4px; color: var(--bw-muted); }
-html[data-runtime="mac-native"] .mac-dw-rail > button:hover,
+html[data-runtime="mac-native"] .mac-dw-rail button:not(.mac-dw-rail-close):hover,
 html[data-runtime="mac-native"] .mac-dw-rail [data-testid="workspace-status"]:hover { color: var(--bw-text); background: var(--bw-raised); }
-html[data-runtime="mac-native"] .mac-dw-rail > button[aria-pressed="true"] { color: var(--dw-hue); background: color-mix(in srgb, var(--dw-hue) 16%, var(--bw-titlebar)); border-color: color-mix(in srgb, var(--dw-hue) 38%, var(--bw-line)); }
+html[data-runtime="mac-native"] .mac-dw-rail button:not(.mac-dw-rail-close)[aria-pressed="true"] { color: var(--dw-hue); background: color-mix(in srgb, var(--dw-hue) 16%, var(--bw-titlebar)); border-color: color-mix(in srgb, var(--dw-hue) 38%, var(--bw-line)); }
 html[data-runtime="mac-native"] .mac-dw-flex { flex: 1; min-height: 12px; }
-html[data-runtime="mac-native"] .mac-dw-top { position: absolute; z-index: 40; top: 9px; right: 10px; display: flex; align-items: center; gap: 5px; -webkit-app-region: no-drag; }
+html[data-runtime="mac-native"] .mac-dw-top { position: absolute; z-index: 15; top: 9px; right: 10px; display: flex; align-items: center; gap: 5px; -webkit-app-region: no-drag; }
 html[data-runtime="mac-native"] .mac-dw-top > button,
 html[data-runtime="mac-native"] .mac-dw-top > time { display: flex; align-items: center; justify-content: center; gap: 4px; height: 27px; min-width: 27px; padding: 0 7px; border: 1px solid var(--bw-line); border-radius: 5px; background: var(--bw-panel); color: var(--bw-text-2); font-size: 12px; font-weight: 550; white-space: nowrap; }
 html[data-runtime="mac-native"] .mac-dw-top > button:hover { border-color: var(--bw-blue); color: var(--bw-text); }
@@ -122,16 +122,28 @@ html[data-runtime="mac-native"] .mac-dw-sidebar-body [role="gridcell"] > span:fi
 /* Expanded rail: names beside the icons (Settings → Desktop → Show names in the sidebar). */
 html[data-runtime="mac-native"] .mac-dw-rail[data-labels="true"] { width: var(--dw-rail-w); align-items: stretch; }
 html[data-runtime="mac-native"] .mac-dw-rail[data-labels="true"] .mac-dw-mark { width: auto; align-self: flex-start; margin-left: 1px; padding: 0 8px; }
-html[data-runtime="mac-native"] .mac-dw-rail[data-labels="true"] > button,
+html[data-runtime="mac-native"] .mac-dw-rail[data-labels="true"] button:not(.mac-dw-rail-close),
 html[data-runtime="mac-native"] .mac-dw-rail[data-labels="true"] [data-testid="workspace-status"] { display: flex; align-items: center; justify-content: flex-start; gap: 9px; width: 100%; padding: 0 8px; font-size: 12.5px; font-weight: 550; text-align: left; }
-html[data-runtime="mac-native"] .mac-dw-rail > button > .mac-dw-rail-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html[data-runtime="mac-native"] .mac-dw-rail button:not(.mac-dw-rail-close) > .mac-dw-rail-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 html[data-runtime="mac-native"] .mac-dw-rail-toggle { margin-top: -6px; margin-bottom: 8px; }
 
 /* Light theme: the window and rail hues are deepened so they stay readable on white. */
-html[data-runtime="mac-native"][data-theme="light"] .mac-dw-rail > button[data-tone="productivity"], html[data-runtime="mac-native"][data-theme="light"] .mac-dw-window[data-tone="productivity"] { --dw-hue: #1e6fc4; }
-html[data-runtime="mac-native"][data-theme="light"] .mac-dw-rail > button[data-tone="learning"], html[data-runtime="mac-native"][data-theme="light"] .mac-dw-window[data-tone="learning"] { --dw-hue: #6b46c1; }
-html[data-runtime="mac-native"][data-theme="light"] .mac-dw-rail > button[data-tone="projects"], html[data-runtime="mac-native"][data-theme="light"] .mac-dw-window[data-tone="projects"] { --dw-hue: #c2185b; }
-html[data-runtime="mac-native"][data-theme="light"] .mac-dw-rail > button[data-tone="insights"], html[data-runtime="mac-native"][data-theme="light"] .mac-dw-window[data-tone="insights"] { --dw-hue: #2e7d32; }
-html[data-runtime="mac-native"][data-theme="light"] .mac-dw-rail > button[data-tone="github"], html[data-runtime="mac-native"][data-theme="light"] .mac-dw-window[data-tone="github"] { --dw-hue: #00838f; }
-html[data-runtime="mac-native"][data-theme="light"] .mac-dw-rail > button[data-tone="website"], html[data-runtime="mac-native"][data-theme="light"] .mac-dw-window[data-tone="website"] { --dw-hue: #c24e00; }
-html[data-runtime="mac-native"][data-theme="light"] .mac-dw-rail > button[data-tone="neutral"], html[data-runtime="mac-native"][data-theme="light"] .mac-dw-window[data-tone="neutral"] { --dw-hue: #566170; }
+html[data-runtime="mac-native"][data-theme="light"] .mac-dw-rail button:not(.mac-dw-rail-close)[data-tone="productivity"], html[data-runtime="mac-native"][data-theme="light"] .mac-dw-window[data-tone="productivity"] { --dw-hue: #1e6fc4; }
+html[data-runtime="mac-native"][data-theme="light"] .mac-dw-rail button:not(.mac-dw-rail-close)[data-tone="learning"], html[data-runtime="mac-native"][data-theme="light"] .mac-dw-window[data-tone="learning"] { --dw-hue: #6b46c1; }
+html[data-runtime="mac-native"][data-theme="light"] .mac-dw-rail button:not(.mac-dw-rail-close)[data-tone="projects"], html[data-runtime="mac-native"][data-theme="light"] .mac-dw-window[data-tone="projects"] { --dw-hue: #c2185b; }
+html[data-runtime="mac-native"][data-theme="light"] .mac-dw-rail button:not(.mac-dw-rail-close)[data-tone="insights"], html[data-runtime="mac-native"][data-theme="light"] .mac-dw-window[data-tone="insights"] { --dw-hue: #2e7d32; }
+html[data-runtime="mac-native"][data-theme="light"] .mac-dw-rail button:not(.mac-dw-rail-close)[data-tone="github"], html[data-runtime="mac-native"][data-theme="light"] .mac-dw-window[data-tone="github"] { --dw-hue: #00838f; }
+html[data-runtime="mac-native"][data-theme="light"] .mac-dw-rail button:not(.mac-dw-rail-close)[data-tone="website"], html[data-runtime="mac-native"][data-theme="light"] .mac-dw-window[data-tone="website"] { --dw-hue: #c24e00; }
+html[data-runtime="mac-native"][data-theme="light"] .mac-dw-rail button:not(.mac-dw-rail-close)[data-tone="neutral"], html[data-runtime="mac-native"][data-theme="light"] .mac-dw-window[data-tone="neutral"] { --dw-hue: #566170; }
+
+/* Each rail app is a button plus, while its window is open, a small close button. */
+html[data-runtime="mac-native"] .mac-dw-rail-item { position: relative; flex: none; display: flex; align-items: center; }
+html[data-runtime="mac-native"] .mac-dw-rail[data-labels="true"] .mac-dw-rail-item { width: 100%; }
+html[data-runtime="mac-native"] .mac-dw-rail .mac-dw-rail-close { position: absolute; display: grid; place-items: center; width: 17px; height: 17px; padding: 0; border: 1px solid var(--bw-border); border-radius: 50%; background: var(--bw-panel); color: var(--bw-text-2); opacity: 0; transition: opacity 120ms; }
+html[data-runtime="mac-native"] .mac-dw-rail:not([data-labels="true"]) .mac-dw-rail-close { top: -4px; right: -5px; }
+html[data-runtime="mac-native"] .mac-dw-rail[data-labels="true"] .mac-dw-rail-close { right: 6px; top: 50%; transform: translateY(-50%); }
+html[data-runtime="mac-native"] .mac-dw-rail-item:hover .mac-dw-rail-close, html[data-runtime="mac-native"] .mac-dw-rail-item:focus-within .mac-dw-rail-close { opacity: 1; }
+html[data-runtime="mac-native"] .mac-dw-rail .mac-dw-rail-close:hover { background: var(--bw-raised); color: var(--bw-text); }
+html[data-runtime="mac-native"] .mac-dw-window { -webkit-app-region: no-drag; }
+html[data-runtime="mac-native"] .mac-dw-window[data-collapsed="true"] { min-height: 0; }
+html[data-runtime="mac-native"] .mac-dw-content[hidden] { display: none; }

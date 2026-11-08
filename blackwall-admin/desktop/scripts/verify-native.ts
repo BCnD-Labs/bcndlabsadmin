@@ -122,6 +122,18 @@ server.listen(0, "127.0.0.1", () => {
     if (process.env.BW_DESKTOP_SHOT) writeFileSync(process.env.BW_DESKTOP_SHOT, (await wc!.capturePage()).toPNG())
     await wc!.executeJavaScript("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))")
     assert(await wc!.executeJavaScript("!document.querySelector('.mac-dw-sidebar')"), "Escape closes the Planner sidebar")
+    // Window controls: the bigger button swaps to "smaller", minimize leaves only the title bar, and the rail can close a window.
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Expand learning window\"]').click()")
+    assert(await wc!.executeJavaScript("!!document.querySelector('button[aria-label=\"Restore learning window\"]')"), "An expanded window offers to make itself smaller")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Restore learning window\"]').click()")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Minimize learning window\"]').click()")
+    assert(await wc!.executeJavaScript("document.querySelector('[aria-label=\"Learning window\"]').getBoundingClientRect().height <= 34"), "Minimize leaves just the title bar")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Show learning window\"]').click()")
+    assert(await wc!.executeJavaScript("document.querySelector('[aria-label=\"Learning window\"]').getBoundingClientRect().height > 100"), "The window comes back from the title bar")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Close Learning window\"]').click()")
+    assert(await wc!.executeJavaScript("!document.querySelector('[aria-label=\"Learning window\"]')"), "The sidebar closes an open window")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Open Learning\"]').click()")
+    assert(await wc!.executeJavaScript("!!document.querySelector('[aria-label=\"Learning window\"]')"), "Learning reopens from the sidebar")
     // Rail names: the toggle writes the names beside the icons and moves the windows over.
     await wc!.executeJavaScript("document.querySelector('.mac-dw-rail-toggle').click()")
     assert(await wc!.executeJavaScript("document.querySelector('.mac-dw-rail').dataset.labels === 'true' && [...document.querySelectorAll('.mac-dw-rail-label')].some(e => e.textContent === 'Learning')"), "The sidebar toggle shows app names")
