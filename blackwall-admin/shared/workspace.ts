@@ -58,7 +58,7 @@ export function validWorkspace(value: unknown): value is Collections {
         socialPosts: { stage: ["idea", "draft", "ready"] },
       }
       if (Object.entries(enums[key] ?? {}).some(([field, choices]) => !choices.includes(row[field]))) return false
-      const optionalStrings = ["details", "due", "time", "courseId", "learningType", "completedAt", "projectId", "connectionId", "productionUrl", "previewUrl", "notes", "cover", "coverAlt", "remoteSlug", "startDate", "endDate", "logo", "materialIcon", "customLogo", "siteId", "course", "publishedAt", "formEndpoint", "turnstileKey", "publishedSha", "link", "media", "scheduledAt"]
+      const optionalStrings = ["details", "due", "time", "courseId", "learningType", "completedAt", "projectId", "connectionId", "productionUrl", "previewUrl", "notes", "cover", "coverAlt", "remoteSlug", "startDate", "endDate", "logo", "materialIcon", "customLogo", "siteId", "course", "publishedAt", "formEndpoint", "turnstileKey", "publishedSha", "link", "media", "scheduledAt", "syllabus", "policies", "repoUrl"]
       if (optionalStrings.some((field) => row[field] != null && typeof row[field] !== "string")) return false
       if (row.links != null && (!Array.isArray(row.links) || row.links.length > 50 || !row.links.every((l: unknown) => !!l && typeof l === "object" && typeof (l as { label?: unknown }).label === "string" && typeof (l as { url?: unknown }).url === "string"))) return false
       if (row.tags != null && (!Array.isArray(row.tags) || !row.tags.every((tag: unknown) => typeof tag === "string"))) return false
@@ -66,6 +66,9 @@ export function validWorkspace(value: unknown): value is Collections {
       if (key === "courses" && row.kind != null && !["course", "certification", "selfpaced", "skill", "reading"].includes(row.kind)) return false
       if (key === "tasks" && (typeof row.done !== "boolean" || typeof row.starred !== "boolean")) return false
       if (key === "tasks" && !validPlannerFields(row)) return false
+      if (key === "tasks" && ((row.status != null && !["not_started", "in_progress", "submitted", "graded"].includes(row.status)) || (row.effort != null && !["quick", "medium", "big"].includes(row.effort)))) return false
+      if (key === "courses" && !validMeetings(row.meetings)) return false
+      if (key === "courses" && ["syllabus", "policies"].some((field) => typeof row[field] === "string" && row[field].length > 100_000)) return false
       if (key === "journal" && row.sections !== undefined && !validJournalSections(row.sections)) return false
       if (key === "journal" && row.entries !== undefined && !validJournalItems(row.entries, row.sections ?? [])) return false
       if (key === "journal" && row.mainNoteId !== undefined && (typeof row.mainNoteId !== "string" || !row.mainNoteId || row.mainNoteId.length > 100)) return false
@@ -111,6 +114,23 @@ export function mergeWorkspace(base: Collections, local: Collections, remote: Co
     Object.assign(data, { [key]: merged })
   }
   return { data, conflicts }
+}
+
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$/
+function validMeetings(value: unknown): boolean {
+  if (value == null) return true
+  if (!Array.isArray(value) || value.length > 30) return false
+  const ids = new Set<string>()
+  return value.every((m: unknown) => {
+    if (!m || typeof m !== "object") return false
+    const x = m as Record<string, unknown>
+    if (typeof x.id !== "string" || !x.id || x.id.includes(":") || ids.has(x.id)) return false
+    ids.add(x.id)
+    if (!["class", "lab", "office", "other"].includes(String(x.kind))) return false
+    if (!Array.isArray(x.days) || !x.days.length || x.days.length > 7 || !x.days.every((d) => Number.isInteger(d) && d >= 0 && d <= 6)) return false
+    if (typeof x.start !== "string" || typeof x.end !== "string" || !TIME.test(x.start) || !TIME.test(x.end) || x.end <= x.start) return false
+    return x.location == null || (typeof x.location === "string" && x.location.length <= 200)
+  })
 }
 
 const PALETTE_KEYS = ["bg", "surface", "text", "muted", "border", "accent"]

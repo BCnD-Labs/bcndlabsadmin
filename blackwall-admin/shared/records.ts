@@ -5,7 +5,7 @@
  * The rules are the ones the web store has always had: keep them in step with it, not ahead of it.
  */
 import { validJournalItems, validJournalSections } from "./journal-sections.ts"
-import type { Course, JournalSection, JournalLogItem, JournalEntry, Note, Service, Task } from "../src/lib/types.ts"
+import type { Course, JournalSection, JournalLogItem, JournalEntry, Note, Service, Task, WorkStatus } from "../src/lib/types.ts"
 import type { Collections } from "./workspace.ts"
 
 export interface RecordOptions {
@@ -51,13 +51,37 @@ export function removeTask<T extends TaskData>(data: T, id: string): T {
   return { ...data, tasks: data.tasks.filter((task) => task.id !== id) }
 }
 
-/** Flips `done`: completing stamps `completedAt`, reopening clears it. */
+/** Flips `done`: completing stamps `completedAt`, reopening clears it. A task that tracks a status follows: done means submitted. */
 export function toggleTask<T extends TaskData>(data: T, id: string, opts: RecordOptions = {}): T {
   const t = (opts.now ?? defaultNow)()
   return {
     ...data,
-    tasks: data.tasks.map((task) => (task.id === id && task.kind !== "event" ? { ...task, done: !task.done, completedAt: task.done ? undefined : t, updatedAt: t } : task)),
+    tasks: data.tasks.map((task) => {
+      if (task.id !== id || task.kind === "event") return task
+      const status: Partial<Task> = task.status ? { status: task.done ? "in_progress" : task.status === "graded" ? "graded" : "submitted" } : {}
+      return { ...task, ...status, done: !task.done, completedAt: task.done ? undefined : t, updatedAt: t }
+    }),
   }
+}
+
+/** Moves coursework through not started, in progress, submitted and graded. Submitted and graded mean done. */
+export function setTaskStatus<T extends TaskData>(data: T, id: string, status: WorkStatus, opts: RecordOptions = {}): T {
+  const t = (opts.now ?? defaultNow)()
+  const done = status === "submitted" || status === "graded"
+  return {
+    ...data,
+    tasks: data.tasks.map((task) => {
+      if (task.id !== id || task.kind === "event") return task
+      return { ...task, status, done, completedAt: done ? (task.done && task.completedAt ? task.completedAt : t) : undefined, updatedAt: t }
+    }),
+  }
+}
+
+/** Puts each proposed task on its suggested focus day, in one edit. Tasks that no longer exist are skipped. */
+export function applyFocusPlan<T extends TaskData>(data: T, plan: { id: string; date: string }[], opts: RecordOptions = {}): T {
+  const t = (opts.now ?? defaultNow)()
+  const days = new Map(plan.map((p) => [p.id, p.date]))
+  return { ...data, tasks: data.tasks.map((task) => (days.has(task.id) && !task.done ? { ...task, focusDate: days.get(task.id), updatedAt: t } : task)) }
 }
 
 export function toggleStar<T extends TaskData>(data: T, id: string, opts: RecordOptions = {}): T {

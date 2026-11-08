@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { addDays, format, isToday } from "date-fns"
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom"
 import { Check, ChevronLeft, ChevronRight, ListChecks, Plus, Star } from "lucide-react"
@@ -12,6 +12,9 @@ import type { Task } from "@/lib/types"
 import { useWorkspace } from "@/stores/workspace"
 import { useUi } from "@/stores/ui"
 import { validDateKey } from "@shared/planner"
+import { addDaysToKey } from "@shared/date-keys"
+import { isMeetingId, meetingCourseId, meetingEvents } from "@shared/learning"
+import { courseHref } from "@/lib/routes"
 import { LOG_PROMPTS, appendPrompt } from "@/features/journal/log-helpers"
 import { ScheduleCalendar } from "./schedule-calendar"
 import { PlannerNotes } from "./planner-notes"
@@ -27,8 +30,11 @@ export function PlannerPage() {
   const { hash } = useLocation()
   const navigate = useNavigate()
   const tasks = useWorkspace((s) => s.tasks)
+  const courses = useWorkspace((s) => s.courses)
   const date = validDateKey(params.get("date")) ? params.get("date")! : todayKey()
   const selected = tasks.find((task) => task.id === params.get("task"))
+  // Weekly class times draw on the calendar without being saved as records; tapping one opens its course.
+  const calendarItems = useMemo(() => [...tasks, ...meetingEvents(courses, addDaysToKey(date, -45)!, addDaysToKey(date, 45)!)], [tasks, courses, date])
   const [tab, setTab] = useState<InspectorTab>("details")
   const [browserOpen, setBrowserOpen] = useState(false)
   const openForm = useUi((s) => s.openForm)
@@ -38,6 +44,7 @@ export function PlannerPage() {
     navigate({ search: next.toString(), hash: "" }, { replace: true })
   }
   const select = (task: Task, reflection = false) => {
+    if (isMeetingId(task.id)) { const course = meetingCourseId(task.id); if (course) navigate(courseHref(course)); return }
     const next = new URLSearchParams(params)
     next.set("task", task.id)
     setParams(next, { replace: true })
@@ -64,7 +71,7 @@ export function PlannerPage() {
         <Popover open={browserOpen || hash === "#tasks"} onOpenChange={(open) => { setBrowserOpen(open); if (!open && hash === "#tasks") navigate({ search: params.toString(), hash: "" }, { replace: true }) }}><PopoverTrigger asChild><Button variant="outline" size="sm"><ListChecks /> Tasks</Button></PopoverTrigger><PopoverContent align="end" className="w-[min(480px,calc(100vw-24px))] p-0"><TaskBrowser date={date} onSelect={(task) => select(task)} onComplete={(task) => select(task, true)} /></PopoverContent></Popover>
       </div>
       <div className="planner-canvas">
-        <ScheduleCalendar date={date} onDate={setDate} tasks={tasks} selected={selected?.id} onSelect={(task) => select(task)} />
+        <ScheduleCalendar date={date} onDate={setDate} tasks={calendarItems} selected={selected?.id} onSelect={(task) => select(task)} />
         <section className="bw-panel planner-notes" aria-label="Notes"><PlannerNotes /></section>
         <DailyLog date={date} onDate={setDate} onSelect={(task) => select(task, true)} />
         <TaskInspector task={selected} date={date} tab={tab} onTab={setTab} onDate={setDate} onSelect={(task) => select(task)} />
