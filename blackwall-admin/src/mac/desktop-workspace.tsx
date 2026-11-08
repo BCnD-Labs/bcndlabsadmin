@@ -1,9 +1,9 @@
-import { memo, useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react"
+import { memo, useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react"
 import { Link, useLocation, useNavigate, useRoutes } from "react-router-dom"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import { createStore, useStore, type StoreApi } from "zustand"
-import { BarChart3, BookOpen, CalendarDays, Code2, FileText, Folder, Globe, GraduationCap, Home, LayoutDashboard, Maximize2, Pin, Search, Server, Settings2, Share2, X } from "lucide-react"
+import { BarChart3, BookOpen, PanelLeftClose, PanelLeftOpen, CalendarDays, Code2, FileText, Folder, Globe, GraduationCap, Home, LayoutDashboard, Maximize2, Pin, Search, Server, Settings2, Share2, X } from "lucide-react"
 import { blackwallPages } from "@/app-routes"
 import { QuickCreate } from "@/components/layout/quick-create"
 import { Notifications } from "@/components/layout/notifications"
@@ -11,6 +11,7 @@ import { SyncStatus, WorkspaceStatus } from "@/components/layout/workspace-statu
 import { useNow } from "@/hooks/use-now"
 import { useWorkspaceSync } from "@/services/workspace-sync"
 import { PageHeadStoreContext, type PageHead } from "@/stores/page-head"
+import { usePrefs } from "@/stores/prefs"
 import { useUi } from "@/stores/ui"
 import { NotesTool } from "./dock/tools"
 import { PlannerSidebar } from "./planner-sidebar"
@@ -43,6 +44,8 @@ const APP_IDS = Object.keys(APP) as AppId[]
 const IDS: Id[] = ["notes", ...APP_IDS]
 const RAIL_IDS: Id[] = ["home", "learning", "journal", "notes", "projects", "insights", "development", "website", "social", "mikoshi"]
 const KEY = "blackwall-mac-desktop-windows-v2"
+/** Width of the left rail with names shown; the icon-only rail is 43px. */
+const RAIL_WIDE = 172, RAIL_NARROW = 43
 const isWidget = (id: Id): id is "notes" => id === "notes"
 function appForPath(path: string): AppId {
   if (path.startsWith("/journal")) return "journal"
@@ -75,7 +78,7 @@ function initialWindows(): Windows {
     for (const id of IDS) {
       const value = saved[id] ?? (id === migratedApp ? saved.app : undefined)
       if (!value || [value.x, value.y, value.width, value.height].some(n => typeof n !== "number" || !Number.isFinite(n))) continue
-      defaults[id] = { ...defaults[id], x: Math.max(45, Math.min(width - 100, value.x!)), y: Math.max(42, Math.min(height - 32, value.y!)), width: Math.max(280, Math.min(width - 50, value.width!)), height: Math.max(200, Math.min(height - 50, value.height!)), open: value.open !== false, collapsed: isWidget(id) && value.collapsed === true, pinned: isWidget(id) && value.pinned === true, expanded: false, path: !isWidget(id) && typeof value.path === "string" && value.path.startsWith("/") ? value.path : id === migratedApp && saved.app ? window.location.pathname + window.location.search : defaults[id].path }
+      defaults[id] = { ...defaults[id], x: Math.max(45, Math.min(width - 100, value.x!)), y: Math.max(42, Math.min(height - 32, value.y!)), width: Math.max(280, Math.min(width - 50, value.width!)), height: Math.max(200, Math.min(height - 50, value.height!)), open: (isWidget(id) || usePrefs.getState().restoreWindows) && value.open !== false, collapsed: isWidget(id) && value.collapsed === true, pinned: isWidget(id) && value.pinned === true, expanded: false, path: !isWidget(id) && typeof value.path === "string" && value.path.startsWith("/") ? value.path : id === migratedApp && saved.app ? window.location.pathname + window.location.search : defaults[id].path }
     }
   } catch { /* Use a fresh local layout when storage is unavailable. */ }
   return defaults
@@ -102,6 +105,11 @@ const AppPage = memo(function AppPage({ path, store }: { path: string; store: St
 export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
   const [windows, setWindows] = useState(initialWindows)
   const [plannerOpen, setPlannerOpen] = useState(false)
+  const railLabels = usePrefs((state) => state.railLabels)
+  const railHidden = usePrefs((state) => state.railHidden)
+  const setPrefs = usePrefs((state) => state.set)
+  /** With names shown the rail is wider, so windows sit that much further right. */
+  const railExtra = railLabels ? RAIL_WIDE - RAIL_NARROW : 0
   const gesture = useRef<Gesture | null>(null)
   const layer = useRef(Math.max(...IDS.map(id => windows[id].z)))
   const [appStores] = useState(() => Object.fromEntries(APP_IDS.map(id => [id, createStore<PageHead>()(() => ({}))])) as Record<AppId, StoreApi<PageHead>>)
@@ -198,7 +206,7 @@ export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
     const widgetFront = windows.notes.z
     const appRank = APP_IDS.filter(app => windows[app].open).sort((a, b) => windows[a].z - windows[b].z).indexOf(id as AppId)
     return <section key={id} className="mac-dw-window" data-kind={isWidget(id) ? "widget" : "app"} data-tone={isWidget(id) ? "productivity" : APP[id].tone} data-collapsed={value.collapsed} aria-label={`${isWidget(id) ? id : APP[id].title} window`}
-      style={{ left: value.x, top: value.y, width: value.width, height: value.collapsed ? 30 : value.height, zIndex: isWidget(id) ? value.z === widgetFront ? 11 : 10 : 20 + appRank }} onPointerDown={event => { if (!(event.target as Element).closest(".mac-dw-title, .mac-dw-edge")) focus(id) }}>
+      style={{ left: value.x + railExtra, top: value.y, width: railExtra ? Math.max(280, Math.min(value.width, window.innerWidth - value.x - railExtra - 10)) : value.width, height: value.collapsed ? 30 : value.height, zIndex: isWidget(id) ? value.z === widgetFront ? 11 : 10 : 20 + appRank }} onPointerDown={event => { if (!(event.target as Element).closest(".mac-dw-title, .mac-dw-edge")) focus(id) }}>
       <header className="mac-dw-title" onPointerDown={event => start(event, id)} onPointerMove={move} onPointerUp={end} onPointerCancel={end} onDoubleClick={() => isWidget(id) && update(id, current => ({ ...current, collapsed: !current.collapsed }))}>
         <span className="mac-dw-icon">{icon}</span><strong>{title}</strong><span className="mac-dw-spacer" />
         {isWidget(id) && <button type="button" aria-label={value.pinned ? `Unlock ${id} position` : `Lock ${id} position`} title={pinBlocked ? "Move clear of other widgets to lock" : undefined} aria-pressed={value.pinned} disabled={pinBlocked} onClick={() => pin(id)}><Pin size={15} fill={value.pinned ? "currentColor" : "none"} /></button>}
@@ -213,18 +221,19 @@ export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
   return <div id="main" className="mac-dw-desktop" tabIndex={-1}>
     <WorkspaceStatus connected />
     <div className="mac-dw-dragbar" aria-hidden />
-    <nav className="mac-dw-rail" aria-label="Blackwall apps and tools">
+    <nav className="mac-dw-rail" aria-label="Blackwall apps and tools" data-labels={railLabels} style={{ "--dw-rail-w": `${RAIL_WIDE}px` } as CSSProperties}>
       <span className="mac-dw-mark">BW</span>
-      {RAIL_IDS.map(id => {
+      <button className="mac-dw-rail-toggle" title={railLabels ? "Hide names" : "Show names"} aria-label={railLabels ? "Hide sidebar names" : "Show sidebar names"} aria-expanded={railLabels} onClick={() => setPrefs({ railLabels: !railLabels })}>{railLabels ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}{railLabels && <span className="mac-dw-rail-label">Collapse</span>}</button>
+      {RAIL_IDS.filter(id => !railHidden.includes(id)).map(id => {
         const widget = isWidget(id)
-        const label = widget ? "Notes widget" : APP[id].title
+        const label = widget ? "Notes" : APP[id].title
         const Icon = widget ? FileText : APP[id].icon
-        return <button key={id} data-tone={widget ? "productivity" : APP[id].tone} title={label} aria-label={`Open ${label}`} aria-pressed={windows[id].open} onClick={() => widget ? open(id) : launch(id)}><Icon size={16} /></button>
+        return <button key={id} data-tone={widget ? "productivity" : APP[id].tone} title={label} aria-label={`Open ${widget ? "Notes widget" : label}`} aria-pressed={windows[id].open} onClick={() => widget ? open(id) : launch(id)}><Icon size={16} />{railLabels && <span className="mac-dw-rail-label">{label}</span>}</button>
       })}
       <span className="mac-dw-flex" />
-      <button title="Classic workspace (⌥⌘D)" aria-label="Open classic workspace" onClick={onClassic}><LayoutDashboard size={16} /></button>
-      <SyncStatus />
-      <button title="Settings" aria-label="Open Settings" aria-pressed={windows.settings.open} onClick={() => launch("settings")}><Settings2 size={16} /></button>
+      <button title="Classic workspace (⌥⌘D)" aria-label="Open classic workspace" onClick={onClassic}><LayoutDashboard size={16} />{railLabels && <span className="mac-dw-rail-label">Classic view</span>}</button>
+      <SyncStatus expanded={railLabels} />
+      <button title="Settings" aria-label="Open Settings" aria-pressed={windows.settings.open} onClick={() => launch("settings")}><Settings2 size={16} />{railLabels && <span className="mac-dw-rail-label">Settings</span>}</button>
     </nav>
     <div className="mac-dw-top">
       <QuickCreate quiet /><Notifications ntfyOnly />

@@ -5,7 +5,12 @@ import { DEFAULT_SLOTS, OLD_DEFAULT_SLOTS, type PanelType } from "@/lib/home-slo
 import { safeLocalStorage } from "./storage"
 import { DEFAULT_LAYOUT, layoutFromSlots, sanitizeLayout, type LayoutItem } from "@/lib/home-layout"
 
-export type Theme = "dim" | "dark"
+import { cleanHex, cleanRoundness, cleanTheme, accentVars, type Roundness, type Theme } from "@/lib/look"
+export type { Theme, Roundness }
+/** The Mac app ships its own default look (Graphite with a blue accent); everywhere else starts on Dim. */
+const MAC = typeof document !== "undefined" && document.documentElement.dataset.runtime === "mac-native"
+const DEFAULT_THEME: Theme = MAC ? "graphite" : "dim"
+const DEFAULT_ACCENT: Accent = MAC ? "blue" : "red"
 export type UiFont = "sans" | "mono"
 export const ACCENTS = ["red", "blue", "violet", "cyan", "orange", "green", "pink"] as const
 export type Accent = (typeof ACCENTS)[number]
@@ -54,8 +59,24 @@ interface PrefsState {
   socialBrands: string[]
   /** Desktop sidebar: the full tree (true) or the icon strip with hover flyouts (false). */
   navExpanded: boolean
-  /** Colour theme: Dim (mid-tone slate, default) or Dark (the original near-black). */
+  /** Colour theme (see lib/look.ts for the list). */
   theme: Theme
+  /** Your own accent colour (`#rrggbb`); empty uses the accent chosen above. */
+  customAccent: string
+  /** Corner roundness of panels and controls. */
+  roundness: Roundness
+  /** Mac desktop: the left rail shows names next to its icons. */
+  railLabels: boolean
+  /** Mac desktop: apps hidden from the rail (by app id). */
+  railHidden: string[]
+  /** Mac desktop: reopen the windows that were open last time. */
+  restoreWindows: boolean
+  /** Learning: most items the planner puts on one day. */
+  planPerDay: number
+  /** Learning: how many days ahead "Plan my weeks" looks. */
+  planHorizon: 7 | 14 | 21 | 28
+  /** Learning: draw class times on the Planner calendar. */
+  showClassTimes: boolean
   /** Interface text: the system sans (default) or JetBrains Mono everywhere. */
   uiFont: UiFont
   /** Home: every block in order, with visibility and width (replaces homeSlots from v5). */
@@ -78,7 +99,7 @@ type Persisted = Omit<PrefsState, "set" | "reset">
 /** Older stored shapes, read only by the migration. */
 type Legacy = Partial<Persisted> & { homeSlots?: PanelType[]; showHomeProjects?: boolean; showHomeLog?: boolean }
 
-export const PREFS_VERSION = 6
+export const PREFS_VERSION = 7
 
 const DEFAULT_PREFS = (): Persisted => ({
   categoryColors: true,
@@ -97,10 +118,18 @@ const DEFAULT_PREFS = (): Persisted => ({
   socialPlatforms: [],
   socialBrands: [],
   navExpanded: false,
-  theme: "dim",
+  theme: DEFAULT_THEME,
+  customAccent: "",
+  roundness: "default",
+  railLabels: false,
+  railHidden: [],
+  restoreWindows: true,
+  planPerDay: 3,
+  planHorizon: 14,
+  showClassTimes: true,
   uiFont: "sans",
   homeLayout: DEFAULT_LAYOUT.map((b) => ({ ...b })),
-  accent: "red",
+  accent: DEFAULT_ACCENT,
   density: "comfortable",
   navLabels: {},
   navHidden: [],
@@ -131,6 +160,12 @@ export const usePrefs = create<PrefsState>()(
         // v5 → v6: the four-slot fields are gone (Home layout replaced them); new options take their defaults.
         const { homeSlots: _a, showHomeProjects: _b, showHomeLog: _c, ...rest } = p as Legacy & { homeSizing?: unknown }
         delete (rest as Record<string, unknown>).homeSizing
+        // v6 → v7: the Mac app's own look is now the Graphite theme. Its old settings were never applied on the
+        // desktop, so the stored defaults (Dim, red) become Graphite and blue there; anything you picked stays.
+        if (version < 7 && MAC) {
+          if (rest.theme === "dim" || rest.theme === undefined) rest.theme = "graphite"
+          if (rest.accent === "red" || rest.accent === undefined) rest.accent = "blue"
+        }
         return rest
       },
       // Never trust stored values blindly: unknown panel types or bad numbers fall back to defaults.
@@ -153,10 +188,18 @@ export const usePrefs = create<PrefsState>()(
           socialBrands: strList(p.socialBrands),
           feedConnections: sanitizeFeedConnections(p.feedConnections),
           navExpanded: p.navExpanded === true,
-          theme: p.theme === "dark" ? "dark" : "dim",
+          theme: cleanTheme(p.theme, DEFAULT_THEME),
+          customAccent: cleanHex(p.customAccent),
+          roundness: cleanRoundness(p.roundness),
+          railLabels: p.railLabels === true,
+          railHidden: strList(p.railHidden).slice(0, 20),
+          restoreWindows: p.restoreWindows !== false,
+          planPerDay: Number.isFinite(Number(p.planPerDay)) ? Math.min(6, Math.max(1, Math.round(Number(p.planPerDay)))) : 3,
+          planHorizon: p.planHorizon === 7 || p.planHorizon === 21 || p.planHorizon === 28 ? p.planHorizon : 14,
+          showClassTimes: p.showClassTimes !== false,
           uiFont: p.uiFont === "mono" ? "mono" : "sans",
           homeLayout: sanitizeLayout(p.homeLayout),
-          accent: (ACCENTS as readonly unknown[]).includes(p.accent) ? (p.accent as Accent) : "red",
+          accent: (ACCENTS as readonly unknown[]).includes(p.accent) ? (p.accent as Accent) : DEFAULT_ACCENT,
           density: p.density === "compact" ? "compact" : "comfortable",
           layoutMode: p.layoutMode === "mobile" ? "mobile" : "responsive",
           navLabels: sanitizeLabels(p.navLabels),
@@ -179,8 +222,22 @@ function sanitizeFeedConnections(raw: unknown): Persisted["feedConnections"] {
 }
 
 /** Theme and font live on <html> so every screen (sign-in included) follows them. */
-function applyLook({ theme, uiFont, categoryColors, accent, density, motion }: Pick<PrefsState, "theme" | "uiFont" | "categoryColors" | "accent" | "density" | "motion">) {
+const ACCENT_PROPS = ["--bw-red", "--bw-red-hover", "--bw-red-ledge", "--bw-red-soft", "--bw-red-light", "--primary-foreground"] as const
+function applyLook({ theme, uiFont, categoryColors, accent, density, motion, customAccent, roundness }: Pick<PrefsState, "theme" | "uiFont" | "categoryColors" | "accent" | "density" | "motion" | "customAccent" | "roundness">) {
   if (typeof document === "undefined") return
+  const root = document.documentElement
+  root.dataset.roundness = roundness
+  // Light themes turn off the dark-mode styles of shared components.
+  root.classList.toggle("dark", theme !== "light")
+  if (customAccent) {
+    const v = accentVars(customAccent)
+    const values = [v.base, v.hover, v.ledge, v.soft, v.light, v.on]
+    ACCENT_PROPS.forEach((prop, i) => root.style.setProperty(prop, values[i]))
+    root.dataset.customAccent = "on"
+  } else {
+    ACCENT_PROPS.forEach((prop) => root.style.removeProperty(prop))
+    delete root.dataset.customAccent
+  }
   document.documentElement.dataset.motion = motion
   document.documentElement.dataset.accent = accent
   document.documentElement.dataset.density = density

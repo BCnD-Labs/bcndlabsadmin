@@ -17,6 +17,8 @@ const SECTION: Record<string, SettingsSection> = {
   server: "server",
   shortcuts: "shortcuts",
   navigation: "shortcuts",
+  desktop: "desktop",
+  learning: "learning",
 }
 
 /** Old /settings/... links and bookmarks: open the settings modal over Home. */
