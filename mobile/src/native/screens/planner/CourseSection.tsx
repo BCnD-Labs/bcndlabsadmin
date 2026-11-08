@@ -3,7 +3,7 @@ import { Text, View } from "react-native"
 import { type Collections } from "../../../lib/shared.ts"
 import { color } from "../../../theme.ts"
 import { Chip } from "../../ui.tsx"
-import { courseLabel, isScored, typeAfterCourseChange, typeOptions } from "./learning-types.ts"
+import { courseLabel, isScored, typeAfterCourseChange, typeLabel, typeOptions } from "./learning-types.ts"
 import { shared } from "./sheet-parts.tsx"
 import type { ExtraErrors, Extras } from "./task-extras.ts"
 
@@ -13,7 +13,7 @@ import type { ExtraErrors, Extras } from "./task-extras.ts"
  * test on a certification also takes a score. Changing the course keeps the type if the new kind
  * has it, as on the web; a score is dropped as soon as the item can't carry one.
  */
-export function CourseSection({ x, set, courses, errors }: { x: Extras; set: (p: Partial<Extras>) => void; courses: Collections["courses"]; errors: ExtraErrors }) {
+export function CourseSection({ x, set, courses, errors, usedTypes = [] }: { x: Extras; set: (p: Partial<Extras>) => void; courses: Collections["courses"]; errors: ExtraErrors; usedTypes?: string[] }) {
   const course = courses.find((c) => c.id === x.courseId)
   const scored = isScored(course?.kind, x.learningType)
   function pick(courseId: string) {
@@ -44,10 +44,17 @@ export function CourseSection({ x, set, courses, errors }: { x: Extras; set: (p:
       ) : null}
       {x.courseId && course?.topics?.length && x.learningType !== "event" ? (
         <>
-          <Text style={shared.label}>Topics covered</Text>
+          <Text style={shared.label}>Module</Text>
           <View style={shared.chips}>
             {course.topics.map((t) => <Chip key={t.id} label={t.title} active={x.topicIds.includes(t.id)} onPress={() => set({ topicIds: x.topicIds.includes(t.id) ? x.topicIds.filter((id) => id !== t.id) : [...x.topicIds, t.id] })} />)}
           </View>
+        </>
+      ) : null}
+      {x.courseId && x.learningType && x.learningType !== "event" && x.learningType !== "milestone" ? (
+        <>
+          <Text style={shared.label}>{typeLabel(x.learningType, course?.kind)} type (optional)</Text>
+          <TextInput value={x.workType} onChangeText={(workType) => set({ workType })} placeholder="Your own label, like Reading or Document" placeholderTextColor={color.faint} accessibilityLabel="Type" maxLength={60} style={shared.input} />
+          {usedTypes.length ? <View style={shared.chips}>{usedTypes.slice(0, 12).map((v) => <Chip key={v} label={v} active={x.workType === v} onPress={() => set({ workType: x.workType === v ? "" : v })} />)}</View> : null}
         </>
       ) : null}
       {scored ? (

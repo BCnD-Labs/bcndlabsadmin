@@ -32,12 +32,14 @@ export interface Extras {
   reflection: ReflectionDraft
   /** Smaller steps inside the task. */
   subtasks: Subtask[]
-  /** The course topics this work covers. */
+  /** The course modules this work belongs to. */
   topicIds: string[]
+  /** Your own label for the kind of assignment, quiz or exam. */
+  workType: string
 }
 export interface ExtraErrors { schedule?: string; duration?: string; score?: string; links?: string; reflection?: string; other?: string }
 
-export const emptyExtras = (): Extras => ({ courseId: "", learningType: "", score: "", scheduledDate: "", scheduledTime: "", duration: "", focusDate: "", links: [], recordLinks: [], reflection: emptyReflection(), subtasks: [], topicIds: [] })
+export const emptyExtras = (): Extras => ({ courseId: "", learningType: "", score: "", scheduledDate: "", scheduledTime: "", duration: "", focusDate: "", links: [], recordLinks: [], reflection: emptyReflection(), subtasks: [], topicIds: [], workType: "" })
 
 export const extrasFromTask = (t: Task): Extras => ({
   courseId: t.courseId ?? "",
@@ -52,6 +54,7 @@ export const extrasFromTask = (t: Task): Extras => ({
   reflection: reflectionDraft(t.reflection),
   subtasks: (t.subtasks ?? []).map((st) => ({ ...st })),
   topicIds: [...(t.topicIds ?? [])],
+  workType: t.workType ?? "",
 })
 
 const minutes = (text: string): number | undefined => (/^\d+$/.test(text.trim()) ? Number(text) : undefined)
@@ -74,6 +77,7 @@ function candidate(x: Extras, existing: Task | undefined, now: string) {
     reflection: buildReflection(x.reflection, existing?.reflection, now),
     subtasks: orNone(x.subtasks.filter((st) => st.title.trim()).map((st) => ({ ...st, title: st.title.trim() }))),
     topicIds: x.courseId ? orNone(x.topicIds) : undefined,
+    workType: x.courseId && x.workType.trim() ? x.workType.trim().slice(0, 60) : undefined,
   }
 }
 type Candidate = ReturnType<typeof candidate>
@@ -134,6 +138,7 @@ const GROUPS: { keys: (keyof Candidate)[]; read: (x: Extras) => unknown }[] = [
   { keys: ["reflection"], read: (x) => x.reflection },
   { keys: ["subtasks"], read: (x) => x.subtasks },
   { keys: ["topicIds"], read: (x) => [x.courseId, x.topicIds] },
+  { keys: ["workType"], read: (x) => [x.courseId, x.workType] },
 ]
 
 /** The patch for edited extras: only the groups that differ from what the task started with, and within them only values that really differ. */

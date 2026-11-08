@@ -150,3 +150,15 @@ test("topics, steps and a study plan made on the Mac reach the phone, and tickin
     rmSync(root, { recursive: true, force: true })
   }
 })
+
+test("a note made on the phone links to work and a module, and the Mac rules read it back both ways", async () => {
+  const { setNoteTaskLinks, tasksOfNote, notesOfTask, modulesOf, createNote } = await import("../src/lib/shared.ts")
+  const withModules = { ...data([task("a"), task("b", { learningType: "quiz", workType: "Reading" })]), courses: [{ ...course, topics: [{ id: "tp1", title: "Module 5" }] }] }
+  const made = createNote(withModules, { text: "Energy notes", color: "amber", pinned: false, courseId: "crs_a", topicIds: ["tp1"] }, { makeId: (p) => `${p}_n`, now: () => ts })
+  const linked = setNoteTaskLinks(made.data, made.record.id, ["a", "b"], ts)
+  assert.ok(validWorkspace(linked))
+  assert.deepEqual(tasksOfNote(linked, "nte_n").map((t) => t.id), ["a", "b"])
+  assert.deepEqual(notesOfTask(linked, linked.tasks[0]).map((n) => n.id), ["nte_n"])
+  assert.deepEqual(modulesOf(linked.courses[0], linked.notes[0]).map((m) => m.title), ["Module 5"])
+  assert.equal(linked.tasks[1].workType, "Reading")
+})

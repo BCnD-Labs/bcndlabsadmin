@@ -18,14 +18,14 @@ export function TopicsEditor({ value, onChange }: { value: Topic[]; onChange: (n
     setText("")
   }
   return <View style={s.wrap}>
-    <Text style={s.label}>Topics or modules</Text>
+    <Text style={s.label}>Modules</Text>
     {value.map(t => <View key={t.id} style={s.row}>
-      <TextInput style={[s.input, s.grow]} value={t.title} onChangeText={title => onChange(value.map(x => x.id === t.id ? { ...x, title } : x))} accessibilityLabel="Topic" maxLength={200} placeholderTextColor={color.muted} />
+      <TextInput style={[s.input, s.grow]} value={t.title} onChangeText={title => onChange(value.map(x => x.id === t.id ? { ...x, title } : x))} accessibilityLabel="Module" maxLength={200} placeholderTextColor={color.muted} />
       <Pressable onPress={() => onChange(value.filter(x => x.id !== t.id))} style={s.trash} accessibilityRole="button" accessibilityLabel={`Remove ${t.title}`}><Icon name="trash-outline" size={17} tint={p.muted} /></Pressable>
     </View>)}
     <View style={s.row}>
-      <TextInput style={[s.input, s.grow]} value={text} onChangeText={setText} onSubmitEditing={add} multiline placeholder="Add a topic, e.g. Unit 3: Recursion" placeholderTextColor={color.muted} accessibilityLabel="New topic" />
-      <Pressable onPress={add} disabled={!text.trim()} style={[s.add, !text.trim() && s.off]} accessibilityRole="button" accessibilityLabel="Add topic"><Text style={s.addText}>Add</Text></Pressable>
+      <TextInput style={[s.input, s.grow]} value={text} onChangeText={setText} onSubmitEditing={add} multiline placeholder="Add a module, e.g. Module 5: Energy markets" placeholderTextColor={color.muted} accessibilityLabel="New module" />
+      <Pressable onPress={add} disabled={!text.trim()} style={[s.add, !text.trim() && s.off]} accessibilityRole="button" accessibilityLabel="Add module"><Text style={s.addText}>Add</Text></Pressable>
     </View>
   </View>
 }

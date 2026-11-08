@@ -16,3 +16,4 @@ export { EFFORTS, MEETING_KINDS, WEEKDAY_LABELS, WORK_STATUSES, daysLabel, dueWo
 export type { ClassMeeting, CourseTopic, Subtask, StudyProposal, TopicUse, DayLoad, MeetingKind, WorkEffort, WorkStatus, MeetingOccurrence, PlanProposal, TodayPlan, WeekDay } from "../../../blackwall-admin/shared/learning.ts"
 export { stepProgress, openSteps, stepsDueBy, stepsOn, hasPlannedSteps } from "../../../blackwall-admin/shared/steps.ts"
 export type { StepRef } from "../../../blackwall-admin/shared/steps.ts"
+export { MAX_RECORD_LINKS as MAX_LINKS, hasLink, modulesOf, noteTitle as noteLinkTitle, notesOfTask, setNoteTaskLinks, tasksLinkingTask, tasksOfNote, withLink } from "../../../blackwall-admin/shared/links.ts"

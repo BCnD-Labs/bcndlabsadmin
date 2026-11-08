@@ -172,11 +172,11 @@ export function TaskSheet({ editor, data, today, onClose, embedded = false, regi
               </Section>
               {!event && (data.courses.length || x.courseId) ? (
                 <Section title="Learning" summary={learningSummary(x, data.courses)} open={openSection === "learning"} onToggle={() => toggleSection("learning")} error={!!errors.score}>
-                  <CourseSection x={x} set={setX} courses={data.courses} errors={errors} />
+                  <CourseSection x={x} set={setX} courses={data.courses} errors={errors} usedTypes={[...new Set(data.tasks.map((t) => t.workType).filter((v): v is string => !!v))].sort()} />
                 </Section>
               ) : null}
               {!event ? <Section title="Steps" summary={x.subtasks.length ? `${x.subtasks.filter((st) => st.done).length} of ${x.subtasks.length} done` : "None"} open={openSection === "steps"} onToggle={() => toggleSection("steps")}>
-                <StepsSection steps={x.subtasks} onChange={(subtasks) => setX({ subtasks })} today={today} onPlanStudy={task && x.learningType === "exam" && !!x.courseId && !draft.done && validDateKey(draft.due) ? () => setStudying(true) : undefined} />
+                <StepsSection steps={x.subtasks} onChange={(subtasks) => setX({ subtasks })} today={today} onPlanStudy={task && (x.learningType === "exam" || x.learningType === "quiz") && !!x.courseId && !draft.done && validDateKey(draft.due) ? () => setStudying(true) : undefined} />
               </Section> : null}
               {!event ? <Section title="Reflection" summary={reflectionSummary(x)} open={openSection === "reflection"} onToggle={() => toggleSection("reflection")} error={!!errors.reflection}>
                 <ReflectionSection value={x.reflection} onChange={(reflection) => setX({ reflection })} error={errors.reflection} />
