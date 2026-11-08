@@ -4,12 +4,12 @@
  * clock, preferences or the browser; "today" is always a `YYYY-MM-DD` parameter, and nothing is saved
  * unless the caller applies a proposal. No AI: every suggestion is a plain date rule the user can see.
  */
-import type { ClassMeeting, Course, MeetingKind, Subtask, Task, WorkEffort, WorkStatus } from "../src/lib/types.ts"
+import type { ClassMeeting, Course, CourseTopic, MeetingKind, Subtask, Task, WorkEffort, WorkStatus } from "../src/lib/types.ts"
 import { addDaysToKey, daysBetween, weekdayOfKey } from "./date-keys.ts"
 import { hasPlannedSteps, openSteps, stepsDueBy, stepsOn, type StepRef } from "./steps.ts"
 import type { Collections } from "./workspace.ts"
 
-export type { ClassMeeting, MeetingKind, WorkEffort, WorkStatus }
+export type { ClassMeeting, CourseTopic, MeetingKind, Subtask, WorkEffort, WorkStatus }
 
 export const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const
 export const MEETING_KINDS: { value: MeetingKind; label: string }[] = [

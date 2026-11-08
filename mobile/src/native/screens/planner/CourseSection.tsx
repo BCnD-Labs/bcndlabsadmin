@@ -42,6 +42,14 @@ export function CourseSection({ x, set, courses, errors }: { x: Extras; set: (p:
           </View>
         </>
       ) : null}
+      {x.courseId && course?.topics?.length && x.learningType !== "event" ? (
+        <>
+          <Text style={shared.label}>Topics covered</Text>
+          <View style={shared.chips}>
+            {course.topics.map((t) => <Chip key={t.id} label={t.title} active={x.topicIds.includes(t.id)} onPress={() => set({ topicIds: x.topicIds.includes(t.id) ? x.topicIds.filter((id) => id !== t.id) : [...x.topicIds, t.id] })} />)}
+          </View>
+        </>
+      ) : null}
       {scored ? (
         <>
           <Text style={shared.label}>Score %</Text>

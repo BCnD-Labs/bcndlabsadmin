@@ -14,6 +14,9 @@ import { CourseSection } from "./CourseSection.tsx"
 import { DatePicker } from "./DatePicker.tsx"
 import { LinksSection } from "./LinksSection.tsx"
 import { RecordLinksSection } from "./RecordLinksSection.tsx"
+import { StepsSection } from "./StepsSection.tsx"
+import { StudyPlanSheet } from "../learning/StepViews.tsx"
+import { addSubtasks } from "../../../lib/shared.ts"
 import { ReflectionSection } from "./ReflectionSection.tsx"
 import { ScheduleSection } from "./ScheduleSection.tsx"
 import { formatDay } from "./dates.ts"
@@ -26,7 +29,7 @@ import { offerUndo } from "./undo-snack.ts"
 
 /** What the sheet is doing: a new task (optionally pre-dated), or an existing task by id. */
 export type Editor = { mode: "create"; due?: string; kind?: "task" | "event"; courseId?: string; learningType?: NonNullable<Collections["tasks"][number]["learningType"]> } | { mode: "edit"; id: string }
-type SectionKey = "schedule" | "learning" | "reflection" | "links" | "records"
+type SectionKey = "schedule" | "learning" | "steps" | "reflection" | "links" | "records"
 
 /**
  * A contextual dialog for adding and editing one task. The first block is the web
@@ -53,6 +56,7 @@ export function TaskSheet({ editor, data, today, onClose, embedded = false, regi
   const [pickerOpen, setPickerOpen] = useState(false)
   const [openSection, setOpenSection] = useState<SectionKey | null>(null)
   const [confirming, setConfirming] = useState(false)
+  const [studying, setStudying] = useState(false)
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
   const set = (patch: Partial<TaskDraft>) => (setDraft((d) => ({ ...d, ...patch })), setFailed(false))
@@ -171,6 +175,9 @@ export function TaskSheet({ editor, data, today, onClose, embedded = false, regi
                   <CourseSection x={x} set={setX} courses={data.courses} errors={errors} />
                 </Section>
               ) : null}
+              {!event ? <Section title="Steps" summary={x.subtasks.length ? `${x.subtasks.filter((st) => st.done).length} of ${x.subtasks.length} done` : "None"} open={openSection === "steps"} onToggle={() => toggleSection("steps")}>
+                <StepsSection steps={x.subtasks} onChange={(subtasks) => setX({ subtasks })} today={today} onPlanStudy={task && x.learningType === "exam" && !!x.courseId && !draft.done && validDateKey(draft.due) ? () => setStudying(true) : undefined} />
+              </Section> : null}
               {!event ? <Section title="Reflection" summary={reflectionSummary(x)} open={openSection === "reflection"} onToggle={() => toggleSection("reflection")} error={!!errors.reflection}>
                 <ReflectionSection value={x.reflection} onChange={(reflection) => setX({ reflection })} error={errors.reflection} />
               </Section> : null}
@@ -207,7 +214,8 @@ export function TaskSheet({ editor, data, today, onClose, embedded = false, regi
         </Animated.View>
       </KeyboardFrame>
   )
-  return embedded ? content : <Modal visible transparent animationType={reduceMotion ? "none" : "fade"} onRequestClose={() => close()} statusBarTranslucent navigationBarTranslucent>{content}</Modal>
+  const study = studying && task ? <StudyPlanSheet data={{ ...data, tasks: data.tasks.map((t) => t.id === task.id ? { ...t, due: draft.due || undefined, learningType: "exam" as const, topicIds: x.topicIds, subtasks: x.subtasks } : t) }} taskId={task.id} today={today} onClose={() => setStudying(false)} onDraft={(plan) => setX({ subtasks: addSubtasks({ tasks: [{ ...task, subtasks: x.subtasks }] }, task.id, plan).tasks[0].subtasks ?? [] })} /> : null
+  return embedded ? <>{content}{study}</> : <Modal visible transparent animationType={reduceMotion ? "none" : "fade"} onRequestClose={() => close()} statusBarTranslucent navigationBarTranslucent>{content}{study}</Modal>
 }
 
 const styles = StyleSheet.create({

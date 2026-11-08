@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { applyFocusPlan, emptyWorkspace, isMeetingId, meetingEvents, planWeek, setTaskStatus, todayPlan, validWorkspace, type Collections } from "../src/lib/shared.ts"
+import { addSubtasks, applyFocusPlan, emptyWorkspace, studyPlan, toggleSubtask, weekLoad, isMeetingId, meetingEvents, planWeek, setTaskStatus, todayPlan, validWorkspace, type Collections } from "../src/lib/shared.ts"
 import { agendaItems, tasksByDay, timedLanes } from "../src/native/screens/planner/calendar/schedule.ts"
 import { meetingsProblem } from "../src/native/screens/learning/meetings-rules.ts"
 
@@ -103,6 +103,48 @@ test("integration: class times, status and a week plan made on the Mac reach the
     assert.equal(row.focusDate, "2026-11-11", "the phone's plan reaches the Mac")
     assert.equal(row.status, "submitted")
     assert.equal(row.done, true, "submitted on the phone is done on the Mac")
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((e) => (e ? reject(e) : resolve())))
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test("topics, steps and a study plan made on the Mac reach the phone, and ticking a step on the phone reaches the Mac", { skip: adminDeps ? false : "blackwall-admin packages are not installed" }, async () => {
+  const { createApi } = await import("../../blackwall-admin/server/app.ts")
+  const { hashPassword, Sessions } = await import("../../blackwall-admin/server/auth.ts")
+  const { FileConnectionStore } = await import("../../blackwall-admin/server/store.ts")
+  const root = mkdtempSync(path.join(tmpdir(), "bw-steps-sync-"))
+  const workspace = new MemoryStore()
+  const sessions = new Sessions(Buffer.alloc(32, 7))
+  const api = createApi({ store: new FileConnectionStore(root), workspace, auth: { sessions, passwordHash: hashPassword("test-password") } })
+  const server = createServer((req, res) => { void api(req, res) })
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
+  const address = `http://127.0.0.1:${(server.address() as { port: number }).port}/`
+  const cookie = sessions.issue(false).split(";")[0]
+  const withCookie = ((url: string, init: RequestInit) => fetch(url, { ...init, headers: { ...(init.headers as Record<string, string>), Cookie: cookie } })) as typeof fetch
+  const make = () => createWorkspaceClient({ address, fetchImpl: withCookie, store: memoryStore() })
+  try {
+    const mac = make(), phone = make()
+    await mac.load()
+    let examId = ""
+    const made = await mac.mutate(["courses", "tasks"], (d) => {
+      const c = createCourse(d, { title: "Data Structures", code: "CS 2110", instructor: "", instructorEmail: "", term: "Fall 2026", schedule: "", location: "", url: "", description: "", tags: [], color: "blue", topics: [{ id: "tp1", title: "Recursion" }, { id: "tp2", title: "Trees" }] })
+      const t = createTask(c.data, { title: "Midterm", courseId: c.record.id, learningType: "exam", due: "2026-11-16", topicIds: ["tp1", "tp2"], starred: false, done: false })
+      examId = t.record.id
+      const plan = studyPlan({ tasks: t.data.tasks, courses: t.data.courses }, examId, "2026-11-09")
+      return { ...d, ...addSubtasks(t.data, examId, plan) }
+    })
+    assert.equal(made.status, "ok")
+    const seen = (await phone.load()).snapshot!.data
+    const exam = seen.tasks.find((t) => t.id === examId)!
+    assert.deepEqual(seen.courses[0].topics!.map((t) => t.title), ["Recursion", "Trees"], "topics reach the phone")
+    assert.deepEqual(exam.subtasks!.map((s) => s.title), ["Review: Recursion", "Review: Trees", "Final review"], "the Mac's study plan reaches the phone")
+    assert.equal(weekLoad(seen, "2026-11-09").flatMap((d) => d.steps).length, 3, "and shows on the phone's week")
+    const first = exam.subtasks![0]
+    assert.equal((await phone.mutate(["tasks"], (d) => toggleSubtask(d, examId, first.id))).status, "ok")
+    const back = (await mac.load()).snapshot!.data.tasks.find((t) => t.id === examId)!
+    assert.equal(back.subtasks![0].done, true, "a step ticked on the phone is ticked on the Mac")
+    assert.equal(back.status, "in_progress", "and starts the exam")
   } finally {
     await new Promise<void>((resolve, reject) => server.close((e) => (e ? reject(e) : resolve())))
     rmSync(root, { recursive: true, force: true })
