@@ -3,13 +3,15 @@ import { KeyboardFrame, KeyboardScrollView, TextInput } from "../../editing/keyb
 import { shape } from "../../../shape.ts"
 import { useState } from "react"
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
-import { createCourse, updateCourse, validDateKey, type Collections, type NewCourse } from "../../../lib/shared.ts"
+import { createCourse, updateCourse, validDateKey, type ClassMeeting, type Collections, type NewCourse } from "../../../lib/shared.ts"
 import { color } from "../../../theme.ts"
 import { plannerColor as p } from "../../planner-theme.ts"
 import { useWorkspace } from "../../data/WorkspaceProvider.tsx"
 import { Icon } from "../../ui.tsx"
 import { cleanLinks, linkProblem } from "../planner/doc-links.ts"
 import { LinksSection } from "../planner/LinksSection.tsx"
+import { MeetingsEditor } from "./MeetingsEditor.tsx"
+import { meetingsProblem } from "./meetings-rules.ts"
 
 type Course = Collections["courses"][number]
 type Kind = NonNullable<Course["kind"]>
@@ -36,11 +38,15 @@ export function CourseEditor({ value, onClose }: { value: Course | "new"; onClos
   const [links, setLinks] = useState(previous?.links ?? [])
   const [pagesRead, setPagesRead] = useState(String(previous?.pagesRead ?? ""))
   const [pagesTotal, setPagesTotal] = useState(String(previous?.pagesTotal ?? ""))
+  const [meetings, setMeetings] = useState<ClassMeeting[]>(previous?.meetings ?? [])
+  const [syllabus, setSyllabus] = useState(previous?.syllabus ?? "")
+  const [policies, setPolicies] = useState(previous?.policies ?? "")
+  const [repoUrl, setRepoUrl] = useState(previous?.repoUrl ?? "")
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
   const [expanded, setExpanded] = useState(false)
-  const [initial] = useState(() => JSON.stringify([kind, title, code, instructor, term, startDate, endDate, schedule, location, description, url, links, pagesRead, pagesTotal]))
-  const dirty = JSON.stringify([kind, title, code, instructor, term, startDate, endDate, schedule, location, description, url, links, pagesRead, pagesTotal]) !== initial
+  const [initial] = useState(() => JSON.stringify([kind, title, code, instructor, term, startDate, endDate, schedule, location, description, url, links, pagesRead, pagesTotal, meetings, syllabus, policies, repoUrl]))
+  const dirty = JSON.stringify([kind, title, code, instructor, term, startDate, endDate, schedule, location, description, url, links, pagesRead, pagesTotal, meetings, syllabus, policies, repoUrl]) !== initial
   function field(label: string, val: string, change: (v: string) => void, placeholder?: string) {
     return <View><Text style={styles.label}>{label}</Text><TextInput style={styles.input} value={val} onChangeText={change} placeholder={placeholder ?? label} placeholderTextColor={color.muted} accessibilityLabel={label} /></View>
   }
@@ -50,9 +56,11 @@ export function CourseEditor({ value, onClose }: { value: Course | "new"; onClos
     if (url.trim() && !/^https?:\/\//i.test(url.trim())) return (setError("Use a full http or https link."), false)
     if (linkProblem(links)) return (setError(linkProblem(links)!), false)
     if ((startDate.trim() && !validDateKey(startDate.trim())) || (endDate.trim() && !validDateKey(endDate.trim()))) return (setError("Use YYYY-MM-DD for dates."), false)
+    if (kind === "course" && meetingsProblem(meetings)) return (setError(meetingsProblem(meetings)!), false)
+    if (repoUrl.trim() && !/^https?:\/\//i.test(repoUrl.trim())) return (setError("Use a full http or https link for the class repository."), false)
     const read = pagesRead.trim() ? Number(pagesRead) : undefined, total = pagesTotal.trim() ? Number(pagesTotal) : undefined
     if (kind === "reading" && ((read != null && (!Number.isInteger(read) || read < 0)) || (total != null && (!Number.isInteger(total) || total < 1)) || (read != null && total != null && read > total))) return (setError("Check the page numbers."), false)
-    const patch: Partial<NewCourse> = { kind, title: title.trim(), code: code.trim(), instructor: instructor.trim(), term: term.trim(), startDate: startDate.trim() || undefined, endDate: endDate.trim() || undefined, schedule: schedule.trim(), location: location.trim(), description: description.trim(), url: url.trim(), links: cleanLinks(links), pagesRead: kind === "reading" ? read : undefined, pagesTotal: kind === "reading" ? total : undefined }
+    const patch: Partial<NewCourse> = { kind, title: title.trim(), code: code.trim(), instructor: instructor.trim(), term: term.trim(), startDate: startDate.trim() || undefined, endDate: endDate.trim() || undefined, schedule: schedule.trim(), location: location.trim(), description: description.trim(), url: url.trim(), links: cleanLinks(links), pagesRead: kind === "reading" ? read : undefined, pagesTotal: kind === "reading" ? total : undefined, meetings: kind === "course" && meetings.length ? meetings : undefined, syllabus: kind === "course" && syllabus.trim() ? syllabus.trim() : undefined, policies: kind === "course" && policies.trim() ? policies.trim() : undefined, repoUrl: kind === "course" && repoUrl.trim() ? repoUrl.trim() : undefined }
     setBusy(true)
     let ok = false
     try { ok = await mutate(["courses"], d => previous ? updateCourse(d, previous.id, patch) : createCourse(d, { instructorEmail: "", tags: [], color: "blue", ...patch } as NewCourse).data)
@@ -68,7 +76,7 @@ export function CourseEditor({ value, onClose }: { value: Course | "new"; onClos
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.kinds}>{kinds.map(k => <Pressable key={k.value} onPress={() => setKind(k.value)} style={[styles.kind, kind === k.value && styles.kindOn]} accessibilityRole="button" accessibilityState={{ selected: kind === k.value }}><Text style={[styles.kindText, kind === k.value && styles.kindTextOn]}>{k.label}</Text></Pressable>)}</ScrollView>
       {field("Title", title, setTitle, kind === "reading" ? "Book title" : "What are you learning?")}
       {kind === "reading" ? <View style={styles.pages}>{field("Pages read", pagesRead, setPagesRead)}{field("Total pages", pagesTotal, setPagesTotal)}</View> : null}
-      {expanded ? <>{field("Code / short label", code, setCode)}{field(kind === "reading" ? "Author" : kind === "certification" ? "Issuer" : "Instructor / source", instructor, setInstructor)}{field("Term / timeframe", term, setTerm)}{field("Start date", startDate, setStartDate, "YYYY-MM-DD")}{field(kind === "certification" ? "Exam date" : "End / target date", endDate, setEndDate, "YYYY-MM-DD")}{field("Schedule", schedule, setSchedule)}{field("Location", location, setLocation)}{field("Description", description, setDescription)}{field("Source link", url, setUrl, "https://…")}<Text style={styles.label}>Resources</Text><LinksSection links={links} onChange={setLinks} hint="Links to notes, files, or other resources for this learning item." /></> : <Pressable onPress={() => setExpanded(true)} accessibilityRole="button" accessibilityLabel="More details" style={styles.more}><Text style={styles.moreText}>+ More details</Text></Pressable>}
+      {expanded ? <>{field("Code / short label", code, setCode)}{field(kind === "reading" ? "Author" : kind === "certification" ? "Issuer" : "Instructor / source", instructor, setInstructor)}{field("Term / timeframe", term, setTerm)}{field("Start date", startDate, setStartDate, "YYYY-MM-DD")}{field(kind === "certification" ? "Exam date" : "End / target date", endDate, setEndDate, "YYYY-MM-DD")}{field("Schedule", schedule, setSchedule)}{field("Location", location, setLocation)}{kind === "course" ? <><MeetingsEditor value={meetings} onChange={setMeetings} />{field("Class repository", repoUrl, setRepoUrl, "https://github.com/…")}{field("Syllabus notes", syllabus, setSyllabus)}{field("Policies", policies, setPolicies)}</> : null}{field("Description", description, setDescription)}{field("Source link", url, setUrl, "https://…")}<Text style={styles.label}>Resources</Text><LinksSection links={links} onChange={setLinks} hint="Links to notes, files, or other resources for this learning item." /></> : <Pressable onPress={() => setExpanded(true)} accessibilityRole="button" accessibilityLabel="More details" style={styles.more}><Text style={styles.moreText}>+ More details</Text></Pressable>}
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </KeyboardScrollView>
     <View style={styles.actions}><Pressable onPress={() => close()} style={styles.action} accessibilityRole="button"><Text style={styles.actionText}>Close</Text></Pressable><Pressable onPress={() => void save()} style={[styles.action, styles.save]} accessibilityRole="button"><Text style={[styles.actionText, styles.saveText]}>{busy ? "Saving…" : "Save"}</Text></Pressable></View>

@@ -3,7 +3,7 @@ import { useCalendarPrefs } from "../planner/calendar/useCalendarPrefs.ts"
 import { KeyboardFrame, KeyboardScrollView, TextInput } from "../../editing/keyboard.tsx"
 import { useState } from "react"
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native"
-import { updateCourse, type Collections } from "../../../lib/shared.ts"
+import { statusLabel, statusOf, todayPlan, updateCourse, type Collections, type WorkStatus } from "../../../lib/shared.ts"
 import { plannerColor as c } from "../../planner-theme.ts"
 import { useWorkspace } from "../../data/WorkspaceProvider.tsx"
 import { mono } from "../../../theme.ts"
@@ -23,6 +23,7 @@ import { selectedItem } from "../../selected-item.ts"
 import { TaskPeek, previewText } from "../planner/TaskPeek.tsx"
 import { isSafeLink } from "../planner/doc-links.ts"
 import { Pill, SmallButton } from "./LearningControls.tsx"
+import { ClassesToday, StartHere, StatusPills } from "./PlanViews.tsx"
 import { dueGroup, kindInfo, learningProgress, learningToday, upcomingLearning, type Course, type Task } from "./learning-view.ts"
 
 export type WorkTab = "open" | "done" | "all"
@@ -86,12 +87,16 @@ function CoursePeek({ course, tasks, noteCount = 0, onOpen }: { course: Course; 
   return <View style={selectedItem.preview}>{course.description ? <Text style={s.peekText} numberOfLines={2} ellipsizeMode="tail">{previewText(course.description)}</Text> : null}<View style={s.chipRow}>{chips.map(chip => <PropChip key={chip.key} kind={chip.kind} label={chip.label} value={chip.value} />)}</View><Pressable onPress={onOpen} style={s.openPill} accessibilityRole="button" accessibilityLabel={`Open ${course.title}`}><Icon name="open-outline" size={12} tint="#fff" /><Text style={s.openPillText}>Open</Text></Pressable></View>
 }
 
-export function Today({ courses, tasks, data, today, onTask, onCourse, onAddTask, onAddSession, onToggle, onReflect, onEditReflection }: { courses: Course[]; tasks: Task[]; data: Collections; today: string; onTask: (id: string) => void; onCourse: (id: string) => void; onAddTask: () => void; onAddSession: () => void; onToggle: (task: Task) => void; onReflect: (task: Task) => void; onEditReflection: (entry: LearningReflection) => void }) {
+export function Today({ courses, tasks, data, today, onTask, onCourse, onAddTask, onAddSession, onPlan, onStart, onToggle, onReflect, onEditReflection }: { courses: Course[]; tasks: Task[]; data: Collections; today: string; onTask: (id: string) => void; onCourse: (id: string) => void; onAddTask: () => void; onAddSession: () => void; onPlan: () => void; onStart: (task: Task) => void; onToggle: (task: Task) => void; onReflect: (task: Task) => void; onEditReflection: (entry: LearningReflection) => void }) {
   const day = learningToday(courses, tasks, today)
+  const plan = todayPlan({ tasks: data.tasks, courses: data.courses }, today)
+  const nowDate = new Date(), nowMinutes = nowDate.getHours() * 60 + nowDate.getMinutes()
   const [prefs] = useCalendarPrefs()
   const [selected, setSelected] = useState<string | null>(null)
   const sections = [{ title: "Today's schedule", icon: "calendar-outline" as const, tint: kit.hue.learning, rows: day.schedule }, { title: "Overdue", icon: "alert-circle-outline" as const, tint: chipTone.overdue.ink, rows: day.overdue }, { title: "Due today", icon: "flag-outline" as const, tint: chipTone.date.ink, rows: day.due }]
-  return <><View style={s.sectionHead}><Text style={s.sectionTitle} accessibilityRole="header">Today · {shortDay(today)}</Text><View style={s.headActions}><SmallButton label="+ Task" onPress={onAddTask} /><SmallButton label="+ Session" onPress={onAddSession} /></View></View>
+  return <><View style={s.sectionHead}><Text style={s.sectionTitle} accessibilityRole="header">Today · {shortDay(today)}</Text><View style={s.headActions}><SmallButton label="Plan week" onPress={onPlan} /><SmallButton label="+ Task" onPress={onAddTask} /><SmallButton label="+ Session" onPress={onAddSession} /></View></View>
+    {plan.next ? <StartHere next={plan.next} courses={data.courses} onStart={onStart} /> : null}
+    <ClassesToday classes={plan.classes} now={nowMinutes} />
     {sections.map(section => <WorkspaceSection key={section.title} title={section.title} icon={section.icon} tint={section.tint} count={String(section.rows.length)} collapsible flush>{section.rows.map(task => {
       const course = courses.find(course => course.id === task.courseId)!
       const event = task.kind === "event" || task.learningType === "event"
@@ -124,16 +129,19 @@ function UpcomingDate({ due }: { due: string }) {
   return <View style={s.dateBox} accessible accessibilityLabel={`${parts.month} ${parts.day}`}><Text style={s.dateMonth}>{parts.month}</Text><Text style={s.dateText}>{parts.day}</Text></View>
 }
 
-export function Work({ course, tasks, data, tab, onTab, onAdd, onOpen, onToggle, onReflect, onEditReflection }: { course: Course; tasks: Task[]; data: Collections; tab: WorkTab; onTab: (tab: WorkTab) => void; onAdd: () => void; onOpen: (id: string) => void; onToggle: (task: Task) => void; onReflect: (id: string) => void; onEditReflection: (entry: LearningReflection) => void }) {
+export function Work({ course, tasks, data, tab, onTab, onAdd, onOpen, onToggle, onStatus, onReflect, onEditReflection }: { course: Course; tasks: Task[]; data: Collections; tab: WorkTab; onTab: (tab: WorkTab) => void; onAdd: () => void; onOpen: (id: string) => void; onToggle: (task: Task) => void; onStatus: (task: Task, status: WorkStatus) => void; onReflect: (id: string) => void; onEditReflection: (entry: LearningReflection) => void }) {
   const [selected, setSelected] = useState<string | null>(null)
   const shown = tasks.filter(t => tab === "all" || (tab === "done") === t.done).sort((a, b) => Number(a.done) - Number(b.done) || (a.due ?? "9999").localeCompare(b.due ?? "9999"))
   const today = todayKey()
   return <><View style={s.sectionHead}><Text style={s.sectionTitle}>Work</Text><SmallButton label="+ Add" onPress={onAdd} /></View><View style={s.smallTabs}>{(["open", "done", "all"] as const).map(x => <Pill key={x} label={`${x[0].toUpperCase() + x.slice(1)} ${tasks.filter(t => x === "all" || (x === "done") === t.done).length}`} selected={tab === x} onPress={() => { setSelected(null); onTab(x) }} />)}</View>
     <WorkspaceSection title={tab === "open" ? "Open work" : tab === "done" ? "Finished work" : "All work"} icon="checkbox-outline" tint={kindInfo(course).tint} count={String(shown.length)} flush>
-      {shown.map(t => <View key={t.id} style={[selectedItem.item, selected === t.id && selectedItem.itemOn]}><View style={s.workRow}>{t.kind === "event" || t.learningType === "event" ? <View style={s.leadIcon}><Icon name="calendar-outline" size={18} tint={c.accent} /></View> : <TaskCheck checked={t.done} onPress={() => onToggle(t)} label={`${t.done ? "Reopen" : "Complete"} ${t.title}`} />}<Pressable onPress={() => setSelected(id => id === t.id ? null : t.id)} style={s.flex} accessibilityRole="button" accessibilityLabel={`Preview ${t.title}`}><Text style={[s.rowTitle, t.done && s.done]} numberOfLines={2}>{t.title}</Text><View style={s.chipRow}><PropChip kind="tag" value={typeLabel(t.learningType ?? "", course.kind)} />{t.due ? <PropChip kind={!t.done && t.due < today ? "overdue" : "date"} label="Due" value={shortDay(t.due)} /> : null}{t.score != null ? <PropChip kind="status" label="Score" value={`${t.score}%`} /> : null}</View></Pressable><Pressable onPress={() => setSelected(id => id === t.id ? null : t.id)} style={s.iconTouch} accessibilityRole="button" accessibilityLabel={`Preview ${t.title}`}><Icon name={selected === t.id ? "chevron-up" : "chevron-down"} size={17} tint={c.muted} /></Pressable></View>{selected === t.id ? <><TaskPeek task={t} course={course.title} onOpen={() => onOpen(t.id)} /><TaskReflectionLinks data={data} task={t} course={course} onReflect={() => onReflect(t.id)} onEdit={onEditReflection} /></> : null}</View>)}
+      {shown.map(t => <View key={t.id} style={[selectedItem.item, selected === t.id && selectedItem.itemOn]}><View style={s.workRow}>{t.kind === "event" || t.learningType === "event" ? <View style={s.leadIcon}><Icon name="calendar-outline" size={18} tint={c.accent} /></View> : <TaskCheck checked={t.done} onPress={() => onToggle(t)} label={`${t.done ? "Reopen" : "Complete"} ${t.title}`} />}<Pressable onPress={() => setSelected(id => id === t.id ? null : t.id)} style={s.flex} accessibilityRole="button" accessibilityLabel={`Preview ${t.title}`}><Text style={[s.rowTitle, t.done && s.done]} numberOfLines={2}>{t.title}</Text><View style={s.chipRow}><PropChip kind="tag" value={typeLabel(t.learningType ?? "", course.kind)} />{t.due ? <PropChip kind={!t.done && t.due < today ? "overdue" : "date"} label="Due" value={shortDay(t.due)} /> : null}{t.score != null ? <PropChip kind="status" label="Score" value={`${t.score}%`} /> : null}{tracked(t, course) && statusOf(t) !== "not_started" ? <PropChip kind="status" value={statusLabel(statusOf(t)).toUpperCase()} /> : null}</View></Pressable><Pressable onPress={() => setSelected(id => id === t.id ? null : t.id)} style={s.iconTouch} accessibilityRole="button" accessibilityLabel={`Preview ${t.title}`}><Icon name={selected === t.id ? "chevron-up" : "chevron-down"} size={17} tint={c.muted} /></Pressable></View>{selected === t.id ? <><TaskPeek task={t} course={course.title} onOpen={() => onOpen(t.id)} />{tracked(t, course) ? <StatusPills task={t} onStatus={status => onStatus(t, status)} /> : null}<TaskReflectionLinks data={data} task={t} course={course} onReflect={() => onReflect(t.id)} onEdit={onEditReflection} /></> : null}</View>)}
       {!shown.length ? <Text style={s.emptyHint}>{tab === "done" ? "Completed work will appear here." : "No work here yet. Add a step when you’re ready."}</Text> : null}
     </WorkspaceSection></>
 }
+
+/** Classes track assignments, exams and milestones through not started, in progress, submitted and graded. */
+const tracked = (t: Task, course: Course) => (course.kind ?? "course") === "course" && t.kind !== "event" && t.learningType !== "event"
 
 function TaskReflectionLinks({ data, task, course, onReflect, onEdit }: { data: Collections; task: Task; course: Course; onReflect: () => void; onEdit: (entry: LearningReflection) => void }) {
   const count = learningReflections(data, course.id, task.id).length

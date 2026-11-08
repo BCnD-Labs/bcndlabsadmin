@@ -8,6 +8,8 @@ import type { ClassMeeting, Course, MeetingKind, Task, WorkEffort, WorkStatus } 
 import { addDaysToKey, daysBetween, weekdayOfKey } from "./date-keys.ts"
 import type { Collections } from "./workspace.ts"
 
+export type { ClassMeeting, MeetingKind, WorkEffort, WorkStatus }
+
 export const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const
 export const MEETING_KINDS: { value: MeetingKind; label: string }[] = [
   { value: "class", label: "Class" },

@@ -2,7 +2,7 @@ import { KeyboardFrame, KeyboardScrollView, useKeyboardTop } from "../../editing
 import { shape } from "../../../shape.ts"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Animated, Easing, Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
-import { toggleTask, type Collections } from "../../../lib/shared.ts"
+import { addDaysToKey, isMeetingId, meetingEvents, toggleTask, type Collections } from "../../../lib/shared.ts"
 import { plannerColor as c } from "../../planner-theme.ts"
 import { NAV_CLEARANCE, Icon } from "../../ui.tsx"
 import { useWorkspace } from "../../data/WorkspaceProvider.tsx"
@@ -79,13 +79,15 @@ export function CalendarView({ data, today, onEdit, onCreateDue, logs, blocked, 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [height])
   useEffect(() => onCreateDue(selected), [selected, onCreateDue])
-  const byDay = useMemo(() => tasksByDay(data.tasks, view === "month" ? weeks.flat() : columns), [data.tasks, view, weeks, columns])
-  const agenda = useMemo(() => agendaItems(data.tasks, selected, today, data.courses).filter(t => layout.showCompleted || !t.done), [data.tasks, data.courses, selected, today, layout.showCompleted])
+  // Weekly class and office-hour times draw here as read-only events; they are never saved as tasks.
+  const items = useMemo(() => [...data.tasks, ...meetingEvents(data.courses, addDaysToKey(selected, -45) ?? selected, addDaysToKey(selected, 45) ?? selected)], [data.tasks, data.courses, selected])
+  const byDay = useMemo(() => tasksByDay(items, view === "month" ? weeks.flat() : columns), [items, view, weeks, columns])
+  const agenda = useMemo(() => agendaItems(items, selected, today, data.courses).filter(t => layout.showCompleted || !t.done), [items, data.courses, selected, today, layout.showCompleted])
   const meta = useMemo(() => dayMeta(data.tasks, data.journal, selected), [data.tasks, data.journal, selected])
-  const toggle = useCallback((id: string) => { if (!blocked) void mutate(["tasks"], d => toggleTask(d, id)) }, [mutate, blocked])
+  const toggle = useCallback((id: string) => { if (!blocked && !isMeetingId(id)) void mutate(["tasks"], d => toggleTask(d, id)) }, [mutate, blocked])
   const step = useCallback((d: -1 | 1) => { setSelected(stepBy(view, displayDate, d)) }, [view, displayDate])
   const swipe = usePeriodSwipe(view === "month", step, reduceMotion)
-  const previewTask = data.tasks.find(t => t.id === previewId)
+  const previewTask = items.find(t => t.id === previewId)
   const previewCourse = previewTask?.courseId ? data.courses.find(c => c.id === previewTask.courseId) : undefined
   const linkedNotes = linkedNotesForDay(data, selected)
   const notes = orderNotes(linkedNotes, { search: "" })
@@ -100,7 +102,7 @@ export function CalendarView({ data, today, onEdit, onCreateDue, logs, blocked, 
     <KeyboardScrollView style={styles.fill} contentContainerStyle={styles.below} keyboardShouldPersistTaps="handled">
       {layout.order.filter(s => !layout.hidden.includes(s) && (s !== "notes" || linkedNotes.length > 0)).map(section => section === "agenda"
         ? <WorkspaceSection key={section} title={longDay(selected)} icon="calendar-outline" tint={c.accent} count={agenda.length ? `${agenda.length} ${agenda.length === 1 ? "item" : "items"}` : "none"} flush>
-          <DayAgenda day={selected} items={agenda} tasks={data.tasks} meta={meta} format={timeFormat} onEdit={onEdit} onToggle={toggle} showTimes={layout.showTimes} showCourses={layout.showCourses} />
+          <DayAgenda day={selected} items={agenda} tasks={data.tasks} meta={meta} format={timeFormat} onEdit={id => { if (!isMeetingId(id)) onEdit(id) }} onToggle={toggle} showTimes={layout.showTimes} showCourses={layout.showCourses} />
         </WorkspaceSection>
         : section === "log"
         ? <WorkspaceSection key={section} title="Log" icon="book-outline" tint={c.accent}><DailyLogEditor data={data} day={selected} logs={logs} blocked={blocked} heading="Log" embedded /></WorkspaceSection>
@@ -109,7 +111,7 @@ export function CalendarView({ data, today, onEdit, onCreateDue, logs, blocked, 
         </WorkspaceSection>)}
       {layout.hidden.length === 3 ? <Pressable onPress={() => setSettings({ top: 140, right: 12 })} style={styles.add} accessibilityRole="button"><Text style={styles.muted}>Choose sections in Planner settings</Text></Pressable> : null}
     </KeyboardScrollView>
-    <Modal visible={!!previewTask} transparent animationType="fade" onRequestClose={() => setPreviewId(null)}><View style={styles.peekBackdrop}><View style={styles.peekDialog}><View style={styles.peekHead}><Text style={styles.peekTitle} numberOfLines={2}>{previewTask?.title}</Text><Pressable onPress={() => setPreviewId(null)} accessibilityRole="button" accessibilityLabel="Close preview"><Icon name="close" tint={c.muted} /></Pressable></View>{previewTask ? <TaskPeek task={previewTask} course={previewCourse?.title} onOpen={() => { const id = previewTask.id; setPreviewId(null); onEdit(id) }} /> : null}</View></View></Modal>
+    <Modal visible={!!previewTask} transparent animationType="fade" onRequestClose={() => setPreviewId(null)}><View style={styles.peekBackdrop}><View style={styles.peekDialog}><View style={styles.peekHead}><Text style={styles.peekTitle} numberOfLines={2}>{previewTask?.title}</Text><Pressable onPress={() => setPreviewId(null)} accessibilityRole="button" accessibilityLabel="Close preview"><Icon name="close" tint={c.muted} /></Pressable></View>{previewTask ? <TaskPeek task={previewTask} course={previewCourse?.title} onOpen={() => { const id = previewTask.id; setPreviewId(null); if (!isMeetingId(id)) onEdit(id) }} /> : null}</View></View></Modal>
     {settings ? <PlannerSettings anchor={settings} onClose={() => setSettings(null)} prefs={layout} onChange={setLayout} calendar={prefs} onCalendar={setPrefs} /> : null}
     {noteEditor ? <NoteSheet editor={noteEditor} data={data} onClose={() => setNoteEditor(null)} /> : null}
   </View>
