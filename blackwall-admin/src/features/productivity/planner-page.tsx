@@ -17,6 +17,7 @@ import { addDaysToKey } from "@shared/date-keys"
 import { isMeetingId, meetingCourseId, meetingEvents } from "@shared/learning"
 import { courseHref } from "@/lib/routes"
 import { LOG_PROMPTS, appendPrompt } from "@/features/journal/log-helpers"
+import { JournalGlance } from "@/features/journal/journal-glance"
 import { ScheduleCalendar } from "./schedule-calendar"
 import { PlannerNotes } from "./planner-notes"
 import { TaskBrowser } from "./task-browser"
@@ -109,6 +110,7 @@ function DailyLog({ date, onDate, onSelect }: { date: string; onDate: (date: str
     <label htmlFor="planner-log" className="sr-only">Daily log for {date}</label>
     <textarea id="planner-log" value={entry?.text ?? ""} onChange={(e) => saveJournal(date, e.target.value)} placeholder="What happened? A few lines are enough." className="planner-log-text" />
     <div className="flex flex-wrap gap-1">{LOG_PROMPTS.map((prompt) => <Button key={prompt} variant="quiet" size="xs" onClick={() => { saveJournal(date, appendPrompt(entry?.text ?? "", prompt)); requestAnimationFrame(() => { const el = document.getElementById("planner-log") as HTMLTextAreaElement | null; el?.focus(); if (el) el.setSelectionRange(el.value.length, el.value.length) }) }}>+ {prompt}</Button>)}</div>
+    <JournalGlance date={date} />
     {entry && <div className="flex items-center gap-2"><PlannerSaveState /><span className="text-[11px] text-muted-foreground">{format(new Date(entry.updatedAt), "HH:mm")}</span></div>}
     {!!completed.length && <details className="border-t border-line-soft pt-2"><summary className="cursor-pointer text-xs text-muted-foreground">{completed.length} completed this day</summary><ul className="mt-1 space-y-1">{completed.map((task) => <li key={task.id}><button className="flex w-full items-start gap-2 rounded p-1 text-left text-xs hover:bg-raised" onClick={() => onSelect(task)}><Check className="mt-0.5 size-3 shrink-0 text-green" /><span><strong className="font-medium">{task.title}</strong><span className="mt-0.5 block text-muted-foreground">{reflectionSummary(task) || "Add a reflection"}</span></span></button></li>)}</ul></details>}
   </Panel>

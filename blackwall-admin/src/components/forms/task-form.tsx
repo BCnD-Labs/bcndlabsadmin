@@ -166,7 +166,7 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
         </div>
       )}
       {!!course?.topics?.length && draft.learningType !== "event" && (
-        <Field label="Topics covered" htmlFor="task-topics" hint="Which units or modules this covers. For an exam, the study plan reviews each one.">
+        <Field label="Module" htmlFor="task-topics" hint="Which module this belongs to. An exam can cover several; its study plan reviews each one.">
           <TopicChips topics={course.topics} value={draft.topicIds} onChange={(topicIds) => set({ topicIds })} />
         </Field>
       )}

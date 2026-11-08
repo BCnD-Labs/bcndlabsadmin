@@ -157,7 +157,7 @@ function LearningCard({ course, items }: { course: Course; items: Task[] }) {
         </div>
         <div className="min-w-0">
           <span className="block font-heading text-[15px] leading-snug font-bold text-ink">{course.title}</span>
-          <span className="mt-1 block truncate text-xs text-muted-foreground">{kindSubtitle(course)}</span>
+          <span className="mt-1 line-clamp-2 text-xs leading-snug text-muted-foreground">{kindSubtitle(course)}</span>
         </div>
         <div className="mt-auto">
           <CardBody course={course} items={items} />
@@ -200,7 +200,6 @@ function Upcoming({ courses }: { courses: Map<string, Course> }) {
       tool="learning"
       command="upcoming"
       meta={total || undefined}
-      className="lg:sticky lg:top-[calc(var(--bw-header-h,88px)+12px)]"
       actions={
         <Button
           size="icon-sm"
@@ -328,7 +327,7 @@ function Library() {
             ]}
           />
           </GridItem>
-          <GridItem span={3}>
+          <GridItem span="full">
             <section aria-label="Learning" className="bw-grid-region grid grid-cols-[minmax(0,1fr)] gap-3">
               <div className="flex flex-wrap items-center gap-2">
                 <SegmentedTabs
@@ -369,7 +368,7 @@ function Library() {
               )}
             </section>
           </GridItem>
-          <GridItem><Upcoming courses={courseMap} /></GridItem>
+          <GridItem span="full"><Upcoming courses={courseMap} /></GridItem>
         </WorkspaceGrid>
       )}
     </>

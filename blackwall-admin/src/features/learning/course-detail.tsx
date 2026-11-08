@@ -74,12 +74,27 @@ function Coursework({ course, items }: { course: Course; items: Task[] }) {
   const firstLabel = first.label.toLowerCase()
   const article = /^[aeiou]/.test(firstLabel) ? "an" : "a"
   const [view, setView] = useState<View>("open")
+  const [by, setBy] = useState<"date" | "module">(course.topics?.length ? "module" : "date")
   const [quick, setQuick] = useState("")
   const open = items.filter((t) => !t.done).sort(compareCoursework)
   const done = items.filter((t) => t.done).sort((a, b) => (b.completedAt ?? "").localeCompare(a.completedAt ?? ""))
 
-  const groups =
-    view === "done"
+  const modules = course.topics ?? []
+  const pool = view === "done" ? done : view === "all" ? [...open, ...done] : open
+  const byModule = by === "module" && modules.length > 0
+  const placed = new Set<string>()
+  const moduleGroups = [
+    ...modules.map((m) => {
+      const mine = pool.filter((t) => t.topicIds?.includes(m.id) && !placed.has(t.id))
+      mine.forEach((t) => placed.add(t.id))
+      const all = items.filter((t) => t.topicIds?.includes(m.id))
+      return { label: m.title, note: all.length ? `${all.filter((t) => t.done).length} of ${all.length} done` : "no work yet", items: mine, keepEmpty: true }
+    }),
+    { label: "No module", note: undefined, items: pool.filter((t) => !placed.has(t.id)), keepEmpty: false },
+  ]
+  const groups: { label: string; tone?: "warn"; note?: string; items: Task[]; keepEmpty?: boolean }[] = byModule
+    ? moduleGroups
+    : view === "done"
       ? [{ label: "Done", items: done }]
       : [
           { label: "Overdue", tone: "warn" as const, items: open.filter((t) => t.due && daysUntil(t.due) < 0) },
@@ -88,7 +103,7 @@ function Coursework({ course, items }: { course: Course; items: Task[] }) {
           { label: "No date", items: open.filter((t) => !t.due) },
           ...(view === "all" ? [{ label: "Done", items: done }] : []),
         ]
-  const shown = groups.filter((g) => g.items.length)
+  const shown = groups.filter((g) => g.items.length || (byModule && g.keepEmpty && view !== "done"))
 
   const add = () => {
     const { title, due } = parseQuickAdd(quick)
@@ -112,6 +127,9 @@ function Coursework({ course, items }: { course: Course; items: Task[] }) {
             { value: "all", label: "All" },
           ]}
         />
+        {modules.length > 0 && (
+          <SegmentedTabs label="Group work" value={by} onChange={setBy} tabClassName="px-3" tabs={[{ value: "module", label: "By module" }, { value: "date", label: "By date" }]} />
+        )}
       </div>
       <form
         onSubmit={(e) => {
@@ -135,12 +153,13 @@ function Coursework({ course, items }: { course: Course; items: Task[] }) {
         shown.map((g) => (
           <section key={g.label} aria-label={g.label}>
             <ListGroupLabel tone={"tone" in g ? g.tone : undefined}>
-              {g.label} <span className="text-faint">· {g.items.length}</span>
+              {g.label} <span className="text-faint">· {g.note ?? g.items.length}</span>
             </ListGroupLabel>
             <ul>
               {g.items.map((t) => (
-                <CourseworkRow key={t.id} task={t} course={course} />
+                <CourseworkRow key={t.id} task={t} course={course} hideModule={byModule} />
               ))}
+              {!g.items.length && <li className="px-3.5 pb-2 text-xs text-faint">Nothing here yet. Use Add work on the Modules panel.</li>}
             </ul>
           </section>
         ))

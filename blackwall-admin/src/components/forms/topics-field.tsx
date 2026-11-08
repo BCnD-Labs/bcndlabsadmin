@@ -19,12 +19,12 @@ export function TopicsField({ value, onChange }: { value: CourseTopic[]; onChang
     <div className="grid gap-1.5" data-testid="topics-field">
       {value.map((t) => (
         <div key={t.id} className="flex items-center gap-2" data-testid="topic-edit-row">
-          <Input aria-label="Topic" className="flex-1" value={t.title} maxLength={200} onChange={(e) => onChange(value.map((x) => (x.id === t.id ? { ...x, title: e.target.value } : x)))} />
+          <Input aria-label="Module" className="flex-1" value={t.title} maxLength={200} onChange={(e) => onChange(value.map((x) => (x.id === t.id ? { ...x, title: e.target.value } : x)))} />
           <Button type="button" variant="quiet" size="icon-sm" aria-label={`Remove ${t.title}`} onClick={() => onChange(value.filter((x) => x.id !== t.id))}><Trash2 /></Button>
         </div>
       ))}
       <div className="flex gap-2">
-        <Input aria-label="New topic" value={text} placeholder="Add a topic or module, e.g. Unit 3: Recursion" onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add() } }}
+        <Input aria-label="New module" value={text} placeholder="Add a module, e.g. Module 5: Energy markets" onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add() } }}
           onPaste={(e) => { const pasted = e.clipboardData.getData("text"); if (pasted.includes("\n")) { e.preventDefault(); setText(pasted) } }} />
         <Button type="button" variant="outline" onClick={add} disabled={!text.trim()}><Plus /> Add</Button>
       </div>
@@ -35,7 +35,7 @@ export function TopicsField({ value, onChange }: { value: CourseTopic[]; onChang
 /** Pick which topics an assignment or exam covers. */
 export function TopicChips({ topics, value, onChange }: { topics: CourseTopic[]; value: string[]; onChange: (next: string[]) => void }) {
   return (
-    <div role="group" aria-label="Topics covered" className="flex flex-wrap gap-1.5">
+    <div role="group" aria-label="Module" className="flex flex-wrap gap-1.5">
       {topics.map((t) => {
         const on = value.includes(t.id)
         return <button key={t.id} type="button" aria-pressed={on} onClick={() => onChange(on ? value.filter((x) => x !== t.id) : [...value, t.id])}

@@ -1,6 +1,6 @@
 import { format } from "date-fns"
 import { CheckCircle2, ChevronLeft, ChevronRight, ChevronRight as Go, Moon, NotebookPen, Plus, Sun, SunMedium } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { OptionSelect } from "@/components/forms/fields"
@@ -20,10 +20,10 @@ import { LogTool } from "@/mac/dock/tools"
 import { useDock } from "@/mac/dock/dock-store"
 import { useWorkspace } from "@/stores/workspace"
 import { addDaysToKey } from "@shared/date-keys"
+import { validDateKey } from "@shared/planner"
 import { SLOTS, checkInSummary, formWording, nextPeriod, periodStart, readCheckIn, readSlotCheckIn, reviewId, slotForHour, slotSummary, type Period, type Slot } from "@shared/journal-review"
 import { isForToday } from "@shared/task-rules"
 import { CheckInDialog } from "./check-in-dialog"
-import { JournalCalendar } from "./journal-calendar"
 
 type View = Period | "reflections"
 const VIEWS: { value: View; label: string }[] = [{ value: "daily", label: "Daily" }, { value: "weekly", label: "Weekly" }, { value: "monthly", label: "Monthly" }, { value: "yearly", label: "Yearly" }, { value: "reflections", label: "Reflections" }]
@@ -93,6 +93,9 @@ export function JournalPage() {
   const view: View = VIEWS.some((v) => v.value === asked) ? (asked as View) : "daily"
   const day = useDock((s) => s.date)
   const setDay = useDock((s) => s.setDate)
+  // Linked from the Planner: /journal?date=2026-11-09 opens that day.
+  const asDate = params.get("date")
+  useEffect(() => { if (asDate && validDateKey(asDate)) { useDock.getState().setDate(asDate); setParams((p) => { const n = new URLSearchParams(p); n.delete("date"); return n }, { replace: true }) } }, [asDate, setParams])
   const journal = useWorkspace((s) => s.journal)
   const tasks = useWorkspace((s) => s.tasks)
   const [dialog, setDialog] = useState<{ slot?: Slot } | null>(null)
@@ -127,16 +130,17 @@ export function JournalPage() {
           </GridItem>
           {view === "daily" ? (
             <>
-              <GridItem>
-                <Panel category="calendar" title="Calendar" tool="journal" command="calendar" bodyClassName="p-2">
-                  <JournalCalendar selected={day} onSelect={setDay} />
-                </Panel>
-              </GridItem>
-              <GridItem span={2}>
-                <Panel category="journal" title="Daily log" tool="journal" command="log" bodyClassName="p-0">
-                  {IS_MAC ? <LogTool /> : <p className="px-3.5 py-3 text-sm text-muted-foreground">The daily log opens in the Planner: <Link className="underline" to={logHref(day)}>open this day</Link>.</p>}
-                </Panel>
-              </GridItem>
+            <GridItem>
+              <Panel category="journal" title="This day" tool="journal" command="day" bodyClassName="grid gap-2 p-3">
+                <p className="text-xs text-muted-foreground">{periodLabel("daily", day)}. Use the arrows above to change day. Days you have written in show a dot on the Planner calendar.</p>
+                <Button variant="outline" size="sm" asChild><Link to={logHref(day)}>See this day in the Planner</Link></Button>
+              </Panel>
+            </GridItem>
+            <GridItem span="full">
+              <Panel category="journal" title="Daily log" tool="journal" command="log" bodyClassName="p-0">
+                {IS_MAC ? <LogTool /> : <p className="px-3.5 py-3 text-sm text-muted-foreground">The daily log opens in the Planner: <Link className="underline" to={logHref(day)}>open this day</Link>.</p>}
+              </Panel>
+            </GridItem>
             </>
           ) : (
             <GridItem span={2}>

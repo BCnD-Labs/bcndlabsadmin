@@ -181,7 +181,7 @@ export function CourseForm({ id, defaults, onDone }: { id?: string; defaults?: P
           </>
         )}
       </div>
-      <Field label="Topics or modules" htmlFor="course-topics" hint="Units, chapters or modules, in order. Paste a list, one per line. Assignments and exams can say which they cover.">
+      <Field label="Modules" htmlFor="course-topics" hint="Units, chapters or topics, in order (Module 1, Module 2…). Paste a list, one per line. Each assignment can then sit in a module.">
         <TopicsField value={d.topics} onChange={(topics) => set({ topics })} />
       </Field>
       {isCourse && (
