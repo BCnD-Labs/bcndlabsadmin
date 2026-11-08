@@ -19,6 +19,7 @@ import { StudyPlanButton } from "@/features/learning/study-plan"
 export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Partial<Task>; onDone: () => void }) {
   const existing = useWorkspace((s) => s.tasks.find((t) => t.id === id))
   const hasCourses = useWorkspace((s) => s.courses.length > 0)
+  const usedTypes = useWorkspace((s) => [...new Set(s.tasks.map((t) => t.workType).filter((v): v is string => !!v))].sort())
   const courses = useWorkspace((s) => s.courses)
   const { create, update, remove } = useWorkspace.getState()
   const base = existing ?? defaults
@@ -35,6 +36,7 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
     score: base?.score != null ? String(base.score) : "",
     status: base?.status as WorkStatus | undefined,
     effort: base?.effort as WorkEffort | undefined,
+    workType: base?.workType ?? "",
     subtasks: (base?.subtasks ?? []) as Subtask[],
     topicIds: base?.topicIds ?? [],
   })
@@ -65,6 +67,7 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
       done: draft.done,
       status: tracked ? draft.status : undefined,
       effort: tracked ? draft.effort : undefined,
+      workType: draft.courseId && draft.workType.trim() ? draft.workType.trim().slice(0, 60) : undefined,
       subtasks: draft.subtasks.filter((s) => s.title.trim()).length ? draft.subtasks.filter((s) => s.title.trim()).map((s) => ({ ...s, title: s.title.trim() })) : undefined,
       topicIds: draft.courseId && draft.topicIds.length ? draft.topicIds.filter((id) => course?.topics?.some((t) => t.id === id)) : undefined,
       links: cleanLinks(draft.links),
@@ -118,6 +121,12 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
             </Field>
           )}
         </div>
+      )}
+      {draft.courseId && draft.learningType !== "event" && draft.learningType !== "milestone" && (
+        <Field label={`${type.label} type`} htmlFor="task-worktype" hint="Optional. Your own label, like Reading, Vocabulary or Document. Ones you have used before are suggested.">
+          <Input id="task-worktype" list="task-worktypes" maxLength={60} value={draft.workType} onChange={(e) => set({ workType: e.target.value })} placeholder="e.g. Reading" />
+          <datalist id="task-worktypes">{usedTypes.map((v) => <option key={v} value={v} />)}</datalist>
+        </Field>
       )}
       <Field label={draft.courseId ? "Notes" : "Details"} htmlFor="task-details">
         <Textarea
@@ -173,7 +182,7 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
       <Field label="Steps" htmlFor="task-steps" hint="Break it into smaller pieces. Give a step a day and it shows up in Today and the week.">
         <StepsField value={draft.subtasks} onChange={(subtasks) => set({ subtasks })} />
       </Field>
-      {existing && draft.learningType === "exam" && !!draft.courseId && !draft.done && !!draft.due && (
+      {existing && (draft.learningType === "exam" || draft.learningType === "quiz") && !!draft.courseId && !draft.done && !!draft.due && (
         <div><StudyPlanButton taskId={existing.id} draft={{ task: { ...existing, due: draft.due || undefined, learningType: draft.learningType, topicIds: draft.topicIds, subtasks: draft.subtasks }, onChange: (t) => set({ subtasks: t.subtasks ?? [] }) }} /></div>
       )}
       <Field label="Linked documents" htmlFor="task-links" hint="Notes, specs or files that live elsewhere. They open in their own app.">

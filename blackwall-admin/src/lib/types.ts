@@ -36,6 +36,8 @@ export interface Task {
   learningType?: LearningItemType
   /** Where a piece of coursework is in its life. Absent on older records: derive it from `done`. */
   status?: WorkStatus
+  /** Your own label for what kind of assignment, quiz or exam this is ("Reading", "Vocabulary", "Document"). Free text. */
+  workType?: string
   /** How big the work feels; sets how many days ahead the planner suggests starting. */
   effort?: WorkEffort
   /** Smaller steps inside this task; each can have its own day. */
@@ -306,7 +308,7 @@ export interface Service {
 }
 
 /** What a piece of coursework is. All of them are tasks, so they share the calendar and Tasks. */
-export type LearningItemType = "assignment" | "exam" | "milestone" | "event"
+export type LearningItemType = "assignment" | "quiz" | "exam" | "milestone" | "event"
 
 /** What kind of learning a record is. Older records have no kind and are courses. */
 export type LearningKind = "course" | "certification" | "selfpaced" | "skill" | "reading"

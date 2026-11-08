@@ -93,6 +93,7 @@ export function CourseworkRow({ task, course, showCourse, hideModule }: { task: 
           task.details && <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{task.details}</span>
         )}
       </button>
+      {task.workType && <span className="max-w-[8rem] shrink-0 truncate rounded-full bg-ink-2/8 px-2 text-[10px] leading-5 text-ink-2" title={`${type.label} type`}>{task.workType}</span>}
       {!hideModule && <ModuleChip task={task} course={course} />}
       <DocLinksMenu links={task.links} />
       {(task.subtasks?.length ?? 0) > 0 && <span className="shrink-0 rounded-full bg-ink-2/8 px-1.5 text-[10px] tabular-nums text-ink-2" title="Steps done" data-testid="step-progress">{stepProgress(task).done}/{stepProgress(task).total}</span>}

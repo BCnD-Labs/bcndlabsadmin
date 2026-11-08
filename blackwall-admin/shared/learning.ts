@@ -31,6 +31,7 @@ export const EFFORTS: { value: WorkEffort; label: string; hint: string; lead: nu
   { value: "big", label: "Big project", hint: "Start a week ahead", lead: 7 },
 ]
 const EXAM_LEAD = 5
+const QUIZ_LEAD = 2
 const DEFAULT_LEAD = 3
 /** No more than this many suggested items on one day. */
 export const PLAN_PER_DAY = 3
@@ -107,7 +108,7 @@ const compareDue = (a: Task, b: Task) => a.due!.localeCompare(b.due!) || (a.time
 /** How many days ahead of the deadline to begin. */
 export function leadDays(t: Task): number {
   if (t.effort) return EFFORTS.find((e) => e.value === t.effort)!.lead
-  return t.learningType === "exam" ? EXAM_LEAD : DEFAULT_LEAD
+  return t.learningType === "exam" ? EXAM_LEAD : t.learningType === "quiz" ? QUIZ_LEAD : DEFAULT_LEAD
 }
 /** The date to begin by: the deadline minus the lead time. */
 export const startBy = (t: Task): string | undefined => (t.due ? addDaysToKey(t.due, -leadDays(t)) : undefined)
@@ -172,7 +173,7 @@ export function weekLoad(data: Pick<Collections, "tasks" | "courses">, start: st
     const exams = due.filter((t) => t.learningType === "exam")
     const classMinutes = meetings.reduce((sum, m) => sum + minutesOf(m.meeting.end) - minutesOf(m.meeting.start), 0)
     const steps = stepsOn(work, date)
-    const score = due.length + exams.length * 2 + classMinutes / 120 + steps.length * 0.5
+    const score = due.length + exams.length * 2 + due.filter((t) => t.learningType === "quiz").length * 0.5 + classMinutes / 120 + steps.length * 0.5
     return { date, classMinutes, classes: meetings.length, due, exams, focus: work.filter((t) => t.focusDate === date), steps, load: score >= 4 ? "heavy" : score >= 2 ? "busy" : "light" }
   })
 }

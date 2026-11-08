@@ -301,14 +301,21 @@ function CourseInfo({ course, items }: { course: Course; items: Task[] }) {
 /** Syllabus and policies live with the course, saved when you press Save. */
 function CourseReference({ course }: { course: Course }) {
   const update = useWorkspace((s) => s.update)
+  const [open, setOpen] = useState(false)
   const [syllabus, setSyllabus] = useState(course.syllabus ?? "")
   const [policies, setPolicies] = useState(course.policies ?? "")
   const dirty = syllabus !== (course.syllabus ?? "") || policies !== (course.policies ?? "")
+  const has = [course.syllabus && "Syllabus", course.policies && "Policies"].filter(Boolean).join(" and ")
   return (
-    <Panel category="learning" title="Syllabus and policies" tool="course" command="syllabus" bodyClassName="grid gap-3 px-3.5 py-3"
-      actions={<Button size="sm" disabled={!dirty} onClick={() => { update("courses", course.id, { syllabus: syllabus.trim() || undefined, policies: policies.trim() || undefined }); toast.success("Saved") }}>Save</Button>}>
-      <label className="grid gap-1 text-xs text-muted-foreground">Syllabus<Textarea rows={5} value={syllabus} onChange={(e) => setSyllabus(e.target.value)} placeholder="Grading breakdown, weekly topics, what the class covers…" /></label>
-      <label className="grid gap-1 text-xs text-muted-foreground">Policies<Textarea rows={3} value={policies} onChange={(e) => setPolicies(e.target.value)} placeholder="Late work, attendance, collaboration, how to reach the instructor…" /></label>
+    <Panel category="learning" title="Syllabus and policies" tool="course" command="syllabus" bodyClassName={open ? "grid gap-3 px-3.5 py-3" : "px-3.5 py-2"}
+      actions={<>
+        {open && <Button size="sm" disabled={!dirty} onClick={() => { update("courses", course.id, { syllabus: syllabus.trim() || undefined, policies: policies.trim() || undefined }); toast.success("Saved") }}>Save</Button>}
+        <Button size="sm" variant="quiet" aria-expanded={open} onClick={() => setOpen((v) => !v)}>{open ? "Hide" : has ? "Show" : "Add"}</Button>
+      </>}>
+      {open ? <>
+        <label className="grid gap-1 text-xs text-muted-foreground">Syllabus<Textarea rows={5} value={syllabus} onChange={(e) => setSyllabus(e.target.value)} placeholder="Grading breakdown, weekly topics, what the class covers…" /></label>
+        <label className="grid gap-1 text-xs text-muted-foreground">Policies<Textarea rows={3} value={policies} onChange={(e) => setPolicies(e.target.value)} placeholder="Late work, attendance, collaboration, how to reach the instructor…" /></label>
+      </> : <p className="text-xs text-muted-foreground">{has ? `${has} saved.` : "Nothing added yet."}</p>}
     </Panel>
   )
 }
@@ -347,7 +354,7 @@ function CourseNotes({ course }: { course: Course }) {
         <label htmlFor="course-note" className="sr-only">New note</label>
         <Textarea
           id="course-note"
-          rows={2}
+          rows={4}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
@@ -366,7 +373,7 @@ function CourseNotes({ course }: { course: Course }) {
         </div>
       </form>
       {linked.length > 0 && (
-        <ul className="grid gap-2.5" aria-label="Notes for this course">
+        <ul className="grid gap-2.5 sm:grid-cols-2" aria-label="Notes for this course">
           {linked.map((n) => (
             <StickyNote key={n.id} note={n} compact />
           ))}
@@ -435,8 +442,8 @@ export function CourseDetail() {
         </GridItem>
         <GridItem><CourseInfo course={course} items={items} /></GridItem>
         <GridItem><TopicsPanel course={course} /></GridItem>
-        <GridItem><CourseNotes course={course} /></GridItem>
-        {kind === "course" && <GridItem span={2}><CourseReference key={course.id} course={course} /></GridItem>}
+        <GridItem span={3}><CourseNotes course={course} /></GridItem>
+        {kind === "course" && <GridItem><CourseReference key={course.id} course={course} /></GridItem>}
       </WorkspaceGrid>
     </>
   )

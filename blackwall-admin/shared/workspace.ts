@@ -58,13 +58,14 @@ export function validWorkspace(value: unknown): value is Collections {
         socialPosts: { stage: ["idea", "draft", "ready"] },
       }
       if (Object.entries(enums[key] ?? {}).some(([field, choices]) => !choices.includes(row[field]))) return false
-      const optionalStrings = ["details", "due", "time", "courseId", "learningType", "completedAt", "projectId", "connectionId", "productionUrl", "previewUrl", "notes", "cover", "coverAlt", "remoteSlug", "startDate", "endDate", "logo", "materialIcon", "customLogo", "siteId", "course", "publishedAt", "formEndpoint", "turnstileKey", "publishedSha", "link", "media", "scheduledAt", "syllabus", "policies", "repoUrl"]
+      const optionalStrings = ["details", "due", "time", "courseId", "learningType", "completedAt", "projectId", "connectionId", "productionUrl", "previewUrl", "notes", "cover", "coverAlt", "remoteSlug", "startDate", "endDate", "logo", "materialIcon", "customLogo", "siteId", "course", "publishedAt", "formEndpoint", "turnstileKey", "publishedSha", "link", "media", "scheduledAt", "syllabus", "policies", "repoUrl", "workType"]
       if (optionalStrings.some((field) => row[field] != null && typeof row[field] !== "string")) return false
       if (row.links != null && (!Array.isArray(row.links) || row.links.length > 50 || !row.links.every((l: unknown) => !!l && typeof l === "object" && typeof (l as { label?: unknown }).label === "string" && typeof (l as { url?: unknown }).url === "string"))) return false
       if (row.tags != null && (!Array.isArray(row.tags) || !row.tags.every((tag: unknown) => typeof tag === "string"))) return false
       if (["credits", "score", "pagesRead", "pagesTotal", "week", "order"].some((field) => row[field] != null && (typeof row[field] !== "number" || !Number.isFinite(row[field])))) return false
       if (key === "courses" && row.kind != null && !["course", "certification", "selfpaced", "skill", "reading"].includes(row.kind)) return false
       if (key === "tasks" && (typeof row.done !== "boolean" || typeof row.starred !== "boolean")) return false
+      if (key === "tasks" && typeof row.workType === "string" && row.workType.length > 60) return false
       if (key === "tasks" && !validPlannerFields(row)) return false
       if (key === "tasks" && ((row.status != null && !["not_started", "in_progress", "submitted", "graded"].includes(row.status)) || (row.effort != null && !["quick", "medium", "big"].includes(row.effort)))) return false
       if (key === "courses" && !validMeetings(row.meetings)) return false

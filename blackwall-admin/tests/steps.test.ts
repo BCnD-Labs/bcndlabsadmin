@@ -2,7 +2,7 @@ import assert from "node:assert/strict"
 import { test } from "node:test"
 import { emptyWorkspace, mergeWorkspace, validWorkspace } from "../shared/workspace.ts"
 import { addSubtasks, removeCourseTopic, toggleSubtask } from "../shared/records.ts"
-import { planWeek, studyPlan, todayPlan, topicUsage, weekLoad } from "../shared/learning.ts"
+import { planWeek, startBy, studyPlan, todayPlan, topicUsage, weekLoad } from "../shared/learning.ts"
 import { stepProgress } from "../shared/steps.ts"
 import type { Course, Task } from "../src/lib/types.ts"
 
@@ -86,4 +86,14 @@ test("topic usage counts open assignments and exams per topic; a step edit on an
   const phone = addSubtasks(base, "t1", [{ title: "Outline" }], { makeId: ids() })
   const mac = { ...base, tasks: [task({ title: "Other" }), ...base.tasks.slice(1)] }
   assert.deepEqual(mergeWorkspace(base, phone, mac).conflicts, ["tasks: t1"], "same record edited on both: reviewed, not lost")
+})
+
+test("quizzes and an assignment type: older records load, long types are refused, quizzes start two days ahead and can be studied for", () => {
+  const quiz = task({ id: "qz", title: "Reading quiz", learningType: "quiz", workType: "Reading", due: "2026-11-12" })
+  assert.ok(validWorkspace({ ...emptyWorkspace(), courses: [course()], tasks: [quiz, task({ workType: undefined })] }))
+  assert.ok(!validWorkspace({ ...emptyWorkspace(), courses: [course()], tasks: [task({ workType: "x".repeat(61) })] }))
+  assert.equal(startBy(quiz), "2026-11-10", "a quiz starts two days ahead")
+  const plan = studyPlan({ tasks: [quiz], courses: [course()] }, "qz", "2026-11-09")
+  assert.equal(plan.at(-1)?.title, "Final review")
+  assert.equal(plan.at(-1)?.date, "2026-11-11")
 })
