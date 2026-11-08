@@ -122,6 +122,21 @@ server.listen(0, "127.0.0.1", () => {
     if (process.env.BW_DESKTOP_SHOT) writeFileSync(process.env.BW_DESKTOP_SHOT, (await wc!.capturePage()).toPNG())
     await wc!.executeJavaScript("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))")
     assert(await wc!.executeJavaScript("!document.querySelector('.mac-dw-sidebar')"), "Escape closes the Planner sidebar")
+    // Rail names: the toggle writes the names beside the icons and moves the windows over.
+    await wc!.executeJavaScript("document.querySelector('.mac-dw-rail-toggle').click()")
+    assert(await wc!.executeJavaScript("document.querySelector('.mac-dw-rail').dataset.labels === 'true' && [...document.querySelectorAll('.mac-dw-rail-label')].some(e => e.textContent === 'Learning')"), "The sidebar toggle shows app names")
+    assert(await wc!.executeJavaScript("(() => { const w = document.querySelector('[aria-label=\"Learning window\"]').getBoundingClientRect(); return w.right <= window.innerWidth + 1 && w.left >= document.querySelector('.mac-dw-rail').getBoundingClientRect().right - 1 })()"), "Windows stay inside the screen and clear of the wide sidebar")
+    await wc!.executeJavaScript("document.querySelector('.mac-dw-rail-toggle').click()")
+    assert(await wc!.executeJavaScript("document.querySelector('.mac-dw-rail').dataset.labels === 'false'"), "The sidebar toggle hides names again")
+    // Settings: Desktop and Learning sections exist, and a theme choice reaches the page.
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Open Settings\"]').click()")
+    assert(await wc!.executeJavaScript("(() => { const names = [...document.querySelectorAll('nav[aria-label=\"Settings sections\"] button')].map(b => b.textContent); return names.includes('Desktop') && names.includes('Learning') && names.includes('Appearance') })()"), "Settings has Desktop, Learning and Appearance sections")
+    await wc!.executeJavaScript("[...document.querySelectorAll('nav[aria-label=\"Settings sections\"] button')].find(b => b.textContent === 'Appearance').click()")
+    await wc!.executeJavaScript("document.querySelector('[role=radio][title=\"Bright and clean\"]').click()")
+    assert(await wc!.executeJavaScript("document.documentElement.dataset.theme === 'light' && !document.documentElement.classList.contains('dark')"), "Choosing the Light theme applies it")
+    await wc!.executeJavaScript("document.querySelector('[role=radio][title=\"Neutral grey, the Mac desktop look\"]').click()")
+    assert(await wc!.executeJavaScript("document.documentElement.dataset.theme === 'graphite'"), "Graphite is the Mac theme")
+    await wc!.executeJavaScript("document.querySelector('button[data-slot=dialog-close]').click()")
     await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Open classic workspace\"]').click()")
     for (let i = 0; i < 40; i++) {
       if (await wc!.executeJavaScript("!!document.querySelector('.mac-titlebar') && !!document.querySelector('.mac-dock')")) break

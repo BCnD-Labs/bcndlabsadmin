@@ -174,7 +174,7 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
         <StepsField value={draft.subtasks} onChange={(subtasks) => set({ subtasks })} />
       </Field>
       {existing && draft.learningType === "exam" && !!draft.courseId && !draft.done && !!draft.due && (
-        <div><StudyPlanButton taskId={existing.id} /></div>
+        <div><StudyPlanButton taskId={existing.id} draft={{ task: { ...existing, due: draft.due || undefined, learningType: draft.learningType, topicIds: draft.topicIds, subtasks: draft.subtasks }, onChange: (t) => set({ subtasks: t.subtasks ?? [] }) }} /></div>
       )}
       <Field label="Linked documents" htmlFor="task-links" hint="Notes, specs or files that live elsewhere. They open in their own app.">
         <DocLinksField value={draft.links} onChange={(links) => set({ links })} />

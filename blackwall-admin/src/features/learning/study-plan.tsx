@@ -7,13 +7,19 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "@/components/ui/dialog"
 import { parseKey, todayKey } from "@/lib/dates"
 import { usePrefs } from "@/stores/prefs"
+import type { Task } from "@/lib/types"
+import { newId } from "@/lib/ids"
 import { useWorkspace } from "@/stores/workspace"
 import { addSubtasks } from "@shared/records"
 import { dueWords, studyPlan } from "@shared/learning"
 
 /** A study plan for one exam: reviews counted back from the exam day. Tick or untick, then add them as steps. Nothing is saved until you press the button. */
-export function StudyPlanDialog({ taskId, open, onClose }: { taskId: string; open: boolean; onClose: () => void }) {
-  const tasks = useWorkspace((s) => s.tasks)
+/** Inside an open task form the plan goes into the form's own draft (saved with the form), not straight to the workspace. */
+export interface StudyDraft { task: Task; onChange: (task: Task) => void }
+
+export function StudyPlanDialog({ taskId, open, onClose, draft }: { taskId: string; open: boolean; onClose: () => void; draft?: StudyDraft }) {
+  const stored = useWorkspace((s) => s.tasks)
+  const tasks = draft ? stored.map((t) => (t.id === taskId ? draft.task : t)) : stored
   const courses = useWorkspace((s) => s.courses)
   const [off, setOff] = useState<Set<number>>(new Set())
   const perDay = usePrefs((st) => st.planPerDay)
@@ -22,7 +28,9 @@ export function StudyPlanDialog({ taskId, open, onClose }: { taskId: string; ope
   const plan = open ? studyPlan({ tasks, courses }, taskId, today, perDay) : []
   const chosen = plan.filter((_, i) => !off.has(i))
   const apply = () => {
-    useWorkspace.setState((s) => addSubtasks({ tasks: s.tasks }, taskId, chosen.map((p) => ({ title: p.title, date: p.date, topicId: p.topicId }))))
+    const steps = chosen.map((p) => ({ title: p.title, date: p.date, topicId: p.topicId }))
+    if (draft) draft.onChange(addSubtasks({ tasks: [draft.task] }, taskId, steps, { makeId: newId }).tasks[0])
+    else useWorkspace.setState((s) => addSubtasks({ tasks: s.tasks }, taskId, steps))
     toast.success(`${chosen.length} study step${chosen.length === 1 ? "" : "s"} added to ${exam?.title ?? "the exam"}`)
     setOff(new Set())
     onClose()
@@ -56,12 +64,12 @@ export function StudyPlanDialog({ taskId, open, onClose }: { taskId: string; ope
   )
 }
 
-export function StudyPlanButton({ taskId, size = "sm", label = "Plan my studying" }: { taskId: string; size?: "sm" | "xs"; label?: string }) {
+export function StudyPlanButton({ taskId, size = "sm", label = "Plan my studying", draft }: { taskId: string; size?: "sm" | "xs"; label?: string; draft?: StudyDraft }) {
   const [open, setOpen] = useState(false)
   return (
     <>
       <Button type="button" variant="outline" size={size} onClick={() => setOpen(true)}><BookOpenCheck /> {label}</Button>
-      <StudyPlanDialog taskId={taskId} open={open} onClose={() => setOpen(false)} />
+      <StudyPlanDialog taskId={taskId} open={open} onClose={() => setOpen(false)} draft={draft} />
     </>
   )
 }
