@@ -29,6 +29,7 @@ import { Input } from "@/components/ui/input"
 import { daysLabel, meetingKindLabel } from "@shared/learning"
 import { formatTime } from "@/lib/dates"
 import { CourseworkRow, KindIcon } from "./coursework"
+import { TopicsPanel } from "./topics-panel"
 import { ProgressBar, ProgressRing, dateRange, kindSubtitle } from "./learning-page"
 import { COURSE_STATUS_LABEL, compareCoursework, courseStatus, kindInfo, kindOf, kindProgress, learningType } from "./learning-utils"
 
@@ -414,6 +415,7 @@ export function CourseDetail() {
           <Coursework course={course} items={items} />
         </GridItem>
         <GridItem><CourseInfo course={course} items={items} /></GridItem>
+        <GridItem><TopicsPanel course={course} /></GridItem>
         <GridItem><CourseNotes course={course} /></GridItem>
         {kind === "course" && <GridItem span={2}><CourseReference key={course.id} course={course} /></GridItem>}
       </WorkspaceGrid>

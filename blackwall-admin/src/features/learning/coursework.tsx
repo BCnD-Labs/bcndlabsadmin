@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
 import { courseColor, courseLabel, kindInfo, learningType } from "./learning-utils"
+import { stepProgress } from "@shared/steps"
 import { StatusPill, tracksStatus } from "./status-pill"
 
 /** The kind's icon tile in its own hue (Course blue, Certification green, …). */
@@ -92,6 +93,7 @@ export function CourseworkRow({ task, course, showCourse }: { task: Task; course
         )}
       </button>
       <DocLinksMenu links={task.links} />
+      {(task.subtasks?.length ?? 0) > 0 && <span className="shrink-0 rounded-full bg-ink-2/8 px-1.5 text-[10px] tabular-nums text-ink-2" title="Steps done" data-testid="step-progress">{stepProgress(task).done}/{stepProgress(task).total}</span>}
       {tracksStatus(task, course) && <StatusPill task={task} />}
       <span
         className={cn(

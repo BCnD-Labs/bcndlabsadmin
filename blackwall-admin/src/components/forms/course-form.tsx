@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils"
 import { useWorkspace } from "@/stores/workspace"
 import { Field } from "./fields"
 import { MeetingsField } from "./meetings-field"
+import { TopicsField } from "./topics-field"
 import { FormFrame } from "./form-frame"
 
 /** Add or edit any kind of learning (Productivity → Learning → Add learning). Fields follow the kind. */
@@ -43,6 +44,7 @@ export function CourseForm({ id, defaults, onDone }: { id?: string; defaults?: P
     pagesRead: base?.pagesRead != null ? String(base.pagesRead) : "",
     pagesTotal: base?.pagesTotal != null ? String(base.pagesTotal) : "",
     meetings: (base?.meetings ?? []) as ClassMeeting[],
+    topics: base?.topics ?? [],
     syllabus: base?.syllabus ?? "",
     policies: base?.policies ?? "",
     repoUrl: base?.repoUrl ?? "",
@@ -82,6 +84,7 @@ export function CourseForm({ id, defaults, onDone }: { id?: string; defaults?: P
       pagesRead: k === "reading" ? pagesRead : undefined,
       pagesTotal: k === "reading" ? pagesTotal : undefined,
       meetings: isCourse && d.meetings.length ? d.meetings : undefined,
+      topics: d.topics.filter((t) => t.title.trim()).length ? d.topics.filter((t) => t.title.trim()).map((t) => ({ ...t, title: t.title.trim() })) : undefined,
       syllabus: isCourse && d.syllabus.trim() ? d.syllabus.trim() : undefined,
       policies: isCourse && d.policies.trim() ? d.policies.trim() : undefined,
       repoUrl: isCourse && repoUrl ? repoUrl : undefined,
@@ -178,6 +181,9 @@ export function CourseForm({ id, defaults, onDone }: { id?: string; defaults?: P
           </>
         )}
       </div>
+      <Field label="Topics or modules" htmlFor="course-topics" hint="Units, chapters or modules, in order. Paste a list, one per line. Assignments and exams can say which they cover.">
+        <TopicsField value={d.topics} onChange={(topics) => set({ topics })} />
+      </Field>
       {isCourse && (
         <>
           <Field label="Class and office-hour times" htmlFor="course-meetings" hint="They repeat every week between the start and end dates and show up on your calendar and in Today.">

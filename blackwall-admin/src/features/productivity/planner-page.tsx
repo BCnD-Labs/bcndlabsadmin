@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { parseKey, toDateKey, todayKey } from "@/lib/dates"
 import type { Task } from "@/lib/types"
 import { useWorkspace } from "@/stores/workspace"
+import { usePrefs } from "@/stores/prefs"
 import { useUi } from "@/stores/ui"
 import { validDateKey } from "@shared/planner"
 import { addDaysToKey } from "@shared/date-keys"
@@ -34,7 +35,8 @@ export function PlannerPage() {
   const date = validDateKey(params.get("date")) ? params.get("date")! : todayKey()
   const selected = tasks.find((task) => task.id === params.get("task"))
   // Weekly class times draw on the calendar without being saved as records; tapping one opens its course.
-  const calendarItems = useMemo(() => [...tasks, ...meetingEvents(courses, addDaysToKey(date, -45)!, addDaysToKey(date, 45)!)], [tasks, courses, date])
+  const showClassTimes = usePrefs((st) => st.showClassTimes)
+  const calendarItems = useMemo(() => (showClassTimes ? [...tasks, ...meetingEvents(courses, addDaysToKey(date, -45)!, addDaysToKey(date, 45)!)] : tasks), [tasks, courses, date, showClassTimes])
   const [tab, setTab] = useState<InspectorTab>("details")
   const [browserOpen, setBrowserOpen] = useState(false)
   const openForm = useUi((s) => s.openForm)

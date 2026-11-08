@@ -7,11 +7,14 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { kindInfo, learningType } from "@/features/learning/learning-utils"
-import type { LearningItemType, Task, WorkEffort, WorkStatus } from "@/lib/types"
+import type { LearningItemType, Subtask, Task, WorkEffort, WorkStatus } from "@/lib/types"
 import { EFFORTS, WORK_STATUSES } from "@shared/learning"
 import { useWorkspace } from "@/stores/workspace"
 import { CourseSelect, Field, OptionSelect } from "./fields"
 import { FormFrame } from "./form-frame"
+import { StepsField } from "./steps-field"
+import { TopicChips } from "./topics-field"
+import { StudyPlanButton } from "@/features/learning/study-plan"
 
 export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Partial<Task>; onDone: () => void }) {
   const existing = useWorkspace((s) => s.tasks.find((t) => t.id === id))
@@ -32,6 +35,8 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
     score: base?.score != null ? String(base.score) : "",
     status: base?.status as WorkStatus | undefined,
     effort: base?.effort as WorkEffort | undefined,
+    subtasks: (base?.subtasks ?? []) as Subtask[],
+    topicIds: base?.topicIds ?? [],
   })
   const set = (patch: Partial<typeof draft>) => setDraft((d) => ({ ...d, ...patch }))
 
@@ -60,6 +65,8 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
       done: draft.done,
       status: tracked ? draft.status : undefined,
       effort: tracked ? draft.effort : undefined,
+      subtasks: draft.subtasks.filter((s) => s.title.trim()).length ? draft.subtasks.filter((s) => s.title.trim()).map((s) => ({ ...s, title: s.title.trim() })) : undefined,
+      topicIds: draft.courseId && draft.topicIds.length ? draft.topicIds.filter((id) => course?.topics?.some((t) => t.id === id)) : undefined,
       links: cleanLinks(draft.links),
       score: draft.courseId && scored ? score : undefined,
     }
@@ -157,6 +164,17 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
             <OptionSelect id="task-effort" value={draft.effort ?? "medium"} onChange={(effort) => set({ effort })} options={EFFORTS.map((e) => ({ value: e.value, label: `${e.label} · ${e.hint}` }))} />
           </Field>
         </div>
+      )}
+      {!!course?.topics?.length && draft.learningType !== "event" && (
+        <Field label="Topics covered" htmlFor="task-topics" hint="Which units or modules this covers. For an exam, the study plan reviews each one.">
+          <TopicChips topics={course.topics} value={draft.topicIds} onChange={(topicIds) => set({ topicIds })} />
+        </Field>
+      )}
+      <Field label="Steps" htmlFor="task-steps" hint="Break it into smaller pieces. Give a step a day and it shows up in Today and the week.">
+        <StepsField value={draft.subtasks} onChange={(subtasks) => set({ subtasks })} />
+      </Field>
+      {existing && draft.learningType === "exam" && !!draft.courseId && !draft.done && !!draft.due && (
+        <div><StudyPlanButton taskId={existing.id} /></div>
       )}
       <Field label="Linked documents" htmlFor="task-links" hint="Notes, specs or files that live elsewhere. They open in their own app.">
         <DocLinksField value={draft.links} onChange={(links) => set({ links })} />
