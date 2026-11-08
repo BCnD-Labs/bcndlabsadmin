@@ -66,7 +66,7 @@ function initialWindows(): Windows {
   const width = window.innerWidth, height = window.innerHeight
   const defaults = {
     notes: { x: Math.max(80, Math.round(width * .12)), y: Math.min(height - 44, 680), width: Math.min(360, width - 95), height: 280, open: true, collapsed: true, expanded: false, pinned: false, z: 1 },
-    ...Object.fromEntries(APP_IDS.map((id, index) => [id, { x: Math.max(75, Math.round(width * .12) + index * 28), y: Math.max(60, Math.round(height * .08) + index * 22), width: Math.min(id === "planner_app" ? 1000 : 820, width - 105), height: Math.min(id === "planner_app" ? 650 : 560, height - 90), open: false, collapsed: false, expanded: false, pinned: false, z: index + 3, path: APP[id].route }])),
+    ...Object.fromEntries(APP_IDS.map((id, index) => [id, { x: Math.max(75, Math.round(width * .12) + index * 28), y: Math.max(60, Math.round(height * .08) + index * 22), width: Math.min(id === "planner_app" || id === "learning" ? 1000 : 820, width - 105), height: Math.min(id === "planner_app" || id === "learning" ? 650 : 560, height - 90), open: false, collapsed: false, expanded: false, pinned: false, z: index + 3, path: APP[id].route }])),
   } as Windows
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) ?? localStorage.getItem("blackwall-mac-desktop-windows-v1") ?? "null") as Partial<Record<Id | "app", Partial<WindowState>>> | null
