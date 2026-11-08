@@ -134,6 +134,18 @@ server.listen(0, "127.0.0.1", () => {
     assert(await wc!.executeJavaScript("!document.querySelector('[aria-label=\"Learning window\"]')"), "The sidebar closes an open window")
     await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Open Learning\"]').click()")
     assert(await wc!.executeJavaScript("!!document.querySelector('[aria-label=\"Learning window\"]')"), "Learning reopens from the sidebar")
+    // The create menu opens the task form (a selector that built a new array on every render once crashed it).
+    const clickAt = async (selector: string, text: string) => {
+      const point = await wc!.executeJavaScript(`(() => { const el = [...document.querySelectorAll(${JSON.stringify(selector)})].find(e => e.textContent.trim().startsWith(${JSON.stringify(text)})) ?? document.querySelector(${JSON.stringify(selector)}); if (!el) return null; const b = el.getBoundingClientRect(); return { x: Math.round(b.x + b.width / 2), y: Math.round(b.y + b.height / 2) } })()`)
+      assert(!!point, `Found ${selector}`)
+      for (const type of ["mouseMove", "mouseDown", "mouseUp"] as const) wc!.sendInputEvent({ type, x: point.x, y: point.y, button: "left", clickCount: 1 })
+      await new Promise((resolve) => setTimeout(resolve, 600))
+    }
+    await clickAt("button[aria-label='Create new']", "")
+    await clickAt("[role=menuitem]", "Task")
+    assert(await wc!.executeJavaScript("!!document.querySelector('#task-title') && !document.body.innerText.includes('Something broke')"), "Create → Task opens the task form without crashing")
+    await wc!.executeJavaScript("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))")
+    await new Promise((resolve) => setTimeout(resolve, 300))
     // Rail names: the toggle writes the names beside the icons and moves the windows over.
     await wc!.executeJavaScript("document.querySelector('.mac-dw-rail-toggle').click()")
     assert(await wc!.executeJavaScript("document.querySelector('.mac-dw-rail').dataset.labels === 'true' && [...document.querySelectorAll('.mac-dw-rail-label')].some(e => e.textContent === 'Learning')"), "The sidebar toggle shows app names")

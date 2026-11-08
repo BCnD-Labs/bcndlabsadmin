@@ -1,5 +1,5 @@
 import { Star } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { DocLinksField, cleanLinks } from "@/components/common/doc-links"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
@@ -19,7 +19,9 @@ import { StudyPlanButton } from "@/features/learning/study-plan"
 export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Partial<Task>; onDone: () => void }) {
   const existing = useWorkspace((s) => s.tasks.find((t) => t.id === id))
   const hasCourses = useWorkspace((s) => s.courses.length > 0)
-  const usedTypes = useWorkspace((s) => [...new Set(s.tasks.map((t) => t.workType).filter((v): v is string => !!v))].sort())
+  const allTasks = useWorkspace((s) => s.tasks)
+  // Derived outside the selector: a selector that builds a new array every call loops forever (React error 185).
+  const usedTypes = useMemo(() => [...new Set(allTasks.map((t) => t.workType).filter((v): v is string => !!v))].sort(), [allTasks])
   const courses = useWorkspace((s) => s.courses)
   const { create, update, remove } = useWorkspace.getState()
   const base = existing ?? defaults
