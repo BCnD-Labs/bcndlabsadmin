@@ -57,6 +57,8 @@ export interface FeedItem {
   url?: string
   at: string
   read: boolean
+  /** Set only after the ntfy server accepted this notification. Older feed items omit it. */
+  ntfyAt?: string
 }
 
 export function channelsFor(settings: NotifySettings, event: string): NotifyChannel[] {

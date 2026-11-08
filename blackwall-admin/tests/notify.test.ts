@@ -8,7 +8,7 @@ import { Notifier, localDay } from "../server/notify.ts"
 import { FileConnectionStore } from "../server/store.ts"
 
 const ts = "2026-11-01T00:00:00Z"
-function setup(ws: Collections, opts: { now: () => number; up: () => boolean }) {
+function setup(ws: Collections, opts: { now: () => number; up: () => boolean; pushFails?: boolean }) {
   const root = mkdtempSync(path.join(tmpdir(), "bw-notify-"))
   const store = new FileConnectionStore(root)
   const pushed: string[] = []
@@ -17,7 +17,7 @@ function setup(ws: Collections, opts: { now: () => number; up: () => boolean }) 
     readWorkspace: async () => ({ data: ws }),
     checkServices: async (urls) => urls.map((url) => ({ url, up: opts.up(), ms: 12, error: opts.up() ? undefined : "ECONNREFUSED" })),
     now: opts.now,
-    sendNtfy: async (_c, m) => void pushed.push(m.title),
+    sendNtfy: async (_c, m) => { if (opts.pushFails) throw Error("ntfy unavailable"); pushed.push(m.title) },
   })
   return { n, store, pushed, done: () => rmSync(root, { recursive: true, force: true }) }
 }
@@ -73,4 +73,22 @@ test("feed: mark one or all read", async () => {
   assert.equal((await t.n.markRead([b.id])).filter((x) => !x.read).length, 1)
   assert.equal((await t.n.markRead("all")).filter((x) => !x.read).length, 0)
   t.done()
+})
+
+test("the Mac feed records only successful ntfy deliveries", async () => {
+  const t = setup(emptyWorkspace(), { now: () => Date.parse(ts), up: () => true })
+  const connection = await t.store.create({ provider: "ntfy", label: "ntfy", config: { url: "https://ntfy.test", topic: "x" }, secrets: {} })
+  await t.store.setResult(connection.id, { status: "ok" })
+  await t.n.emit("work.digest", { title: "Sent", body: "Due work" }, { force: ["ntfy"] })
+  assert.ok((await t.n.feed())[0].ntfyAt, "ntfy-only delivery appears in the Mac feed")
+  await t.n.emit("work.digest", { title: "Bell only", body: "Due work" }, { force: ["bell"] })
+  assert.equal((await t.n.feed())[0].ntfyAt, undefined)
+  t.done()
+
+  const failed = setup(emptyWorkspace(), { now: () => Date.parse(ts), up: () => true, pushFails: true })
+  const broken = await failed.store.create({ provider: "ntfy", label: "ntfy", config: { url: "https://ntfy.test", topic: "x" }, secrets: {} })
+  await failed.store.setResult(broken.id, { status: "ok" })
+  await failed.n.emit("work.digest", { title: "Not sent", body: "Due work" }, { force: ["ntfy"] })
+  assert.equal((await failed.n.feed()).length, 0, "failed ntfy delivery does not appear")
+  failed.done()
 })

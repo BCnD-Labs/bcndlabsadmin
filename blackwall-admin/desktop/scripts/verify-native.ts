@@ -91,6 +91,9 @@ server.listen(0, "127.0.0.1", () => {
     assert(await wc!.executeJavaScript("!!document.querySelector('[data-testid=planner]')"), "Planner opens with server workspace data")
     assert(await wc!.executeJavaScript("!!document.querySelector('.mac-dw-desktop')"), "Mac workspace opens as a desktop")
     const logInput = (selector: string, value: string) => `(() => { const field = document.querySelector(${JSON.stringify(selector)}); if (!field) return false; const set = Object.getOwnPropertyDescriptor(field instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype, 'value').set; set.call(field, ${JSON.stringify(value)}); field.dispatchEvent(new Event('input', { bubbles: true })); return true })()`
+    assert(!await wc!.executeJavaScript("!!document.querySelector('.mac-dw-sidebar')"), "Planner sidebar starts closed")
+    await wc!.executeJavaScript("document.querySelector('.mac-dw-date').click()")
+    assert(await wc!.executeJavaScript("!!document.querySelector('.mac-dw-sidebar [role=grid]') && !!document.querySelector('.mac-dw-sidebar .mac-task-list, .mac-dw-sidebar .mac-tool-empty') && !!document.querySelector('.mac-dw-sidebar .mac-log-tool')"), "Date button opens the Planner sidebar with calendar, tasks and daily log")
     await wc!.executeJavaScript("document.querySelector('.mac-log-add').click()")
     assert(await wc!.executeJavaScript(logInput('.mac-log-name input', 'Build notes')), "Daily log accepts a section name")
     await wc!.executeJavaScript("document.querySelector('.mac-log-name .is-primary').click()")
@@ -116,11 +119,9 @@ server.listen(0, "127.0.0.1", () => {
     assert(await wc!.executeJavaScript("!document.querySelector('[aria-label=\"Projects window\"]') && !!document.querySelector('[aria-label=\"Learning window\"]')"), "Closing Projects leaves Learning open")
     await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Open Projects\"]').click()")
     assert(await wc!.executeJavaScript("!!document.querySelector('[aria-label=\"Projects window\"]')"), "Projects reopens from the compact launcher")
-    const plannerPin = await wc!.executeJavaScript("({ disabled: document.querySelector('button[aria-label=\"Lock planner position\"]')?.disabled, present: !!document.querySelector('[aria-label=\"planner window\"]') })")
-    assert(plannerPin.present && !plannerPin.disabled, "Planner widget can be pinned beside the collapsed Notes widget")
-    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Lock planner position\"]').click()")
-    assert(await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Unlock planner position\"]')?.getAttribute('aria-pressed') === 'true'"), "Pin locks the Planner widget")
     if (process.env.BW_DESKTOP_SHOT) writeFileSync(process.env.BW_DESKTOP_SHOT, (await wc!.capturePage()).toPNG())
+    await wc!.executeJavaScript("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))")
+    assert(await wc!.executeJavaScript("!document.querySelector('.mac-dw-sidebar')"), "Escape closes the Planner sidebar")
     await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Open classic workspace\"]').click()")
     for (let i = 0; i < 40; i++) {
       if (await wc!.executeJavaScript("!!document.querySelector('.mac-titlebar') && !!document.querySelector('.mac-dock')")) break
