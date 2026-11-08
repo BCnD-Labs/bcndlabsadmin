@@ -38,6 +38,10 @@ export interface Task {
   status?: WorkStatus
   /** How big the work feels; sets how many days ahead the planner suggests starting. */
   effort?: WorkEffort
+  /** Smaller steps inside this task; each can have its own day. */
+  subtasks?: Subtask[]
+  /** The course topics (units, modules, chapters) this assignment or exam covers. */
+  topicIds?: ID[]
   /** Practice tests (certifications): the score, 0–100. */
   score?: number
   starred: boolean
@@ -45,6 +49,23 @@ export interface Task {
   completedAt?: Timestamp
   createdAt: Timestamp
   updatedAt: Timestamp
+}
+
+/** One small step inside a task: "Outline", "Review: Recursion". A date puts it on that day's plan. */
+export interface Subtask {
+  id: ID
+  title: string
+  done: boolean
+  date?: DateKey
+  /** The course topic a study step reviews. */
+  topicId?: ID
+}
+
+/** A unit, module or chapter of a course. `done` means "I know this one". */
+export interface CourseTopic {
+  id: ID
+  title: string
+  done?: boolean
 }
 
 export interface RecordLink {
@@ -343,6 +364,8 @@ export interface Course {
   policies?: string
   /** The class's code repository. */
   repoUrl?: string
+  /** Units, modules or chapters, in order. Assignments and exams can point at them. */
+  topics?: CourseTopic[]
   credits?: number
   description: string
   tags: string[]

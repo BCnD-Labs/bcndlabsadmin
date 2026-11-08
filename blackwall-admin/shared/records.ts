@@ -5,7 +5,7 @@
  * The rules are the ones the web store has always had: keep them in step with it, not ahead of it.
  */
 import { validJournalItems, validJournalSections } from "./journal-sections.ts"
-import type { Course, JournalSection, JournalLogItem, JournalEntry, Note, Service, Task, WorkStatus } from "../src/lib/types.ts"
+import type { Course, JournalSection, JournalLogItem, JournalEntry, Note, Service, Subtask, Task, WorkStatus } from "../src/lib/types.ts"
 import type { Collections } from "./workspace.ts"
 
 export interface RecordOptions {
@@ -82,6 +82,53 @@ export function applyFocusPlan<T extends TaskData>(data: T, plan: { id: string; 
   const t = (opts.now ?? defaultNow)()
   const days = new Map(plan.map((p) => [p.id, p.date]))
   return { ...data, tasks: data.tasks.map((task) => (days.has(task.id) && !task.done ? { ...task, focusDate: days.get(task.id), updatedAt: t } : task)) }
+}
+
+const SUBTASK_ID_PREFIX = "sub"
+type NewStep = { title: string; date?: string; topicId?: string }
+
+/** Adds steps to a task in one edit. Blank titles are skipped; the list is capped (100) like the validator. */
+export function addSubtasks<T extends TaskData>(data: T, taskId: string, steps: NewStep[], opts: RecordOptions = {}): T {
+  const t = (opts.now ?? defaultNow)()
+  const make = opts.makeId ?? defaultMakeId
+  const fresh: Subtask[] = steps.filter((s) => s.title.trim()).map((s) => ({ id: make(SUBTASK_ID_PREFIX), title: s.title.trim().slice(0, 300), done: false, ...(s.date ? { date: s.date } : {}), ...(s.topicId ? { topicId: s.topicId } : {}) }))
+  if (!fresh.length) return data
+  return { ...data, tasks: data.tasks.map((task) => (task.id === taskId && (task.subtasks?.length ?? 0) + fresh.length <= 100 ? { ...task, subtasks: [...(task.subtasks ?? []), ...fresh], updatedAt: t } : task)) }
+}
+
+/** Edits one step. Finishing the first step of unstarted coursework moves it to "in progress". */
+export function updateSubtask<T extends TaskData>(data: T, taskId: string, stepId: string, patch: Partial<Omit<Subtask, "id">>, opts: RecordOptions = {}): T {
+  const t = (opts.now ?? defaultNow)()
+  return {
+    ...data,
+    tasks: data.tasks.map((task) => {
+      if (task.id !== taskId || !task.subtasks?.some((s) => s.id === stepId)) return task
+      const subtasks = task.subtasks.map((s) => (s.id === stepId ? { ...s, ...patch } : s))
+      const begins = patch.done === true && !task.done && !!task.courseId && (!task.status || task.status === "not_started")
+      return { ...task, subtasks, ...(begins ? { status: "in_progress" as const } : {}), updatedAt: t }
+    }),
+  }
+}
+
+export function toggleSubtask<T extends TaskData>(data: T, taskId: string, stepId: string, opts: RecordOptions = {}): T {
+  const step = data.tasks.find((task) => task.id === taskId)?.subtasks?.find((s) => s.id === stepId)
+  return step ? updateSubtask(data, taskId, stepId, { done: !step.done }, opts) : data
+}
+
+export function removeSubtask<T extends TaskData>(data: T, taskId: string, stepId: string, opts: RecordOptions = {}): T {
+  const t = (opts.now ?? defaultNow)()
+  return { ...data, tasks: data.tasks.map((task) => (task.id === taskId && task.subtasks ? { ...task, subtasks: task.subtasks.filter((s) => s.id !== stepId), updatedAt: t } : task)) }
+}
+
+/** Removes a course topic and unlinks it from the course's work, rather than deleting that work. */
+export function removeCourseTopic<T extends TaskData & Pick<Collections, "courses">>(data: T, courseId: string, topicId: string, opts: RecordOptions = {}): T {
+  const t = (opts.now ?? defaultNow)()
+  return {
+    ...data,
+    courses: data.courses.map((c) => (c.id === courseId ? { ...c, topics: (c.topics ?? []).filter((x) => x.id !== topicId), updatedAt: t } : c)),
+    tasks: data.tasks.map((task) => task.courseId === courseId && (task.topicIds?.includes(topicId) || task.subtasks?.some((s) => s.topicId === topicId))
+      ? { ...task, topicIds: task.topicIds?.filter((x) => x !== topicId), subtasks: task.subtasks?.map((s) => (s.topicId === topicId ? { ...s, topicId: undefined } : s)), updatedAt: t } : task),
+  }
 }
 
 export function toggleStar<T extends TaskData>(data: T, id: string, opts: RecordOptions = {}): T {

@@ -68,6 +68,8 @@ export function validWorkspace(value: unknown): value is Collections {
       if (key === "tasks" && !validPlannerFields(row)) return false
       if (key === "tasks" && ((row.status != null && !["not_started", "in_progress", "submitted", "graded"].includes(row.status)) || (row.effort != null && !["quick", "medium", "big"].includes(row.effort)))) return false
       if (key === "courses" && !validMeetings(row.meetings)) return false
+      if (key === "courses" && !validTopics(row.topics)) return false
+      if (key === "tasks" && (!validSubtasks(row.subtasks) || !validTopicIds(row.topicIds))) return false
       if (key === "courses" && ["syllabus", "policies"].some((field) => typeof row[field] === "string" && row[field].length > 100_000)) return false
       if (key === "journal" && row.sections !== undefined && !validJournalSections(row.sections)) return false
       if (key === "journal" && row.entries !== undefined && !validJournalItems(row.entries, row.sections ?? [])) return false
@@ -131,6 +133,37 @@ function validMeetings(value: unknown): boolean {
     if (typeof x.start !== "string" || typeof x.end !== "string" || !TIME.test(x.start) || !TIME.test(x.end) || x.end <= x.start) return false
     return x.location == null || (typeof x.location === "string" && x.location.length <= 200)
   })
+}
+
+const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/
+function validTopics(value: unknown): boolean {
+  if (value == null) return true
+  if (!Array.isArray(value) || value.length > 80) return false
+  const ids = new Set<string>()
+  return value.every((t: unknown) => {
+    if (!t || typeof t !== "object") return false
+    const x = t as Record<string, unknown>
+    if (typeof x.id !== "string" || !x.id || x.id.length > 100 || ids.has(x.id)) return false
+    ids.add(x.id)
+    return typeof x.title === "string" && x.title.length <= 200 && (x.done == null || typeof x.done === "boolean")
+  })
+}
+function validSubtasks(value: unknown): boolean {
+  if (value == null) return true
+  if (!Array.isArray(value) || value.length > 100) return false
+  const ids = new Set<string>()
+  return value.every((t: unknown) => {
+    if (!t || typeof t !== "object") return false
+    const x = t as Record<string, unknown>
+    if (typeof x.id !== "string" || !x.id || x.id.length > 100 || ids.has(x.id)) return false
+    ids.add(x.id)
+    if (typeof x.title !== "string" || x.title.length > 300 || typeof x.done !== "boolean") return false
+    if (x.date != null && (typeof x.date !== "string" || !DATE_KEY.test(x.date))) return false
+    return x.topicId == null || (typeof x.topicId === "string" && x.topicId.length <= 100)
+  })
+}
+function validTopicIds(value: unknown): boolean {
+  return value == null || (Array.isArray(value) && value.length <= 80 && value.every((v) => typeof v === "string" && v.length <= 100))
 }
 
 const PALETTE_KEYS = ["bg", "surface", "text", "muted", "border", "accent"]
