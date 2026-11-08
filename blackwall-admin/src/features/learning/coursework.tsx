@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
 import { courseColor, courseLabel, kindInfo, learningType } from "./learning-utils"
+import { StatusPill, tracksStatus } from "./status-pill"
 
 /** The kind's icon tile in its own hue (Course blue, Certification green, …). */
 export function KindIcon({ kind, className, small }: { kind?: LearningKind; className?: string; small?: boolean }) {
@@ -91,6 +92,7 @@ export function CourseworkRow({ task, course, showCourse }: { task: Task; course
         )}
       </button>
       <DocLinksMenu links={task.links} />
+      {tracksStatus(task, course) && <StatusPill task={task} />}
       <span
         className={cn(
           "inline-flex shrink-0 items-center justify-end gap-1 text-[11px] tabular-nums",

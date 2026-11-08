@@ -2,7 +2,7 @@ import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
 import { format } from "date-fns"
 import { ChevronDown, GraduationCap, Plus } from "lucide-react"
 import { useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -17,13 +17,16 @@ import { PageHeader } from "@/components/common/page-header"
 import { Panel } from "@/components/common/panel"
 import { SegmentedTabs } from "@/components/common/segmented-tabs"
 import { StatStrip } from "@/components/common/stat-strip"
-import { daysUntil, parseKey, relativeDue } from "@/lib/dates"
+import { daysUntil, parseKey, relativeDue, todayKey } from "@/lib/dates"
 import { courseHref } from "@/lib/routes"
 import type { Course, LearningKind, Task } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useUi } from "@/stores/ui"
 import { useCourseMap, useWorkspace } from "@/stores/workspace"
 import { CourseworkRow, KindIcon, courseworkWhen } from "./coursework"
+import { TodayView } from "./today-view"
+import { WeekView } from "./week-view"
+import { TermView } from "./term-view"
 import { COURSE_STATUS_LABEL, KINDS, compareCoursework, courseProgress, courseStatus, kindInfo, kindOf, kindProgress, learningType, type CourseStatus } from "./learning-utils"
 
 type Filter = CourseStatus | "all"
@@ -254,7 +257,30 @@ function Upcoming({ courses }: { courses: Map<string, Course> }) {
 
 const STATUS_LABEL: Record<Filter, string> = { active: "Active", upcoming: "Upcoming", completed: "Done", all: "Any status" }
 
+type LearningView = "today" | "week" | "courses" | "term"
+
+/** Learning opens on Today; Week plans ahead, Courses is the library, Term shows the semester. */
 export function LearningPage() {
+  const courses = useWorkspace((s) => s.courses)
+  const [params, setParams] = useSearchParams()
+  const asked = params.get("view")
+  const view: LearningView = asked === "week" || asked === "courses" || asked === "term" || asked === "today" ? asked : courses.length ? "today" : "courses"
+  const today = todayKey()
+  const choose = (next: LearningView) => setParams((p) => { const n = new URLSearchParams(p); n.set("view", next); return n }, { replace: true })
+  return (
+    <>
+      <PageHeader title="Learning" actions={<AddLearning />} />
+      {courses.length > 0 && (
+        <div className="mb-3">
+          <SegmentedTabs<LearningView> label="Learning view" value={view} onChange={choose} className="max-w-full overflow-x-auto" tabs={[{ value: "today", label: "Today" }, { value: "week", label: "Week" }, { value: "courses", label: "Courses" }, { value: "term", label: "Term" }]} />
+        </div>
+      )}
+      {view === "today" ? <TodayView today={today} /> : view === "week" ? <WeekView today={today} /> : view === "term" ? <TermView today={today} /> : <Library />}
+    </>
+  )
+}
+
+function Library() {
   const courses = useWorkspace((s) => s.courses)
   const tasks = useWorkspace((s) => s.tasks)
   const courseMap = useCourseMap()
@@ -285,7 +311,6 @@ export function LearningPage() {
 
   return (
     <>
-      <PageHeader title="Learning" actions={<AddLearning />} />
       {courses.length === 0 ? (
         <WorkspaceGrid><GridItem span={2}><Panel category="learning" title="Learning" tool="learning" command="ls">
           <EmptyState roomy icon={GraduationCap} title="Nothing here yet" action={<AddLearning label="Add your first" variant="outline" />}>
