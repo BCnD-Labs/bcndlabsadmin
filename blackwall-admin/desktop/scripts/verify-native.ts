@@ -89,6 +89,29 @@ server.listen(0, "127.0.0.1", () => {
     }
     assert(wc!.getURL() === "bw-native://app/productivity", "Workspace route survives a reload")
     assert(await wc!.executeJavaScript("!!document.querySelector('[data-testid=planner]')"), "Planner opens with server workspace data")
+    assert(await wc!.executeJavaScript("!!document.querySelector('.mac-dw-desktop')"), "Mac workspace opens as a desktop")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Open Learning\"]').click()")
+    for (let i = 0; i < 40; i++) {
+      if (await wc!.executeJavaScript("!!document.querySelector('[aria-label=\"Learning window\"] .mac-dw-app-main')?.textContent?.trim()")) break
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+    assert(await wc!.executeJavaScript("!!document.querySelector('[aria-label=\"Learning window\"] .mac-dw-app-main')?.textContent?.trim()"), "Learning opens in its own app window")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Open Projects\"]').click()")
+    assert(await wc!.executeJavaScript("!!document.querySelector('[aria-label=\"Learning window\"]') && !!document.querySelector('[aria-label=\"Projects window\"]')"), "Opening Projects leaves Learning open")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Close projects window\"]').click()")
+    assert(await wc!.executeJavaScript("!document.querySelector('[aria-label=\"Projects window\"]') && !!document.querySelector('[aria-label=\"Learning window\"]')"), "Closing Projects leaves Learning open")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Open Projects\"]').click()")
+    assert(await wc!.executeJavaScript("!!document.querySelector('[aria-label=\"Projects window\"]')"), "Projects reopens from the compact launcher")
+    const plannerPin = await wc!.executeJavaScript("({ disabled: document.querySelector('button[aria-label=\"Lock planner position\"]')?.disabled, present: !!document.querySelector('[aria-label=\"planner window\"]') })")
+    assert(plannerPin.present && !plannerPin.disabled, "Planner widget can be pinned beside the collapsed Notes widget")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Lock planner position\"]').click()")
+    assert(await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Unlock planner position\"]')?.getAttribute('aria-pressed') === 'true'"), "Pin locks the Planner widget")
+    if (process.env.BW_DESKTOP_SHOT) writeFileSync(process.env.BW_DESKTOP_SHOT, (await wc!.capturePage()).toPNG())
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Open classic workspace\"]').click()")
+    for (let i = 0; i < 40; i++) {
+      if (await wc!.executeJavaScript("!!document.querySelector('.mac-titlebar')")) break
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
     const macFrame = await wc!.executeJavaScript(`({
       titlebar: !!document.querySelector('.mac-titlebar .mac-search'),
       sections: !!document.querySelector('.mac-navigator'),

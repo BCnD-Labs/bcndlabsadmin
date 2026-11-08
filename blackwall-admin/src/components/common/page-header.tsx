@@ -1,6 +1,6 @@
-import { useId, useLayoutEffect, type ReactNode } from "react"
+import { useContext, useId, useLayoutEffect, type ReactNode } from "react"
 import { cn } from "@/lib/utils"
-import { usePageHead } from "@/stores/page-head"
+import { PageHeadStoreContext, usePageHead } from "@/stores/page-head"
 
 /**
  * A page's title, badge, status line and actions. They render in the app header,
@@ -26,14 +26,16 @@ export function PageHeader({
   className?: string
 }) {
   const owner = useId()
+  const localStore = useContext(PageHeadStoreContext)
+  const store = localStore ?? usePageHead
   useLayoutEffect(() => {
-    usePageHead.setState({ title, subtitle, actions, badge, back, owner }, true)
+    store.setState({ title, subtitle, actions, badge, back, owner }, true)
   })
   useLayoutEffect(
     () => () => {
-      if (usePageHead.getState().owner === owner) usePageHead.setState({}, true)
+      if (store.getState().owner === owner) store.setState({}, true)
     },
-    [owner],
+    [owner, store],
   )
   if (!actions) return null
   return <div className={cn("mb-3 flex flex-wrap items-center gap-2 md:hidden", className)}>{actions}</div>
