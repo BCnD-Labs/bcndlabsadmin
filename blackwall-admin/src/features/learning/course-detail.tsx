@@ -29,6 +29,8 @@ import { Input } from "@/components/ui/input"
 import { daysLabel, meetingKindLabel } from "@shared/learning"
 import { formatTime } from "@/lib/dates"
 import { CourseworkRow, KindIcon } from "./coursework"
+import { TopicsPanel } from "./topics-panel"
+import { TopicChips } from "@/components/forms/topics-field"
 import { ProgressBar, ProgressRing, dateRange, kindSubtitle } from "./learning-page"
 import { COURSE_STATUS_LABEL, compareCoursework, courseStatus, kindInfo, kindOf, kindProgress, learningType } from "./learning-utils"
 
@@ -73,12 +75,27 @@ function Coursework({ course, items }: { course: Course; items: Task[] }) {
   const firstLabel = first.label.toLowerCase()
   const article = /^[aeiou]/.test(firstLabel) ? "an" : "a"
   const [view, setView] = useState<View>("open")
+  const [by, setBy] = useState<"date" | "module">(course.topics?.length ? "module" : "date")
   const [quick, setQuick] = useState("")
   const open = items.filter((t) => !t.done).sort(compareCoursework)
   const done = items.filter((t) => t.done).sort((a, b) => (b.completedAt ?? "").localeCompare(a.completedAt ?? ""))
 
-  const groups =
-    view === "done"
+  const modules = course.topics ?? []
+  const pool = view === "done" ? done : view === "all" ? [...open, ...done] : open
+  const byModule = by === "module" && modules.length > 0
+  const placed = new Set<string>()
+  const moduleGroups = [
+    ...modules.map((m) => {
+      const mine = pool.filter((t) => t.topicIds?.includes(m.id) && !placed.has(t.id))
+      mine.forEach((t) => placed.add(t.id))
+      const all = items.filter((t) => t.topicIds?.includes(m.id))
+      return { label: m.title, note: all.length ? `${all.filter((t) => t.done).length} of ${all.length} done` : "no work yet", items: mine, keepEmpty: true }
+    }),
+    { label: "No module", note: undefined, items: pool.filter((t) => !placed.has(t.id)), keepEmpty: false },
+  ]
+  const groups: { label: string; tone?: "warn"; note?: string; items: Task[]; keepEmpty?: boolean }[] = byModule
+    ? moduleGroups
+    : view === "done"
       ? [{ label: "Done", items: done }]
       : [
           { label: "Overdue", tone: "warn" as const, items: open.filter((t) => t.due && daysUntil(t.due) < 0) },
@@ -87,7 +104,7 @@ function Coursework({ course, items }: { course: Course; items: Task[] }) {
           { label: "No date", items: open.filter((t) => !t.due) },
           ...(view === "all" ? [{ label: "Done", items: done }] : []),
         ]
-  const shown = groups.filter((g) => g.items.length)
+  const shown = groups.filter((g) => g.items.length || (byModule && g.keepEmpty && view !== "done"))
 
   const add = () => {
     const { title, due } = parseQuickAdd(quick)
@@ -111,6 +128,9 @@ function Coursework({ course, items }: { course: Course; items: Task[] }) {
             { value: "all", label: "All" },
           ]}
         />
+        {modules.length > 0 && (
+          <SegmentedTabs label="Group work" value={by} onChange={setBy} tabClassName="px-3" tabs={[{ value: "module", label: "By module" }, { value: "date", label: "By date" }]} />
+        )}
       </div>
       <form
         onSubmit={(e) => {
@@ -134,12 +154,13 @@ function Coursework({ course, items }: { course: Course; items: Task[] }) {
         shown.map((g) => (
           <section key={g.label} aria-label={g.label}>
             <ListGroupLabel tone={"tone" in g ? g.tone : undefined}>
-              {g.label} <span className="text-faint">· {g.items.length}</span>
+              {g.label} <span className="text-faint">· {g.note ?? g.items.length}</span>
             </ListGroupLabel>
             <ul>
               {g.items.map((t) => (
-                <CourseworkRow key={t.id} task={t} course={course} />
+                <CourseworkRow key={t.id} task={t} course={course} hideModule={byModule} />
               ))}
+              {!g.items.length && <li className="px-3.5 pb-2 text-xs text-faint">Nothing here yet. Use Add work on the Modules panel.</li>}
             </ul>
           </section>
         ))
@@ -281,14 +302,21 @@ function CourseInfo({ course, items }: { course: Course; items: Task[] }) {
 /** Syllabus and policies live with the course, saved when you press Save. */
 function CourseReference({ course }: { course: Course }) {
   const update = useWorkspace((s) => s.update)
+  const [open, setOpen] = useState(false)
   const [syllabus, setSyllabus] = useState(course.syllabus ?? "")
   const [policies, setPolicies] = useState(course.policies ?? "")
   const dirty = syllabus !== (course.syllabus ?? "") || policies !== (course.policies ?? "")
+  const has = [course.syllabus && "Syllabus", course.policies && "Policies"].filter(Boolean).join(" and ")
   return (
-    <Panel category="learning" title="Syllabus and policies" tool="course" command="syllabus" bodyClassName="grid gap-3 px-3.5 py-3"
-      actions={<Button size="sm" disabled={!dirty} onClick={() => { update("courses", course.id, { syllabus: syllabus.trim() || undefined, policies: policies.trim() || undefined }); toast.success("Saved") }}>Save</Button>}>
-      <label className="grid gap-1 text-xs text-muted-foreground">Syllabus<Textarea rows={5} value={syllabus} onChange={(e) => setSyllabus(e.target.value)} placeholder="Grading breakdown, weekly topics, what the class covers…" /></label>
-      <label className="grid gap-1 text-xs text-muted-foreground">Policies<Textarea rows={3} value={policies} onChange={(e) => setPolicies(e.target.value)} placeholder="Late work, attendance, collaboration, how to reach the instructor…" /></label>
+    <Panel category="learning" title="Syllabus and policies" tool="course" command="syllabus" bodyClassName={open ? "grid gap-3 px-3.5 py-3" : "px-3.5 py-2"}
+      actions={<>
+        {open && <Button size="sm" disabled={!dirty} onClick={() => { update("courses", course.id, { syllabus: syllabus.trim() || undefined, policies: policies.trim() || undefined }); toast.success("Saved") }}>Save</Button>}
+        <Button size="sm" variant="quiet" aria-expanded={open} onClick={() => setOpen((v) => !v)}>{open ? "Hide" : has ? "Show" : "Add"}</Button>
+      </>}>
+      {open ? <>
+        <label className="grid gap-1 text-xs text-muted-foreground">Syllabus<Textarea rows={5} value={syllabus} onChange={(e) => setSyllabus(e.target.value)} placeholder="Grading breakdown, weekly topics, what the class covers…" /></label>
+        <label className="grid gap-1 text-xs text-muted-foreground">Policies<Textarea rows={3} value={policies} onChange={(e) => setPolicies(e.target.value)} placeholder="Late work, attendance, collaboration, how to reach the instructor…" /></label>
+      </> : <p className="text-xs text-muted-foreground">{has ? `${has} saved.` : "Nothing added yet."}</p>}
     </Panel>
   )
 }
@@ -297,11 +325,13 @@ function CourseNotes({ course }: { course: Course }) {
   const notes = useWorkspace((s) => s.notes)
   const create = useWorkspace((s) => s.create)
   const [text, setText] = useState("")
+  const [noteModules, setNoteModules] = useState<string[]>([])
   const linked = notes.filter((n) => n.courseId === course.id).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
   const add = () => {
     if (!text.trim()) return
-    create("notes", { text: text.trim(), color: "blue", pinned: false, courseId: course.id })
+    create("notes", { text: text.trim(), color: "blue", pinned: false, courseId: course.id, topicIds: noteModules.length ? noteModules : undefined })
     setText("")
+    setNoteModules([])
   }
   return (
     <Panel
@@ -327,7 +357,7 @@ function CourseNotes({ course }: { course: Course }) {
         <label htmlFor="course-note" className="sr-only">New note</label>
         <Textarea
           id="course-note"
-          rows={2}
+          rows={4}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
@@ -338,6 +368,7 @@ function CourseNotes({ course }: { course: Course }) {
           }}
           placeholder={kindOf(course) === "course" ? "Lecture notes, reminders, questions for office hours…" : "Notes, reminders, questions…"}
         />
+        {!!course.topics?.length && <div className="grid gap-1"><span className="text-[11px] text-muted-foreground">Module (optional)</span><TopicChips topics={course.topics} value={noteModules} onChange={setNoteModules} /></div>}
         <div className="flex items-center justify-between gap-2">
           <span className="text-[11px] text-faint">Also on the Notes page · ⌘/Ctrl + Enter</span>
           <Button type="submit" size="sm" disabled={!text.trim()}>
@@ -346,7 +377,7 @@ function CourseNotes({ course }: { course: Course }) {
         </div>
       </form>
       {linked.length > 0 && (
-        <ul className="grid gap-2.5" aria-label="Notes for this course">
+        <ul className="grid gap-2.5 sm:grid-cols-2" aria-label="Notes for this course">
           {linked.map((n) => (
             <StickyNote key={n.id} note={n} compact />
           ))}
@@ -414,8 +445,9 @@ export function CourseDetail() {
           <Coursework course={course} items={items} />
         </GridItem>
         <GridItem><CourseInfo course={course} items={items} /></GridItem>
-        <GridItem><CourseNotes course={course} /></GridItem>
-        {kind === "course" && <GridItem span={2}><CourseReference key={course.id} course={course} /></GridItem>}
+        <GridItem><TopicsPanel course={course} /></GridItem>
+        <GridItem span={3}><CourseNotes course={course} /></GridItem>
+        {kind === "course" && <GridItem><CourseReference key={course.id} course={course} /></GridItem>}
       </WorkspaceGrid>
     </>
   )

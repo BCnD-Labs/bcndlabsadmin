@@ -2,10 +2,10 @@ import { useEditorClose } from "../../../editing/useEditorClose.ts"
 import { TextInput } from "../../../editing/keyboard.tsx"
 import { useState } from "react"
 import { Pressable, StyleSheet, Switch, Text, View } from "react-native"
-import { createNote, removeNote, updateNote, type Collections } from "../../../../lib/shared.ts"
+import { createNote, removeNote, setNoteTaskLinks, tasksOfNote, updateNote, type Collections } from "../../../../lib/shared.ts"
 import { color, noteInk, notePaper } from "../../../../theme.ts"
 import { useWorkspace } from "../../../data/WorkspaceProvider.tsx"
-import { Button, Icon, tone } from "../../../ui.tsx"
+import { Button, Chip, Icon, tone } from "../../../ui.tsx"
 import { resolveWithin } from "../task-form.ts"
 import { CoursePicker } from "./CoursePicker.tsx"
 import { SheetFrame } from "./SheetFrame.tsx"
@@ -26,7 +26,7 @@ export function NoteSheet({ editor, data, onClose, compact = false }: { editor: 
   const { mutate, message } = useWorkspace()
   const note = editor.mode === "edit" ? data.notes.find((n) => n.id === editor.id) : undefined
   const [opened] = useState(() => !!note)
-  const [start] = useState<NoteDraft>(() => (note ? draftFromNote(note) : { ...emptyNoteDraft(), ...(editor.mode === "create" && editor.courseId && { courseId: editor.courseId }) }))
+  const [start] = useState<NoteDraft>(() => (note ? draftFromNote(note, tasksOfNote({ tasks: data.tasks }, note.id).map(t => t.id)) : { ...emptyNoteDraft(), ...(editor.mode === "create" && editor.courseId && { courseId: editor.courseId }) }))
   const [draft, setDraft] = useState(start)
   const [showErrors, setShowErrors] = useState(false)
   const [confirming, setConfirming] = useState(false)
@@ -41,11 +41,11 @@ export function NoteSheet({ editor, data, onClose, compact = false }: { editor: 
   const dirty = noteDirty(draft, start)
 
   /** Runs one change; closes when it is on the phone (saved or queued), stays open if refused. */
-  async function run(change: (d: Collections) => Collections, closeAfter = true): Promise<boolean> {
+  async function run(change: (d: Collections) => Collections, closeAfter = true, withTasks = false): Promise<boolean> {
     if (busy) return false
     setBusy(true)
     let ok = false
-    try { ok = await resolveWithin(mutate(["notes"], change), 1500, true) } catch { ok = false }
+    try { ok = await resolveWithin(mutate(withTasks ? ["notes", "tasks"] : ["notes"], change), 1500, true) } catch { ok = false }
     setBusy(false)
     setFailed(!ok)
     if (ok && closeAfter) onClose()
@@ -55,8 +55,11 @@ export function NoteSheet({ editor, data, onClose, compact = false }: { editor: 
   async function save(closeAfter = true): Promise<boolean> {
     setShowErrors(true)
     if (Object.keys(noteErrors(draft)).length || gone) return false
-    if (note) return run((d) => updateNote(d, note.id, buildNotePatch(draft)), closeAfter)
-    else return run((d) => createNote(d, buildNewNote(draft)).data, closeAfter)
+    const now = new Date().toISOString()
+    // The links live on the tasks, so a save that changes them edits those tasks in the same step.
+    const touchesTasks = JSON.stringify(draft.taskIds) !== JSON.stringify(start.taskIds)
+    if (note) return run((d) => { const next = updateNote(d, note.id, buildNotePatch(draft, start)); return touchesTasks ? { ...next, ...setNoteTaskLinks(next, note.id, draft.taskIds, now) } : next }, closeAfter, touchesTasks)
+    return run((d) => { const made = createNote(d, buildNewNote(draft)); return draft.taskIds.length ? { ...made.data, ...setNoteTaskLinks(made.data, made.record.id, draft.taskIds, now) } : made.data }, closeAfter, draft.taskIds.length > 0)
   }
 
   const close = useEditorClose(dirty, busy, onClose, () => save(false))
@@ -94,6 +97,18 @@ export function NoteSheet({ editor, data, onClose, compact = false }: { editor: 
               <CoursePicker courses={data.courses} value={draft.courseId} onChange={(courseId) => set({ courseId })} />
             </>
           ) : null}
+
+          {data.courses.find(x => x.id === draft.courseId)?.topics?.length ? <>
+            <Text style={styles.label}>Module</Text>
+            <View style={styles.chips}>{data.courses.find(x => x.id === draft.courseId)!.topics!.map(m => <Chip key={m.id} label={m.title} active={draft.topicIds.includes(m.id)} onPress={() => set({ topicIds: draft.topicIds.includes(m.id) ? draft.topicIds.filter(x => x !== m.id) : [...draft.topicIds, m.id] })} />)}</View>
+          </> : null}
+
+          <Text style={styles.label}>Linked work</Text>
+          <Text style={styles.hint}>Assignments, quizzes, exams or tasks this note is for. They show the note too.</Text>
+          <View style={styles.chips}>
+            {draft.taskIds.map(id => <Chip key={id} label={`${data.tasks.find(t => t.id === id)?.title ?? "Deleted task"} ✕`} active onPress={() => set({ taskIds: draft.taskIds.filter(x => x !== id) })} />)}
+            {data.tasks.filter(t => t.kind !== "event" && !draft.taskIds.includes(t.id)).sort((a, b) => Number(b.courseId === draft.courseId) - Number(a.courseId === draft.courseId) || Number(a.done) - Number(b.done)).slice(0, 10).map(t => <Chip key={t.id} label={`+ ${t.title}`} active={false} onPress={() => set({ taskIds: [...draft.taskIds, t.id] })} />)}
+          </View>
 
           <View style={styles.toggle}>
             <Text style={styles.value}>Pin to Home</Text>
@@ -141,6 +156,7 @@ export function NoteSheet({ editor, data, onClose, compact = false }: { editor: 
 }
 
 const styles = StyleSheet.create({
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   label: { color: color.muted, fontSize: 12, fontWeight: "700", marginTop: 4 },
   input: { minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: color.border, backgroundColor: color.well, color: color.text, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15 },
   multi: { minHeight: 140 },

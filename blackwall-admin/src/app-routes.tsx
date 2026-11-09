@@ -14,6 +14,7 @@ import { DevelopmentPage } from "@/features/development/development-page"
 import { HomePage } from "@/features/home/home-page"
 import { CourseDetail } from "@/features/learning/course-detail"
 import { LearningPage } from "@/features/learning/learning-page"
+import { JournalPage } from "@/features/journal/journal-page"
 import { SettingsRoute } from "@/features/settings/settings-route"
 import { ProjectDetail } from "@/features/work/project-detail"
 import { ProjectsPage } from "@/features/work/projects-page"
@@ -51,6 +52,7 @@ function MovedAnalytics() {
 /** Shared page map also lets each Mac desktop window retain its own route. */
 export const blackwallPages: RouteObject[] = [
       { index: true, element: <HomePage /> },
+      { path: "journal", element: <JournalPage /> },
       { path: "productivity", element: <PlannerPage /> },
       { path: "productivity/tasks", element: <ToPlanner /> },
       { path: "productivity/projects", element: <ProjectsPage /> },

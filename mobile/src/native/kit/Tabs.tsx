@@ -23,8 +23,9 @@ export function Tabs<K extends string>({ items, value, onChange, label }: { item
 }
 
 const s = StyleSheet.create({
-  row: { flexDirection: "row", gap: 4 },
-  tab: { flex: 1, minWidth: 0, minHeight: 34, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingHorizontal: 4, borderRadius: shape.card, backgroundColor: c.panel, borderWidth: 1, borderColor: c.line, overflow: "hidden" },
+  // Full width on purpose: inside a row parent the bar would shrink to nothing and leave unreadable slits.
+  row: { flexDirection: "row", gap: 4, width: "100%" },
+  tab: { flex: 1, minWidth: 0, minHeight: 40, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingHorizontal: 4, borderRadius: shape.card, backgroundColor: c.panel, borderWidth: 1, borderColor: c.line, overflow: "hidden" },
   on: { backgroundColor: c.selected, borderColor: c.selectedBorder }, pressed: { backgroundColor: c.raised },
   text: { flexShrink: 1, color: c.text2, fontSize: 12, fontWeight: "600" }, textOn: { color: c.accent },
   count: { color: c.muted, fontFamily: mono, fontSize: 10 },

@@ -2,7 +2,7 @@ import { KeyboardFrame, KeyboardScrollView, TextInput } from "../editing/keyboar
 import { shape } from "../../shape.ts"
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { Animated, Easing, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native"
-import { toggleTask, type Collections } from "../../lib/shared.ts"
+import { setTaskStatus, toggleTask, type Collections, type WorkStatus } from "../../lib/shared.ts"
 import { plannerColor as c } from "../planner-theme.ts"
 import { useWorkspace } from "../data/WorkspaceProvider.tsx"
 import { SyncStatus } from "../data/SyncStatus.tsx"
@@ -17,12 +17,14 @@ import { PropChip } from "../kit/PropChip.tsx"
 import { Pill, SmallButton } from "./learning/LearningControls.tsx"
 import { KINDS, kindInfo, type Course, type Kind, type Task } from "./learning/learning-view.ts"
 import { Library, Today, Upcoming, Overview, Work, LinkedNotes, Progress, type WorkTab } from "./learning/LearningViews.tsx"
+import { PlanWeekSheet } from "./learning/PlanViews.tsx"
+import { StudyPlanSheet, WeekView } from "./learning/StepViews.tsx"
 import { LearningReflectionSheet, ReflectionList, type LearningReflection } from "./LearningReflections.tsx"
 import { TaskSheet, type Editor } from "./planner/TaskSheet.tsx"
 import { typeOptions } from "./planner/learning-types.ts"
 import { NoteSheet, type NoteEditor } from "./planner/notes/NoteSheet.tsx"
 
-type CollectionTab = "today" | "library" | "upcoming"
+type CollectionTab = "today" | "week" | "library" | "upcoming"
 type DetailTab = "overview" | "work" | "notes" | "reflections"
 
 /** Native Learning uses the same workspace records as Planner, with a compact tabbed layout. */
@@ -39,6 +41,8 @@ export function LearningScreen({ onOpenSettings }: { onOpenSettings: () => void 
   const [notice, setNotice] = useState<string>()
   const [courseEditor, setCourseEditor] = useState<Course | "new" | null>(null)
   const [taskEditor, setTaskEditor] = useState<Editor | null>(null)
+  const [planOpen, setPlanOpen] = useState(false)
+  const [studyFor, setStudyFor] = useState<string | null>(null)
   const [coursePicker, setCoursePicker] = useState<"task" | "session" | null>(null)
   const [noteEditor, setNoteEditor] = useState<NoteEditor | null>(null)
   const [reflectionEditor, setReflectionEditor] = useState<{ courseId: string; taskId?: string; entry?: LearningReflection } | null>(null)
@@ -62,11 +66,19 @@ export function LearningScreen({ onOpenSettings }: { onOpenSettings: () => void 
     if (blocked) return setNotice("Resolve the sync conflict before editing.")
     if (!await mutate(["tasks"], d => toggleTask(d, task.id))) setNotice(message ?? "Could not save this task.")
   }
+  async function setStatus(task: Task, status: WorkStatus) {
+    if (blocked) return setNotice("Resolve the sync conflict before editing.")
+    if (!await mutate(["tasks"], d => setTaskStatus(d, task.id, status))) setNotice(message ?? "Could not save this status.")
+  }
+  async function start(task: Task) {
+    await setStatus(task, "in_progress")
+    setTaskEditor({ mode: "edit", id: task.id })
+  }
   function chooseCourse(selected: Course) {
     setTaskEditor({ mode: "create", courseId: selected.id, learningType: coursePicker === "session" ? "event" : typeOptions(selected.kind)[0].value, ...(coursePicker === "session" && { kind: "event" as const, due: today }) })
     setCoursePicker(null)
   }
-  const tabs = course ? ["overview", "work", "notes", "reflections"] as const : ["today", "upcoming", "library"] as const
+  const tabs = course ? ["overview", "work", "notes", "reflections"] as const : ["today", "week", "upcoming", "library"] as const
   return <KeyboardFrame style={s.fill}>
     <View style={s.header}>
       <View style={s.top}><Text style={s.breadcrumb}>Blackwall <Text style={s.muted}>/ Learning</Text></Text><View style={s.topRight}><SyncStatus onOpenSettings={onOpenSettings} /></View></View>
@@ -81,16 +93,18 @@ export function LearningScreen({ onOpenSettings }: { onOpenSettings: () => void 
         <Pressable onPress={() => { setOpenId(null); setMenu(false) }} style={s.back} accessibilityRole="button" accessibilityLabel="Back to Learning"><Icon name="chevron-back" size={17} tint={c.accent} /><Text style={s.accent}>Library</Text></Pressable>
         <View style={s.identity}><View style={[s.kindMark, { backgroundColor: kindInfo(course).tint }]} /><View style={s.flex}><Text style={s.identityTitle}>{course.title}</Text><View style={s.identityChips}><PropChip kind="course" value={kindInfo(course).label.toUpperCase()} />{course.code ? <PropChip kind="neutral" label="Code" value={course.code} /> : null}{course.term ? <PropChip kind="neutral" label="Term" value={course.term} /> : null}</View></View><Pressable onPress={() => edit(() => setCourseEditor(course))} style={s.edit} accessibilityRole="button" accessibilityLabel={`Edit ${course.title}`}><Icon name="create-outline" size={19} tint={c.muted} /></Pressable></View>
         <Progress course={course} tasks={data.tasks.filter(t => t.courseId === course.id)} />
-        {detail === "overview" ? <Overview key={course.id} course={course} tasks={data.tasks.filter(t => t.courseId === course.id)} blocked={blocked} mutate={mutate} onError={setNotice} /> : null}
-        {detail === "work" ? <Work course={course} tasks={data.tasks.filter(t => t.courseId === course.id)} data={data} tab={workTab} onTab={setWorkTab} onAdd={() => setMenu(true)} onOpen={id => setTaskEditor({ mode: "edit", id })} onToggle={complete} onReflect={taskId => edit(() => setReflectionEditor({ courseId: course.id, taskId }))} onEditReflection={entry => edit(() => setReflectionEditor({ courseId: course.id, entry }))} /> : null}
+        {detail === "overview" ? <Overview key={course.id} data={data} course={course} tasks={data.tasks.filter(t => t.courseId === course.id)} blocked={blocked} mutate={mutate} onError={setNotice} /> : null}
+        {detail === "work" ? <Work course={course} tasks={data.tasks.filter(t => t.courseId === course.id)} data={data} tab={workTab} onTab={setWorkTab} onAdd={() => setMenu(true)} onOpen={id => setTaskEditor({ mode: "edit", id })} onToggle={complete} onStatus={(task, status) => void setStatus(task, status)} onReflect={taskId => edit(() => setReflectionEditor({ courseId: course.id, taskId }))} onEditReflection={entry => edit(() => setReflectionEditor({ courseId: course.id, entry }))} /> : null}
         {detail === "reflections" ? <><View style={s.reflectionHead}><Text style={s.reflectionTitle}>Learning reflections</Text><SmallButton label="+ Reflect" onPress={() => edit(() => setReflectionEditor({ courseId: course.id }))} /></View><WorkspaceSection title="Reflections" icon="create-outline" tint={kit.hue.learning} flush><ReflectionList data={data} courseId={course.id} onEdit={entry => edit(() => setReflectionEditor({ courseId: course.id, entry }))} /></WorkspaceSection></> : null}
         {detail === "notes" ? <LinkedNotes notes={data.notes.filter(n => n.courseId === course.id)} onAdd={() => edit(() => setNoteEditor({ mode: "create", courseId: course.id }))} onOpen={id => setNoteEditor({ mode: "edit", id })} /> : null}
       </MotionPane> : data ? <MotionPane motionKey={collection} reduce={reduceMotion}>
         <View style={s.search}><Icon name="search-outline" size={16} tint={c.muted} /><TextInput value={search} onChangeText={setSearch} placeholder="Find learning…" placeholderTextColor={c.muted} style={s.searchInput} accessibilityLabel="Find learning" returnKeyType="search" />{search ? <Pressable onPress={() => setSearch("")} accessibilityRole="button" accessibilityLabel="Clear search"><Icon name="close-circle" size={17} tint={c.muted} /></Pressable> : null}</View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filters}><Pill label={`All ${data.courses.length}`} selected={kind === "all"} onPress={() => setKind("all")} />{KINDS.map(k => <Pill key={k.value} label={`${k.label} ${data.courses.filter(x => (x.kind ?? "course") === k.value).length}`} selected={kind === k.value} onPress={() => setKind(k.value)} />)}</ScrollView>
-        {collection === "today" ? <Today courses={shown} tasks={data.tasks} data={data} today={today} onTask={id => setTaskEditor({ mode: "edit", id })} onCourse={id => { const course = data.courses.find(course => course.id === id); if (course) openCourse(course) }} onAddTask={() => edit(() => setCoursePicker("task"))} onAddSession={() => edit(() => setCoursePicker("session"))} onToggle={complete} onReflect={task => edit(() => setReflectionEditor({ courseId: task.courseId!, taskId: task.id }))} onEditReflection={entry => edit(() => setReflectionEditor({ courseId: entry.item.courseId ?? "", entry }))} /> : collection === "library" ? <Library courses={shown} tasks={data.tasks} notes={data.notes} total={data.courses.length} onOpen={openCourse} onAdd={() => edit(() => setCourseEditor("new"))} /> : <Upcoming courses={shown} tasks={data.tasks} data={data} today={today} onTask={id => setTaskEditor({ mode: "edit", id })} onCourse={id => { const found = data.courses.find(x => x.id === id); if (found) openCourse(found) }} onReflect={task => edit(() => setReflectionEditor({ courseId: task.courseId!, taskId: task.id }))} onEditReflection={entry => edit(() => setReflectionEditor({ courseId: entry.item.courseId ?? "", entry }))} />}
+        {collection === "today" ? <Today courses={shown} tasks={data.tasks} data={data} today={today} onTask={id => setTaskEditor({ mode: "edit", id })} onCourse={id => { const course = data.courses.find(course => course.id === id); if (course) openCourse(course) }} onAddTask={() => edit(() => setCoursePicker("task"))} onAddSession={() => edit(() => setCoursePicker("session"))} onPlan={() => edit(() => setPlanOpen(true))} onStart={task => void start(task)} onToggle={complete} onStudy={id => edit(() => setStudyFor(id))} onReflect={task => edit(() => setReflectionEditor({ courseId: task.courseId!, taskId: task.id }))} onEditReflection={entry => edit(() => setReflectionEditor({ courseId: entry.item.courseId ?? "", entry }))} /> : collection === "week" ? <WeekView data={data} today={today} onOpen={id => setTaskEditor({ mode: "edit", id })} onPlan={() => edit(() => setPlanOpen(true))} /> : collection === "library" ? <Library courses={shown} tasks={data.tasks} notes={data.notes} total={data.courses.length} onOpen={openCourse} onAdd={() => edit(() => setCourseEditor("new"))} /> : <Upcoming courses={shown} tasks={data.tasks} data={data} today={today} onTask={id => setTaskEditor({ mode: "edit", id })} onCourse={id => { const found = data.courses.find(x => x.id === id); if (found) openCourse(found) }} onReflect={task => edit(() => setReflectionEditor({ courseId: task.courseId!, taskId: task.id }))} onEditReflection={entry => edit(() => setReflectionEditor({ courseId: entry.item.courseId ?? "", entry }))} />}
       </MotionPane> : null}
     </KeyboardScrollView>
+    {data && studyFor ? <StudyPlanSheet data={data} taskId={studyFor} today={today} onClose={() => setStudyFor(null)} /> : null}
+    {data && planOpen ? <PlanWeekSheet data={data} today={today} onClose={() => setPlanOpen(false)} /> : null}
     {data && reflectionEditor ? <LearningReflectionSheet key={reflectionEditor.entry?.item.id ?? `${reflectionEditor.courseId}/${reflectionEditor.taskId ?? "course"}`} data={data} initialCourseId={reflectionEditor.courseId} initialTaskId={reflectionEditor.taskId} entry={reflectionEditor.entry} onClose={() => setReflectionEditor(null)} /> : null}
     {data && courseEditor ? <CourseEditor key={courseEditor === "new" ? "new" : courseEditor.id} value={courseEditor} onClose={() => setCourseEditor(null)} /> : null}
     {data && taskEditor ? <TaskSheet key={taskEditor.mode === "edit" ? taskEditor.id : `new-${taskEditor.courseId}-${taskEditor.learningType}`} editor={taskEditor} data={data} today={today} onClose={() => setTaskEditor(null)} /> : null}
@@ -112,7 +126,7 @@ const s = StyleSheet.create({
   fill: { flex: 1, backgroundColor: c.ground }, flex: { flex: 1, minWidth: 0 }, pane: { gap: 10 }, content: { padding: 14, paddingBottom: NAV_CLEARANCE, gap: 10 },
   header: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 10, gap: 8, zIndex: 4 }, top: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }, topRight: { flexDirection: "row", alignItems: "center", gap: 7 }, breadcrumb: { color: c.text, fontSize: 13, fontWeight: "600" }, muted: { color: c.muted, fontWeight: "400" }, add: { width: 32, height: 32, borderRadius: 16, backgroundColor: c.panel, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: c.line },
   dismiss: { ...StyleSheet.absoluteFill, zIndex: 3 },
-  tabs: { flexDirection: "row", gap: 5 }, pressed: { opacity: 0.72 },
+  tabs: { width: "100%" }, pressed: { opacity: 0.72 },
   menu: { position: "absolute", right: 14, top: 42, width: 206, padding: 6, borderRadius: shape.menu, backgroundColor: c.raised, borderWidth: 1, borderColor: c.border, elevation: 8, zIndex: 8 }, menuLabel: { color: c.muted, fontSize: 10, fontWeight: "700", letterSpacing: 0.6, paddingHorizontal: 9, paddingVertical: 6 }, menuItem: { minHeight: 35, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 9, borderRadius: 9 }, menuText: { color: c.text, fontSize: 13 }, rule: { height: 1, backgroundColor: c.line, marginVertical: 4 },
   search: { flexDirection: "row", alignItems: "center", gap: 8, minHeight: 38, borderRadius: shape.card, backgroundColor: c.panel, paddingHorizontal: 12, borderWidth: 1, borderColor: c.line }, searchInput: { flex: 1, color: c.text, fontSize: 13, paddingVertical: 5 }, filters: { gap: 6, paddingVertical: 1 },
   back: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start", minHeight: 28, gap: 2 }, accent: { color: c.accent, fontSize: 12 }, identity: { flexDirection: "row", alignItems: "center", gap: 9, paddingVertical: 2 }, identityTitle: { color: c.text, fontSize: 18, fontWeight: "700" }, kindMark: { width: 4, alignSelf: "stretch", minHeight: 34, borderRadius: 2 }, edit: { width: 36, height: 36, alignItems: "center", justifyContent: "center", borderRadius: shape.card, backgroundColor: c.panel, borderWidth: 1, borderColor: c.line }, identityChips: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 4 }, meta: { color: c.muted, fontSize: 12, lineHeight: 17 },

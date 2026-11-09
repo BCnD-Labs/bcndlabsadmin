@@ -4,9 +4,12 @@
  * clock, preferences or the browser; "today" is always a `YYYY-MM-DD` parameter, and nothing is saved
  * unless the caller applies a proposal. No AI: every suggestion is a plain date rule the user can see.
  */
-import type { ClassMeeting, Course, MeetingKind, Task, WorkEffort, WorkStatus } from "../src/lib/types.ts"
+import type { ClassMeeting, Course, CourseTopic, MeetingKind, Subtask, Task, WorkEffort, WorkStatus } from "../src/lib/types.ts"
 import { addDaysToKey, daysBetween, weekdayOfKey } from "./date-keys.ts"
+import { hasPlannedSteps, openSteps, stepsDueBy, stepsOn, type StepRef } from "./steps.ts"
 import type { Collections } from "./workspace.ts"
+
+export type { ClassMeeting, CourseTopic, MeetingKind, Subtask, WorkEffort, WorkStatus }
 
 export const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const
 export const MEETING_KINDS: { value: MeetingKind; label: string }[] = [
@@ -28,6 +31,7 @@ export const EFFORTS: { value: WorkEffort; label: string; hint: string; lead: nu
   { value: "big", label: "Big project", hint: "Start a week ahead", lead: 7 },
 ]
 const EXAM_LEAD = 5
+const QUIZ_LEAD = 2
 const DEFAULT_LEAD = 3
 /** No more than this many suggested items on one day. */
 export const PLAN_PER_DAY = 3
@@ -104,7 +108,7 @@ const compareDue = (a: Task, b: Task) => a.due!.localeCompare(b.due!) || (a.time
 /** How many days ahead of the deadline to begin. */
 export function leadDays(t: Task): number {
   if (t.effort) return EFFORTS.find((e) => e.value === t.effort)!.lead
-  return t.learningType === "exam" ? EXAM_LEAD : DEFAULT_LEAD
+  return t.learningType === "exam" ? EXAM_LEAD : t.learningType === "quiz" ? QUIZ_LEAD : DEFAULT_LEAD
 }
 /** The date to begin by: the deadline minus the lead time. */
 export const startBy = (t: Task): string | undefined => (t.due ? addDaysToKey(t.due, -leadDays(t)) : undefined)
@@ -116,9 +120,15 @@ export interface TodayPlan {
   inProgress: Task[]
   /** Not due yet, but this is the day to start (or past it). */
   startNow: Task[]
+  /** Steps you planned for today (or earlier) inside coursework. */
+  steps: StepRef[]
+  /** Exams coming up soon that have no study plan yet. */
+  studyNudges: Task[]
   /** The single best next thing to do, with the reason in plain words. */
-  next?: { task: Task; why: string }
+  next?: { task: Task; step?: Subtask; why: string }
 }
+/** An exam this close with nothing planned gets a nudge to plan studying. */
+const STUDY_NUDGE_DAYS = 14
 
 /** What today holds for someone who doesn't know where to begin. */
 export function todayPlan(data: Pick<Collections, "tasks" | "courses">, today: string): TodayPlan {
@@ -128,12 +138,16 @@ export function todayPlan(data: Pick<Collections, "tasks" | "courses">, today: s
   const dueToday = open.filter((t) => t.due === today)
   const inProgress = open.filter((t) => t.due! > today && statusOf(t) === "in_progress")
   const startNow = open.filter((t) => t.due! > today && statusOf(t) !== "in_progress" && startBy(t)! <= today)
+  const steps = stepsDueBy(data.tasks.filter((t) => t.courseId && ids.has(t.courseId)), today)
+  const studyNudges = data.tasks.filter((t) => isPlannable(t, ids) && t.learningType === "exam" && t.due! > today && daysBetween(t.due!, today) <= STUDY_NUDGE_DAYS && !hasPlannedSteps(t)).sort(compareDue)
+  const stepNext: TodayPlan["next"] = steps[0] ? { task: steps[0].task, step: steps[0].step, why: steps[0].step.date! < today ? `Step planned for ${dueWords(steps[0].step.date!, today)}: still open` : `Planned for today: ${steps[0].step.title}` } : undefined
   const next: TodayPlan["next"] = overdue[0] ? { task: overdue[0], why: `${-daysBetween(overdue[0].due!, today)} day${daysBetween(overdue[0].due!, today) === -1 ? "" : "s"} late: do this first` }
     : dueToday[0] ? { task: dueToday[0], why: "Due today" }
+    : stepNext ? stepNext
     : inProgress[0] ? { task: inProgress[0], why: "You already started this" }
     : startNow[0] ? { task: startNow[0], why: `Due ${dueWords(startNow[0].due!, today)}: a good day to begin` }
     : undefined
-  return { classes: meetingsForDay(data.courses, today), overdue, dueToday, inProgress, startNow, next }
+  return { classes: meetingsForDay(data.courses, today), overdue, dueToday, inProgress, startNow, steps, studyNudges, next }
 }
 
 /** "tomorrow", "Fri", "in 9 days". */
@@ -146,7 +160,7 @@ export function dueWords(due: string, today: string): string {
 }
 
 export type DayLoad = "light" | "busy" | "heavy"
-export interface WeekDay { date: string; classMinutes: number; classes: number; due: Task[]; exams: Task[]; focus: Task[]; load: DayLoad }
+export interface WeekDay { date: string; classMinutes: number; classes: number; due: Task[]; exams: Task[]; focus: Task[]; steps: StepRef[]; load: DayLoad }
 
 /** Seven days from `start`: classes, deadlines, exams and what's planned, with a plain light/busy/heavy rating. */
 export function weekLoad(data: Pick<Collections, "tasks" | "courses">, start: string): WeekDay[] {
@@ -158,8 +172,9 @@ export function weekLoad(data: Pick<Collections, "tasks" | "courses">, start: st
     const due = work.filter((t) => t.due === date)
     const exams = due.filter((t) => t.learningType === "exam")
     const classMinutes = meetings.reduce((sum, m) => sum + minutesOf(m.meeting.end) - minutesOf(m.meeting.start), 0)
-    const score = due.length + exams.length * 2 + classMinutes / 120
-    return { date, classMinutes, classes: meetings.length, due, exams, focus: work.filter((t) => t.focusDate === date), load: score >= 4 ? "heavy" : score >= 2 ? "busy" : "light" }
+    const steps = stepsOn(work, date)
+    const score = due.length + exams.length * 2 + due.filter((t) => t.learningType === "quiz").length * 0.5 + classMinutes / 120 + steps.length * 0.5
+    return { date, classMinutes, classes: meetings.length, due, exams, focus: work.filter((t) => t.focusDate === date), steps, load: score >= 4 ? "heavy" : score >= 2 ? "busy" : "light" }
   })
 }
 
@@ -173,8 +188,9 @@ export function planWeek(data: Pick<Collections, "tasks" | "courses">, today: st
   const ids = new Set(data.courses.map((c) => c.id))
   const load = new Map<string, number>()
   for (const t of data.tasks) if (!t.done && t.focusDate && t.focusDate >= today) load.set(t.focusDate, (load.get(t.focusDate) ?? 0) + 1)
+  for (const { step } of openSteps(data.tasks)) if (step.date && step.date >= today) load.set(step.date, (load.get(step.date) ?? 0) + 1)
   const out: PlanProposal[] = []
-  const candidates = data.tasks.filter((t) => isPlannable(t, ids) && !(t.focusDate && t.focusDate >= today) && daysBetween(t.due!, today) <= horizon).sort(compareDue)
+  const candidates = data.tasks.filter((t) => isPlannable(t, ids) && !(t.focusDate && t.focusDate >= today) && !hasPlannedSteps(t) && daysBetween(t.due!, today) <= horizon).sort(compareDue)
   for (const task of candidates) {
     const earliest = startBy(task)! > today ? startBy(task)! : today
     const latest = task.due! < today ? today : task.due!
@@ -222,4 +238,61 @@ export function degreeMap(courses: Course[]): TermGroup[] {
     groups.set(term, g)
   }
   return [...groups.values()].sort((a, b) => (a.start ?? "9999").localeCompare(b.start ?? "9999") || a.term.localeCompare(b.term))
+}
+
+export interface TopicUse { topicId: string; assignments: number; exams: number }
+
+/** How much open work points at each topic of a course. */
+export function topicUsage(data: Pick<Collections, "tasks" | "courses">, courseId: string): TopicUse[] {
+  const course = data.courses.find((c) => c.id === courseId)
+  return (course?.topics ?? []).map((topic) => {
+    const linked = data.tasks.filter((t) => t.courseId === courseId && !t.done && t.topicIds?.includes(topic.id))
+    return { topicId: topic.id, assignments: linked.filter((t) => t.learningType !== "exam").length, exams: linked.filter((t) => t.learningType === "exam").length }
+  })
+}
+
+export interface StudyProposal { title: string; date: string; topicId?: string }
+const MAX_STUDY_LEAD = 21
+const GENERIC_STUDY = ["Review your notes", "Practice questions"]
+const FINAL_REVIEW = "Final review"
+
+/**
+ * A study plan that counts back from an exam: one review per topic the exam covers (or two general
+ * sessions when no topics are set), spread over the days before it, with a final review the day
+ * before. No more than `perDay` things on a day. Topics you marked as known, and steps already on
+ * the exam, are skipped, so running it twice never doubles up. Nothing is saved here.
+ */
+export function studyPlan(data: Pick<Collections, "tasks" | "courses">, examId: string, today: string, perDay = PLAN_PER_DAY): StudyProposal[] {
+  const exam = data.tasks.find((t) => t.id === examId)
+  if (!exam || exam.done || !exam.due || exam.due <= today) return []
+  const course = data.courses.find((c) => c.id === exam.courseId)
+  const have = exam.subtasks ?? []
+  const open = have.filter((s) => !s.done)
+  const plannedTopics = new Set(open.map((s) => s.topicId).filter(Boolean))
+  const openTitles = new Set(open.map((s) => s.title.trim().toLowerCase()))
+  const covered = exam.topicIds?.length ? (course?.topics ?? []).filter((t) => exam.topicIds!.includes(t.id)) : []
+  const items: { title: string; topicId?: string }[] = [
+    ...covered.filter((t) => !t.done && !plannedTopics.has(t.id)).map((t) => ({ title: `Review: ${t.title}`, topicId: t.id })),
+    ...(covered.length ? [] : GENERIC_STUDY.map((title) => ({ title }))),
+    { title: FINAL_REVIEW },
+  ].filter((i) => !openTitles.has(i.title.toLowerCase()))
+  if (!items.length) return []
+  const lead = Math.min(MAX_STUDY_LEAD, Math.max(leadDays(exam), items.length + 2))
+  const first = addDaysToKey(exam.due, -lead)! > today ? addDaysToKey(exam.due, -lead)! : today
+  const last = addDaysToKey(exam.due, -1)!
+  const span = daysBetween(last, first) + 1
+  const load = new Map<string, number>()
+  for (const t of data.tasks) if (!t.done && t.focusDate && t.focusDate >= today) load.set(t.focusDate, (load.get(t.focusDate) ?? 0) + 1)
+  for (const { step } of openSteps(data.tasks)) if (step.date && step.date >= today) load.set(step.date, (load.get(step.date) ?? 0) + 1)
+  const free = (i: number) => (load.get(addDaysToKey(first, i)!) ?? 0) < perDay
+  return items.map((item, n) => {
+    let at = items.length === 1 || n === items.length - 1 ? span - 1 : Math.round((n * (span - 1)) / (items.length - 1))
+    const wanted = at
+    while (at < span - 1 && !free(at)) at++
+    if (!free(at)) { at = wanted; while (at > 0 && !free(at)) at-- }
+    if (!free(at)) at = wanted
+    const date = addDaysToKey(first, at)!
+    load.set(date, (load.get(date) ?? 0) + 1)
+    return { ...item, date }
+  }).sort((a, b) => a.date.localeCompare(b.date))
 }

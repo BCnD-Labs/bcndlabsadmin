@@ -9,7 +9,7 @@ import { useUi, type SettingsSection } from "@/stores/ui"
 import { ConnectionsPage } from "./connections-page"
 import { AboutSettings, DataPanel, ResetPanel } from "./general-page"
 import { ServerSettings, SessionGroup } from "./server-page"
-import { AppearanceSettings, GeneralSettings, NotificationsSettings, SETTINGS_SECTIONS, SampleDataGroup, SectionContext, SettingsPage, SettingsQuery, ShortcutsSettings, SidebarSettings } from "./settings-pages"
+import { AppearanceSettings, DesktopSettings, GeneralSettings, LearningSettings, NotificationsSettings, SETTINGS_SECTIONS, SampleDataGroup, SectionContext, SettingsPage, SettingsQuery, ShortcutsSettings, SidebarSettings } from "./settings-pages"
 
 const BUILD = __BLACKWALL_BUILD__
 
@@ -43,6 +43,8 @@ const BODY: Record<SettingsSection, ComponentType> = {
   server: ServerSettings,
   shortcuts: ShortcutsSettings,
   about: AboutSettings,
+  desktop: DesktopSettings,
+  learning: LearningSettings,
 }
 
 /**

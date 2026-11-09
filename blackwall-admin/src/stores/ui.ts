@@ -2,7 +2,7 @@ import { create } from "zustand"
 import type { ProviderId } from "@shared/connections"
 import type { Course, Note, Project, RepoLink, Service, Task } from "@/lib/types"
 
-export type SettingsSection = "general" | "appearance" | "home" | "sidebar" | "notifications" | "connections" | "data" | "server" | "shortcuts" | "about"
+export type SettingsSection = "general" | "appearance" | "home" | "sidebar" | "notifications" | "connections" | "data" | "server" | "shortcuts" | "about" | "desktop" | "learning"
 
 /** Which record form is open. One dialog host renders these app-wide. */
 export type FormRequest =

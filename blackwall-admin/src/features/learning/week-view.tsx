@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { parseKey, toDateKey, weekStart } from "@/lib/dates"
 import { cn } from "@/lib/utils"
+import { usePrefs } from "@/stores/prefs"
 import { useUi } from "@/stores/ui"
 import { useCourseMap, useWorkspace } from "@/stores/workspace"
 import { applyFocusPlan } from "@shared/records"
@@ -26,7 +27,9 @@ function PlanWeek({ today }: { today: string }) {
   const courses = useWorkspace((s) => s.courses)
   const courseMap = useCourseMap()
   const [off, setOff] = useState<Set<string>>(new Set())
-  const proposals = planWeek({ tasks, courses }, today)
+  const perDay = usePrefs((st) => st.planPerDay)
+  const horizon = usePrefs((st) => st.planHorizon)
+  const proposals = planWeek({ tasks, courses }, today, horizon, perDay)
   const chosen = proposals.filter((p) => !off.has(p.task.id))
   const apply = () => {
     useWorkspace.setState((s) => applyFocusPlan({ tasks: s.tasks }, chosen.map((p) => ({ id: p.task.id, date: p.date }))))
@@ -34,11 +37,11 @@ function PlanWeek({ today }: { today: string }) {
     setOff(new Set())
   }
   return (
-    <Panel category="learning" title="Plan my next two weeks" tool="learning" command="plan" meta={proposals.length || undefined}
+    <Panel category="learning" title={`Plan my next ${horizon / 7} week${horizon === 7 ? "" : "s"}`} tool="learning" command="plan" meta={proposals.length || undefined}
       actions={proposals.length ? <Button size="sm" disabled={!chosen.length} onClick={apply}><CalendarPlus /> Add {chosen.length} to my days</Button> : undefined}>
       {proposals.length ? (
         <>
-          <p className="border-b border-line-soft px-3.5 py-2 text-[11px] text-muted-foreground">Each one goes on a day a few days before it is due, never more than three a day. They show in Today's focus in the Planner. Untick what you'd rather plan yourself.</p>
+          <p className="border-b border-line-soft px-3.5 py-2 text-[11px] text-muted-foreground">Each one goes on a day a few days before it is due, never more than {perDay} a day. They show in Today's focus in the Planner. Untick what you'd rather plan yourself.</p>
           <ul>
             {proposals.map((p) => (
               <li key={p.task.id} className="flex min-h-11 items-center gap-2.5 border-b border-line-soft px-3.5 py-1.5 last:border-b-0">
@@ -86,7 +89,10 @@ export function WeekView({ today }: { today: string }) {
             {d.focus.filter((t) => t.due !== d.date).map((t) => (
               <button key={t.id} type="button" onClick={() => openForm({ kind: "task", id: t.id })} className="rounded-[5px] border border-dashed border-line px-1.5 py-1 text-left text-[11px] text-ink-2 hover:bg-raised">Work on: {t.title}</button>
             ))}
-            {!d.classes && !d.due.length && !d.focus.length && <p className="text-[11px] text-faint">Free</p>}
+            {d.steps.map(({ task, step }) => (
+              <button key={step.id} type="button" onClick={() => openForm({ kind: "task", id: task.id })} className="rounded-[5px] border border-dashed border-line px-1.5 py-1 text-left text-[11px] text-ink-2 hover:bg-raised" title={task.title}>Step: {step.title}</button>
+            ))}
+            {!d.classes && !d.due.length && !d.focus.length && !d.steps.length && <p className="text-[11px] text-faint">Free</p>}
           </section>
         ))}
       </Panel>

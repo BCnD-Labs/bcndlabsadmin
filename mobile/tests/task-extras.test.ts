@@ -69,7 +69,7 @@ test("course and type: set with the course, dropped with it, score only with a c
 })
 
 test("learning types follow the course kind as on the web", () => {
-  assert.deepEqual(typeOptions().map((o) => o.value), ["assignment", "exam", "milestone", "event"])
+  assert.deepEqual(typeOptions().map((o) => o.value), ["assignment", "quiz", "exam", "milestone", "event"])
   assert.equal(typeLabel("milestone", "certification"), "Exam domain")
   assert.equal(typeLabel("exam", "certification"), "Practice test")
   assert.equal(typeAfterCourseChange("", "course"), "assignment")

@@ -36,8 +36,14 @@ export interface Task {
   learningType?: LearningItemType
   /** Where a piece of coursework is in its life. Absent on older records: derive it from `done`. */
   status?: WorkStatus
+  /** Your own label for what kind of assignment, quiz or exam this is ("Reading", "Vocabulary", "Document"). Free text. */
+  workType?: string
   /** How big the work feels; sets how many days ahead the planner suggests starting. */
   effort?: WorkEffort
+  /** Smaller steps inside this task; each can have its own day. */
+  subtasks?: Subtask[]
+  /** The course topics (units, modules, chapters) this assignment or exam covers. */
+  topicIds?: ID[]
   /** Practice tests (certifications): the score, 0–100. */
   score?: number
   starred: boolean
@@ -45,6 +51,23 @@ export interface Task {
   completedAt?: Timestamp
   createdAt: Timestamp
   updatedAt: Timestamp
+}
+
+/** One small step inside a task: "Outline", "Review: Recursion". A date puts it on that day's plan. */
+export interface Subtask {
+  id: ID
+  title: string
+  done: boolean
+  date?: DateKey
+  /** The course topic a study step reviews. */
+  topicId?: ID
+}
+
+/** A unit, module or chapter of a course. `done` means "I know this one". */
+export interface CourseTopic {
+  id: ID
+  title: string
+  done?: boolean
 }
 
 export interface RecordLink {
@@ -74,6 +97,8 @@ export interface Note {
   pinned: boolean
   /** Linked course (Productivity → Learning). */
   courseId?: ID
+  /** Modules of that course this note belongs to. */
+  topicIds?: ID[]
   createdAt: Timestamp
   updatedAt: Timestamp
 }
@@ -285,7 +310,7 @@ export interface Service {
 }
 
 /** What a piece of coursework is. All of them are tasks, so they share the calendar and Tasks. */
-export type LearningItemType = "assignment" | "exam" | "milestone" | "event"
+export type LearningItemType = "assignment" | "quiz" | "exam" | "milestone" | "event"
 
 /** What kind of learning a record is. Older records have no kind and are courses. */
 export type LearningKind = "course" | "certification" | "selfpaced" | "skill" | "reading"
@@ -343,6 +368,8 @@ export interface Course {
   policies?: string
   /** The class's code repository. */
   repoUrl?: string
+  /** Units, modules or chapters, in order. Assignments and exams can point at them. */
+  topics?: CourseTopic[]
   credits?: number
   description: string
   tags: string[]

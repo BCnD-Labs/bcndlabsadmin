@@ -66,13 +66,13 @@ test("courses: the web's label (code, else initials) and lookup", () => {
 
 test("form: a new note starts yellow and unpinned, needs text, and has no course key unless one is picked", () => {
   const d = emptyNoteDraft()
-  assert.deepEqual(d, { text: "", color: "amber", pinned: false })
+  assert.deepEqual(d, { text: "", color: "amber", pinned: false, topicIds: [], taskIds: [] })
   assert.deepEqual(noteErrors(d), { text: "Write something first." })
   assert.deepEqual(noteErrors({ ...d, text: " \n " }), { text: "Write something first." })
   assert.deepEqual(noteErrors({ ...d, text: "hi" }), {})
   assert.deepEqual(buildNewNote({ ...d, text: "  hi  " }), { text: "  hi  ", color: "amber", pinned: false })
   assert.ok(!("courseId" in buildNewNote({ ...d, text: "hi" })))
-  assert.deepEqual(buildNewNote({ text: "hi", color: "rose", pinned: true, courseId: "c1" }), { text: "hi", color: "rose", pinned: true, courseId: "c1" })
+  assert.deepEqual(buildNewNote({ text: "hi", color: "rose", pinned: true, courseId: "c1", topicIds: [], taskIds: [] }), { text: "hi", color: "rose", pinned: true, courseId: "c1" })
   const created = createNote(ws(), buildNewNote({ ...d, text: "hi" }), { makeId: (p) => `${p}_x`, now: () => "2026-11-04T10:00:00Z" })
   assert.equal(created.record.id, "nte_x")
   assert.equal(created.data.notes[0].text, "hi")
@@ -82,12 +82,17 @@ test("form: a new note starts yellow and unpinned, needs text, and has no course
 test("form: dirty only when a field differs; a cleared course is an explicit undefined", () => {
   const base = n("a", "text", { color: "teal", pinned: true, courseId: "c1" })
   const d = draftFromNote(base)
-  assert.deepEqual(d, { text: "text", color: "teal", pinned: true, courseId: "c1" })
+  assert.deepEqual(d, { text: "text", color: "teal", pinned: true, courseId: "c1", topicIds: [], taskIds: [] })
   assert.equal(noteDirty(d, draftFromNote(base)), false)
   for (const change of [{ text: "text!" }, { color: "rose" as const }, { pinned: false }, { courseId: undefined }]) assert.equal(noteDirty({ ...d, ...change }, d), true, JSON.stringify(change))
   const patch = buildNotePatch({ ...d, courseId: undefined })
   assert.ok("courseId" in patch && patch.courseId === undefined)
   assert.deepEqual(Object.keys(buildNotePatch(d)).sort(), ["color", "courseId", "pinned", "text"])
+  const withModule = { ...d, topicIds: ["tp1"] }
+  assert.deepEqual(buildNotePatch(withModule, d).topicIds, ["tp1"])
+  assert.ok("topicIds" in buildNotePatch({ ...d, topicIds: [] }, withModule), "clearing the modules clears them")
+  assert.equal(noteDirty(withModule, d), true)
+  assert.equal(noteDirty({ ...d, taskIds: ["t1"] }, d), true)
 })
 
 test("older-shape note (no course, no links) edits fine and gains nothing it was not given", () => {

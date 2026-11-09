@@ -310,6 +310,16 @@ export function startShell(options: ShellOptions = {}): ShellController | null {
       changed,
       found,
       attach: attachShortcuts,
+      // The workspace page defines window.__bwBrowserOpen while its desktop view (with a Browser window) is up.
+      openInWorkspace: async (url) => {
+        const wc = tabs?.pinned?.view?.webContents
+        if (!wc || wc.isDestroyed() || !wc.getURL().startsWith(NATIVE_HOME)) return false
+        try {
+          return (await wc.executeJavaScript(`typeof window.__bwBrowserOpen === "function" && window.__bwBrowserOpen(${JSON.stringify(url)}) === true`)) === true
+        } catch {
+          return false
+        }
+      },
     })
 
     // Restore: pinned Blackwall tab first (last page if still on the same site), then saved tabs.
@@ -396,8 +406,11 @@ export function startShell(options: ShellOptions = {}): ShellController | null {
     })
     registerNativeWorkspace(tabSession, () => config.get().webAddress, updater, sourceUpdater, { openBrowser: () => newTab() })
 
+    // No page may embed a <webview> except the bundled workspace, which tabs.ts vets and locks down.
     app.on("web-contents-created", (_e, contents) => {
-      contents.on("will-attach-webview", (e) => e.preventDefault())
+      contents.on("will-attach-webview", (e) => {
+        if (contents !== tabs?.pinned?.view?.webContents) e.preventDefault()
+      })
     })
 
     ipcMain.on("shell:cmd", (e, cmd: ShellCommand) => {

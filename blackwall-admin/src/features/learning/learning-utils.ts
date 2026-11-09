@@ -1,10 +1,11 @@
-import { Award, BookOpen, BookOpenCheck, CalendarDays, ClipboardList, Flag, GraduationCap, ListChecks, MonitorPlay, Zap, type LucideIcon } from "lucide-react"
+import { Award, BookOpen, BookOpenCheck, CalendarDays, ClipboardList, FileQuestion, Flag, GraduationCap, ListChecks, MonitorPlay, Zap, type LucideIcon } from "lucide-react"
 import { daysUntil, todayKey } from "@/lib/dates"
 import type { Course, CourseColor, LearningItemType, LearningKind, Task } from "@/lib/types"
 
 /** Coursework kinds. Every one is a task with `courseId` + `learningType`, so it shares Tasks and the calendar. */
 export const LEARNING_TYPES: { value: LearningItemType; label: string; plural: string; icon: LucideIcon; dateLabel: string }[] = [
   { value: "assignment", label: "Assignment", plural: "Assignments", icon: ClipboardList, dateLabel: "Due date" },
+  { value: "quiz", label: "Quiz", plural: "Quizzes", icon: FileQuestion, dateLabel: "Date" },
   { value: "exam", label: "Exam", plural: "Exams", icon: BookOpenCheck, dateLabel: "Date" },
   { value: "milestone", label: "Milestone", plural: "Milestones", icon: Flag, dateLabel: "Target date" },
   { value: "event", label: "Event", plural: "Events", icon: CalendarDays, dateLabel: "Date" },
@@ -38,7 +39,7 @@ export const KINDS: KindInfo[] = [
     value: "course", label: "Course", plural: "Courses", icon: GraduationCap,
     description: "A class: instructor, schedule, assignments and exams.",
     name: ["Course name", "e.g. Data Structures"], person: ["Instructor", "Name"], endLabel: "End date", linkLabel: "Course site",
-    types: [{ value: "assignment", label: "Assignment", plural: "Assignments" }, { value: "exam", label: "Exam", plural: "Exams" }, { value: "milestone", label: "Milestone", plural: "Milestones" }, { value: "event", label: "Event", plural: "Events" }],
+    types: [{ value: "assignment", label: "Assignment", plural: "Assignments" }, { value: "quiz", label: "Quiz", plural: "Quizzes" }, { value: "exam", label: "Exam", plural: "Exams" }, { value: "milestone", label: "Milestone", plural: "Milestones" }, { value: "event", label: "Event", plural: "Events" }],
   },
   {
     value: "certification", label: "Certification", plural: "Certifications", icon: Award,

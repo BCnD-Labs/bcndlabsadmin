@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto"
 import { DEFAULT_NOTIFY_SETTINGS, NOTIFY_EVENTS, channelsFor, sanitizeNotifySettings, type FeedItem, type NotifyChannel, type NotifySettings } from "../shared/notifications.ts"
 import type { Collections } from "../shared/workspace.ts"
+import { meetingsForDay, minutesOf, startBy, todayPlan } from "../shared/learning.ts"
+import { hasPlannedSteps } from "../shared/steps.ts"
 import type { DevelopmentOverview } from "../shared/connections.ts"
 import { sendEmail, sendNtfy, type Outgoing } from "./providers/channels.ts"
 import type { ServiceStatus } from "./service-status.ts"
@@ -22,6 +24,9 @@ interface Memory {
   backupOverdueDay?: string
   digestDay?: string
   examsSent: string[]
+  /** Class reminders already sent ("course:meeting:day"), and exams already nudged to plan studying. */
+  classSent?: string[]
+  studyNudged?: string[]
   siteFailed: string[]
   /** Social posts already reminded about ("id@scheduledAt"). */
   socialSent?: string[]
@@ -53,6 +58,10 @@ export function localDay(ms: number, timeZone: string) {
 }
 const localHour = (ms: number, timeZone: string) => Number(new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", hourCycle: "h23" }).format(ms))
 const daysBetween = (a: string, b: string) => Math.round((Date.parse(b) - Date.parse(a)) / 86400_000)
+const localMinutes = (ms: number, timeZone: string) => {
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(ms).split(":")
+  return Number(parts[0]) * 60 + Number(parts[1])
+}
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`
 
 /**
@@ -144,6 +153,7 @@ export class Notifier {
       await this.watchConnections()
       await this.watchGitHub(ws)
       await this.dailyWork(ws, settings)
+      await this.watchClasses(ws, settings)
       await this.watchSocial(ws)
       await this.watchUpdates()
       await this.saveMem()
@@ -260,6 +270,18 @@ export class Notifier {
         tags: ["spiral_calendar"],
       })
     }
+    // Learning: what to begin today, the steps you planned, and exams with no study plan yet.
+    const learning = todayPlan(ws, today)
+    const link = (path: string) => (this.d.baseUrl ? `${this.d.baseUrl}${path}` : undefined)
+    const begin = ws.tasks.filter((t) => !t.done && t.due && t.courseId && t.learningType !== "event" && t.kind !== "event" && t.due > today && startBy(t) === today && !t.focusDate && !hasPlannedSteps(t))
+    if (begin.length) await this.emit("learning.start_by", { title: `Time to start: ${begin[0].title}${begin.length > 1 ? ` and ${begin.length - 1} more` : ""}`, body: begin.slice(0, 4).map((t) => `• ${t.title} (due ${t.due})`).join("\n"), url: link("/productivity/learning"), tags: ["hourglass_flowing_sand"] })
+    if (learning.steps.length) await this.emit("learning.steps", { title: `${plural(learning.steps.length, "step")} planned for today`, body: learning.steps.slice(0, 4).map((r) => `• ${r.step.title} (${r.task.title})${r.step.date! < today ? " (missed)" : ""}`).join("\n"), url: link("/productivity/learning"), tags: ["footprints"] })
+    const nudged = new Set(mem.studyNudged ?? [])
+    const unplanned = learning.studyNudges.filter((t) => !nudged.has(t.id))
+    if (unplanned.length) {
+      mem.studyNudged = [...unplanned.map((t) => t.id), ...nudged].slice(0, 200)
+      await this.emit("learning.study_plan", { title: `Plan your studying: ${unplanned[0].title}`, body: unplanned.slice(0, 4).map((t) => `• ${t.title} (${t.due})`).join("\n"), url: link("/productivity/learning"), tags: ["books"] })
+    }
     for (const c of ws.courses.filter((c) => c.kind === "certification" && c.endDate)) {
       const left = daysBetween(today, c.endDate!)
       const key = `${c.id}:${left}`
@@ -267,6 +289,22 @@ export class Notifier {
         mem.examsSent = [key, ...mem.examsSent].slice(0, 100)
         await this.emit("work.exam_soon", { title: `${c.title} exam ${left === 1 ? "tomorrow" : "in a week"}`, body: `Your ${c.title} exam is on ${c.endDate}.`, url: this.d.baseUrl ? `${this.d.baseUrl}/productivity/learning/${c.id}` : undefined, priority: 4, tags: ["mortar_board"] })
       }
+    }
+  }
+
+  /** A class or lab starts within 15 minutes: remind once per meeting per day. */
+  private async watchClasses(ws: Collections, settings: NotifySettings) {
+    const mem = await this.mem()
+    const now = this.now()
+    const today = localDay(now, settings.timeZone)
+    const minutes = localMinutes(now, settings.timeZone)
+    for (const { course, meeting } of meetingsForDay(ws.courses, today)) {
+      if (meeting.kind !== "class" && meeting.kind !== "lab") continue
+      const left = minutesOf(meeting.start) - minutes
+      const key = `${course.id}:${meeting.id}:${today}`
+      if (left < 0 || left > 15 || (mem.classSent ?? []).includes(key)) continue
+      mem.classSent = [key, ...(mem.classSent ?? [])].slice(0, 100)
+      await this.emit("learning.class_soon", { title: `${course.title} ${left <= 1 ? "is starting" : `starts in ${left} min`}`, body: [meeting.start, meeting.location].filter(Boolean).join(" · "), url: this.d.baseUrl ? `${this.d.baseUrl}/productivity/learning/${course.id}` : undefined, tags: ["school"] })
     }
   }
 

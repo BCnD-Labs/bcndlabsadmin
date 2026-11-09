@@ -12,7 +12,7 @@ export interface TypeOption { value: ItemType; label: string }
 
 const t = (value: ItemType, label: string): TypeOption => ({ value, label })
 const KIND_TYPES: Record<Kind, TypeOption[]> = {
-  course: [t("assignment", "Assignment"), t("exam", "Exam"), t("milestone", "Milestone"), t("event", "Event")],
+  course: [t("assignment", "Assignment"), t("quiz", "Quiz"), t("exam", "Exam"), t("milestone", "Milestone"), t("event", "Event")],
   certification: [t("milestone", "Exam domain"), t("exam", "Practice test"), t("assignment", "Study task"), t("event", "Event")],
   selfpaced: [t("milestone", "Section"), t("assignment", "Exercise"), t("event", "Study session")],
   skill: [t("milestone", "Milestone"), t("assignment", "Practice"), t("event", "Practice session")],

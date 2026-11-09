@@ -1,5 +1,5 @@
 import { Star } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { DocLinksField, cleanLinks } from "@/components/common/doc-links"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
@@ -7,15 +7,23 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { kindInfo, learningType } from "@/features/learning/learning-utils"
-import type { LearningItemType, Task, WorkEffort, WorkStatus } from "@/lib/types"
+import type { LearningItemType, Subtask, Task, WorkEffort, WorkStatus } from "@/lib/types"
 import { EFFORTS, WORK_STATUSES } from "@shared/learning"
 import { useWorkspace } from "@/stores/workspace"
 import { CourseSelect, Field, OptionSelect } from "./fields"
 import { FormFrame } from "./form-frame"
+import { StepsField } from "./steps-field"
+import { LinkedRecordsField } from "./linked-records-field"
+import { tasksLinkingTask } from "@shared/links"
+import { TopicChips } from "./topics-field"
+import { StudyPlanButton } from "@/features/learning/study-plan"
 
 export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Partial<Task>; onDone: () => void }) {
   const existing = useWorkspace((s) => s.tasks.find((t) => t.id === id))
   const hasCourses = useWorkspace((s) => s.courses.length > 0)
+  const allTasks = useWorkspace((s) => s.tasks)
+  // Derived outside the selector: a selector that builds a new array every call loops forever (React error 185).
+  const usedTypes = useMemo(() => [...new Set(allTasks.map((t) => t.workType).filter((v): v is string => !!v))].sort(), [allTasks])
   const courses = useWorkspace((s) => s.courses)
   const { create, update, remove } = useWorkspace.getState()
   const base = existing ?? defaults
@@ -32,6 +40,10 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
     score: base?.score != null ? String(base.score) : "",
     status: base?.status as WorkStatus | undefined,
     effort: base?.effort as WorkEffort | undefined,
+    workType: base?.workType ?? "",
+    subtasks: (base?.subtasks ?? []) as Subtask[],
+    topicIds: base?.topicIds ?? [],
+    recordLinks: base?.recordLinks ?? [],
   })
   const set = (patch: Partial<typeof draft>) => setDraft((d) => ({ ...d, ...patch }))
 
@@ -60,7 +72,11 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
       done: draft.done,
       status: tracked ? draft.status : undefined,
       effort: tracked ? draft.effort : undefined,
+      workType: draft.courseId && draft.workType.trim() ? draft.workType.trim().slice(0, 60) : undefined,
+      subtasks: draft.subtasks.filter((s) => s.title.trim()).length ? draft.subtasks.filter((s) => s.title.trim()).map((s) => ({ ...s, title: s.title.trim() })) : undefined,
+      topicIds: draft.courseId && draft.topicIds.length ? draft.topicIds.filter((id) => course?.topics?.some((t) => t.id === id)) : undefined,
       links: cleanLinks(draft.links),
+      recordLinks: draft.recordLinks.length ? draft.recordLinks : undefined,
       score: draft.courseId && scored ? score : undefined,
     }
     if (existing) {
@@ -112,6 +128,12 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
           )}
         </div>
       )}
+      {draft.courseId && draft.learningType !== "event" && draft.learningType !== "milestone" && (
+        <Field label={`${type.label} type`} htmlFor="task-worktype" hint="Optional. Your own label, like Reading, Vocabulary or Document. Ones you have used before are suggested.">
+          <Input id="task-worktype" list="task-worktypes" maxLength={60} value={draft.workType} onChange={(e) => set({ workType: e.target.value })} placeholder="e.g. Reading" />
+          <datalist id="task-worktypes">{usedTypes.map((v) => <option key={v} value={v} />)}</datalist>
+        </Field>
+      )}
       <Field label={draft.courseId ? "Notes" : "Details"} htmlFor="task-details">
         <Textarea
           id="task-details"
@@ -158,6 +180,20 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
           </Field>
         </div>
       )}
+      {!!course?.topics?.length && draft.learningType !== "event" && (
+        <Field label="Module" htmlFor="task-topics" hint="Which module this belongs to. An exam can cover several; its study plan reviews each one.">
+          <TopicChips topics={course.topics} value={draft.topicIds} onChange={(topicIds) => set({ topicIds })} />
+        </Field>
+      )}
+      <Field label="Steps" htmlFor="task-steps" hint="Break it into smaller pieces. Give a step a day and it shows up in Today and the week.">
+        <StepsField value={draft.subtasks} onChange={(subtasks) => set({ subtasks })} />
+      </Field>
+      {existing && (draft.learningType === "exam" || draft.learningType === "quiz") && !!draft.courseId && !draft.done && !!draft.due && (
+        <div><StudyPlanButton taskId={existing.id} draft={{ task: { ...existing, due: draft.due || undefined, learningType: draft.learningType, topicIds: draft.topicIds, subtasks: draft.subtasks }, onChange: (t) => set({ subtasks: t.subtasks ?? [] }) }} /></div>
+      )}
+      <Field label="Linked notes and tasks" htmlFor="task-records" hint="Notes and other tasks that belong with this. The links show on both sides.">
+        <LinkedRecordsField value={draft.recordLinks} onChange={(recordLinks) => set({ recordLinks })} selfId={existing?.id} backlinks={existing ? tasksLinkingTask({ tasks: allTasks }, existing.id) : []} />
+      </Field>
       <Field label="Linked documents" htmlFor="task-links" hint="Notes, specs or files that live elsewhere. They open in their own app.">
         <DocLinksField value={draft.links} onChange={(links) => set({ links })} />
       </Field>

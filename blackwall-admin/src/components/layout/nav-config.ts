@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 import type { Category } from "@/components/common/category-icon"
 import { usePrefs } from "@/stores/prefs"
-import { CMS, DEVELOPMENT, cmsPagesHref, formsHref, siteSettingsHref, MIKOSHI, PRODUCTIVITY, launcherHref, mikoshiStatusHref, mikoshiStorageHref, insightsHref, learningHref, mediaHref, plannerHref, postsHref, projectsHref, siteAnalyticsHref, SOCIAL, socialHref } from "@/lib/routes"
+import { CMS, DEVELOPMENT, cmsPagesHref, formsHref, siteSettingsHref, JOURNAL, MIKOSHI, PRODUCTIVITY, journalHref, launcherHref, mikoshiStatusHref, mikoshiStorageHref, insightsHref, learningHref, mediaHref, plannerHref, postsHref, projectsHref, siteAnalyticsHref, SOCIAL, socialHref } from "@/lib/routes"
 
 export interface NavChild {
   label: string
@@ -34,6 +34,7 @@ export const NAV: NavDestination[] = [
       { label: "Activity insights", to: insightsHref },
     ],
   },
+  { id: "journal", label: "Journal", category: "journal", to: journalHref, match: JOURNAL },
   {
     id: "development",
     label: "GitHub activity",
