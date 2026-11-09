@@ -2,25 +2,23 @@ import { Plus, Trash2 } from "lucide-react"
 import { useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
-import { STARTERS, SWATCH_INFO, SWATCH_KEYS, contrast } from "@shared/sitebuilder"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { Textarea } from "@/components/ui/textarea"
 import { EmptyState } from "@/components/common/empty-state"
 import { PageHeader } from "@/components/common/page-header"
 import { Panel } from "@/components/common/panel"
 import { GridItem, WorkspaceGrid } from "@/components/common/workspace-grid"
 import { OptionSelect } from "@/components/forms/fields"
 import { cmsPagesHref } from "@/lib/routes"
-import type { Site, SitePalette } from "@/lib/types"
-import { cn } from "@/lib/utils"
+import type { Site } from "@/lib/types"
 import { useConnections } from "@/services/connector"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
 import { SiteSwitcher } from "./site-switcher"
 import { PublishBar } from "./pages-tab"
+import { SiteTabs } from "./site-tabs"
 import { useCurrentSite } from "./use-cms"
 
 function Row({ label, htmlFor, hint, children }: { label: string; htmlFor?: string; hint?: string; children: React.ReactNode }) {
@@ -28,24 +26,6 @@ function Row({ label, htmlFor, hint, children }: { label: string; htmlFor?: stri
     <div className="flex flex-col gap-1.5 px-3.5 py-2.5 sm:flex-row sm:items-center sm:gap-6">
       <div className="min-w-0 flex-1"><Label htmlFor={htmlFor} className="text-[13px] font-medium text-ink">{label}</Label>{hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}</div>
       <div className="flex shrink-0 flex-wrap items-center gap-2 sm:w-80">{children}</div>
-    </div>
-  )
-}
-
-function Palette({ site, mode, onChange }: { site: Site; mode: "light" | "dark"; onChange: (p: SitePalette) => void }) {
-  const pal = site[mode]
-  return (
-    <div className="grid gap-1.5 px-3.5 py-2.5 sm:grid-cols-3">
-      {SWATCH_KEYS.map((k) => {
-        const ratio = k === "text" || k === "muted" || k === "accent" ? contrast(pal[k], pal.bg) : undefined
-        return (
-          <label key={k} className="flex items-center gap-2 rounded-[8px] bg-raised px-2 py-1.5">
-            <input type="color" value={pal[k]} onChange={(e) => onChange({ ...pal, [k]: e.target.value })} className="size-7 shrink-0 cursor-pointer rounded border-0 bg-transparent" aria-label={`${SWATCH_INFO[k].l} (${mode})`} />
-            <span className="min-w-0 flex-1"><span className="block text-xs text-ink">{SWATCH_INFO[k].l}</span><span className="block truncate font-mono text-[10.5px] text-muted-foreground">{pal[k]}</span></span>
-            {ratio != null && <span className={cn("text-[10.5px] tabular-nums", ratio >= (k === "muted" ? 3 : 4.5) ? "text-green" : "text-amber")} title="Contrast against the page">{ratio.toFixed(1)}</span>}
-          </label>
-        )
-      })}
     </div>
   )
 }
@@ -64,6 +44,7 @@ export function CmsSiteSettingsPage() {
     <>
       <PageHeader title="Website" badge={<SiteSwitcher />} />
       <WorkspaceGrid>
+        <GridItem span="full"><SiteTabs current="settings" /></GridItem>
         <GridItem span="full"><PublishBar site={site} /></GridItem>
         <GridItem span={2}>
           <Panel category="website" title="Site" bodyClassName="divide-y divide-line-soft">
@@ -86,15 +67,6 @@ export function CmsSiteSettingsPage() {
           </Panel>
         </GridItem>
         <GridItem span={2}>
-          <Panel category="website" title="Colors" bodyClassName="py-1">
-            <Row label="Start from" htmlFor="ss-starter">
-              <OptionSelect id="ss-starter" value={site.starter in STARTERS ? site.starter : "midnight"} onChange={(k) => set({ starter: k, light: { ...STARTERS[k].light }, dark: { ...STARTERS[k].dark } })} options={Object.entries(STARTERS).map(([k, s]) => ({ value: k, label: s.name }))} className="w-full" />
-            </Row>
-            <p className="px-3.5 pt-1 text-[11px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Light</p>
-            <Palette site={site} mode="light" onChange={(light) => set({ light })} />
-            <Row label="Dark mode" htmlFor="ss-dark" hint="Used when a visitor's device is set to dark."><Switch id="ss-dark" checked={site.darkMode} onCheckedChange={(darkMode) => set({ darkMode })} /></Row>
-            {site.darkMode && <Palette site={site} mode="dark" onChange={(dark) => set({ dark })} />}
-          </Panel>
           <Panel category="website" title="Redirects" className="mt-[var(--bw-grid-gap)]" meta="Renaming a published page adds one" bodyClassName="grid gap-1.5 px-3.5 py-3">
             {site.redirects.map((r, i) => (
               <div key={i} className="grid grid-cols-[1fr_auto_1fr_auto] items-center gap-2">
@@ -106,9 +78,9 @@ export function CmsSiteSettingsPage() {
             ))}
             <Button variant="outline" size="sm" className="justify-self-start" onClick={() => set({ redirects: [...site.redirects, { from: "/old-page", to: "/new-page/" }] })}><Plus /> Redirect</Button>
           </Panel>
-          <Panel category="website" title="Your CSS" className="mt-[var(--bw-grid-gap)]" bodyClassName="px-3.5 py-3">
-            <Textarea rows={5} value={site.customCss} onChange={(e) => set({ customCss: e.target.value })} className="font-mono text-xs" placeholder=".site-title { letter-spacing: .05em; }" aria-label="Custom CSS" />
-            <p className="mt-1.5 text-[11px] text-faint">Added at the end of theme.css on every page.</p>
+          <Panel category="website" title="Template" className="mt-[var(--bw-grid-gap)]" bodyClassName="divide-y divide-line-soft">
+            <Row label="Offer this site as a template" htmlFor="ss-template" hint="New sites can start as a copy of it: same look, same pages, none of your posts."><Switch id="ss-template" checked={!!site.template} onCheckedChange={(template) => set({ template })} /></Row>
+            {site.template && <Row label="What it is" htmlFor="ss-template-about" hint="One line shown when you pick a template."><Input id="ss-template-about" className="h-8" value={site.templateAbout ?? ""} onChange={(e) => set({ templateAbout: e.target.value })} placeholder="e.g. My blog layout" /></Row>}
           </Panel>
           <Panel category="website" title="Danger zone" className="mt-[var(--bw-grid-gap)]" bodyClassName="px-3.5 py-3">
             <Button variant="outline" className="text-red-text" onClick={() => { if (!confirm(`Delete ${site.name} and its pages from Blackwall? The published site and its repository aren't touched.`)) return; remove("sites", site.id); toast(`${site.name} deleted`); navigate(cmsPagesHref) }}><Trash2 /> Delete site</Button>

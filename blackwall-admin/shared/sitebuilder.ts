@@ -40,6 +40,16 @@ export const SWATCH_INFO: Record<(typeof SWATCH_KEYS)[number], { l: string; d: s
 
 export { STARTERS } from "./site-starters.ts"
 
+/** The look beyond colours: type, corners and page width. Each is one CSS variable in theme.css. */
+export const FONTS = {
+  sans: { name: "Clean", about: "Modern sans-serif", css: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif' },
+  serif: { name: "Classic", about: "Book-style serif", css: 'Georgia, "Times New Roman", serif' },
+  rounded: { name: "Friendly", about: "Soft, rounded letters", css: 'ui-rounded, "SF Pro Rounded", "Segoe UI", system-ui, sans-serif' },
+  mono: { name: "Typewriter", about: "Code-style monospace", css: 'ui-monospace, "SF Mono", Menlo, Consolas, monospace' },
+} as const
+export const CORNERS = { sharp: { name: "Sharp", px: 0 }, soft: { name: "Soft", px: 8 }, round: { name: "Round", px: 18 } } as const
+export const WIDTHS = { narrow: { name: "Narrow", px: 880 }, normal: { name: "Normal", px: 1100 }, wide: { name: "Wide", px: 1320 } } as const
+
 /* ------------------------------------------------------------------- blocks */
 
 const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
@@ -141,7 +151,7 @@ export const BLOCKS: Record<string, BlockDef> = {
   },
   image: {
     name: "Picture", def: { src: "", alt: "", shape: "wide" },
-    edit: [{ k: "src", l: "Image", kind: "url", note: "An image address or one from the asset library" }, { k: "alt", l: "Describe it" }, { k: "shape", l: "Shape", kind: "select", options: [{ value: "wide", label: "Wide" }, { value: "square", label: "Square" }, { value: "tall", label: "Tall" }] }],
+    edit: [{ k: "src", l: "Image", kind: "url", note: "A path on your site like /images/me.jpg (copy the file there yourself), or a full https:// image address" }, { k: "alt", l: "Describe it" }, { k: "shape", l: "Shape", kind: "select", options: [{ value: "wide", label: "Wide" }, { value: "square", label: "Square" }, { value: "tall", label: "Tall" }] }],
     html: (b) => {
       const shape = b.shape === "square" ? " ph--square" : b.shape === "tall" ? " ph--tall" : ""
       const src = str(b.src).trim()
@@ -149,6 +159,11 @@ export const BLOCKS: Record<string, BlockDef> = {
     },
   },
   divider: { name: "Divider", def: {}, html: () => ["<hr>"] },
+  html: {
+    name: "Custom HTML", def: { code: "" },
+    edit: [{ k: "code", l: "HTML", kind: "big", note: "Your own markup, published exactly as written. Use it for embeds or to bring over a section from another site." }],
+    html: (b) => (str(b.code).trim() ? str(b.code).split("\n") : ['<p class="muted">Paste your HTML into this block.</p>']),
+  },
   table: {
     name: "Table", def: { rows: "Week|Topic\n6|CSS Grid\n7|Responsive design" },
     edit: [{ k: "rows", l: "Rows", kind: "big", note: "One row per line, cells separated with |. The first line is the header." }],
@@ -262,7 +277,7 @@ function formClose(ctx: BuildCtx, done: string, button?: string) {
 }
 
 /** Blocks you can add inside a section (containers and content), in menu order. */
-export const ADDABLE = ["heading", "text", "richtext", "button", "link", "list", "image", "table", "divider", "postsByWeek", "postList", "form", "newsletter", "row", "card"]
+export const ADDABLE = ["heading", "text", "richtext", "button", "link", "list", "image", "table", "divider", "html", "postsByWeek", "postList", "form", "newsletter", "row", "card"]
 
 export const menuPages = (pages: SitePage[]) => [...pages].filter((p) => p.inMenu).sort((a, b) => a.order - b.order)
 
@@ -310,6 +325,16 @@ function emit(list: SiteBlock[], indent: string, ctx: BuildCtx, out: string[]) {
   for (const b of list) {
     const def = BLOCKS[b.type]
     if (!def) continue
+    // In the editor's preview every block sits in a transparent wrapper, so a click can be traced back to its block.
+    const marked = ctx.preview && ctx.where === "page"
+    if (marked) out.push(`${indent}<div data-bw="${esc(b.id)}" style="display:contents">`)
+    emitBlock(b, def, indent, ctx, out)
+    if (marked) out.push(`${indent}</div>`)
+  }
+}
+
+function emitBlock(b: SiteBlock, def: BlockDef, indent: string, ctx: BuildCtx, out: string[]) {
+  {
     if (def.container) {
       def.open!(b, ctx).forEach((l) => out.push(indent + l))
       emit(b.kids ?? [], indent + "  ".repeat(def.inset ?? 1), ctx, out)
@@ -338,6 +363,9 @@ document.querySelectorAll("form[data-blackwall-form]").forEach(function (f) {
 });
 </script>`
 
+/** Editor-only marks in a preview: the block under the pointer and the block being edited. */
+const PREVIEW_CSS = ".bw-hover { outline: 1px dashed #4c8dff; outline-offset: 3px; cursor: pointer; } .bw-sel { outline: 2px solid #4c8dff; outline-offset: 3px; }"
+
 interface Doc { title: string; description: string; body: string[]; current?: string; bodyClass: string }
 
 function documentHtml(site: Site, pages: SitePage[], doc: Doc, opts: { preview: boolean; posts: Draft[]; forms: SiteForm[] }) {
@@ -347,7 +375,7 @@ function documentHtml(site: Site, pages: SitePage[], doc: Doc, opts: { preview: 
   ctx.where = "footer"
   emit([mk("sitename"), mk("nav")], "      ", ctx, foot)
   const hasForm = doc.body.some((l) => l.includes("data-blackwall-form"))
-  const css = opts.preview ? `    <style>\n${buildTheme(site)}\n${buildCss()}\n    </style>` : '    <link rel="stylesheet" href="/theme.css">\n    <link rel="stylesheet" href="/style.css">'
+  const css = opts.preview ? `    <style>\n${buildTheme(site)}\n${buildCss()}\n${PREVIEW_CSS}\n    </style>` : '    <link rel="stylesheet" href="/theme.css">\n    <link rel="stylesheet" href="/style.css">'
   return [
     "<!doctype html>", '<html lang="en">', "  <head>", '    <meta charset="UTF-8">', '    <meta name="viewport" content="width=device-width, initial-scale=1.0">',
     `    <title>${esc(doc.title)}</title>`,
@@ -416,7 +444,8 @@ export function renderPost(site: Site, pages: SitePage[], post: Draft, opts: { p
 export function buildTheme(site: Site) {
   const o = [`/* ${site.name} — colours (generated by Blackwall; edit them in Site settings) */`, ":root {"]
   for (const k of SWATCH_KEYS) o.push(`  --${k}: ${site.light[k]};`)
-  o.push(`  --accent-text: ${onAccent(site.light.accent)};`, "}")
+  o.push(`  --accent-text: ${onAccent(site.light.accent)};`)
+  o.push(`  --font: ${FONTS[site.font ?? "sans"]?.css ?? FONT};`, `  --radius: ${CORNERS[site.corners ?? "soft"]?.px ?? 8}px;`, `  --width: ${WIDTHS[site.width ?? "normal"]?.px ?? 1100}px;`, "}")
   if (site.darkMode) {
     o.push("@media (prefers-color-scheme: dark) {", "  :root {")
     for (const k of SWATCH_KEYS) o.push(`    --${k}: ${site.dark[k]};`)
@@ -430,34 +459,34 @@ export function buildTheme(site: Site) {
 export function buildCss() {
   return `/* Layout (generated by Blackwall) */
 * { box-sizing: border-box; }
-body { margin: 0; font-family: ${FONT}; font-size: 16px; line-height: 1.6; background: var(--bg); color: var(--text); }
+body { margin: 0; font-family: var(--font, ${FONT}); font-size: 16px; line-height: 1.6; background: var(--bg); color: var(--text); }
 h1 { font-size: 36px; } h2 { font-size: 26px; } h3 { font-size: 19px; }
 h1, h2, h3 { margin: 0 0 20px; line-height: 1.25; }
 a { color: var(--accent); }
 img { max-width: 100%; display: block; }
 .muted { color: var(--muted); }
-.container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+.container { max-width: var(--width, 1100px); margin: 0 auto; padding: 0 20px; }
 .container--narrow { max-width: 760px; }
 .section { padding: 64px 0; }
 .section--tinted { background: var(--surface); }
 .row { display: grid; grid-template-columns: 1fr; gap: 20px; }
 @media (min-width: 700px) { .row--2 { grid-template-columns: repeat(2, 1fr); } .row--3 { grid-template-columns: repeat(3, 1fr); } .row--side { grid-template-columns: 2fr 1fr; } }
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
-.btn { display: inline-block; padding: 12px 22px; border: 1px solid var(--accent); border-radius: 8px; background: var(--accent); color: var(--accent-text); font: inherit; text-decoration: none; cursor: pointer; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius, 8px); padding: 20px; }
+.btn { display: inline-block; padding: 12px 22px; border: 1px solid var(--accent); border-radius: var(--radius, 8px); background: var(--accent); color: var(--accent-text); font: inherit; text-decoration: none; cursor: pointer; }
 .btn--outline { background: none; color: var(--accent); }
-.ph { height: 240px; display: grid; place-items: center; background: var(--surface); border: 1px dashed var(--border); border-radius: 8px; color: var(--muted); font-size: 13px; }
+.ph { height: 240px; display: grid; place-items: center; background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius, 8px); color: var(--muted); font-size: 13px; }
 .ph--square { height: 260px; } .ph--tall { height: 320px; }
-.pic { width: 100%; height: 240px; object-fit: cover; border-radius: 8px; }
+.pic { width: 100%; height: 240px; object-fit: cover; border-radius: var(--radius, 8px); }
 .pic.ph--square { aspect-ratio: 1; height: auto; } .pic.ph--tall { aspect-ratio: 4 / 5; height: auto; }
 .list { padding-left: 20px; margin: 0 0 20px; } .list li { margin-bottom: 6px; }
 hr { border: 0; border-top: 1px solid var(--border); margin: 48px 0; }
 table { border-collapse: collapse; width: 100%; margin: 0 0 20px; }
 th, td { border: 1px solid var(--border); padding: 10px; text-align: left; }
 th { background: var(--surface); }
-.prose { max-width: 70ch; } .prose img { border-radius: 8px; margin: 16px 0; }
-.prose pre { background: var(--surface); padding: 14px; border-radius: 8px; overflow: auto; }
+.prose { max-width: 70ch; } .prose img { border-radius: var(--radius, 8px); margin: 16px 0; }
+.prose pre { background: var(--surface); padding: 14px; border-radius: var(--radius, 8px); overflow: auto; }
 .form { max-width: 480px; } .field { margin: 0 0 18px; } .field label { display: block; margin-bottom: 6px; }
-.field input:not([type=checkbox]), .field textarea, .field select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; }
+.field input:not([type=checkbox]), .field textarea, .field select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius, 8px); background: var(--bg); color: var(--text); font: inherit; }
 .field--check label { display: flex; gap: 8px; align-items: center; }
 .cf-turnstile { margin: 0 0 18px; }
 .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
@@ -470,7 +499,7 @@ th { background: var(--surface); }
 .week { margin: 0 0 40px; }
 .week__label { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .post-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
-.post-card { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; text-decoration: none; color: var(--text); background: var(--bg); }
+.post-card { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius, 10px); overflow: hidden; text-decoration: none; color: var(--text); background: var(--bg); }
 .post-card:hover { border-color: var(--accent); }
 .post-card img, .post-card__cover { width: 100%; height: 150px; object-fit: cover; background: var(--surface); }
 .post-card__body { display: grid; gap: 4px; padding: 12px 14px 16px; }
@@ -478,8 +507,8 @@ th { background: var(--surface); }
 .post-card__title { font-weight: 700; }
 .post-card__summary, .post-card__meta { font-size: 14px; color: var(--muted); }
 .post__kicker { color: var(--accent); font-weight: 600; margin: 0 0 8px; }
-.post__cover { border-radius: 10px; margin: 0 0 24px; width: 100%; }
-.site-header, .site-footer { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between; max-width: 1100px; margin: 0 auto; padding: 20px; }
+.post__cover { border-radius: var(--radius, 10px); margin: 0 0 24px; width: 100%; }
+.site-header, .site-footer { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between; max-width: var(--width, 1100px); margin: 0 auto; padding: 20px; }
 .site-header { border-bottom: 1px solid var(--border); }
 .site-footer { border-top: 1px solid var(--border); color: var(--muted); }
 .site-title { font-weight: bold; font-size: 18px; color: var(--text); text-decoration: none; }
@@ -525,6 +554,131 @@ export function siteFromTemplate(name: string, key: string): { site: Omit<Site, 
   const s = STARTERS[t.starter]
   return {
     site: { name, domain: "", root: "", starter: t.starter, light: { ...s.light }, dark: { ...s.dark }, darkMode: true, customCss: "", footerText: "", redirects: [] },
-    pages: t.pages.map((p, i) => ({ title: p.title, slug: p.slug, description: "", inMenu: true, order: i, sections: p.sections.map(section) })),
+    pages: t.pages.map((p, i) => ({ title: p.title, slug: p.slug, description: "", inMenu: true, order: i, sections: nameFirstHeading(p.sections.map(section), p.slug ? p.title : name) })),
   }
+}
+
+/** The page's first heading becomes its title (as the page's one big heading), so a new page opens with its own name instead of a blank or sample "Heading". */
+export function nameFirstHeading(sections: SiteBlock[], title: string): SiteBlock[] {
+  let done = false
+  const go = (list: SiteBlock[]): SiteBlock[] => list.map((b) => {
+    if (!done && b.type === "heading") { done = true; return { ...b, text: title, level: "1" } }
+    return b.kids ? { ...b, kids: go(b.kids) } : b
+  })
+  return go(sections)
+}
+
+/** What a new page can start as: a title, an address and the sections that usually make it up. */
+export const PAGE_KINDS: Record<string, { name: string; about: string; title: string; slug: string; sections: string[] }> = {
+  blank: { name: "Blank page", about: "Start empty and add your own sections.", title: "", slug: "", sections: [] },
+  about: { name: "About", about: "Who you are, with a photo.", title: "About", slug: "about", sections: ["profileCard", "plainText"] },
+  contact: { name: "Contact", about: "A short note and a contact form.", title: "Contact", slug: "contact", sections: ["contact"] },
+  projects: { name: "Projects", about: "Boxes for your work, then a photo grid.", title: "Projects", slug: "projects", sections: ["threeCards", "photoGrid"] },
+  services: { name: "Services", about: "What you offer, then a nudge to get in touch.", title: "Services", slug: "services", sections: ["threeCards", "callToAction"] },
+  blog: { name: "Blog", about: "Your newest posts as cards.", title: "Blog", slug: "blog", sections: ["latestPosts"] },
+  portal: { name: "Course portal", about: "Posts grouped by week.", title: "Course portal", slug: "portal", sections: ["coursePortal"] },
+  gallery: { name: "Gallery", about: "A grid of photos.", title: "Gallery", slug: "gallery", sections: ["photoGrid"] },
+  links: { name: "Links / resources", about: "A heading and a list.", title: "Resources", slug: "resources", sections: ["linkList"] },
+}
+
+/** A copy of blocks with fresh ids (for duplicating a page or building a site from a template site). */
+export function cloneBlocks(list: SiteBlock[]): SiteBlock[] {
+  return list.map((b) => ({ ...structuredClone(b), id: rid("b"), kids: b.kids ? cloneBlocks(b.kids) : undefined })).map((b) => (b.kids === undefined ? (delete b.kids, b) : b))
+}
+
+/** A new site that starts as a copy of one you kept as a template: its look and its pages, with fresh ids. */
+export function siteFromSite(name: string, source: Site, sourcePages: SitePage[]): { site: Omit<Site, "id" | "createdAt" | "updatedAt">; pages: Omit<SitePage, "id" | "siteId" | "createdAt" | "updatedAt">[] } {
+  const { id: _id, createdAt: _c, updatedAt: _u, publishedAt: _p, publishedSha: _s, exportedAt: _e, connectionId: _k, template: _t, templateAbout: _a, guideHidden: _g, ...look } = source
+  return {
+    site: { ...structuredClone(look), name, domain: "", footerText: look.footerText === `© ${source.name}` ? "" : look.footerText, redirects: [] },
+    pages: [...sourcePages].sort((a, b) => a.order - b.order).map((p, i) => ({ title: p.title, slug: p.slug, description: p.description, inMenu: p.inMenu, order: i, sections: cloneBlocks(p.sections) })),
+  }
+}
+
+/* -------------------------------------------------------------- site check */
+
+export interface SiteIssue {
+  /** "fix" stops the site working or looking right; "tip" makes it better. */
+  level: "fix" | "tip"
+  text: string
+  pageId?: string
+  /** Where the fix lives, when it isn't a page. */
+  area?: "settings" | "look" | "forms" | "posts"
+}
+
+/** Words the ready-made sections ship with that nobody means to publish as they are. */
+const SAMPLE_TEXT = new Set(["what i do", "your name", "what you do", "ready to talk?", "on the side", "sources", "details"])
+
+function walk(list: SiteBlock[], fn: (b: SiteBlock) => void) {
+  for (const b of list) {
+    fn(b)
+    if (b.kids) walk(b.kids, fn)
+  }
+}
+const has = (v: unknown) => typeof v === "string" && v.trim().length > 0
+
+/** Plain-language problems to sort out before the files go live: placeholders, broken links, empty pages, forms that can't send. */
+export function checkSite(site: Site, pages: SitePage[], posts: Draft[], forms: SiteForm[]): SiteIssue[] {
+  const out: SiteIssue[] = []
+  const own = pages.filter((p) => p.siteId === site.id)
+  const live = posts.filter((p) => p.siteId === site.id && p.publishedAt)
+  if (!own.length) return [{ level: "fix", text: "The site has no pages yet. Add one from the Pages tab." }]
+  if (!own.some((p) => p.slug === "")) out.push({ level: "fix", text: "There is no home page. A page with an empty address is the front door of the site." })
+  const slugs = new Set<string>()
+  for (const p of own) {
+    if (slugs.has(p.slug)) out.push({ level: "fix", text: `Two pages use the address /${p.slug}. Give one of them a new address.`, pageId: p.id })
+    slugs.add(p.slug)
+  }
+  const known = new Set([...own.map((p) => pageHref(p)), ...live.map((p) => postHref(p))])
+  let needsReceiver = !!site.comments && live.length > 0
+  for (const page of own) {
+    const name = page.title || "Untitled page"
+    if (!page.sections.length) out.push({ level: "fix", text: `${name} is empty. Add a section to it, or delete it.`, pageId: page.id })
+    let blank = 0, noAlt = 0, noImage = 0, bad = 0, noForm = 0, h1 = 0
+    walk(page.sections, (b) => {
+      if (b.type === "heading") { if (!has(b.text) || SAMPLE_TEXT.has(String(b.text).trim().toLowerCase())) blank++; if (b.level === "1") h1++ }
+      else if (b.type === "text" && !has(b.text)) blank++
+      else if (b.type === "richtext" && !has(b.md)) blank++
+      else if (b.type === "button" && !has(b.text)) blank++
+      else if (b.type === "list" && !has(b.items)) blank++
+      else if (b.type === "image") { if (!has(b.src)) noImage++; else if (!has(b.alt)) noAlt++ }
+      else if (b.type === "form") { if (!forms.some((f) => f.id === b.formId)) noForm++; else needsReceiver = true }
+      else if (b.type === "newsletter") needsReceiver = true
+      if (b.type === "button" || b.type === "link") {
+        const href = String(b.href ?? "").trim()
+        const internal = href.startsWith("/") && !href.startsWith("//")
+        if (!href || href === "#") bad++
+        else if (internal && !known.has(href.split(/[?#]/)[0].replace(/\/?$/, "/"))) bad++
+      }
+    })
+    const at = { pageId: page.id }
+    if (blank) out.push({ level: "fix", text: `${name}: ${blank} ${blank === 1 ? "block still shows" : "blocks still show"} placeholder text. Click it in the preview and write your own.`, ...at })
+    if (noImage) out.push({ level: "fix", text: `${name}: ${noImage} ${noImage === 1 ? "picture has" : "pictures have"} no image yet.`, ...at })
+    if (bad) out.push({ level: "fix", text: `${name}: ${bad} ${bad === 1 ? "button or link goes" : "buttons or links go"} nowhere (or to a page that doesn't exist).`, ...at })
+    if (noForm) out.push({ level: "fix", text: `${name}: a form block has no form chosen.`, ...at })
+    if (noAlt) out.push({ level: "tip", text: `${name}: ${noAlt} ${noAlt === 1 ? "picture needs" : "pictures need"} a description for people who can't see it.`, ...at })
+    if (!has(page.description)) out.push({ level: "tip", text: `${name}: add a one-sentence description; search results and shared links use it.`, ...at })
+    if (h1 > 1) out.push({ level: "tip", text: `${name} has ${h1} big page titles; one is best for search.`, ...at })
+  }
+  for (const post of live) if (!has(post.body)) out.push({ level: "fix", text: `The post “${post.title || post.slug}” is published but empty.`, area: "posts" })
+  if (needsReceiver && !has(site.formEndpoint)) out.push({ level: "fix", text: "Forms, sign-ups or comments are on the site but can't send yet: add your form receiver address in Site settings.", area: "settings" })
+  if (!has(site.domain)) out.push({ level: "tip", text: "Add your domain in Site settings so the sitemap and “Open site” point at the right place.", area: "settings" })
+  const low = (["text", "muted", "accent"] as const).filter((k) => contrast(site.light[k], site.light.bg) < (k === "muted" ? 3 : 4.5))
+  if (low.length) out.push({ level: "tip", text: `Some colors are hard to read on the page background (${low.map((k) => SWATCH_INFO[k].l.toLowerCase()).join(", ")}). Check the Look tab.`, area: "look" })
+  return out
+}
+
+
+/**
+ * Brings one page of an existing site over: its title, description and main content. The site's own header, footer and
+ * scripts are left behind (Blackwall draws its own), and the content becomes a Custom HTML block you can replace piece by piece.
+ */
+export function importHtml(source: string): { title: string; description: string; body: string } {
+  const pick = (re: RegExp) => re.exec(source)?.[1]?.trim() ?? ""
+  const decode = (t: string) => t.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+  const title = decode(pick(/<title[^>]*>([\s\S]*?)<\/title>/i)).split(/\s[—–|-]\s/)[0].trim()
+  const description = decode(pick(/<meta[^>]+name=["']description["'][^>]*content=["']([^"']*)["']/i) || pick(/<meta[^>]+content=["']([^"']*)["'][^>]*name=["']description["']/i))
+  let body = pick(/<main[^>]*>([\s\S]*?)<\/main>/i) || pick(/<body[^>]*>([\s\S]*?)<\/body>/i) || source
+  body = body.replace(/<script[\s\S]*?<\/script>/gi, "").replace(/<header[\s\S]*?<\/header>/gi, "").replace(/<footer[\s\S]*?<\/footer>/gi, "").replace(/<!--[\s\S]*?-->/g, "")
+  return { title, description, body: body.split("\n").map((l) => l.replace(/\s+$/, "")).join("\n").replace(/\n{3,}/g, "\n\n").trim() }
 }

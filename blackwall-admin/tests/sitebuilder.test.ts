@@ -37,3 +37,95 @@ test("text is escaped and links are limited to safe schemes", () => {
   assert.equal(safeHref("/contact/"), "/contact/")
   assert.equal(safeHref("https://x.dev"), "https://x.dev")
 })
+
+import { checkSite, cloneBlocks, importHtml, nameFirstHeading, siteFromSite, buildCss, buildTheme, PAGE_KINDS, section } from "../shared/sitebuilder.ts"
+import { crc32, makeZip } from "../shared/zip.ts"
+import { validWorkspace, emptyWorkspace } from "../shared/workspace.ts"
+
+test("type, corners and width reach theme.css as variables, and an older site still builds with the defaults", () => {
+  const { site } = portal()
+  const plain = buildTheme(site)
+  assert.match(plain, /--radius: 8px;/)
+  assert.match(plain, /--width: 1100px;/)
+  const styled = buildTheme({ ...site, font: "serif", corners: "round", width: "wide" })
+  assert.match(styled, /--font: Georgia/)
+  assert.match(styled, /--radius: 18px;/)
+  assert.match(styled, /--width: 1320px;/)
+  assert.match(buildCss(), /var\(--radius, 8px\)/)
+})
+
+test("a Custom HTML block is published as written, and the preview marks every block so a click finds it", () => {
+  const { site, pages } = portal()
+  const block = mk("html", { code: "<p class=\"mine\">Hand-made</p>" })
+  const page: SitePage = { ...pages[0], sections: [mk("section", {}, [block])] }
+  assert.ok(renderPage(site, pages, page).includes('<p class="mine">Hand-made</p>'))
+  assert.ok(!renderPage(site, pages, page).includes("data-bw"), "the published page carries no editor marks")
+  const preview = renderPage(site, pages, page, { preview: true })
+  assert.ok(preview.includes(`data-bw="${block.id}"`))
+  assert.ok(preview.includes(`data-bw="${page.sections[0].id}"`))
+})
+
+test("the first heading of a new page becomes its title; pages get ids of their own when copied", () => {
+  const named = nameFirstHeading([section("threeCards")], "Projects")
+  assert.equal(named[0].kids![0].text, "Projects")
+  assert.equal(named[0].kids![0].level, "1")
+  assert.equal(PAGE_KINDS.contact.slug, "contact")
+  const copy = cloneBlocks(named)
+  const ids = (list: typeof copy): string[] => list.flatMap((b) => [b.id, ...(b.kids ? ids(b.kids) : [])])
+  const before = new Set(ids(named))
+  assert.ok(ids(copy).every((id) => !before.has(id)), "every block of the copy has a fresh id")
+  assert.equal(JSON.stringify(copy).replace(/"id":"[^"]+"/g, ""), JSON.stringify(named).replace(/"id":"[^"]+"/g, ""))
+})
+
+test("a site kept as a template starts a new site with its look and pages, but none of its history", () => {
+  const { site, pages } = portal()
+  const source: Site = { ...site, font: "mono", corners: "sharp", template: true, publishedAt: ts, exportedAt: ts, connectionId: "c1", footerText: "© Old" }
+  const made = siteFromSite("Second", source, pages)
+  assert.equal(made.site.name, "Second")
+  assert.equal(made.site.font, "mono")
+  assert.equal(made.site.domain, "")
+  assert.equal(made.site.template, undefined)
+  assert.equal(made.site.publishedAt, undefined)
+  assert.equal(made.site.connectionId, undefined)
+  assert.equal(made.pages.length, pages.length)
+  assert.notEqual(made.pages[0].sections[0].id, pages[0].sections[0].id)
+})
+
+test("the site check names placeholders, dead links and forms that can't send, and a finished site passes", () => {
+  const { site, pages, posts } = portal()
+  const issues = checkSite({ ...site, domain: "" }, pages, posts, [])
+  const text = issues.map((i) => i.text).join("\n")
+  assert.match(text, /placeholder text/)
+  assert.match(text, /nowhere/)
+  assert.match(text, /no form chosen/)
+  assert.match(text, /Add your domain/)
+  const done: SitePage[] = [{ ...pages[0], description: "Home page", sections: [mk("section", {}, [mk("heading", { level: "1", text: "Hi" }), mk("text", { text: "Hello" }), mk("button", { text: "About", href: "/about/" })])] }, { ...pages[1], slug: "about", description: "About me", sections: [mk("section", {}, [mk("heading", { level: "1", text: "About" }), mk("text", { text: "Me" })])] }]
+  assert.deepEqual(checkSite(site, done, [], []).filter((i) => i.level === "fix"), [])
+  const broken = [{ ...done[0], sections: [mk("section", {}, [mk("button", { text: "Gone", href: "/missing/" })])] }]
+  assert.match(checkSite(site, broken, [], []).map((i) => i.text).join("\n"), /nowhere/)
+  assert.match(checkSite(site, [{ ...done[1], slug: "x" }], [], []).map((i) => i.text).join("\n"), /no home page/)
+})
+
+test("an existing page can be brought over: title, description and main content, without its header, footer or scripts", () => {
+  const got = importHtml(`<!doctype html><html><head><title>Projects — Old Site</title><meta name="description" content="What I built"></head><body><header><nav>menu</nav></header><main><h1>Projects</h1><p>One &amp; two</p><script>alert(1)</script></main><footer>© me</footer></body></html>`)
+  assert.equal(got.title, "Projects")
+  assert.equal(got.description, "What I built")
+  assert.equal(got.body, "<h1>Projects</h1><p>One &amp; two</p>")
+})
+
+test("the .zip a site is downloaded as has the right checksums and file names", () => {
+  assert.equal(crc32(new TextEncoder().encode("123456789")), 0xcbf43926)
+  const zip = makeZip({ "index.html": "<p>hi</p>", "about/index.html": "x" })
+  const view = new DataView(zip.buffer)
+  assert.equal(view.getUint32(0, true), 0x04034b50)
+  assert.equal(view.getUint16(zip.length - 12, true), 2, "two entries in the central directory")
+  assert.ok(new TextDecoder().decode(zip).includes("about/index.html"))
+})
+
+test("an older saved site (no look, template or guide fields) still loads, and so does one with them", () => {
+  const { site, pages } = portal()
+  const old = { ...emptyWorkspace(), sites: [site], pages }
+  assert.ok(validWorkspace(structuredClone(old)))
+  const newer = { ...emptyWorkspace(), sites: [{ ...site, font: "serif", corners: "round", width: "wide", template: true, templateAbout: "x", guideHidden: true, exportedAt: ts }], pages }
+  assert.ok(validWorkspace(structuredClone(newer)))
+})

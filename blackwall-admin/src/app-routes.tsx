@@ -7,6 +7,8 @@ import { CmsPagesPage } from "@/features/cms/pages-tab"
 import { CmsPostsPage } from "@/features/cms/posts-tab"
 import { CmsFormsPage } from "@/features/cms/forms-tab"
 import { CmsSiteSettingsPage } from "@/features/cms/site-settings"
+import { CmsLookPage } from "@/features/cms/look-page"
+import { CmsFilesPage } from "@/features/cms/files-page"
 import { PageEditor } from "@/features/cms/page-editor"
 import { SocialPage } from "@/features/social/social-page"
 import { SocialPostPage } from "@/features/social/social-post"
@@ -72,6 +74,8 @@ export function createBlackwallRouter(shell: ReactNode) {
       { path: "cms/pages/:id", element: <PageEditor /> },
       { path: "cms/forms", element: <CmsFormsPage /> },
       { path: "cms/settings", element: <CmsSiteSettingsPage /> },
+      { path: "cms/look", element: <CmsLookPage /> },
+      { path: "cms/files", element: <CmsFilesPage /> },
       { path: "cms/posts/:id", element: <PostEditor /> },
       { path: "cms/drafts", element: <Navigate to="/cms/posts?show=drafts" replace /> },
       { path: "cms/drafts/:id", element: <Moved from="/cms/drafts" to="/cms/posts" /> },
