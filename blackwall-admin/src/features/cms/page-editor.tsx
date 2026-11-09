@@ -2,6 +2,7 @@ import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Copy, FileDown, MoreHori
 import { useMemo, useRef, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
+import { imagePathsIn } from "@shared/assets"
 import { ADDABLE, BLOCKS, SECTIONS, mk, renderPage, section, type BlockField } from "@shared/sitebuilder"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -20,6 +21,8 @@ import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
 import { slugify } from "./cms-forms"
 import { StateChip, pageState } from "./pages-tab"
+import { AssetField } from "@/features/assets/asset-field"
+import { usePreviewPictures } from "@/features/assets/use-assets"
 import { SectionGallery } from "./section-gallery"
 import { SitePreview } from "./site-preview"
 import { duplicatePage } from "./use-cms"
@@ -48,10 +51,11 @@ function moveIn(list: SiteBlock[], id: string, d: -1 | 1): SiteBlock[] {
 
 const WIDTHS = { desktop: "100%", tablet: "820px", phone: "390px" } as const
 
-function FieldInput({ f, value, onChange, id }: { f: BlockField; value: unknown; onChange: (v: unknown) => void; id: string }) {
+function FieldInput({ f, value, onChange, onPatch, block, id }: { f: BlockField; value: unknown; onChange: (v: unknown) => void; onPatch: (p: Record<string, unknown>) => void; block: SiteBlock; id: string }) {
   const forms = useWorkspace((s) => s.forms)
   const openForm = useUi((s) => s.openForm)
   const v = value == null ? "" : String(value)
+  if (f.kind === "asset") return <AssetField id={id} value={v} onPick={(a) => onPatch({ [f.k]: `/images/${a.file}`, ...(String(block.alt ?? "").trim() ? {} : { alt: a.alt }) })} onClear={() => onChange("")} />
   if (f.kind === "big") return <Textarea id={id} rows={f.k === "md" ? 6 : 3} value={v} onChange={(e) => onChange(e.target.value)} className="font-[inherit] text-[13px]" />
   if (f.kind === "select") return <OptionSelect id={id} value={v || f.options![0].value} onChange={onChange} options={f.options!} className="w-full" />
   if (f.kind === "number") return <Input id={id} inputMode="numeric" value={v} onChange={(e) => onChange(Number(e.target.value) || "")} className="h-8 w-24" />
@@ -94,7 +98,7 @@ function BlockNode({ b, depth, open, selected, onToggle, onChange, onMove, onRem
           {def.edit.map((f) => (
             <div key={f.k} className="grid gap-1">
               <Label htmlFor={`${b.id}-${f.k}`} className="text-[11.5px] font-normal text-muted-foreground">{f.l}</Label>
-              <FieldInput id={`${b.id}-${f.k}`} f={f} value={b[f.k]} onChange={(v) => onChange(b.id, { [f.k]: v })} />
+              <FieldInput id={`${b.id}-${f.k}`} f={f} block={b} value={b[f.k]} onChange={(v) => onChange(b.id, { [f.k]: v })} onPatch={(p) => onChange(b.id, p)} />
               {f.note && <span className="text-[11px] text-faint">{f.note}</span>}
             </div>
           ))}
@@ -147,7 +151,10 @@ export function PageEditor() {
 
   const pages = useMemo(() => allPages.filter((p) => p.siteId === site?.id), [allPages, site?.id])
   const posts = useMemo(() => drafts.filter((d) => d.siteId === site?.id && d.publishedAt), [drafts, site?.id])
-  const html = useMemo(() => (site && page ? renderPage(site, pages, page, { preview: true, posts, forms }) : ""), [site, page, pages, posts, forms])
+  const library = useWorkspace((s) => s.assets)
+  const paths = useMemo(() => (page ? imagePathsIn(page.sections) : []), [page])
+  const pictures = usePreviewPictures(paths)
+  const html = useMemo(() => (site && page ? renderPage(site, pages, page, { preview: true, posts, forms, assets: library, assetUrls: pictures }) : ""), [site, page, pages, posts, forms, library, pictures])
 
   if (!page || !site) {
     return (

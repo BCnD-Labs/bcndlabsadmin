@@ -58,6 +58,8 @@ interface PrefsState {
   theme: Theme
   /** Interface text: the system sans (default) or JetBrains Mono everywhere. */
   uiFont: UiFont
+  /** The Nextcloud folder the asset library saves processed pictures to. */
+  assetsFolder: string
   /** Home: every block in order, with visibility and width (replaces homeSlots from v5). */
   homeLayout: LayoutItem[]
   /** Brand/action color for buttons, the logo and active markers. */
@@ -99,6 +101,7 @@ const DEFAULT_PREFS = (): Persisted => ({
   navExpanded: false,
   theme: "dim",
   uiFont: "sans",
+  assetsFolder: "/Blackwall/assets",
   homeLayout: DEFAULT_LAYOUT.map((b) => ({ ...b })),
   accent: "red",
   density: "comfortable",
@@ -155,6 +158,7 @@ export const usePrefs = create<PrefsState>()(
           navExpanded: p.navExpanded === true,
           theme: p.theme === "dark" ? "dark" : "dim",
           uiFont: p.uiFont === "mono" ? "mono" : "sans",
+          assetsFolder: typeof p.assetsFolder === "string" && /^\/[^\0]{0,200}$/.test(p.assetsFolder) && !p.assetsFolder.includes("..") ? p.assetsFolder.replace(/\/+$/, "") || "/Blackwall/assets" : "/Blackwall/assets",
           homeLayout: sanitizeLayout(p.homeLayout),
           accent: (ACCENTS as readonly unknown[]).includes(p.accent) ? (p.accent as Accent) : "red",
           density: p.density === "compact" ? "compact" : "comfortable",

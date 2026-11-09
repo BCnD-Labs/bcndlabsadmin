@@ -33,9 +33,21 @@ All new site fields are optional. An older saved workspace loads unchanged (see 
 
 ## Not done yet (in the order I'd do them)
 
-1. **Pictures.** Pagesmith doesn't store images; an Image block or post cover points at a path like `/images/me.jpg` and you copy the file over. The Get files tab lists every path your pages use. Uploading to the connected repository (as the classic Posts flow does) is the next step.
-2. **Drag to reorder** blocks and sections (today: up/down arrows).
-3. **Menu structure**: drop-down menus and a separate footer menu (today the menu is every page marked "in the menu", in order).
-4. **Per-site Mac window integration**: open Look beside the page you are editing as two windows.
-5. **Approved comments in the downloaded files.** They are in the GitHub publish; the browser can't read the inbox, so the .zip leaves them out.
-6. **Posts**: tags page, post list on its own page with paging, RSS.
+1. **Drag to reorder** blocks and sections (today: up/down arrows).
+2. **Menu structure**: drop-down menus and a separate footer menu (today the menu is every page marked "in the menu", in order).
+3. **Per-site Mac window integration**: open Look beside the page you are editing as two windows.
+4. **Posts**: tags page, post list on its own page with paging, RSS.
+
+## Asset library (added after the first pass)
+
+Pictures now come from one place, the **Assets** tab, and Pagesmith can only use pictures from it.
+
+- **Where the files live:** in your Nextcloud, in one folder (default `/Blackwall/assets`, changeable on the Assets tab). Blackwall stores no image bytes; the library is a list of small records (name, file, size, description, tags, where it came from) kept with the rest of your workspace. This uses the Nextcloud connection and the Mikoshi storage endpoints that already exist, so nothing new runs on the server.
+- **Adding a picture:** from Nextcloud (a folder browser) or from this computer (a file picker or drag and drop). The original is never changed.
+- **Preparing it:** crop with a draggable box (free, original, 1:1, 4:3, 3:2, 16:9, 4:5, 3:1), turn and flip, set the size by longest edge or exact width, pick WebP, JPEG or PNG, set the quality or "keep under N KB", and see the real result size ("1200 × 675 · WebP · 34 KB, 98% smaller") before saving. Re-encoding also drops hidden camera data such as location.
+- **Using it:** an Image block, a post cover and a post's Picture button open the library to choose from. The picture's description fills in the block's description. Pictures are written into the site as `images/<file>` with their width and height, so pages don't jump as they load.
+- **Editing later:** open a picture, change it, and either save a copy or replace it everywhere it is used (when the file type stays the same).
+- **The site check** flags a picture that isn't from the library, and a published post that uses one that isn't.
+- **Get files:** the .zip contains the pictures a site uses, in `images/`.
+
+Not yet: publishing to GitHub doesn't carry the library's pictures (the .zip does), and the library isn't offered in the classic Posts flow or outside Pagesmith. AVIF isn't offered because the browser can't encode it.

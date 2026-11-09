@@ -12,6 +12,7 @@ import { QuickCreate } from "@/components/layout/quick-create"
 import { SignIn } from "@/components/layout/sign-in"
 import { SyncStatus, WorkspaceStatus } from "@/components/layout/workspace-status"
 import { activeChild, isActive, useNav } from "@/components/layout/nav-config"
+import { AssetFlowHost } from "@/features/assets/asset-flow"
 import { FormHost } from "@/components/forms/form-host"
 import { SettingsModal } from "@/features/settings/settings-modal"
 import { useNow } from "@/hooks/use-now"
@@ -146,7 +147,7 @@ export function MacShell() {
           <span className="mac-status-item">{format(now, "EEE, MMM d · h:mm a")}</span>
         </footer>
       </div>
-      {workspaceReady && <><FormHost /><SettingsModal /><CommandSearch /></>}
+      {workspaceReady && <><FormHost /><AssetFlowHost /><SettingsModal /><CommandSearch /></>}
       <Toaster position="bottom-right" />
     </TooltipProvider>
   )

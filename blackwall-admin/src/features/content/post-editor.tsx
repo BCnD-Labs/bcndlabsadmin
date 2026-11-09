@@ -6,7 +6,11 @@ import { useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEven
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 import { joinUrl, renderPostPage, type SiteChrome } from "@shared/site"
+import { assetPath, imagePathsInPost } from "@shared/assets"
 import { renderPost } from "@shared/sitebuilder"
+import { AssetField } from "@/features/assets/asset-field"
+import { chooseAsset } from "@/features/assets/asset-flow"
+import { usePreviewPictures } from "@/features/assets/use-assets"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { EmptyState } from "@/components/common/empty-state"
@@ -178,7 +182,15 @@ function Editor({ draft }: { draft: Draft }) {
                 <ImagePlus /> Image
               </ImageButton>
             )}
-            <span className="ml-auto hidden text-[11px] text-faint sm:inline">{tab === "write" ? (pagesmith ? "Markdown: ## heading, **bold**, [link](https://…), ![picture](/images/name.jpg)" : "Markdown") : pagesmith ? `As it will look on ${pagesmith.name}` : site.overview ? `As it will look on ${site.overview.siteUrl.replace(/^https?:\/\//, "")}` : "Without your site's styles (not connected)"}</span>
+            {tab === "write" && pagesmith && (
+              <Button type="button" variant="ghost" size="sm" onClick={() => chooseAsset((a) => {
+                const el = bodyRef.current
+                const md = `![${a.alt || a.name}](${assetPath(a)})`
+                const at = el ? el.selectionStart : value.body.length
+                set({ body: `${value.body.slice(0, at)}${at && !value.body.slice(0, at).endsWith("\n") ? "\n\n" : ""}${md}\n${value.body.slice(at)}` })
+              })}><ImagePlus /> Picture</Button>
+            )}
+            <span className="ml-auto hidden text-[11px] text-faint sm:inline">{tab === "write" ? (pagesmith ? "Markdown: ## heading, **bold**, [link](https://…). Use Picture for images." : "Markdown") : pagesmith ? `As it will look on ${pagesmith.name}` : site.overview ? `As it will look on ${site.overview.siteUrl.replace(/^https?:\/\//, "")}` : "Without your site's styles (not connected)"}</span>
           </div>
           {tab === "write" ? (
             <textarea
@@ -586,14 +598,14 @@ function SitePostPanel({ draft }: { draft: Draft }) {
   )
 }
 
-/** Pagesmith posts keep their cover as a path on the site (there is no upload: you copy the picture over yourself). */
+/** Pagesmith posts take their cover from the asset library only. */
 function SiteCoverPath({ cover, alt, onChange }: { cover?: string; alt?: string; onChange: (cover: string, alt: string) => void }) {
   return (
     <div className="grid gap-2 border-b border-line px-4 py-2.5 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-      <label className="grid gap-0.5 text-[11px] text-muted-foreground">Cover picture (optional)
-        <Input value={cover ?? ""} onChange={(e) => onChange(e.target.value.trim(), alt ?? "")} placeholder="/images/week-1.jpg" className="h-8 font-mono text-xs" aria-label="Cover picture path" />
-      </label>
-      <label className="grid gap-0.5 text-[11px] text-muted-foreground">Describe it
+      <div className="grid gap-0.5 text-[11px] text-muted-foreground">Cover picture (optional)
+        <AssetField value={cover ?? ""} onPick={(a) => onChange(assetPath(a), alt || a.alt)} onClear={() => onChange("", "")} />
+      </div>
+      <label className="grid content-start gap-0.5 text-[11px] text-muted-foreground">Describe it
         <Input value={alt ?? ""} onChange={(e) => onChange(cover ?? "", e.target.value)} placeholder="What's in the picture" className="h-8 text-xs" aria-label="Cover picture description" />
       </label>
     </div>
@@ -606,6 +618,8 @@ function SitePostPreview({ draft }: { draft: Draft }) {
   const pages = useWorkspace((s) => s.pages)
   const forms = useWorkspace((s) => s.forms)
   const own = useMemo(() => pages.filter((p) => p.siteId === draft.siteId), [pages, draft.siteId])
-  const html = useMemo(() => (site ? renderPost(site, own, draft, { preview: true, forms }) : ""), [site, own, draft, forms])
+  const library = useWorkspace((s) => s.assets)
+  const pictures = usePreviewPictures(imagePathsInPost(draft))
+  const html = useMemo(() => (site ? renderPost(site, own, draft, { preview: true, forms, assets: library, assetUrls: pictures }) : ""), [site, own, draft, forms, library, pictures])
   return <SitePreview html={html} title="Post preview" className="min-h-[65vh] flex-1 rounded-none" />
 }
