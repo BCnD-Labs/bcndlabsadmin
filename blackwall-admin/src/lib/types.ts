@@ -219,6 +219,16 @@ export interface Site {
   turnstileKey?: string
   /** Show approved comments and a comment form under posts. */
   comments?: boolean
+  /** The look beyond colours (all optional; the defaults match older sites). */
+  font?: "sans" | "serif" | "mono" | "rounded"
+  corners?: "sharp" | "soft" | "round"
+  width?: "narrow" | "normal" | "wide"
+  /** A site kept as a starting point: "New site" lists it under "My templates" and copies its look and pages. */
+  template?: boolean
+  templateAbout?: string
+  /** Guided setup: hidden by the user, and when the site's files were last copied or downloaded. */
+  guideHidden?: boolean
+  exportedAt?: Timestamp
   publishedAt?: Timestamp
   publishedSha?: string
   createdAt: Timestamp

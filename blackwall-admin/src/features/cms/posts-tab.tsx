@@ -13,6 +13,7 @@ import type { Draft, Site } from "@/lib/types"
 import { useWorkspace } from "@/stores/workspace"
 import { PublishBar, StateChip } from "./pages-tab"
 import { SiteSwitcher } from "./site-switcher"
+import { SiteTabs } from "./site-tabs"
 import { useCurrentSite } from "./use-cms"
 
 const postState = (d: Draft, site: Site) => (!d.publishedAt ? "draft" : !site.publishedAt || d.updatedAt > site.publishedAt || d.publishedAt > site.publishedAt ? "changed" : "published")
@@ -37,6 +38,7 @@ export function CmsPostsPage() {
     <>
       <PageHeader title="Website" badge={<SiteSwitcher />} actions={<Button onClick={newPost}><Plus /> Post</Button>} />
       <WorkspaceGrid>
+        <GridItem span="full"><SiteTabs current="posts" /></GridItem>
         <GridItem span="full"><PublishBar site={site} /></GridItem>
         <GridItem span={3}>
           <Panel category="website" title="Posts" meta={`${posts.filter((p) => p.publishedAt).length} published · ${posts.filter((p) => !p.publishedAt).length} draft${posts.filter((p) => !p.publishedAt).length === 1 ? "" : "s"}`}>
