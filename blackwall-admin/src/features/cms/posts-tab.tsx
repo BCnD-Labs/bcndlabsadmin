@@ -36,7 +36,7 @@ export function CmsPostsPage() {
 
   return (
     <>
-      <PageHeader title="Website" badge={<SiteSwitcher />} actions={<Button onClick={newPost}><Plus /> Post</Button>} />
+      <PageHeader title={site?.name ?? "Website"} badge={<SiteSwitcher />} actions={<Button onClick={newPost}><Plus /> Post</Button>} />
       <WorkspaceGrid>
         <GridItem span="full"><SiteTabs current="posts" /></GridItem>
         <GridItem span="full"><PublishBar site={site} /></GridItem>

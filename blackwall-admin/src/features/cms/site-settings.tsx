@@ -42,7 +42,7 @@ export function CmsSiteSettingsPage() {
 
   return (
     <>
-      <PageHeader title="Website" badge={<SiteSwitcher />} />
+      <PageHeader title={site?.name ?? "Website"} badge={<SiteSwitcher />} />
       <WorkspaceGrid>
         <GridItem span="full"><SiteTabs current="settings" /></GridItem>
         <GridItem span="full"><PublishBar site={site} /></GridItem>

@@ -19,6 +19,7 @@ export function SetupGuide({ site }: { site: Site }) {
   const pages = useWorkspace((s) => s.pages)
   const drafts = useWorkspace((s) => s.drafts)
   const forms = useWorkspace((s) => s.forms)
+  const assets = useWorkspace((s) => s.assets)
   const { update } = useWorkspace.getState()
   const openForm = useUi((s) => s.openForm)
   const createDraft = useCreateDraft()
@@ -26,7 +27,7 @@ export function SetupGuide({ site }: { site: Site }) {
 
   const steps = useMemo<Step[]>(() => {
     const own = pages.filter((p) => p.siteId === site.id)
-    const issues = checkSite(site, pages, drafts, forms)
+    const issues = checkSite(site, pages, drafts, forms, assets)
     const placeholders = issues.filter((i) => i.pageId && /placeholder|no image yet/.test(i.text))
     const unfinishedPages = new Set(placeholders.map((i) => i.pageId)).size
     const firstUnfinished = [...own].sort((a, b) => a.order - b.order).find((p) => placeholders.some((i) => i.pageId === p.id)) ?? own.find((p) => p.slug === "") ?? own[0]
@@ -42,7 +43,7 @@ export function SetupGuide({ site }: { site: Site }) {
       { id: "details", title: "Add your domain and footer", why: "So the sitemap, links and footer say the right things.", done: !!site.domain.trim() && !!site.footerText.trim(), label: "Open Settings", to: siteSettingsHref },
       { id: "files", title: "Check it and get the files", why: "Blackwall looks for problems, then gives you everything to copy to your host.", done: !!site.exportedAt || !!site.publishedAt, label: "Get files", to: siteFilesHref },
     ]
-  }, [site, pages, drafts, forms, openForm, createDraft, navigate])
+  }, [site, pages, drafts, forms, assets, openForm, createDraft, navigate])
 
   if (site.guideHidden) return null
   const done = steps.filter((s) => s.done).length

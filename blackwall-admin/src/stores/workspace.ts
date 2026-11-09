@@ -32,6 +32,7 @@ const ID_PREFIX: Record<GenericKey, string> = {
   forms: "frm",
   socialAccounts: "sac",
   socialPosts: "spo",
+  assets: "ast",
 }
 
 interface WorkspaceState extends Collections {
@@ -51,7 +52,7 @@ interface WorkspaceState extends Collections {
   clearAll: () => void
 }
 
-const empty: Collections = { tasks: [], notes: [], journal: [], projects: [], repos: [], drafts: [], courses: [], services: [], sites: [], pages: [], forms: [], socialAccounts: [], socialPosts: [] }
+const empty: Collections = { tasks: [], notes: [], journal: [], projects: [], repos: [], drafts: [], courses: [], services: [], sites: [], pages: [], forms: [], socialAccounts: [], socialPosts: [], assets: [] }
 const now = () => new Date().toISOString()
 /** The pure record rules in shared/records.ts use the web's own id generator. */
 const RULES = { makeId: newId }
@@ -148,6 +149,7 @@ export const useWorkspace = create<WorkspaceState>()(
         forms: s.forms,
         socialAccounts: s.socialAccounts,
         socialPosts: s.socialPosts,
+        assets: s.assets,
       }),
       migrate: (persisted, version) => migrateWorkspace(persisted as Record<string, unknown[]>, version),
     },
