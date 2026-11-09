@@ -1,43 +1,50 @@
 import { Plus, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
-import { SECTIONS, SECTION_ORDER, TEMPLATES, rid, section } from "@shared/sitebuilder"
+import { PAGE_KINDS, TEMPLATES, importHtml, mk, nameFirstHeading, rid, section } from "@shared/sitebuilder"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
 import { Field, OptionSelect } from "@/components/forms/fields"
 import { FormFrame } from "@/components/forms/form-frame"
 import { sitePageHref } from "@/lib/routes"
 import type { SiteForm, SiteFormField } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useWorkspace } from "@/stores/workspace"
-import { createSite, useCurrentSite } from "./use-cms"
+import { createSite, createSiteFromSite, useCurrentSite } from "./use-cms"
 
 export const slugify = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
 
-/** New site: a name, a domain and one of Pagesmith's templates. */
+/** New site: a name, a domain and a starting point (one of Pagesmith's templates, or a site you kept as a template). */
 export function NewSiteForm({ onDone }: { onDone: () => void }) {
+  const sites = useWorkspace((s) => s.sites)
+  const pageCount = useWorkspace((s) => s.pages)
+  const mine = useMemo(() => sites.filter((x) => x.template), [sites])
   const [name, setName] = useState("")
   const [domain, setDomain] = useState("")
   const [template, setTemplate] = useState("portal")
+  const own = template.startsWith("mine:") ? mine.find((x) => x.id === template.slice(5)) : undefined
   return (
     <FormFrame
       title="New site"
       submitLabel="Create site"
       canSubmit={name.trim().length > 0}
       onSubmit={() => {
-        createSite(name.trim(), template, domain.trim().replace(/^https?:\/\//, "").replace(/\/+$/, ""))
-        toast.success(`${name.trim()} created`, { description: "Edit its pages, then publish from the Pages tab." })
+        const host = domain.trim().replace(/^https?:\/\//, "").replace(/\/+$/, "")
+        if (own) createSiteFromSite(name.trim(), own.id, host)
+        else createSite(name.trim(), template, host)
+        toast.success(`${name.trim()} created`, { description: "Follow the checklist on the Pages tab to finish it." })
         onDone()
       }}
     >
       <div className="grid gap-x-4 gap-y-3.5 sm:grid-cols-2">
         <Field label="Site name" htmlFor="site-name"><Input id="site-name" autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. BCnD Labs" /></Field>
-        <Field label="Domain" htmlFor="site-domain" hint="Optional for now."><Input id="site-domain" value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="bcndlabs.dev" /></Field>
+        <Field label="Domain" htmlFor="site-domain" hint="Optional: you can add it later."><Input id="site-domain" value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="bcndlabs.dev" /></Field>
       </div>
-      <Field label="Start from" htmlFor="tpl-portal">
+      <Field label="Start from" htmlFor="tpl-portal" hint="Everything can be changed afterwards: pages, sections, colors.">
         <div role="radiogroup" className="grid gap-2 sm:grid-cols-2">
           {Object.entries(TEMPLATES).map(([k, t]) => (
             <button key={k} id={`tpl-${k}`} type="button" role="radio" aria-checked={template === k} onClick={() => setTemplate(k)}
@@ -49,43 +56,75 @@ export function NewSiteForm({ onDone }: { onDone: () => void }) {
           ))}
         </div>
       </Field>
+      {mine.length > 0 && (
+        <Field label="My templates" htmlFor={`tpl-mine-${mine[0].id}`} hint="Sites you kept as templates in their Settings.">
+          <div role="radiogroup" className="grid gap-2 sm:grid-cols-2">
+            {mine.map((t) => (
+              <button key={t.id} id={`tpl-mine-${t.id}`} type="button" role="radio" aria-checked={template === `mine:${t.id}`} onClick={() => setTemplate(`mine:${t.id}`)}
+                className={cn("rounded-xl bg-raised px-3 py-2.5 text-left", template === `mine:${t.id}` && "ring-2 ring-[var(--bw-red)]")}>
+                <span className="block text-[13px] font-semibold text-ink">{t.name}</span>
+                <span className="block text-[11.5px] leading-snug text-muted-foreground">{t.templateAbout || "A copy of this site's look and pages."}</span>
+                <span className="mt-1 block text-[11px] text-faint">{pageCount.filter((p) => p.siteId === t.id).map((p) => p.title).join(" · ")}</span>
+              </button>
+            ))}
+          </div>
+        </Field>
+      )}
     </FormFrame>
   )
 }
 
-/** New page on the current site: title, address and a first section. */
+/** New page on the current site: what kind of page, its title and address, or an existing page pasted in as HTML. */
 export function NewPageForm({ onDone }: { onDone: () => void }) {
   const site = useCurrentSite()
-  const pages = useWorkspace((s) => s.pages.filter((p) => p.siteId === site?.id))
+  const allPages = useWorkspace((s) => s.pages)
+  const pages = useMemo(() => allPages.filter((p) => p.siteId === site?.id), [allPages, site?.id])
   const navigate = useNavigate()
+  const [kind, setKind] = useState(() => Object.keys(PAGE_KINDS).find((k) => PAGE_KINDS[k].slug && !pages.some((p) => p.slug === PAGE_KINDS[k].slug)) ?? "blank")
   const [title, setTitle] = useState("")
   const [slug, setSlug] = useState("")
   const [touched, setTouched] = useState(false)
-  const [start, setStart] = useState("plainText")
   const [inMenu, setInMenu] = useState(true)
-  const finalSlug = slugify(touched ? slug : title)
+  const [html, setHtml] = useState("")
+  const imported = kind === "import" ? importHtml(html) : null
+  const k = PAGE_KINDS[kind]
+  const shownTitle = title || (imported ? imported.title : k?.title ?? "")
+  const finalSlug = slugify(touched ? slug : shownTitle || k?.slug || "")
   const clash = pages.some((p) => p.slug === finalSlug)
   if (!site) return null
   return (
     <FormFrame
       title="New page"
       submitLabel="Create page"
-      canSubmit={!!title.trim() && !!finalSlug && !clash}
+      canSubmit={!!shownTitle.trim() && !!finalSlug && !clash && (kind !== "import" || !!imported?.body)}
       onSubmit={() => {
-        const p = useWorkspace.getState().create("pages", { siteId: site.id, title: title.trim(), slug: finalSlug, description: "", inMenu, order: pages.length, sections: start === "blank" ? [] : [section(start)] })
+        const sections = kind === "import" ? [mk("section", {}, [mk("html", { code: imported!.body })])] : nameFirstHeading((k?.sections ?? []).map(section), shownTitle.trim())
+        const p = useWorkspace.getState().create("pages", { siteId: site.id, title: shownTitle.trim(), slug: finalSlug, description: imported?.description ?? "", inMenu, order: pages.length, sections })
         onDone()
         navigate(sitePageHref(p.id))
       }}
     >
+      <Field label="What kind of page?" htmlFor="kind-about" hint="It arrives with sections already laid out; you fill them in.">
+        <div role="radiogroup" className="grid gap-2 sm:grid-cols-3">
+          {[...Object.entries(PAGE_KINDS).map(([id, v]) => ({ id, name: v.name, about: v.about })), { id: "import", name: "Paste a page", about: "Bring over a page from an existing site as HTML." }].map((o) => (
+            <button key={o.id} id={`kind-${o.id}`} type="button" role="radio" aria-checked={kind === o.id} onClick={() => { setKind(o.id); setTouched(false); setTitle("") }} className={cn("rounded-xl bg-raised px-3 py-2 text-left", kind === o.id && "ring-2 ring-[var(--bw-red)]")}>
+              <span className="block text-[13px] font-semibold text-ink">{o.name}</span>
+              <span className="block text-[11px] leading-snug text-muted-foreground">{o.about}</span>
+            </button>
+          ))}
+        </div>
+      </Field>
+      {kind === "import" && (
+        <Field label="The page's HTML" htmlFor="page-html" hint={imported?.body ? `Found ${imported.body.length.toLocaleString()} characters of content${imported.title ? ` titled “${imported.title}”` : ""}. The site's own header, footer and scripts are left out.` : "Open the page in your browser, view its source, and paste all of it here."}>
+          <Textarea id="page-html" rows={5} value={html} onChange={(e) => setHtml(e.target.value)} className="font-mono text-xs" placeholder="<!doctype html>…" />
+        </Field>
+      )}
       <div className="grid gap-x-4 gap-y-3.5 sm:grid-cols-2">
-        <Field label="Title" htmlFor="page-title"><Input id="page-title" autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Projects" /></Field>
+        <Field label="Title" htmlFor="page-title"><Input id="page-title" autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder={shownTitle || "e.g. Projects"} /></Field>
         <Field label="Address" htmlFor="page-slug" error={clash ? "Another page uses that address." : undefined}>
-          <div className="flex items-center gap-1"><span className="text-muted-foreground">/</span><Input id="page-slug" className="font-mono" value={touched ? slug : slugify(title)} onChange={(e) => { setTouched(true); setSlug(e.target.value) }} placeholder="projects" /></div>
+          <div className="flex items-center gap-1"><span className="text-muted-foreground">/</span><Input id="page-slug" className="font-mono" value={touched ? slug : finalSlug} onChange={(e) => { setTouched(true); setSlug(e.target.value) }} placeholder="projects" /></div>
         </Field>
       </div>
-      <Field label="Start with" htmlFor="page-start">
-        <OptionSelect id="page-start" value={start} onChange={setStart} options={[{ value: "blank", label: "An empty page" }, ...SECTION_ORDER.map((k) => ({ value: k, label: SECTIONS[k].name }))]} className="w-full" />
-      </Field>
       <div className="flex items-center gap-2"><Switch id="page-menu" checked={inMenu} onCheckedChange={setInMenu} /><Label htmlFor="page-menu" className="text-xs font-normal">Show in the site menu</Label></div>
     </FormFrame>
   )

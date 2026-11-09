@@ -1,6 +1,6 @@
 import { toast } from "sonner"
-import { siteFromTemplate } from "@shared/sitebuilder"
-import type { Site } from "@/lib/types"
+import { cloneBlocks, siteFromSite, siteFromTemplate } from "@shared/sitebuilder"
+import type { Site, SitePage } from "@/lib/types"
 import { api } from "@/services/connector"
 import { syncWorkspace, useWorkspaceSync } from "@/services/workspace-sync"
 import { usePrefs } from "@/stores/prefs"
@@ -25,15 +25,52 @@ export function createSite(name: string, template: string, domain = "") {
   return site
 }
 
-/** Unpublished changes: pages, posts or settings edited after the last publish. */
+/** A new site that starts as a copy of one you kept as a template (its look and its pages). */
+export function createSiteFromSite(name: string, sourceId: string, domain = "") {
+  const { create, sites, pages } = useWorkspace.getState()
+  const source = sites.find((s) => s.id === sourceId)
+  if (!source) return createSite(name, "simple", domain)
+  const t = siteFromSite(name, source, pages.filter((p) => p.siteId === source.id))
+  const site = create("sites", { ...t.site, domain })
+  for (const p of t.pages) create("pages", { ...p, siteId: site.id })
+  selectSite(site.id)
+  return site
+}
+
+/** A copy of a page right after it, with its own address. */
+export function duplicatePage(page: SitePage): SitePage {
+  const { create, pages } = useWorkspace.getState()
+  const taken = new Set(pages.filter((p) => p.siteId === page.siteId).map((p) => p.slug))
+  let slug = `${page.slug || "home"}-copy`, n = 2
+  while (taken.has(slug)) slug = `${page.slug || "home"}-copy-${n++}`
+  const order = Math.max(...pages.filter((p) => p.siteId === page.siteId).map((p) => p.order)) + 1
+  return create("pages", { siteId: page.siteId, title: `${page.title} copy`, slug, description: page.description, inMenu: false, order, sections: cloneBlocks(page.sections) })
+}
+
+/** When the site's files last left Blackwall: a publish or a copy/download, whichever is later. */
+export const deployedAt = (site: Site) => [site.publishedAt, site.exportedAt].filter(Boolean).sort().at(-1)
+
+/** Saves a text file through the browser (the Mac app asks where to put it). */
+export function saveFile(name: string, data: BlobPart, type: string) {
+  const url = URL.createObjectURL(new Blob([data], { type }))
+  const a = document.createElement("a")
+  a.href = url
+  a.download = name
+  document.body.append(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 10_000)
+}
+
+/** Unpublished changes: pages, posts or settings edited after the files last left Blackwall. */
 export function useUnpublished(site?: Site) {
   const pages = useWorkspace((s) => s.pages)
   const drafts = useWorkspace((s) => s.drafts)
   if (!site) return { pages: [], posts: [], settings: false, count: 0 }
-  const since = site.publishedAt ?? ""
+  const since = deployedAt(site) ?? ""
   const p = pages.filter((x) => x.siteId === site.id && x.updatedAt > since)
   const d = drafts.filter((x) => x.siteId === site.id && x.publishedAt && x.updatedAt > since)
-  const settings = !site.publishedAt || site.updatedAt > since
+  const settings = !since || site.updatedAt > since
   return { pages: p, posts: d, settings, count: p.length + d.length + (settings && !p.length && !d.length ? 1 : 0) }
 }
 

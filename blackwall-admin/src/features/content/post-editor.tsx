@@ -2,22 +2,25 @@ import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
 import { useWorkspaceSync } from "@/services/workspace-sync"
 import { format } from "date-fns"
 import { CalendarClock, ExternalLink, FileX, ImagePlus, Loader2, Rocket, Trash2, Undo2, X } from "lucide-react"
-import { useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from "react"
+import { useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 import { joinUrl, renderPostPage, type SiteChrome } from "@shared/site"
+import { renderPost } from "@shared/sitebuilder"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { EmptyState } from "@/components/common/empty-state"
 import { PageHeader } from "@/components/common/page-header"
-import { publishSite as publishSiteNow } from "@/features/cms/use-cms"
+import { SitePreview } from "@/features/cms/site-preview"
+import { deployedAt, publishSite as publishSiteNow } from "@/features/cms/use-cms"
+import { useConnections } from "@/services/connector"
 import { SourceBadge } from "@/components/common/source-badge"
 import { Panel } from "@/components/common/panel"
 import { SegmentedTabs } from "@/components/common/segmented-tabs"
 import { Field, OptionSelect, ProjectSelect } from "@/components/forms/fields"
 import { slugify } from "@/lib/ids"
 import { timeAgo, timeFmt } from "@/lib/dates"
-import { postsHref } from "@/lib/routes"
+import { postsHref, siteFilesHref } from "@/lib/routes"
 import type { Draft, DraftKind } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { draftToPost, localImages, mergePosts, uploadSiteImage, useSite, useSiteChrome, useSiteStore, type PostItem } from "@/services/site"
@@ -62,6 +65,8 @@ function Editor({ draft }: { draft: Draft }) {
   const [tab, setTab] = useState<"write" | "preview">("write")
   const [confirmDelete, setConfirmDelete] = useState(false)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
+  /** A post on one of your Blackwall sites (Pagesmith) rather than the classic connected website. */
+  const pagesmith = useWorkspace((s) => s.sites.find((x) => x.id === draft.siteId))
 
   // Put keystrokes in the workspace immediately. Only network saves are debounced,
   // so incoming server updates cannot be mistaken for unsaved editor changes.
@@ -120,7 +125,8 @@ function Editor({ draft }: { draft: Draft }) {
       <WorkspaceGrid>
         <GridItem span={3}>
         <section className="bw-panel flex min-w-0 flex-col overflow-hidden" aria-label="Post">
-          {value.kind === "post" && (
+          {value.kind === "post" && pagesmith && <SiteCoverPath cover={value.cover} alt={value.coverAlt} onChange={(cover, coverAlt) => set({ cover: cover || undefined, coverAlt: coverAlt || undefined })} />}
+          {value.kind === "post" && !pagesmith && (
             <CoverField
               cover={value.cover}
               siteUrl={site.overview?.siteUrl}
@@ -167,12 +173,12 @@ function Editor({ draft }: { draft: Draft }) {
                 { value: "preview", label: "Preview" },
               ]}
             />
-            {tab === "write" && (
+            {tab === "write" && !pagesmith && (
               <ImageButton disabled={!live} onFile={insertImage}>
                 <ImagePlus /> Image
               </ImageButton>
             )}
-            <span className="ml-auto hidden text-[11px] text-faint sm:inline">{tab === "write" ? "Markdown" : site.overview ? `As it will look on ${site.overview.siteUrl.replace(/^https?:\/\//, "")}` : "Without your site's styles (not connected)"}</span>
+            <span className="ml-auto hidden text-[11px] text-faint sm:inline">{tab === "write" ? (pagesmith ? "Markdown: ## heading, **bold**, [link](https://…), ![picture](/images/name.jpg)" : "Markdown") : pagesmith ? `As it will look on ${pagesmith.name}` : site.overview ? `As it will look on ${site.overview.siteUrl.replace(/^https?:\/\//, "")}` : "Without your site's styles (not connected)"}</span>
           </div>
           {tab === "write" ? (
             <textarea
@@ -184,7 +190,7 @@ function Editor({ draft }: { draft: Draft }) {
               className="min-h-[22rem] w-full max-w-[76ch] flex-1 resize-y bg-transparent px-4 py-3 font-mono text-[13px] leading-relaxed text-ink outline-none placeholder:text-faint"
             />
           ) : (
-            <Preview draft={current} live={live} date={item?.state !== "draft" ? item?.date : undefined} />
+            pagesmith ? <SitePostPreview draft={current} /> : <Preview draft={current} live={live} date={item?.state !== "draft" ? item?.date : undefined} />
           )}
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-soft px-4 py-2 text-[11px] text-muted-foreground">
             <span>{words} {words === 1 ? "word" : "words"} · Markdown</span>
@@ -544,15 +550,21 @@ function SiteSelect({ id, value, onChange }: { id: string; value?: string; onCha
 function SitePostPanel({ draft }: { draft: Draft }) {
   const site = useWorkspace((s) => s.sites.find((x) => x.id === draft.siteId))
   const update = useWorkspace((s) => s.update)
+  const { list, refresh } = useConnections()
+  const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
+  useEffect(() => { void refresh() }, [refresh])
   if (!site) return null
-  const changed = !!draft.publishedAt && !!site.publishedAt && draft.updatedAt > site.publishedAt
-  const state = !draft.publishedAt ? "draft" : changed || !site.publishedAt || draft.publishedAt > site.publishedAt ? "pending" : "live"
+  const repo = list.some((c) => c.provider === "website")
+  const since = deployedAt(site)
+  const changed = !!draft.publishedAt && !!since && draft.updatedAt > since
+  const state = !draft.publishedAt ? "draft" : changed || !since || draft.publishedAt > since ? "pending" : "live"
   const go = async (live: boolean) => {
     setBusy(true)
     try {
       update("drafts", draft.id, { publishedAt: live ? draft.publishedAt ?? new Date().toISOString() : undefined, status: live ? "ready" : draft.status })
-      await publishSiteNow(site)
+      if (repo) await publishSiteNow(site)
+      else toast.success(live ? "Added to the site" : "Taken off the site", { description: "It's in your files the next time you get them.", action: { label: "Get files", onClick: () => navigate(siteFilesHref) } })
     } catch (e) {
       toast.error((e as Error).message)
     } finally {
@@ -562,13 +574,38 @@ function SitePostPanel({ draft }: { draft: Draft }) {
   return (
     <Panel category="website" title="Publishing" subtitle={site.name} bodyClassName="flex flex-col gap-2.5 px-3.5 py-3">
       <p className="text-xs text-muted-foreground">
-        {state === "draft" ? "A draft: it isn't on the site yet." : state === "pending" ? "Changes not published yet." : `Live at /posts/${draft.slug}/.`}
+        {state === "draft" ? "A draft: it isn't part of the site yet." : state === "pending" ? (repo ? "Changes not published yet." : "On the site. It goes into your files the next time you get them.") : `On the site at /posts/${draft.slug}/ and in your latest files.`}
       </p>
       <div className="flex flex-wrap gap-2">
-        <Button disabled={busy || state === "live"} onClick={() => void go(true)}>{busy ? <Loader2 className="animate-spin" /> : <Rocket />} {state === "draft" ? "Publish" : state === "pending" ? "Publish changes" : "Up to date"}</Button>
-        {draft.publishedAt && <Button variant="quiet" disabled={busy} onClick={() => void go(false)}><Undo2 /> Unpublish</Button>}
+        <Button disabled={busy || (repo ? state === "live" : state !== "draft")} onClick={() => void go(true)}>{busy ? <Loader2 className="animate-spin" /> : <Rocket />} {repo ? (state === "draft" ? "Publish" : state === "pending" ? "Publish changes" : "Up to date") : (state === "draft" ? "Add to the site" : "On the site")}</Button>
+        {draft.publishedAt && <Button variant="quiet" disabled={busy} onClick={() => void go(false)}><Undo2 /> {repo ? "Unpublish" : "Take off the site"}</Button>}
+        {!repo && <Button variant="outline" asChild><Link to={siteFilesHref}>Get files</Link></Button>}
       </div>
-      <p className="text-[11px] text-faint">Publishing rebuilds and commits the whole site, so the course portal and post lists update too.</p>
+      <p className="text-[11px] text-faint">{repo ? "Publishing rebuilds and commits the whole site, so the course portal and post lists update too." : "Adding a post puts it in the site's files, its blog list and its course pages. Then get the files and copy them over."}</p>
     </Panel>
   )
+}
+
+/** Pagesmith posts keep their cover as a path on the site (there is no upload: you copy the picture over yourself). */
+function SiteCoverPath({ cover, alt, onChange }: { cover?: string; alt?: string; onChange: (cover: string, alt: string) => void }) {
+  return (
+    <div className="grid gap-2 border-b border-line px-4 py-2.5 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      <label className="grid gap-0.5 text-[11px] text-muted-foreground">Cover picture (optional)
+        <Input value={cover ?? ""} onChange={(e) => onChange(e.target.value.trim(), alt ?? "")} placeholder="/images/week-1.jpg" className="h-8 font-mono text-xs" aria-label="Cover picture path" />
+      </label>
+      <label className="grid gap-0.5 text-[11px] text-muted-foreground">Describe it
+        <Input value={alt ?? ""} onChange={(e) => onChange(cover ?? "", e.target.value)} placeholder="What's in the picture" className="h-8 text-xs" aria-label="Cover picture description" />
+      </label>
+    </div>
+  )
+}
+
+/** The post as the site will show it: its own header, menu, colors and type. */
+function SitePostPreview({ draft }: { draft: Draft }) {
+  const site = useWorkspace((s) => s.sites.find((x) => x.id === draft.siteId))
+  const pages = useWorkspace((s) => s.pages)
+  const forms = useWorkspace((s) => s.forms)
+  const own = useMemo(() => pages.filter((p) => p.siteId === draft.siteId), [pages, draft.siteId])
+  const html = useMemo(() => (site ? renderPost(site, own, draft, { preview: true, forms }) : ""), [site, own, draft, forms])
+  return <SitePreview html={html} title="Post preview" className="min-h-[65vh] flex-1 rounded-none" />
 }

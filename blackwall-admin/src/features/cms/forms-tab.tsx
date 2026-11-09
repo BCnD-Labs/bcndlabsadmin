@@ -16,6 +16,7 @@ import { useInbox } from "@/services/inbox"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
 import { SiteSwitcher } from "./site-switcher"
+import { SiteTabs } from "./site-tabs"
 import { useCurrentSite } from "./use-cms"
 
 type Show = "all" | InboxKind
@@ -99,6 +100,7 @@ export function CmsFormsPage() {
     <>
       <PageHeader title="Website" badge={<SiteSwitcher />} actions={<Button onClick={() => openForm({ kind: "siteForm" })}><Plus /> Form</Button>} />
       <WorkspaceGrid>
+        <GridItem span="full"><SiteTabs current="forms" /></GridItem>
         <GridItem span={3}>
           <Panel
             category="website"
