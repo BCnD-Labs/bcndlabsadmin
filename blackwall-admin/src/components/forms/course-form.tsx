@@ -6,10 +6,12 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { COURSE_COLORS, kindInfo, parseTags } from "@/features/learning/learning-utils"
 import { courseHref, learningHref } from "@/lib/routes"
-import type { Course, CourseColor } from "@/lib/types"
+import type { ClassMeeting, Course, CourseColor } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useWorkspace } from "@/stores/workspace"
 import { Field } from "./fields"
+import { MeetingsField } from "./meetings-field"
+import { TopicsField } from "./topics-field"
 import { FormFrame } from "./form-frame"
 
 /** Add or edit any kind of learning (Productivity → Learning → Add learning). Fields follow the kind. */
@@ -41,6 +43,11 @@ export function CourseForm({ id, defaults, onDone }: { id?: string; defaults?: P
     links: base?.links ?? [],
     pagesRead: base?.pagesRead != null ? String(base.pagesRead) : "",
     pagesTotal: base?.pagesTotal != null ? String(base.pagesTotal) : "",
+    meetings: (base?.meetings ?? []) as ClassMeeting[],
+    topics: base?.topics ?? [],
+    syllabus: base?.syllabus ?? "",
+    policies: base?.policies ?? "",
+    repoUrl: base?.repoUrl ?? "",
   })
   const set = (patch: Partial<typeof d>) => setD((x) => ({ ...x, ...patch }))
   const datesBackwards = !!d.startDate && !!d.endDate && d.endDate < d.startDate
@@ -51,6 +58,9 @@ export function CourseForm({ id, defaults, onDone }: { id?: string; defaults?: P
   const pageNum = (v: string) => (v.trim() === "" ? undefined : Number(v))
   const pagesRead = pageNum(d.pagesRead)
   const pagesTotal = pageNum(d.pagesTotal)
+  const repoUrl = d.repoUrl.trim()
+  const repoBad = !!repoUrl && !/^https?:\/\/\S+$/i.test(repoUrl)
+  const meetingsBad = d.meetings.some((m) => m.end <= m.start)
   const pagesBad = [pagesRead, pagesTotal].some((n) => n !== undefined && (!Number.isInteger(n) || n < 0 || n > 100_000))
 
   const save = () => {
@@ -73,6 +83,11 @@ export function CourseForm({ id, defaults, onDone }: { id?: string; defaults?: P
       kind: k,
       pagesRead: k === "reading" ? pagesRead : undefined,
       pagesTotal: k === "reading" ? pagesTotal : undefined,
+      meetings: isCourse && d.meetings.length ? d.meetings : undefined,
+      topics: d.topics.filter((t) => t.title.trim()).length ? d.topics.filter((t) => t.title.trim()).map((t) => ({ ...t, title: t.title.trim() })) : undefined,
+      syllabus: isCourse && d.syllabus.trim() ? d.syllabus.trim() : undefined,
+      policies: isCourse && d.policies.trim() ? d.policies.trim() : undefined,
+      repoUrl: isCourse && repoUrl ? repoUrl : undefined,
     }
     if (existing) {
       update("courses", existing.id, values)
@@ -91,7 +106,7 @@ export function CourseForm({ id, defaults, onDone }: { id?: string; defaults?: P
       title={existing ? `Edit ${noun}` : `New ${noun}`}
       onSubmit={save}
       submitLabel={existing ? "Save" : `Add ${noun}`}
-      canSubmit={d.title.trim().length > 0 && !datesBackwards && !creditsBad && !urlBad && !pagesBad}
+      canSubmit={d.title.trim().length > 0 && !datesBackwards && !creditsBad && !urlBad && !pagesBad && !repoBad && !meetingsBad}
       onDelete={
         existing
           ? () => {
@@ -166,6 +181,25 @@ export function CourseForm({ id, defaults, onDone }: { id?: string; defaults?: P
           </>
         )}
       </div>
+      <Field label="Modules" htmlFor="course-topics" hint="Units, chapters or topics, in order (Module 1, Module 2…). Paste a list, one per line. Each assignment can then sit in a module.">
+        <TopicsField value={d.topics} onChange={(topics) => set({ topics })} />
+      </Field>
+      {isCourse && (
+        <>
+          <Field label="Class and office-hour times" htmlFor="course-meetings" hint="They repeat every week between the start and end dates and show up on your calendar and in Today.">
+            <MeetingsField value={d.meetings} onChange={(meetings) => set({ meetings })} />
+          </Field>
+          <Field label="Class repository" htmlFor="course-repo" error={repoBad ? "Start with http:// or https://" : undefined}>
+            <Input id="course-repo" type="url" value={d.repoUrl} onChange={(e) => set({ repoUrl: e.target.value })} placeholder="https://github.com/…" />
+          </Field>
+          <Field label="Syllabus notes" htmlFor="course-syllabus" hint="Grading breakdown, schedule, what the class covers.">
+            <Textarea id="course-syllabus" rows={4} value={d.syllabus} onChange={(e) => set({ syllabus: e.target.value })} />
+          </Field>
+          <Field label="Policies" htmlFor="course-policies" hint="Late work, attendance, collaboration, how to reach the instructor.">
+            <Textarea id="course-policies" rows={3} value={d.policies} onChange={(e) => set({ policies: e.target.value })} />
+          </Field>
+        </>
+      )}
       <Field label={info.linkLabel} htmlFor="course-url" hint={isCourse ? "The course site or LMS page, to open it from here." : "Opens in a new tab."} error={urlBad ? "Start with http:// or https://" : undefined}>
         <Input id="course-url" type="url" value={d.url} onChange={(e) => set({ url: e.target.value })} placeholder="https://" />
       </Field>

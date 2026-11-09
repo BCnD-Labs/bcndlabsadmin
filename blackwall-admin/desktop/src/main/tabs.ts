@@ -2,7 +2,7 @@ import { Menu, WebContentsView, clipboard, shell, type BrowserWindow, type Sessi
 import { CHROME_HEIGHTS, type ChromeMode, type FindResult, type TabError, type TabState } from "../shared/ipc.ts"
 import { NATIVE_HOME } from "./native-workspace.ts"
 import { classifyLink, sameOrigin } from "./url.ts"
-import { confirmExternal } from "./web-session.ts"
+import { TAB_PARTITION, confirmExternal } from "./web-session.ts"
 
 /**
  * One tab = one WebContentsView in the tab session, created when the tab is
@@ -42,6 +42,11 @@ export interface TabHost {
   found(result: FindResult): void
   /** Called for every tab's webContents (shortcut handling). */
   attach(contents: WebContents): void
+  /**
+   * Asks the Blackwall workspace page to show a web page in its own browser window.
+   * Resolves false when the page has no such window (classic view), so a tab opens instead.
+   */
+  openInWorkspace(url: string): Promise<boolean>
 }
 
 let nextId = 1
@@ -228,7 +233,8 @@ export class TabManager {
         contextIsolation: true,
         nodeIntegration: false,
         nodeIntegrationInSubFrames: false,
-        webviewTag: false,
+        // Only the bundled workspace may embed pages: its Browser window is a <webview> (see wireWebviews).
+        webviewTag: tab.kind === "native",
         safeDialogs: true,
         scrollBounce: false,
         spellcheck: true,
@@ -305,7 +311,7 @@ export class TabManager {
       else if (tab.kind === "native" && server && sameOrigin(url, server)) {
         const target = new URL(url)
         this.load(tab.id, NATIVE_HOME + target.pathname.slice(1) + target.search + target.hash)
-      } else this.openLink(url, disposition !== "background-tab")
+      } else this.openLink(url, disposition !== "background-tab", tab.kind === "native")
       return { action: "deny" }
     })
 
@@ -325,14 +331,49 @@ export class TabManager {
         if (kind === "external") void this.openExternal(url)
         return
       }
-      // The bundled workspace stays pinned; external pages open in a web tab.
+      // The bundled workspace stays pinned; external pages open in its Browser window (or a web tab).
       if (tab.kind === "native") {
         event.preventDefault()
-        this.openLink(url, true)
+        this.openLink(url, true, true)
       }
     })
 
-    wc.on("context-menu", (_e, params) => this.contextMenu(wc, params))
+    wc.on("context-menu", (_e, params) => this.contextMenu(wc, params, (url) => this.openLink(url, false, tab.kind === "native")))
+    if (tab.kind === "native") this.wireWebviews(wc)
+  }
+
+  /**
+   * The workspace's Browser window is a <webview> inside the page, so it can be dragged, resized and
+   * stacked like the other windows. Guests run in the same tab session as browser tabs (sign-ins carry
+   * over), with no preload, no Node and the sandbox on, and may only load web pages.
+   */
+  private wireWebviews(host: WebContents) {
+    host.on("will-attach-webview", (event, webPreferences, params) => {
+      if (classifyLink(params.src ?? "") !== "web") return event.preventDefault()
+      delete webPreferences.preload
+      delete (webPreferences as { preloadURL?: string }).preloadURL
+      Object.assign(webPreferences, { nodeIntegration: false, nodeIntegrationInSubFrames: false, contextIsolation: true, sandbox: true, webSecurity: true, webviewTag: false, allowRunningInsecureContent: false })
+      params.partition = TAB_PARTITION
+      params.allowpopups = "true" // the open handler below decides where they go
+      delete params.preload
+    })
+    host.on("did-attach-webview", (_e, guest) => this.wireGuest(guest))
+  }
+
+  private wireGuest(guest: WebContents) {
+    const open = (url: string) => this.openLink(url, true, true)
+    this.host.attach(guest)
+    guest.setWindowOpenHandler(({ url }) => {
+      open(url)
+      return { action: "deny" }
+    })
+    guest.on("will-navigate", (event) => {
+      const kind = classifyLink(event.url)
+      if (kind === "web") return
+      event.preventDefault()
+      if (kind === "external") void this.openExternal(event.url)
+    })
+    guest.on("context-menu", (_e, params) => this.contextMenu(guest, params, (url) => this.openLink(url, false, true)))
   }
 
   private favicons = new Map<string, string>()
@@ -363,29 +404,37 @@ export class TabManager {
     this.host.changed()
   }
 
-  /** A link from a page: web links open in a new tab next to the current one. */
-  openLink(url: string, activate: boolean) {
+  /**
+   * A link from a page: web links open in a new tab next to the current one. Links from the Blackwall
+   * workspace go to its Browser window when it has one, so the page opens beside the other windows.
+   */
+  openLink(url: string, activate: boolean, fromWorkspace = false) {
     const kind = classifyLink(url)
-    if (kind === "web") this.add({ kind: "web", url }, { activate, afterActive: true })
-    else if (kind === "external") void this.openExternal(url)
+    if (kind === "external") return void this.openExternal(url)
+    if (kind !== "web") return
+    const tab = () => this.add({ kind: "web", url }, { activate, afterActive: true })
+    if (!fromWorkspace) return void tab()
+    void this.host.openInWorkspace(url).then((shown) => {
+      if (!shown) tab()
+    })
   }
 
   private async openExternal(url: string) {
     if (await confirmExternal(this.host.window, url)) await shell.openExternal(url)
   }
 
-  private contextMenu(wc: WebContents, p: Electron.ContextMenuParams) {
+  private contextMenu(wc: WebContents, p: Electron.ContextMenuParams, open: (url: string) => void) {
     const items: Electron.MenuItemConstructorOptions[] = []
     if (p.linkURL && classifyLink(p.linkURL) === "web") {
       items.push(
-        { label: "Open Link in New Tab", click: () => this.openLink(p.linkURL, false) },
+        { label: "Open Link in New Tab", click: () => open(p.linkURL) },
         { label: "Copy Link Address", click: () => clipboard.writeText(p.linkURL) },
         { type: "separator" },
       )
     }
     if (p.mediaType === "image" && p.srcURL && classifyLink(p.srcURL) === "web") {
       items.push(
-        { label: "Open Image in New Tab", click: () => this.openLink(p.srcURL, false) },
+        { label: "Open Image in New Tab", click: () => open(p.srcURL) },
         { label: "Copy Image", click: () => wc.copyImageAt(p.x, p.y) },
         { type: "separator" },
       )

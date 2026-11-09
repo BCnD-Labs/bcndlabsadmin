@@ -13,6 +13,8 @@ interface DockState {
   tools: DockTool[]
   /** The day the Calendar, Tasks and Daily log tools show together. Not saved. */
   date: string
+  /** Unsaved Daily log text stays in memory when its window is collapsed or closed. */
+  logDrafts: Record<string, string>
   toggleDock(): void
   toggleNav(): void
   setWidth(width: number): void
@@ -21,6 +23,7 @@ interface DockState {
   moveTool(id: ToolId, step: -1 | 1): void
   toggleCollapsed(id: ToolId): void
   setDate(date: string): void
+  setLogDraft(key: string, text: string | null): void
 }
 
 export const useDock = create<DockState>()(
@@ -28,6 +31,7 @@ export const useDock = create<DockState>()(
     (set) => ({
       ...sanitizeDock(undefined),
       date: todayKey(),
+      logDrafts: {},
       toggleDock: () => set((s) => ({ open: !s.open })),
       toggleNav: () => set((s) => ({ navOpen: !s.navOpen })),
       setWidth: (width) => set({ width: Math.min(MAX_DOCK, Math.max(MIN_DOCK, Math.round(width))) }),
@@ -44,6 +48,7 @@ export const useDock = create<DockState>()(
         }),
       toggleCollapsed: (id) => set((s) => ({ tools: s.tools.map((t) => (t.id === id ? { ...t, collapsed: !t.collapsed } : t)) })),
       setDate: (date) => set({ date }),
+      setLogDraft: (key, text) => set((s) => { const logDrafts = { ...s.logDrafts }; if (text === null) delete logDrafts[key]; else logDrafts[key] = text; return { logDrafts } }),
     }),
     {
       name: "blackwall-mac-dock",

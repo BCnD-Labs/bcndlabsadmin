@@ -5,7 +5,7 @@
  * The rules are the ones the web store has always had: keep them in step with it, not ahead of it.
  */
 import { validJournalItems, validJournalSections } from "./journal-sections.ts"
-import type { Course, JournalSection, JournalLogItem, JournalEntry, Note, Service, Task } from "../src/lib/types.ts"
+import type { Course, JournalSection, JournalLogItem, JournalEntry, Note, Service, Subtask, Task, WorkStatus } from "../src/lib/types.ts"
 import type { Collections } from "./workspace.ts"
 
 export interface RecordOptions {
@@ -51,12 +51,84 @@ export function removeTask<T extends TaskData>(data: T, id: string): T {
   return { ...data, tasks: data.tasks.filter((task) => task.id !== id) }
 }
 
-/** Flips `done`: completing stamps `completedAt`, reopening clears it. */
+/** Flips `done`: completing stamps `completedAt`, reopening clears it. A task that tracks a status follows: done means submitted. */
 export function toggleTask<T extends TaskData>(data: T, id: string, opts: RecordOptions = {}): T {
   const t = (opts.now ?? defaultNow)()
   return {
     ...data,
-    tasks: data.tasks.map((task) => (task.id === id && task.kind !== "event" ? { ...task, done: !task.done, completedAt: task.done ? undefined : t, updatedAt: t } : task)),
+    tasks: data.tasks.map((task) => {
+      if (task.id !== id || task.kind === "event") return task
+      const status: Partial<Task> = task.status ? { status: task.done ? "in_progress" : task.status === "graded" ? "graded" : "submitted" } : {}
+      return { ...task, ...status, done: !task.done, completedAt: task.done ? undefined : t, updatedAt: t }
+    }),
+  }
+}
+
+/** Moves coursework through not started, in progress, submitted and graded. Submitted and graded mean done. */
+export function setTaskStatus<T extends TaskData>(data: T, id: string, status: WorkStatus, opts: RecordOptions = {}): T {
+  const t = (opts.now ?? defaultNow)()
+  const done = status === "submitted" || status === "graded"
+  return {
+    ...data,
+    tasks: data.tasks.map((task) => {
+      if (task.id !== id || task.kind === "event") return task
+      return { ...task, status, done, completedAt: done ? (task.done && task.completedAt ? task.completedAt : t) : undefined, updatedAt: t }
+    }),
+  }
+}
+
+/** Puts each proposed task on its suggested focus day, in one edit. Tasks that no longer exist are skipped. */
+export function applyFocusPlan<T extends TaskData>(data: T, plan: { id: string; date: string }[], opts: RecordOptions = {}): T {
+  const t = (opts.now ?? defaultNow)()
+  const days = new Map(plan.map((p) => [p.id, p.date]))
+  return { ...data, tasks: data.tasks.map((task) => (days.has(task.id) && !task.done ? { ...task, focusDate: days.get(task.id), updatedAt: t } : task)) }
+}
+
+const SUBTASK_ID_PREFIX = "sub"
+type NewStep = { title: string; date?: string; topicId?: string }
+
+/** Adds steps to a task in one edit. Blank titles are skipped; the list is capped (100) like the validator. */
+export function addSubtasks<T extends TaskData>(data: T, taskId: string, steps: NewStep[], opts: RecordOptions = {}): T {
+  const t = (opts.now ?? defaultNow)()
+  const make = opts.makeId ?? defaultMakeId
+  const fresh: Subtask[] = steps.filter((s) => s.title.trim()).map((s) => ({ id: make(SUBTASK_ID_PREFIX), title: s.title.trim().slice(0, 300), done: false, ...(s.date ? { date: s.date } : {}), ...(s.topicId ? { topicId: s.topicId } : {}) }))
+  if (!fresh.length) return data
+  return { ...data, tasks: data.tasks.map((task) => (task.id === taskId && (task.subtasks?.length ?? 0) + fresh.length <= 100 ? { ...task, subtasks: [...(task.subtasks ?? []), ...fresh], updatedAt: t } : task)) }
+}
+
+/** Edits one step. Finishing the first step of unstarted coursework moves it to "in progress". */
+export function updateSubtask<T extends TaskData>(data: T, taskId: string, stepId: string, patch: Partial<Omit<Subtask, "id">>, opts: RecordOptions = {}): T {
+  const t = (opts.now ?? defaultNow)()
+  return {
+    ...data,
+    tasks: data.tasks.map((task) => {
+      if (task.id !== taskId || !task.subtasks?.some((s) => s.id === stepId)) return task
+      const subtasks = task.subtasks.map((s) => (s.id === stepId ? { ...s, ...patch } : s))
+      const begins = patch.done === true && !task.done && !!task.courseId && (!task.status || task.status === "not_started")
+      return { ...task, subtasks, ...(begins ? { status: "in_progress" as const } : {}), updatedAt: t }
+    }),
+  }
+}
+
+export function toggleSubtask<T extends TaskData>(data: T, taskId: string, stepId: string, opts: RecordOptions = {}): T {
+  const step = data.tasks.find((task) => task.id === taskId)?.subtasks?.find((s) => s.id === stepId)
+  return step ? updateSubtask(data, taskId, stepId, { done: !step.done }, opts) : data
+}
+
+export function removeSubtask<T extends TaskData>(data: T, taskId: string, stepId: string, opts: RecordOptions = {}): T {
+  const t = (opts.now ?? defaultNow)()
+  return { ...data, tasks: data.tasks.map((task) => (task.id === taskId && task.subtasks ? { ...task, subtasks: task.subtasks.filter((s) => s.id !== stepId), updatedAt: t } : task)) }
+}
+
+/** Removes a course module and unlinks it from the course's work and notes, rather than deleting them. */
+export function removeCourseTopic<T extends TaskData & Pick<Collections, "courses"> & Partial<Pick<Collections, "notes">>>(data: T, courseId: string, topicId: string, opts: RecordOptions = {}): T {
+  const t = (opts.now ?? defaultNow)()
+  return {
+    ...data,
+    courses: data.courses.map((c) => (c.id === courseId ? { ...c, topics: (c.topics ?? []).filter((x) => x.id !== topicId), updatedAt: t } : c)),
+    tasks: data.tasks.map((task) => task.courseId === courseId && (task.topicIds?.includes(topicId) || task.subtasks?.some((s) => s.topicId === topicId))
+      ? { ...task, topicIds: task.topicIds?.filter((x) => x !== topicId), subtasks: task.subtasks?.map((s) => (s.topicId === topicId ? { ...s, topicId: undefined } : s)), updatedAt: t } : task),
+    ...(data.notes ? { notes: data.notes.map((n) => (n.courseId === courseId && n.topicIds?.includes(topicId) ? { ...n, topicIds: n.topicIds.filter((x) => x !== topicId), updatedAt: t } : n)) } : {}),
   }
 }
 

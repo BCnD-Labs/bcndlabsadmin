@@ -7,7 +7,7 @@
  * (field group by field group) so only touched groups are written, and nothing is re-normalised
  * on a task you didn't touch. Emptied lists and cleared fields are explicit undefined.
  */
-import { same, validDateKey, validPlannerFields, type Collections, type NewTask } from "../../../lib/shared.ts"
+import { same, validDateKey, validPlannerFields, type Collections, type NewTask, type Subtask } from "../../../lib/shared.ts"
 import { cleanLinks, linkProblem, type DocLink } from "./doc-links.ts"
 import type { ItemType } from "./learning-types.ts"
 import { MAX_RECORD_LINKS, type RecordLink } from "./record-links.ts"
@@ -30,10 +30,16 @@ export interface Extras {
   links: DocLink[]
   recordLinks: RecordLink[]
   reflection: ReflectionDraft
+  /** Smaller steps inside the task. */
+  subtasks: Subtask[]
+  /** The course modules this work belongs to. */
+  topicIds: string[]
+  /** Your own label for the kind of assignment, quiz or exam. */
+  workType: string
 }
 export interface ExtraErrors { schedule?: string; duration?: string; score?: string; links?: string; reflection?: string; other?: string }
 
-export const emptyExtras = (): Extras => ({ courseId: "", learningType: "", score: "", scheduledDate: "", scheduledTime: "", duration: "", focusDate: "", links: [], recordLinks: [], reflection: emptyReflection() })
+export const emptyExtras = (): Extras => ({ courseId: "", learningType: "", score: "", scheduledDate: "", scheduledTime: "", duration: "", focusDate: "", links: [], recordLinks: [], reflection: emptyReflection(), subtasks: [], topicIds: [], workType: "" })
 
 export const extrasFromTask = (t: Task): Extras => ({
   courseId: t.courseId ?? "",
@@ -46,6 +52,9 @@ export const extrasFromTask = (t: Task): Extras => ({
   links: (t.links ?? []).map((l) => ({ ...l })),
   recordLinks: (t.recordLinks ?? []).map((l) => ({ ...l })),
   reflection: reflectionDraft(t.reflection),
+  subtasks: (t.subtasks ?? []).map((st) => ({ ...st })),
+  topicIds: [...(t.topicIds ?? [])],
+  workType: t.workType ?? "",
 })
 
 const minutes = (text: string): number | undefined => (/^\d+$/.test(text.trim()) ? Number(text) : undefined)
@@ -66,6 +75,9 @@ function candidate(x: Extras, existing: Task | undefined, now: string) {
     links: orNone(links),
     recordLinks: orNone(x.recordLinks),
     reflection: buildReflection(x.reflection, existing?.reflection, now),
+    subtasks: orNone(x.subtasks.filter((st) => st.title.trim()).map((st) => ({ ...st, title: st.title.trim() }))),
+    topicIds: x.courseId ? orNone(x.topicIds) : undefined,
+    workType: x.courseId && x.workType.trim() ? x.workType.trim().slice(0, 60) : undefined,
   }
 }
 type Candidate = ReturnType<typeof candidate>
@@ -124,6 +136,9 @@ const GROUPS: { keys: (keyof Candidate)[]; read: (x: Extras) => unknown }[] = [
   { keys: ["links"], read: (x) => x.links },
   { keys: ["recordLinks"], read: (x) => x.recordLinks },
   { keys: ["reflection"], read: (x) => x.reflection },
+  { keys: ["subtasks"], read: (x) => x.subtasks },
+  { keys: ["topicIds"], read: (x) => [x.courseId, x.topicIds] },
+  { keys: ["workType"], read: (x) => [x.courseId, x.workType] },
 ]
 
 /** The patch for edited extras: only the groups that differ from what the task started with, and within them only values that really differ. */

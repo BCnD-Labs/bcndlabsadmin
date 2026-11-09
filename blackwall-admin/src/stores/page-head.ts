@@ -1,5 +1,5 @@
-import type { ReactNode } from "react"
-import { create } from "zustand"
+import { createContext, type ReactNode } from "react"
+import { create, type StoreApi } from "zustand"
 
 /**
  * What the current page shows in the app header: its title (where Home shows the
@@ -17,3 +17,6 @@ export interface PageHead {
 }
 
 export const usePageHead = create<PageHead>()(() => ({}))
+
+/** A Mac app window owns its header; pages outside a window use the shared header. */
+export const PageHeadStoreContext = createContext<StoreApi<PageHead> | null>(null)

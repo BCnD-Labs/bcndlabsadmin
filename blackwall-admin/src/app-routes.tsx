@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate, useLocation, useParams } from "react-router-dom"
+import { createBrowserRouter, Navigate, useLocation, useParams, type RouteObject } from "react-router-dom"
 import type { ReactNode } from "react"
 import { InsightsPage, SiteAnalyticsPage } from "@/features/analytics/analytics-page"
 import { PostEditor } from "@/features/content/post-editor"
@@ -18,6 +18,7 @@ import { DevelopmentPage } from "@/features/development/development-page"
 import { HomePage } from "@/features/home/home-page"
 import { CourseDetail } from "@/features/learning/course-detail"
 import { LearningPage } from "@/features/learning/learning-page"
+import { JournalPage } from "@/features/journal/journal-page"
 import { SettingsRoute } from "@/features/settings/settings-route"
 import { ProjectDetail } from "@/features/work/project-detail"
 import { ProjectsPage } from "@/features/work/projects-page"
@@ -52,13 +53,10 @@ function MovedAnalytics() {
   return <Navigate to={new URLSearchParams(search).get("view") === "website" ? "/cms/analytics" : "/productivity/insights"} replace />
 }
 
-export function createBlackwallRouter(shell: ReactNode) {
-  return createBrowserRouter([
-  {
-    element: shell,
-    errorElement: <RouteError />,
-    children: [
+/** Shared page map also lets each Mac desktop window retain its own route. */
+export const blackwallPages: RouteObject[] = [
       { index: true, element: <HomePage /> },
+      { path: "journal", element: <JournalPage /> },
       { path: "productivity", element: <PlannerPage /> },
       { path: "productivity/tasks", element: <ToPlanner /> },
       { path: "productivity/projects", element: <ProjectsPage /> },
@@ -101,7 +99,8 @@ export function createBlackwallRouter(shell: ReactNode) {
       { path: "settings", element: <SettingsRoute /> },
       { path: "settings/:section", element: <SettingsRoute /> },
       { path: "*", element: <NotFound /> },
-    ],
-  },
-  ])
+]
+
+export function createBlackwallRouter(shell: ReactNode) {
+  return createBrowserRouter([{ element: shell, errorElement: <RouteError />, children: blackwallPages }])
 }

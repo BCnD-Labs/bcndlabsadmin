@@ -1,12 +1,19 @@
 import { TextInput } from "../../../editing/keyboard.tsx"
 import { useMemo, useState } from "react"
 import { Pressable, StyleSheet, Text, View } from "react-native"
-import { togglePin, type Collections } from "../../../../lib/shared.ts"
+import { modulesOf, tasksOfNote, togglePin, type Collections } from "../../../../lib/shared.ts"
 import { color, notePaper } from "../../../../theme.ts"
 import { useWorkspace } from "../../../data/WorkspaceProvider.tsx"
 import { Button, Chip, ChipRow, Icon, SectionLabel } from "../../../ui.tsx"
 import { resolveWithin } from "../task-form.ts"
 import { NoteRow } from "./NoteRow.tsx"
+
+/** "Module 5 · for 2 tasks": where a note belongs, so it reads the same as on the Mac. */
+function noteExtra(data: Collections, n: Collections["notes"][number]): string {
+  const mods = modulesOf(data.courses.find(c => c.id === n.courseId), n).map(m => m.title)
+  const work = tasksOfNote(data, n.id).length
+  return [mods.join(", "), work ? `for ${work} task${work === 1 ? "" : "s"}` : ""].filter(Boolean).join(" · ")
+}
 import { NoteSheet, type NoteEditor } from "./NoteSheet.tsx"
 import { NOTE_COLORS, colorCounts, courseFor, orderNotes, type NoteColor } from "./note-rules.ts"
 import { Pill, SmallButton } from "../../learning/LearningControls.tsx"
@@ -38,7 +45,7 @@ export function NotesView({ data, blocked, compact = false, hideAdd = false, con
   }
 
   const rows = (notes: typeof pinned) =>
-    notes.map((n) => <NoteRow key={n.id} note={n} course={courseFor(data.courses, n.courseId)} now={now} compact={compact} expanded={selected === n.id} onSelect={() => setSelected(selected === n.id ? null : n.id)} onOpen={() => setEditor({ mode: "edit", id: n.id })} onPin={() => (blocked ? setNotice(blocked) : void pin(n.id))} />)
+    notes.map((n) => <NoteRow key={n.id} note={n} extra={noteExtra(data, n)} course={courseFor(data.courses, n.courseId)} now={now} compact={compact} expanded={selected === n.id} onSelect={() => setSelected(selected === n.id ? null : n.id)} onOpen={() => setEditor({ mode: "edit", id: n.id })} onPin={() => (blocked ? setNotice(blocked) : void pin(n.id))} />)
 
   return (
     <View style={[styles.gap, compact && styles.compactGap]}>

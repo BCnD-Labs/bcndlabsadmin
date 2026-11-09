@@ -35,19 +35,21 @@ function groupLabel(n: BwNotification) {
  * Bell + floating notifications card (spec §4): slides in from the right over the
  * page with no dimming or layout shift, and auto-hides like the calendar.
  */
-export function Notifications() {
+export function Notifications({ ntfyOnly = false }: { ntfyOnly?: boolean }) {
   const items = useNotifications((s) => s.items)
   const loaded = useNotifications((s) => s.loaded)
   useEffect(() => startNotifications(), [])
   const markRead = useNotifications((s) => s.markRead)
   const markAllRead = useNotifications((s) => s.markAllRead)
+  const markManyRead = useNotifications((s) => s.markManyRead)
   const [open, setOpen] = useState(false)
   const [filter, setFilter] = useState<Filter>("all")
   const buttonRef = useRef<HTMLButtonElement>(null)
   const cardId = useId()
   const hide = useAutoHide(open, () => setOpen(false))
   const { disarm } = hide
-  const unread = items.filter((n) => !n.read).length
+  const visible = ntfyOnly ? items.filter((n) => !!n.ntfyAt) : items
+  const unread = visible.filter((n) => !n.read).length
 
   const close = () => {
     disarm()
@@ -66,7 +68,7 @@ export function Notifications() {
     return () => document.removeEventListener("keydown", onKey)
   }, [open, disarm])
 
-  const shown = [...items]
+  const shown = [...visible]
     .filter((n) => filter === "all" || n.group === filter)
     .sort((a, b) => b.at.localeCompare(a.at))
   const groups = (["Today", "Yesterday", "Earlier"] as const)
@@ -115,7 +117,7 @@ export function Notifications() {
         inert={!open}
         onPointerEnter={hide.onPointerEnter}
         onPointerLeave={hide.onPointerLeave}
-        className={cn("bw-panel bw-float bw-slide fixed top-[var(--bw-header-h,88px)] right-3 z-50 flex w-[340px] max-w-[calc(100vw-24px)] flex-col overflow-hidden", items.length ? "bottom-3" : "h-[260px] max-h-[calc(100dvh-var(--bw-header-h,88px)-12px)]")}
+        className={cn("bw-panel bw-float bw-slide fixed top-[var(--bw-header-h,88px)] right-3 z-50 flex w-[340px] max-w-[calc(100vw-24px)] flex-col overflow-hidden", visible.length ? "bottom-3" : "h-[260px] max-h-[calc(100dvh-var(--bw-header-h,88px)-12px)]")}
       >
         <TitleBar
           category="notifications"
@@ -131,8 +133,8 @@ export function Notifications() {
             </span>
           }
         >
-            {items.length > 0 && (
-              <Button variant="ghost" size="sm" onClick={markAllRead} disabled={!unread}>
+            {visible.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={() => ntfyOnly ? markManyRead(visible.filter((n) => !n.read).map((n) => n.id)) : markAllRead()} disabled={!unread}>
                 read all
               </Button>
             )}
@@ -141,12 +143,12 @@ export function Notifications() {
             </Button>
         </TitleBar>
 
-        {items.length === 0 ? (
+        {visible.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-1 px-6 text-center">
             {loaded ? (
               <>
                 <p className="text-sm text-ink-2">You're all caught up</p>
-                <p className="text-[11px] text-muted-foreground">Service outages, GitHub reviews, due work and more land here. Choose what reaches your phone or email in Settings.</p>
+                <p className="text-[11px] text-muted-foreground">{ntfyOnly ? "Messages successfully sent through ntfy appear here." : "Service outages, GitHub reviews, due work and more land here. Choose what reaches your phone or email in Settings."}</p>
               </>
             ) : (
               <NoSignal message="Loading notifications…" onNavigate={close} />

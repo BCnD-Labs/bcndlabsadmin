@@ -9,6 +9,9 @@ import { cn } from "@/lib/utils"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
 import { courseColor, courseLabel, kindInfo, learningType } from "./learning-utils"
+import { stepProgress } from "@shared/steps"
+import { ModuleChip } from "./module-chip"
+import { StatusPill, tracksStatus } from "./status-pill"
 
 /** The kind's icon tile in its own hue (Course blue, Certification green, …). */
 export function KindIcon({ kind, className, small }: { kind?: LearningKind; className?: string; small?: boolean }) {
@@ -56,7 +59,7 @@ export function courseworkWhen(t: Task) {
  * One assignment / exam / milestone / event: checkbox, type icon, title, optional
  * course chip, and when it's due. Clicking the title opens the task form.
  */
-export function CourseworkRow({ task, course, showCourse }: { task: Task; course?: Course; showCourse?: boolean }) {
+export function CourseworkRow({ task, course, showCourse, hideModule }: { task: Task; course?: Course; showCourse?: boolean; hideModule?: boolean }) {
   const toggleTask = useWorkspace((s) => s.toggleTask)
   const openForm = useUi((s) => s.openForm)
   const type = learningType(task.learningType, course?.kind)
@@ -65,7 +68,7 @@ export function CourseworkRow({ task, course, showCourse }: { task: Task; course
   const soon = !task.done && !!task.due && daysUntil(task.due) >= 0 && daysUntil(task.due) <= 2
 
   return (
-    <li className="group flex min-h-11 items-center gap-2.5 border-b border-line-soft px-3.5 py-1.5 last:border-b-0 hover:bg-raised" data-testid="coursework-row">
+    <li className="group flex min-h-11 flex-wrap items-center gap-x-2.5 gap-y-1 border-b border-line-soft px-3.5 py-1.5 last:border-b-0 hover:bg-raised" data-testid="coursework-row">
       <Checkbox
         checked={task.done}
         onCheckedChange={() => toggleTask(task.id)}
@@ -78,7 +81,7 @@ export function CourseworkRow({ task, course, showCourse }: { task: Task; course
         <Icon className="size-3.5" aria-hidden />
         <span className="sr-only">{type.label}</span>
       </span>
-      <button type="button" onClick={() => openForm({ kind: "task", id: task.id })} className="min-w-0 flex-1 rounded-[4px] py-0.5 text-left" title={`Edit ${type.label.toLowerCase()}`}>
+      <button type="button" onClick={() => openForm({ kind: "task", id: task.id })} className="min-w-[8rem] flex-1 basis-[8rem] rounded-[4px] py-0.5 text-left" title={`Edit ${type.label.toLowerCase()}`}>
         <span className={cn("line-clamp-2 text-[13px] leading-snug break-words text-ink", task.done && "text-faint line-through")} title={task.title}>{task.title}</span>
         {showCourse && course ? (
           // Across courses, the course goes under the title so narrow columns keep the title readable.
@@ -90,7 +93,11 @@ export function CourseworkRow({ task, course, showCourse }: { task: Task; course
           task.details && <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{task.details}</span>
         )}
       </button>
+      {task.workType && <span className="max-w-[8rem] shrink-0 truncate rounded-full bg-ink-2/8 px-2 text-[10px] leading-5 text-ink-2" title={`${type.label} type`}>{task.workType}</span>}
+      {!hideModule && <ModuleChip task={task} course={course} />}
       <DocLinksMenu links={task.links} />
+      {(task.subtasks?.length ?? 0) > 0 && <span className="shrink-0 rounded-full bg-ink-2/8 px-1.5 text-[10px] tabular-nums text-ink-2" title="Steps done" data-testid="step-progress">{stepProgress(task).done}/{stepProgress(task).total}</span>}
+      {tracksStatus(task, course) && <StatusPill task={task} />}
       <span
         className={cn(
           "inline-flex shrink-0 items-center justify-end gap-1 text-[11px] tabular-nums",

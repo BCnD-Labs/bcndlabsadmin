@@ -211,11 +211,39 @@ html[data-runtime="mac-native"] .mac-tool-empty { padding: 8px 6px; color: var(-
 html[data-runtime="mac-native"] .mac-task-list { margin: 2px 0 0; padding: 0; list-style: none; }
 html[data-runtime="mac-native"] .mac-task { display: flex; align-items: center; gap: 7px; min-height: 28px; padding: 2px 4px; border-radius: 3px; font-size: 12px; }
 html[data-runtime="mac-native"] .mac-task:hover { background: var(--bw-raised); }
-html[data-runtime="mac-native"] .mac-task button { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
-html[data-runtime="mac-native"] .mac-task[data-done="true"] button { color: var(--bw-muted); text-decoration: line-through; }
-html[data-runtime="mac-native"] .mac-task[data-late="true"] button { color: var(--bw-amber, #e0a03a); }
+html[data-runtime="mac-native"] .mac-task button:not([role="checkbox"]) { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+html[data-runtime="mac-native"] .mac-task[data-done="true"] button:not([role="checkbox"]) { color: var(--bw-muted); text-decoration: line-through; }
+html[data-runtime="mac-native"] .mac-task[data-late="true"] button:not([role="checkbox"]) { color: var(--bw-amber, #e0a03a); }
 html[data-runtime="mac-native"] .mac-task-tag { font-size: 10px; color: var(--bw-muted); }
-html[data-runtime="mac-native"] .mac-log { display: block; width: calc(100% - 8px); min-height: 110px; margin: 4px; padding: 6px 8px; resize: vertical; border: 1px solid var(--bw-border); border-radius: 4px; background: var(--bw-well); color: var(--bw-text); font-size: 12px; line-height: 1.45; }
+html[data-runtime="mac-native"] .mac-log-tool { padding-bottom: 5px; }
+html[data-runtime="mac-native"] .mac-log-groups { display: grid; gap: 3px; margin: 4px; }
+html[data-runtime="mac-native"] .mac-log-group { border: 1px solid var(--bw-line); border-radius: 6px; overflow: hidden; background: var(--bw-panel); }
+html[data-runtime="mac-native"] .mac-log-group-head { display: flex; align-items: center; min-height: 29px; background: var(--bw-raised); }
+html[data-runtime="mac-native"] .mac-log-group-head > button:first-child { display: flex; align-items: center; flex: 1; min-width: 0; gap: 5px; padding: 5px 7px; text-align: left; }
+html[data-runtime="mac-native"] .mac-log-group-head strong { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+html[data-runtime="mac-native"] .mac-log-group-head span { color: var(--bw-muted); font: 10px var(--font-mono); }
+html[data-runtime="mac-native"] .mac-log-group-head svg { width: 13px; height: 13px; color: var(--bw-muted); }
+html[data-runtime="mac-native"] .mac-log-rename { padding: 6px 8px; }
+html[data-runtime="mac-native"] .mac-log-group-body { display: grid; gap: 4px; padding: 6px; }
+html[data-runtime="mac-native"] .mac-log-group-body textarea,
+html[data-runtime="mac-native"] .mac-log-name input { width: 100%; min-width: 0; border: 1px solid var(--bw-border); border-radius: 5px; outline: none; background: var(--bw-well); color: var(--bw-text); font-size: 12px; line-height: 1.4; }
+html[data-runtime="mac-native"] .mac-log-group-body textarea { min-height: 56px; padding: 6px 7px; resize: vertical; }
+html[data-runtime="mac-native"] .mac-log-name input { min-height: 27px; padding: 4px 6px; }
+html[data-runtime="mac-native"] .mac-log-group-body textarea:focus,
+html[data-runtime="mac-native"] .mac-log-name input:focus { border-color: var(--bw-blue); }
+html[data-runtime="mac-native"] .mac-log-actions { display: flex; justify-content: flex-end; gap: 5px; }
+html[data-runtime="mac-native"] .mac-log-actions button,
+html[data-runtime="mac-native"] .mac-log-name button { min-height: 24px; padding: 3px 7px; border: 1px solid var(--bw-border); border-radius: 4px; background: var(--bw-raised); color: var(--bw-text); font-size: 11px; }
+html[data-runtime="mac-native"] .mac-log-actions .is-primary,
+html[data-runtime="mac-native"] .mac-log-name .is-primary { border-color: #1976d2; background: #1565c0; color: white; }
+html[data-runtime="mac-native"] .mac-log-actions button:disabled,
+html[data-runtime="mac-native"] .mac-log-name button:disabled { opacity: .45; }
+html[data-runtime="mac-native"] .mac-log-item { border-top: 1px solid var(--bw-line); }
+html[data-runtime="mac-native"] .mac-log-item-text { display: block; width: 100%; padding: 6px 2px; color: var(--bw-text-2); font-size: 11px; line-height: 1.35; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; }
+html[data-runtime="mac-native"] .mac-log-item-text:hover { color: var(--bw-blue); }
+html[data-runtime="mac-native"] .mac-log-name { display: flex; gap: 4px; align-items: center; margin: 4px; }
+html[data-runtime="mac-native"] .mac-log-add { display: flex; align-items: center; gap: 4px; margin: 3px 6px; color: var(--bw-blue); font-size: 11px; }
+html[data-runtime="mac-native"] .mac-log-add svg { width: 13px; height: 13px; }
 /* The month grid is the Planner's; in the dock it is compacted to fit a narrow column. */
 html[data-runtime="mac-native"] .mac-tool [role="grid"] { padding: 2px 2px 4px; }
 html[data-runtime="mac-native"] .mac-tool [role="columnheader"] { font-size: 11px; color: var(--bw-muted); }

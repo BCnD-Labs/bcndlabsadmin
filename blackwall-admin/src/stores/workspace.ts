@@ -1,8 +1,8 @@
 import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
 import { newId } from "@/lib/ids"
-import type { JournalEntry, Note, Task } from "@/lib/types"
-import { createNote, createTask, moveJournal, removeCourseRecords, removeNote, removeTask, saveJournal, toggleStar, togglePin, toggleTask, updateNote, updateTask } from "@shared/records"
+import type { JournalEntry, JournalLogItem, JournalSection, Note, Task } from "@/lib/types"
+import { createNote, createTask, moveJournal, removeCourseRecords, removeNote, removeTask, saveJournal, saveJournalItem, saveJournalLegacyText, saveJournalSections, toggleStar, togglePin, toggleTask, updateNote, updateTask } from "@shared/records"
 import { V1_EXAMPLE_IDS } from "./seed"
 import { safeLocalStorage } from "./storage"
 
@@ -44,6 +44,9 @@ interface WorkspaceState extends Collections {
   togglePin: (id: string) => void
   /** Upsert the log for a day; an empty text deletes it. */
   saveJournal: (date: string, text: string) => void
+  saveJournalSections: (date: string, sections: JournalSection[]) => void
+  saveJournalItem: (date: string, item: JournalLogItem, asNote?: boolean) => void
+  saveJournalLegacyText: (date: string, sectionId: string | undefined, text: string, asNote: boolean, stableNoteId: string) => void
   /** Move a day's log to another date, appending if that day already has one. */
   moveJournal: (from: string, to: string) => void
   clearAll: () => void
@@ -120,6 +123,9 @@ export const useWorkspace = create<WorkspaceState>()(
       togglePin: (id) => set(togglePin({ notes: get().notes }, id)),
 
       saveJournal: (date, text) => set(saveJournal({ journal: get().journal }, date, text)),
+      saveJournalSections: (date, sections) => set((s) => saveJournalSections({ journal: s.journal }, date, sections)),
+      saveJournalItem: (date, item, asNote = false) => set((s) => saveJournalItem({ journal: s.journal, notes: s.notes }, date, item, asNote)),
+      saveJournalLegacyText: (date, sectionId, text, asNote, stableNoteId) => set((s) => saveJournalLegacyText({ journal: s.journal, notes: s.notes }, date, sectionId, text, asNote, stableNoteId)),
 
       moveJournal: (from, to) => set(moveJournal({ journal: get().journal }, from, to)),
 

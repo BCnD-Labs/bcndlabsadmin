@@ -34,6 +34,16 @@ export interface Task {
   /** Coursework: the course it belongs to and what kind of item it is. */
   courseId?: ID
   learningType?: LearningItemType
+  /** Where a piece of coursework is in its life. Absent on older records: derive it from `done`. */
+  status?: WorkStatus
+  /** Your own label for what kind of assignment, quiz or exam this is ("Reading", "Vocabulary", "Document"). Free text. */
+  workType?: string
+  /** How big the work feels; sets how many days ahead the planner suggests starting. */
+  effort?: WorkEffort
+  /** Smaller steps inside this task; each can have its own day. */
+  subtasks?: Subtask[]
+  /** The course topics (units, modules, chapters) this assignment or exam covers. */
+  topicIds?: ID[]
   /** Practice tests (certifications): the score, 0–100. */
   score?: number
   starred: boolean
@@ -41,6 +51,23 @@ export interface Task {
   completedAt?: Timestamp
   createdAt: Timestamp
   updatedAt: Timestamp
+}
+
+/** One small step inside a task: "Outline", "Review: Recursion". A date puts it on that day's plan. */
+export interface Subtask {
+  id: ID
+  title: string
+  done: boolean
+  date?: DateKey
+  /** The course topic a study step reviews. */
+  topicId?: ID
+}
+
+/** A unit, module or chapter of a course. `done` means "I know this one". */
+export interface CourseTopic {
+  id: ID
+  title: string
+  done?: boolean
 }
 
 export interface RecordLink {
@@ -70,6 +97,8 @@ export interface Note {
   pinned: boolean
   /** Linked course (Productivity → Learning). */
   courseId?: ID
+  /** Modules of that course this note belongs to. */
+  topicIds?: ID[]
   createdAt: Timestamp
   updatedAt: Timestamp
 }
@@ -320,10 +349,26 @@ export interface Service {
 }
 
 /** What a piece of coursework is. All of them are tasks, so they share the calendar and Tasks. */
-export type LearningItemType = "assignment" | "exam" | "milestone" | "event"
+export type LearningItemType = "assignment" | "quiz" | "exam" | "milestone" | "event"
 
 /** What kind of learning a record is. Older records have no kind and are courses. */
 export type LearningKind = "course" | "certification" | "selfpaced" | "skill" | "reading"
+
+/** Not started, working on it, handed in, marked. Submitted and graded both mean the task is done. */
+export type WorkStatus = "not_started" | "in_progress" | "submitted" | "graded"
+export type WorkEffort = "quick" | "medium" | "big"
+
+export type MeetingKind = "class" | "lab" | "office" | "other"
+/** A weekly meeting time. It repeats on `days` (0 = Sunday) between the course's start and end dates. */
+export interface ClassMeeting {
+  id: ID
+  kind: MeetingKind
+  days: number[]
+  /** `HH:mm` */
+  start: string
+  end: string
+  location?: string
+}
 
 export type CourseColor = "red" | "amber" | "teal" | "blue" | "violet" | "green" | "slate"
 
@@ -355,6 +400,15 @@ export interface Course {
   location: string
   /** Course site or LMS page. */
   url: string
+  /** Structured weekly class and office-hour times; they appear on the calendar. `schedule` stays as free text. */
+  meetings?: ClassMeeting[]
+  /** Syllabus and policies, as notes the writer keeps with the course. */
+  syllabus?: string
+  policies?: string
+  /** The class's code repository. */
+  repoUrl?: string
+  /** Units, modules or chapters, in order. Assignments and exams can point at them. */
+  topics?: CourseTopic[]
   credits?: number
   description: string
   tags: string[]

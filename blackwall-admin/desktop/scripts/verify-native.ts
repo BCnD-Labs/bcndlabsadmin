@@ -1,7 +1,7 @@
 /** Smoke test for the bundled Mac workspace and its authenticated API bridge.
  * Run after desktop:compile: npx electron desktop/scripts/verify-native.ts
  */
-import { app } from "electron"
+import { app, webContents } from "electron"
 import { createServer } from "node:http"
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -89,6 +89,100 @@ server.listen(0, "127.0.0.1", () => {
     }
     assert(wc!.getURL() === "bw-native://app/productivity", "Workspace route survives a reload")
     assert(await wc!.executeJavaScript("!!document.querySelector('[data-testid=planner]')"), "Planner opens with server workspace data")
+    assert(await wc!.executeJavaScript("!!document.querySelector('.mac-dw-desktop')"), "Mac workspace opens as a desktop")
+    const logInput = (selector: string, value: string) => `(() => { const field = document.querySelector(${JSON.stringify(selector)}); if (!field) return false; const set = Object.getOwnPropertyDescriptor(field instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype, 'value').set; set.call(field, ${JSON.stringify(value)}); field.dispatchEvent(new Event('input', { bubbles: true })); return true })()`
+    assert(!await wc!.executeJavaScript("!!document.querySelector('.mac-dw-sidebar')"), "Planner sidebar starts closed")
+    await wc!.executeJavaScript("document.querySelector('.mac-dw-date').click()")
+    assert(await wc!.executeJavaScript("!!document.querySelector('.mac-dw-sidebar [role=grid]') && !!document.querySelector('.mac-dw-sidebar .mac-task-list, .mac-dw-sidebar .mac-tool-empty') && !!document.querySelector('.mac-dw-sidebar .mac-log-tool')"), "Date button opens the Planner sidebar with calendar, tasks and daily log")
+    await wc!.executeJavaScript("document.querySelector('.mac-log-add').click()")
+    assert(await wc!.executeJavaScript(logInput('.mac-log-name input', 'Build notes')), "Daily log accepts a section name")
+    await wc!.executeJavaScript("document.querySelector('.mac-log-name .is-primary').click()")
+    assert(await wc!.executeJavaScript("!!Array.from(document.querySelectorAll('.mac-log-group-head strong')).find((node) => node.textContent === 'Build notes')"), "Daily log saves a named section")
+    assert(await wc!.executeJavaScript(logInput('textarea[aria-label="New Build notes entry"]', 'Compact Mac reflection')), "Daily log accepts an entry draft")
+    await wc!.executeJavaScript("Array.from(document.querySelectorAll('.mac-log-group')).find((group) => group.textContent.includes('Build notes')).querySelector('.mac-log-actions .is-primary').click()")
+    assert(await wc!.executeJavaScript("!!Array.from(document.querySelectorAll('.mac-log-item-text')).find((node) => node.textContent === 'Compact Mac reflection')"), "Daily log saves an entry in its section")
+    await wc!.executeJavaScript("Array.from(document.querySelectorAll('.mac-log-item-text')).find((node) => node.textContent === 'Compact Mac reflection').click()")
+    assert(await wc!.executeJavaScript(logInput('textarea[aria-label="Edit Build notes entry"]', 'Edited Mac reflection')), "Daily log opens a saved entry for editing")
+    await wc!.executeJavaScript("Array.from(document.querySelectorAll('.mac-log-item')).find((row) => row.querySelector('textarea')).querySelector('.is-primary').click()")
+    assert(await wc!.executeJavaScript("!!Array.from(document.querySelectorAll('.mac-log-item-text')).find((node) => node.textContent === 'Edited Mac reflection')"), "Daily log saves an edited entry")
+    await wc!.executeJavaScript("Array.from(document.querySelectorAll('.mac-log-group-head strong')).find((node) => node.textContent === 'Build notes').closest('button').click()")
+    assert(await wc!.executeJavaScript("Array.from(document.querySelectorAll('.mac-log-group-head strong')).find((node) => node.textContent === 'Build notes').closest('button').getAttribute('aria-expanded') === 'false'"), "Daily log section collapses")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Open Learning\"]').click()")
+    for (let i = 0; i < 40; i++) {
+      if (await wc!.executeJavaScript("!!document.querySelector('[aria-label=\"Learning window\"] .mac-dw-app-main')?.textContent?.trim()")) break
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+    assert(await wc!.executeJavaScript("!!document.querySelector('[aria-label=\"Learning window\"] .mac-dw-app-main')?.textContent?.trim()"), "Learning opens in its own app window")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Open Projects\"]').click()")
+    assert(await wc!.executeJavaScript("!!document.querySelector('[aria-label=\"Learning window\"]') && !!document.querySelector('[aria-label=\"Projects window\"]')"), "Opening Projects leaves Learning open")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Close projects window\"]').click()")
+    assert(await wc!.executeJavaScript("!document.querySelector('[aria-label=\"Projects window\"]') && !!document.querySelector('[aria-label=\"Learning window\"]')"), "Closing Projects leaves Learning open")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Open Projects\"]').click()")
+    assert(await wc!.executeJavaScript("!!document.querySelector('[aria-label=\"Projects window\"]')"), "Projects reopens from the compact launcher")
+    if (process.env.BW_DESKTOP_SHOT) writeFileSync(process.env.BW_DESKTOP_SHOT, (await wc!.capturePage()).toPNG())
+    await wc!.executeJavaScript("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))")
+    assert(await wc!.executeJavaScript("!document.querySelector('.mac-dw-sidebar')"), "Escape closes the Planner sidebar")
+    // Window controls: the bigger button swaps to "smaller", minimize leaves only the title bar, and the rail can close a window.
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Expand learning window\"]').click()")
+    assert(await wc!.executeJavaScript("!!document.querySelector('button[aria-label=\"Restore learning window\"]')"), "An expanded window offers to make itself smaller")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Restore learning window\"]').click()")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Minimize learning window\"]').click()")
+    assert(await wc!.executeJavaScript("document.querySelector('[aria-label=\"Learning window\"]').getBoundingClientRect().height <= 34"), "Minimize leaves just the title bar")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Show learning window\"]').click()")
+    assert(await wc!.executeJavaScript("document.querySelector('[aria-label=\"Learning window\"]').getBoundingClientRect().height > 100"), "The window comes back from the title bar")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Close Learning window\"]').click()")
+    assert(await wc!.executeJavaScript("!document.querySelector('[aria-label=\"Learning window\"]')"), "The sidebar closes an open window")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Open Learning\"]').click()")
+    assert(await wc!.executeJavaScript("!!document.querySelector('[aria-label=\"Learning window\"]')"), "Learning reopens from the sidebar")
+    // The Browser window: a page opens as a locked-down <webview> window next to the others (links from Blackwall pages arrive the same way).
+    assert(await wc!.executeJavaScript(`window.__bwBrowserOpen('http://127.0.0.1:${address.port}/?browser-window')`), "Blackwall pages can hand a link to the Browser window")
+    for (let i = 0; i < 40; i++) {
+      if (await wc!.executeJavaScript("!!document.querySelector('[aria-label=\"Browser window\"] webview')")) break
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+    assert(await wc!.executeJavaScript("!!document.querySelector('[aria-label=\"Browser window\"] webview') && !!document.querySelector('[aria-label=\"Learning window\"]')"), "The Browser opens as a window beside Learning")
+    const guest = webContents.getAllWebContents().find((c) => c.getType() === "webview")
+    assert(!!guest && guest.session === wc!.session, "The page runs in the shared browser session")
+    assert(await guest!.executeJavaScript("typeof require === 'undefined' && typeof process === 'undefined' && typeof window.__bwBrowserOpen === 'undefined'"), "The page has no Node access and no workspace bridge")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Close browser window\"]').click()")
+    // The create menu opens the task form (a selector that built a new array on every render once crashed it).
+    const clickAt = async (selector: string, text: string) => {
+      const point = await wc!.executeJavaScript(`(() => { const el = [...document.querySelectorAll(${JSON.stringify(selector)})].find(e => e.textContent.trim().startsWith(${JSON.stringify(text)})) ?? document.querySelector(${JSON.stringify(selector)}); if (!el) return null; const b = el.getBoundingClientRect(); return { x: Math.round(b.x + b.width / 2), y: Math.round(b.y + b.height / 2) } })()`)
+      assert(!!point, `Found ${selector}`)
+      for (const type of ["mouseMove", "mouseDown", "mouseUp"] as const) wc!.sendInputEvent({ type, x: point.x, y: point.y, button: "left", clickCount: 1 })
+      await new Promise((resolve) => setTimeout(resolve, 600))
+    }
+    await clickAt("button[aria-label='Create new']", "")
+    await clickAt("[role=menuitem]", "Task")
+    assert(await wc!.executeJavaScript("!!document.querySelector('#task-title') && !document.body.innerText.includes('Something broke')"), "Create → Task opens the task form without crashing")
+    assert(await wc!.executeJavaScript("!!document.querySelector('[data-testid=linked-records] select')"), "The task form can link notes and tasks")
+    await wc!.executeJavaScript("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))")
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    await clickAt("button[aria-label='Create new']", "")
+    await clickAt("[role=menuitem]", "Note")
+    assert(await wc!.executeJavaScript("!!document.querySelector('#note-text') && !!document.querySelector('select[aria-label=\"Link a task\"]') && !document.body.innerText.includes('Something broke')"), "Create → Note opens the note form with linked work")
+    await wc!.executeJavaScript("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))")
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    // Rail names: the toggle writes the names beside the icons and moves the windows over.
+    await wc!.executeJavaScript("document.querySelector('.mac-dw-rail-toggle').click()")
+    assert(await wc!.executeJavaScript("document.querySelector('.mac-dw-rail').dataset.labels === 'true' && [...document.querySelectorAll('.mac-dw-rail-label')].some(e => e.textContent === 'Learning')"), "The sidebar toggle shows app names")
+    assert(await wc!.executeJavaScript("(() => { const w = document.querySelector('[aria-label=\"Learning window\"]').getBoundingClientRect(); return w.right <= window.innerWidth + 1 && w.left >= document.querySelector('.mac-dw-rail').getBoundingClientRect().right - 1 })()"), "Windows stay inside the screen and clear of the wide sidebar")
+    await wc!.executeJavaScript("document.querySelector('.mac-dw-rail-toggle').click()")
+    assert(await wc!.executeJavaScript("document.querySelector('.mac-dw-rail').dataset.labels === 'false'"), "The sidebar toggle hides names again")
+    // Settings: Desktop and Learning sections exist, and a theme choice reaches the page.
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Open Settings\"]').click()")
+    assert(await wc!.executeJavaScript("(() => { const names = [...document.querySelectorAll('nav[aria-label=\"Settings sections\"] button')].map(b => b.textContent); return names.includes('Desktop') && names.includes('Learning') && names.includes('Appearance') })()"), "Settings has Desktop, Learning and Appearance sections")
+    await wc!.executeJavaScript("[...document.querySelectorAll('nav[aria-label=\"Settings sections\"] button')].find(b => b.textContent === 'Appearance').click()")
+    await wc!.executeJavaScript("document.querySelector('[role=radio][title=\"Bright and clean\"]').click()")
+    assert(await wc!.executeJavaScript("document.documentElement.dataset.theme === 'light' && !document.documentElement.classList.contains('dark')"), "Choosing the Light theme applies it")
+    await wc!.executeJavaScript("document.querySelector('[role=radio][title=\"Neutral grey, the Mac desktop look\"]').click()")
+    assert(await wc!.executeJavaScript("document.documentElement.dataset.theme === 'graphite'"), "Graphite is the Mac theme")
+    await wc!.executeJavaScript("document.querySelector('button[data-slot=dialog-close]').click()")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Open classic workspace\"]').click()")
+    for (let i = 0; i < 40; i++) {
+      if (await wc!.executeJavaScript("!!document.querySelector('.mac-titlebar') && !!document.querySelector('.mac-dock')")) break
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
     const macFrame = await wc!.executeJavaScript(`({
       titlebar: !!document.querySelector('.mac-titlebar .mac-search'),
       sections: !!document.querySelector('.mac-navigator'),
@@ -97,7 +191,7 @@ server.listen(0, "127.0.0.1", () => {
       hostedShell: !!document.querySelector('.bw-app-shell'),
       focusedEditor: document.activeElement?.matches('input, textarea, [contenteditable=true]') ?? false,
     })`)
-    assert(macFrame.titlebar && macFrame.sections && macFrame.dock && macFrame.status && !macFrame.hostedShell, "Mac workspace has its own title bar, navigation, tool dock and status bar")
+    assert(macFrame.titlebar && macFrame.sections && macFrame.dock && macFrame.status && !macFrame.hostedShell, `Mac workspace has its own title bar, navigation, tool dock and status bar (${JSON.stringify(macFrame)})`)
     assert(!macFrame.focusedEditor, "Mac workspace does not focus an editor on arrival")
     const headerHeight = await wc!.executeJavaScript("document.querySelector('.mac-titlebar')?.getBoundingClientRect().height")
     assert(headerHeight >= 36 && headerHeight <= 46, "Mac title bar stays compact")

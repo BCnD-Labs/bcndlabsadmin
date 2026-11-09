@@ -220,6 +220,66 @@ html[data-theme="dark"] {
   --bw-settings-side: #0f1218;
   --bw-settings-card: #1a1f28;
 }
+/* Graphite: the neutral grey of the Mac desktop (the Mac app's default theme). */
+html[data-theme="graphite"] {
+  --bw-ground: #28292b;
+  --bw-panel: #303134;
+  --bw-raised: #3a3b3e;
+  --bw-selected: #243e60;
+  --bw-titlebar: #242527;
+  --bw-well: #26272a;
+  --bw-ledge: #3f4043;
+  --bw-ledge-hi: #48494c;
+  --bw-line: #48494c;
+  --bw-line-soft: #3e3f42;
+  --bw-border: #606065;
+  --bw-edge: #3e3f42;
+  --bw-text: #f2f3f5;
+  --bw-text-2: #d9dce1;
+  --bw-muted: #b4b8c0;
+  --bw-blue: #64b5f6;
+  --bw-green: #66bb6a;
+  --bw-amber: #ffa726;
+  --bw-settings-bg: #2b2c2e;
+  --bw-settings-side: #252628;
+  --bw-settings-card: #333437;
+}
+/* Midnight: deep blue-black. */
+html[data-theme="midnight"] {
+  --bw-ground: #0a0f1e; --bw-grid: rgba(130, 160, 220, 0.035); --bw-panel: #121a2e; --bw-raised: #19223a; --bw-selected: #223055;
+  --bw-titlebar: #0d1426; --bw-well: #0b1120; --bw-ledge: #243050; --bw-ledge-hi: #2c3a60; --bw-line: #212c48; --bw-line-soft: #1a2339;
+  --bw-border: #2b3858; --bw-edge: #222d4a; --bw-text: #e6eaf5; --bw-text-2: #c4cce0; --bw-muted: #a1abc4; --bw-faint: #8590ab;
+  --bw-off: #28324d; --bw-check: #46536f; --bw-settings-bg: #0f1526; --bw-settings-side: #0c1120; --bw-settings-card: #161e34;
+}
+/* Mocha: warm dark brown. */
+html[data-theme="mocha"] {
+  --bw-ground: #1d1a18; --bw-grid: rgba(220, 190, 160, 0.03); --bw-panel: #2a2522; --bw-raised: #342e2a; --bw-selected: #473b33;
+  --bw-titlebar: #211d1b; --bw-well: #191614; --bw-ledge: #3d3530; --bw-ledge-hi: #4a403a; --bw-line: #3f3732; --bw-line-soft: #332d29;
+  --bw-border: #4f453f; --bw-edge: #3a322e; --bw-text: #efe9e3; --bw-text-2: #d6cdc4; --bw-muted: #b5aaa0; --bw-faint: #a0958b;
+  --bw-off: #433a34; --bw-check: #75685f; --bw-settings-bg: #221e1c; --bw-settings-side: #1d1a18; --bw-settings-card: #2e2926;
+}
+/* Forest: dark green-grey. */
+html[data-theme="forest"] {
+  --bw-ground: #171d1b; --bw-grid: rgba(160, 210, 190, 0.03); --bw-panel: #212a27; --bw-raised: #2a3531; --bw-selected: #2f4a3f;
+  --bw-titlebar: #1b2220; --bw-well: #141917; --bw-ledge: #34413c; --bw-ledge-hi: #3d4c46; --bw-line: #313d38; --bw-line-soft: #29332f;
+  --bw-border: #3f4e48; --bw-edge: #2f3b36; --bw-text: #e6eeea; --bw-text-2: #c6d3cc; --bw-muted: #a5b5ac; --bw-faint: #93a49a;
+  --bw-off: #36443e; --bw-check: #627a6e; --bw-settings-bg: #1c2320; --bw-settings-side: #171d1b; --bw-settings-card: #26302c;
+}
+/* Light: bright surfaces with dark text. Hues that were tuned for dark grounds are deepened here. */
+html[data-theme="light"] {
+  color-scheme: light;
+  --bw-ground: #f1f3f6; --bw-grid: rgba(60, 80, 110, 0.05); --bw-panel: #ffffff; --bw-raised: #f3f5f8; --bw-selected: #e1e8f4;
+  --bw-titlebar: #e8ebf0; --bw-well: #eceff3; --bw-ledge: #d6dae1; --bw-ledge-hi: #c9ced7; --bw-line: #dce0e6; --bw-line-soft: #e8ebef;
+  --bw-border: #c9ced7; --bw-edge: #d9dde4;
+  --bw-red-soft: rgba(201, 42, 42, 0.1); --bw-red-light: #b02222; --bw-red-text: #b02222;
+  --bw-amber: #a86500; --bw-green: #1f7a45; --bw-blue: #2563b8;
+  --bw-text: #1c2128; --bw-text-2: #38414c; --bw-muted: #566170; --bw-faint: #697483;
+  --bw-off: #cfd4db; --bw-check: #8a94a3; --bw-on-paper: #14171c;
+  --bw-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --bw-shadow-float: 0 2px 6px rgba(16, 24, 40, 0.12), 0 18px 40px -12px rgba(16, 24, 40, 0.25);
+  --bw-scanlines: none;
+  --bw-settings-bg: #f7f8fa; --bw-settings-side: #eceff3; --bw-settings-card: #ffffff;
+}
 /* Interface font: Settings → Appearance (Sans by default, Mono for the all-terminal look). */
 html[data-font="mono"] {
   --bw-ui-font: var(--font-mono);
@@ -349,6 +409,14 @@ html[data-accent="cyan"] { --bw-red: #0f9fb8; --bw-red-hover: #0d8ca2; --bw-red-
 html[data-accent="orange"] { --bw-red: #e8710a; --bw-red-hover: #cf6409; --bw-red-ledge: #9e4c07; }
 html[data-accent="green"] { --bw-red: #1e8e3e; --bw-red-hover: #1a7c36; --bw-red-ledge: #135c28; }
 html[data-accent="pink"] { --bw-red: #d6337f; --bw-red-hover: #be2b70; --bw-red-ledge: #8f2054; }
+
+/* Non-red accents also tint the "soft" and "light" accent roles (active rows, markers). */
+html[data-accent]:not([data-accent="red"]) { --bw-red-soft: color-mix(in srgb, var(--bw-red) 18%, transparent); --bw-red-light: color-mix(in srgb, var(--bw-red) 60%, white); }
+html[data-theme="light"][data-accent]:not([data-accent="red"]) { --bw-red-light: var(--bw-red); }
+
+/* Corner roundness (Settings → Appearance). The doubled attribute outranks the Mac app's own radii. */
+html[data-roundness="sharp"][data-theme] { --bw-control-radius: 0.125rem; --bw-panel-radius: 0.1875rem; }
+html[data-roundness="round"][data-theme] { --bw-control-radius: 0.625rem; --bw-panel-radius: 1.25rem; }
 
 /* Density (Settings → Appearance). Compact halves the gaps and trims the title bar. */
 html[data-density="compact"] { --bw-grid-gap: 0.75rem; --bw-panel-header-h: 2rem; }

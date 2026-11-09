@@ -10,10 +10,10 @@ import { plannerColor as p } from "../../../planner-theme.ts"
  * One note as a line: paper-colour document tile, first line, a one-line preview, its course and age. A tap opens
  * its read-only details; the pin button on the right pins or unpins it.
  */
-export function NoteRow({ note, course, now, onOpen, onSelect, onPin, expanded = false, compact = false }: { note: Note; course?: CourseOption; now: Date; onOpen: () => void; onSelect: () => void; onPin: () => void; expanded?: boolean; compact?: boolean }) {
+export function NoteRow({ note, course, now, onOpen, onSelect, onPin, expanded = false, compact = false, extra }: { extra?: string; note: Note; course?: CourseOption; now: Date; onOpen: () => void; onSelect: () => void; onPin: () => void; expanded?: boolean; compact?: boolean }) {
   const title = noteTitle(note.text)
   const preview = notePreview(note.text)
-  const meta = [course?.label, shortAgo(note.updatedAt, now), note.links?.length ? `${note.links.length} link${note.links.length === 1 ? "" : "s"}` : ""].filter(Boolean).join(" · ")
+  const meta = [course?.label, extra, shortAgo(note.updatedAt, now), note.links?.length ? `${note.links.length} link${note.links.length === 1 ? "" : "s"}` : ""].filter(Boolean).join(" · ")
   return (
     <View style={[selectedItem.item, expanded && selectedItem.itemOn]}>
     <View style={styles.row}>

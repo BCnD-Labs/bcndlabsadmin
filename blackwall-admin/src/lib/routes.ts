@@ -1,6 +1,8 @@
 /** URLs for records and sections, so links don't hard-code paths. */
 export const PRODUCTIVITY = "/productivity"
 export const DEVELOPMENT = "/development"
+export const JOURNAL = "/journal"
+export const journalHref = JOURNAL
 export const CMS = "/cms"
 export const MIKOSHI = "/mikoshi"
 export const SOCIAL = "/social"
