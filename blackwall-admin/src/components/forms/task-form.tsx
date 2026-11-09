@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { kindInfo, learningType } from "@/features/learning/learning-utils"
-import type { LearningItemType, Task } from "@/lib/types"
+import type { LearningItemType, Task, WorkEffort, WorkStatus } from "@/lib/types"
+import { EFFORTS, WORK_STATUSES } from "@shared/learning"
 import { useWorkspace } from "@/stores/workspace"
 import { CourseSelect, Field, OptionSelect } from "./fields"
 import { FormFrame } from "./form-frame"
@@ -29,6 +30,8 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
     done: base?.done ?? false,
     links: base?.links ?? [],
     score: base?.score != null ? String(base.score) : "",
+    status: base?.status as WorkStatus | undefined,
+    effort: base?.effort as WorkEffort | undefined,
   })
   const set = (patch: Partial<typeof draft>) => setDraft((d) => ({ ...d, ...patch }))
 
@@ -41,6 +44,9 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
   const scoreBad = score !== undefined && (!Number.isFinite(score) || score < 0 || score > 100)
   // Coursework reads as what it is: "New assignment", "Exam updated".
   const noun = draft.courseId ? type.label : "Task"
+  // Assignments, exams and milestones move through a lifecycle; events don't.
+  const tracked = !!draft.courseId && draft.learningType !== "event"
+  const finished = (status?: WorkStatus) => status === "submitted" || status === "graded"
 
   const save = () => {
     const values = {
@@ -52,6 +58,8 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
       learningType: draft.courseId ? draft.learningType : undefined,
       starred: draft.starred,
       done: draft.done,
+      status: tracked ? draft.status : undefined,
+      effort: tracked ? draft.effort : undefined,
       links: cleanLinks(draft.links),
       score: draft.courseId && scored ? score : undefined,
     }
@@ -135,11 +143,21 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
         </div>
         {existing && (
           <div className="flex items-center gap-2 pb-1.5">
-            <Switch id="task-done" checked={draft.done} onCheckedChange={(done) => set({ done })} />
+            <Switch id="task-done" checked={draft.done} onCheckedChange={(done) => set({ done, ...(draft.status && { status: done ? "submitted" : "in_progress" }) })} />
             <Label htmlFor="task-done" className="text-xs font-normal">Done</Label>
           </div>
         )}
       </div>
+      {tracked && (
+        <div className="grid gap-x-4 gap-y-3.5 sm:grid-cols-2">
+          <Field label="Where it stands" htmlFor="task-status">
+            <OptionSelect id="task-status" value={draft.status ?? (draft.done ? "submitted" : "not_started")} onChange={(status) => set({ status, done: finished(status) })} options={WORK_STATUSES} />
+          </Field>
+          <Field label="How big is it?" htmlFor="task-effort" hint="Sets how many days ahead the planner suggests starting.">
+            <OptionSelect id="task-effort" value={draft.effort ?? "medium"} onChange={(effort) => set({ effort })} options={EFFORTS.map((e) => ({ value: e.value, label: `${e.label} · ${e.hint}` }))} />
+          </Field>
+        </div>
+      )}
       <Field label="Linked documents" htmlFor="task-links" hint="Notes, specs or files that live elsewhere. They open in their own app.">
         <DocLinksField value={draft.links} onChange={(links) => set({ links })} />
       </Field>

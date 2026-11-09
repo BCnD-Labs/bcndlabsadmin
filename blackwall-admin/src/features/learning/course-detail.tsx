@@ -1,6 +1,6 @@
 import { DocLinksList } from "@/components/common/doc-links"
 import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
-import { CalendarRange, ChevronDown, Clock, ExternalLink, GraduationCap, Mail, MapPin, Pencil, Plus, StickyNote as NoteIcon, Tag, UserRound } from "lucide-react"
+import { CalendarRange, ChevronDown, Clock, ExternalLink, GitBranch, GraduationCap, Mail, MapPin, Pencil, Plus, StickyNote as NoteIcon, Tag, UserRound } from "lucide-react"
 import { useState, type ReactNode } from "react"
 import { Link, useParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -26,6 +26,8 @@ import type { Course, LearningItemType, Task } from "@/lib/types"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
 import { Input } from "@/components/ui/input"
+import { daysLabel, meetingKindLabel } from "@shared/learning"
+import { formatTime } from "@/lib/dates"
 import { CourseworkRow, KindIcon } from "./coursework"
 import { ProgressBar, ProgressRing, dateRange, kindSubtitle } from "./learning-page"
 import { COURSE_STATUS_LABEL, compareCoursework, courseStatus, kindInfo, kindOf, kindProgress, learningType } from "./learning-utils"
@@ -228,9 +230,19 @@ function CourseInfo({ course, items }: { course: Course; items: Task[] }) {
             <a href={`mailto:${course.instructorEmail}`} className="underline-offset-2 hover:underline">{course.instructorEmail}</a>
           </InfoRow>
         )}
-        {course.schedule && (
+        {course.meetings?.map((m) => (
+          <InfoRow key={m.id} icon={Clock} label={meetingKindLabel(m.kind)}>
+            {daysLabel(m.days)} {formatTime(m.start)}–{formatTime(m.end)}{m.location ? ` · ${m.location}` : ""}
+          </InfoRow>
+        ))}
+        {course.schedule && !course.meetings?.length && (
           <InfoRow icon={Clock} label="Schedule">
             {course.schedule}
+          </InfoRow>
+        )}
+        {course.repoUrl && (
+          <InfoRow icon={GitBranch} label="Class repo">
+            <a href={course.repoUrl} target="_blank" rel="noreferrer" className="underline-offset-2 hover:underline">{course.repoUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")}</a>
           </InfoRow>
         )}
         {course.location && (
@@ -262,6 +274,21 @@ function CourseInfo({ course, items }: { course: Course; items: Task[] }) {
       </dl>
       {course.description && info.value !== "skill" && <p className="mt-2.5 border-t border-line-soft pt-2.5 text-xs leading-relaxed whitespace-pre-line text-ink-2">{course.description}</p>}
       {!!course.links?.length && <div className="mt-2.5 border-t border-line-soft pt-2.5"><p className="bw-label mb-1.5">{info.value === "skill" ? "Resources" : "Linked documents"}</p><DocLinksList links={course.links} /></div>}
+    </Panel>
+  )
+}
+
+/** Syllabus and policies live with the course, saved when you press Save. */
+function CourseReference({ course }: { course: Course }) {
+  const update = useWorkspace((s) => s.update)
+  const [syllabus, setSyllabus] = useState(course.syllabus ?? "")
+  const [policies, setPolicies] = useState(course.policies ?? "")
+  const dirty = syllabus !== (course.syllabus ?? "") || policies !== (course.policies ?? "")
+  return (
+    <Panel category="learning" title="Syllabus and policies" tool="course" command="syllabus" bodyClassName="grid gap-3 px-3.5 py-3"
+      actions={<Button size="sm" disabled={!dirty} onClick={() => { update("courses", course.id, { syllabus: syllabus.trim() || undefined, policies: policies.trim() || undefined }); toast.success("Saved") }}>Save</Button>}>
+      <label className="grid gap-1 text-xs text-muted-foreground">Syllabus<Textarea rows={5} value={syllabus} onChange={(e) => setSyllabus(e.target.value)} placeholder="Grading breakdown, weekly topics, what the class covers…" /></label>
+      <label className="grid gap-1 text-xs text-muted-foreground">Policies<Textarea rows={3} value={policies} onChange={(e) => setPolicies(e.target.value)} placeholder="Late work, attendance, collaboration, how to reach the instructor…" /></label>
     </Panel>
   )
 }
@@ -388,6 +415,7 @@ export function CourseDetail() {
         </GridItem>
         <GridItem><CourseInfo course={course} items={items} /></GridItem>
         <GridItem><CourseNotes course={course} /></GridItem>
+        {kind === "course" && <GridItem span={2}><CourseReference key={course.id} course={course} /></GridItem>}
       </WorkspaceGrid>
     </>
   )
