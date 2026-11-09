@@ -11,8 +11,6 @@ import { EmptyState } from "@/components/common/empty-state"
 import { PageHeader } from "@/components/common/page-header"
 import { Panel } from "@/components/common/panel"
 import { GridItem, WorkspaceGrid } from "@/components/common/workspace-grid"
-import { SiteSwitcher } from "@/features/cms/site-switcher"
-import { SiteTabs } from "@/features/cms/site-tabs"
 import { draftHref, sitePageHref } from "@/lib/routes"
 import type { Asset } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -102,9 +100,8 @@ export function AssetsPage() {
 
   return (
     <>
-      <PageHeader title="Website" badge={<SiteSwitcher />} />
+      <PageHeader title="Assets" subtitle="Pictures for all your sites" />
       <WorkspaceGrid>
-        <GridItem span="full"><SiteTabs current="assets" /></GridItem>
         {info && !connected && (
           <GridItem span="full">
             <p role="status" className="bw-panel flex flex-wrap items-center gap-3 px-4 py-3 text-[13px] text-ink-2">
@@ -114,7 +111,7 @@ export function AssetsPage() {
           </GridItem>
         )}
         <GridItem span="full">
-          <Panel category="website" title="Asset library" meta={assets.length ? `${assets.length} · ${humanBytes(total)}` : undefined} actions={<AddPictureButton />} bodyClassName="p-0">
+          <Panel category="website" title="Library" meta={assets.length ? `${assets.length} · ${humanBytes(total)}` : undefined} actions={<AddPictureButton />} bodyClassName="p-0">
             <div onDragOver={(e) => { e.preventDefault(); setOver(true) }} onDragLeave={() => setOver(false)} onDrop={drop} className={cn("min-h-56 transition-colors", over && "bg-selected")}>
               {assets.length > 0 && <div className="border-b border-line-soft px-3 py-2"><Input aria-label="Search pictures" className="h-8 w-full max-w-xs text-xs" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name, description or tag" /></div>}
               {shown.length ? (

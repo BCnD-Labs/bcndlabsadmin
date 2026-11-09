@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 import type { Category } from "@/components/common/category-icon"
 import { usePrefs } from "@/stores/prefs"
-import { CMS, DEVELOPMENT, cmsPagesHref, formsHref, siteSettingsHref, MIKOSHI, PRODUCTIVITY, launcherHref, mikoshiStatusHref, mikoshiStorageHref, insightsHref, learningHref, mediaHref, plannerHref, postsHref, projectsHref, siteAnalyticsHref, SOCIAL, socialHref } from "@/lib/routes"
+import { CMS, DEVELOPMENT, assetsHref, cmsPagesHref, sitesHref, formsHref, siteSettingsHref, MIKOSHI, PRODUCTIVITY, launcherHref, mikoshiStatusHref, mikoshiStorageHref, insightsHref, learningHref, mediaHref, plannerHref, postsHref, projectsHref, siteAnalyticsHref, SOCIAL, socialHref } from "@/lib/routes"
 
 export interface NavChild {
   label: string
@@ -43,19 +43,21 @@ export const NAV: NavDestination[] = [
   },
   {
     id: "cms",
-    label: "Website",
+    label: "Websites",
     category: "website",
-    to: cmsPagesHref,
+    to: sitesHref,
     match: CMS,
     children: [
+      { label: "All sites", to: sitesHref },
       { label: "Pages", to: cmsPagesHref },
       { label: "Posts", to: postsHref },
       { label: "Forms", to: formsHref },
-      { label: "Assets", to: mediaHref },
+      { label: "Repo images", to: mediaHref },
       { label: "Traffic", to: siteAnalyticsHref },
       { label: "Site settings", to: siteSettingsHref },
     ],
   },
+  { id: "assets", label: "Assets", category: "website", to: assetsHref, match: assetsHref },
   { id: "social", label: "Social", category: "social", to: socialHref, match: SOCIAL },
   {
     id: "mikoshi",

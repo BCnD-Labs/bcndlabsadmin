@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input"
 import { EmptyState } from "@/components/common/empty-state"
 import { PageHeader } from "@/components/common/page-header"
 import { SitePreview } from "@/features/cms/site-preview"
-import { deployedAt, publishSite as publishSiteNow } from "@/features/cms/use-cms"
+import { deployedAt, publishSite as publishSiteNow, selectSite } from "@/features/cms/use-cms"
 import { useConnections } from "@/services/connector"
 import { SourceBadge } from "@/components/common/source-badge"
 import { Panel } from "@/components/common/panel"
@@ -71,6 +71,8 @@ function Editor({ draft }: { draft: Draft }) {
   const bodyRef = useRef<HTMLTextAreaElement>(null)
   /** A post on one of your Blackwall sites (Pagesmith) rather than the classic connected website. */
   const pagesmith = useWorkspace((s) => s.sites.find((x) => x.id === draft.siteId))
+  const siteOfPost = draft.siteId
+  useEffect(() => { if (siteOfPost) selectSite(siteOfPost) }, [siteOfPost])
 
   // Put keystrokes in the workspace immediately. Only network saves are debounced,
   // so incoming server updates cannot be mistaken for unsaved editor changes.

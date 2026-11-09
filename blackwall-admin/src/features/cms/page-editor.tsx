@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Copy, FileDown, MoreHorizontal, Monitor, MousePointerClick, Plus, Smartphone, Tablet, Trash2 } from "lucide-react"
-import { useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 import { imagePathsIn } from "@shared/assets"
@@ -25,7 +25,7 @@ import { AssetField } from "@/features/assets/asset-field"
 import { usePreviewPictures } from "@/features/assets/use-assets"
 import { SectionGallery } from "./section-gallery"
 import { SitePreview } from "./site-preview"
-import { duplicatePage } from "./use-cms"
+import { duplicatePage, selectSite } from "./use-cms"
 
 /* Tree helpers: blocks are nested (section → row → card → content). */
 function mapTree(list: SiteBlock[], id: string, fn: (b: SiteBlock) => SiteBlock | null): SiteBlock[] {
@@ -148,6 +148,8 @@ export function PageEditor() {
   const [gallery, setGallery] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const slugAtFocus = useRef<string | null>(null)
+  const siteOfPage = page?.siteId
+  useEffect(() => { if (siteOfPage) selectSite(siteOfPage) }, [siteOfPage])
 
   const pages = useMemo(() => allPages.filter((p) => p.siteId === site?.id), [allPages, site?.id])
   const posts = useMemo(() => drafts.filter((d) => d.siteId === site?.id && d.publishedAt), [drafts, site?.id])

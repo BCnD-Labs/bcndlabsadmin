@@ -95,7 +95,7 @@ export function CmsPagesPage() {
 
   return (
     <>
-      <PageHeader title="Website" badge={<SiteSwitcher />} actions={<Button onClick={() => openForm({ kind: "sitePage" })}><Plus /> Page</Button>} />
+      <PageHeader title={site?.name ?? "Website"} badge={<SiteSwitcher />} actions={<Button onClick={() => openForm({ kind: "sitePage" })}><Plus /> Page</Button>} />
       <WorkspaceGrid>
         <GridItem span="full"><SiteTabs current="pages" /></GridItem>
         <GridItem span="full"><PublishBar site={site} /></GridItem>
