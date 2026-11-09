@@ -89,6 +89,44 @@ server.listen(0, "127.0.0.1", () => {
     }
     assert(wc!.getURL() === "bw-native://app/productivity", "Workspace route survives a reload")
     assert(await wc!.executeJavaScript("!!document.querySelector('[data-testid=planner]')"), "Planner opens with server workspace data")
+    assert(await wc!.executeJavaScript("!!document.querySelector('.mac-dw-desktop')"), "Mac workspace opens as a desktop")
+    const logInput = (selector: string, value: string) => `(() => { const field = document.querySelector(${JSON.stringify(selector)}); if (!field) return false; const set = Object.getOwnPropertyDescriptor(field instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype, 'value').set; set.call(field, ${JSON.stringify(value)}); field.dispatchEvent(new Event('input', { bubbles: true })); return true })()`
+    assert(!await wc!.executeJavaScript("!!document.querySelector('.mac-dw-sidebar')"), "Planner sidebar starts closed")
+    await wc!.executeJavaScript("document.querySelector('.mac-dw-date').click()")
+    assert(await wc!.executeJavaScript("!!document.querySelector('.mac-dw-sidebar [role=grid]') && !!document.querySelector('.mac-dw-sidebar .mac-task-list, .mac-dw-sidebar .mac-tool-empty') && !!document.querySelector('.mac-dw-sidebar .mac-log-tool')"), "Date button opens the Planner sidebar with calendar, tasks and daily log")
+    await wc!.executeJavaScript("document.querySelector('.mac-log-add').click()")
+    assert(await wc!.executeJavaScript(logInput('.mac-log-name input', 'Build notes')), "Daily log accepts a section name")
+    await wc!.executeJavaScript("document.querySelector('.mac-log-name .is-primary').click()")
+    assert(await wc!.executeJavaScript("!!Array.from(document.querySelectorAll('.mac-log-group-head strong')).find((node) => node.textContent === 'Build notes')"), "Daily log saves a named section")
+    assert(await wc!.executeJavaScript(logInput('textarea[aria-label="New Build notes entry"]', 'Compact Mac reflection')), "Daily log accepts an entry draft")
+    await wc!.executeJavaScript("Array.from(document.querySelectorAll('.mac-log-group')).find((group) => group.textContent.includes('Build notes')).querySelector('.mac-log-actions .is-primary').click()")
+    assert(await wc!.executeJavaScript("!!Array.from(document.querySelectorAll('.mac-log-item-text')).find((node) => node.textContent === 'Compact Mac reflection')"), "Daily log saves an entry in its section")
+    await wc!.executeJavaScript("Array.from(document.querySelectorAll('.mac-log-item-text')).find((node) => node.textContent === 'Compact Mac reflection').click()")
+    assert(await wc!.executeJavaScript(logInput('textarea[aria-label="Edit Build notes entry"]', 'Edited Mac reflection')), "Daily log opens a saved entry for editing")
+    await wc!.executeJavaScript("Array.from(document.querySelectorAll('.mac-log-item')).find((row) => row.querySelector('textarea')).querySelector('.is-primary').click()")
+    assert(await wc!.executeJavaScript("!!Array.from(document.querySelectorAll('.mac-log-item-text')).find((node) => node.textContent === 'Edited Mac reflection')"), "Daily log saves an edited entry")
+    await wc!.executeJavaScript("Array.from(document.querySelectorAll('.mac-log-group-head strong')).find((node) => node.textContent === 'Build notes').closest('button').click()")
+    assert(await wc!.executeJavaScript("Array.from(document.querySelectorAll('.mac-log-group-head strong')).find((node) => node.textContent === 'Build notes').closest('button').getAttribute('aria-expanded') === 'false'"), "Daily log section collapses")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Open Learning\"]').click()")
+    for (let i = 0; i < 40; i++) {
+      if (await wc!.executeJavaScript("!!document.querySelector('[aria-label=\"Learning window\"] .mac-dw-app-main')?.textContent?.trim()")) break
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+    assert(await wc!.executeJavaScript("!!document.querySelector('[aria-label=\"Learning window\"] .mac-dw-app-main')?.textContent?.trim()"), "Learning opens in its own app window")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Open Projects\"]').click()")
+    assert(await wc!.executeJavaScript("!!document.querySelector('[aria-label=\"Learning window\"]') && !!document.querySelector('[aria-label=\"Projects window\"]')"), "Opening Projects leaves Learning open")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Close projects window\"]').click()")
+    assert(await wc!.executeJavaScript("!document.querySelector('[aria-label=\"Projects window\"]') && !!document.querySelector('[aria-label=\"Learning window\"]')"), "Closing Projects leaves Learning open")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Open Projects\"]').click()")
+    assert(await wc!.executeJavaScript("!!document.querySelector('[aria-label=\"Projects window\"]')"), "Projects reopens from the compact launcher")
+    if (process.env.BW_DESKTOP_SHOT) writeFileSync(process.env.BW_DESKTOP_SHOT, (await wc!.capturePage()).toPNG())
+    await wc!.executeJavaScript("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))")
+    assert(await wc!.executeJavaScript("!document.querySelector('.mac-dw-sidebar')"), "Escape closes the Planner sidebar")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Open classic workspace\"]').click()")
+    for (let i = 0; i < 40; i++) {
+      if (await wc!.executeJavaScript("!!document.querySelector('.mac-titlebar') && !!document.querySelector('.mac-dock')")) break
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
     const macFrame = await wc!.executeJavaScript(`({
       titlebar: !!document.querySelector('.mac-titlebar .mac-search'),
       sections: !!document.querySelector('.mac-navigator'),
@@ -97,7 +135,7 @@ server.listen(0, "127.0.0.1", () => {
       hostedShell: !!document.querySelector('.bw-app-shell'),
       focusedEditor: document.activeElement?.matches('input, textarea, [contenteditable=true]') ?? false,
     })`)
-    assert(macFrame.titlebar && macFrame.sections && macFrame.dock && macFrame.status && !macFrame.hostedShell, "Mac workspace has its own title bar, navigation, tool dock and status bar")
+    assert(macFrame.titlebar && macFrame.sections && macFrame.dock && macFrame.status && !macFrame.hostedShell, `Mac workspace has its own title bar, navigation, tool dock and status bar (${JSON.stringify(macFrame)})`)
     assert(!macFrame.focusedEditor, "Mac workspace does not focus an editor on arrival")
     const headerHeight = await wc!.executeJavaScript("document.querySelector('.mac-titlebar')?.getBoundingClientRect().height")
     assert(headerHeight >= 36 && headerHeight <= 46, "Mac title bar stays compact")

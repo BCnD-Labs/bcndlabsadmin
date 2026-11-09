@@ -12,6 +12,7 @@ interface NotificationState {
   error?: string
   refresh: () => Promise<void>
   markRead: (id: string) => void
+  markManyRead: (ids: string[]) => void
   markAllRead: () => void
 }
 
@@ -33,6 +34,11 @@ export const useNotifications = create<NotificationState>()((set, get) => ({
   markRead: (id) => {
     set({ items: get().items.map((n) => (n.id === id ? { ...n, read: true } : n)) })
     void api("notifications/read", { method: "POST", body: JSON.stringify({ ids: [id] }) }).catch(() => {})
+  },
+  markManyRead: (ids) => {
+    const selected = new Set(ids)
+    set({ items: get().items.map((n) => selected.has(n.id) ? { ...n, read: true } : n) })
+    if (ids.length) void api("notifications/read", { method: "POST", body: JSON.stringify({ ids }) }).catch(() => {})
   },
   markAllRead: () => {
     set({ items: get().items.map((n) => ({ ...n, read: true })) })

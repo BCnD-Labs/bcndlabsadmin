@@ -109,11 +109,7 @@ export class Notifier {
     // Links like "/cms/forms" become full addresses for pushes and emails.
     const url = m.url?.startsWith("/") ? (this.d.baseUrl ? `${this.d.baseUrl}${m.url}` : undefined) : (m.url ?? this.d.baseUrl)
     const sent: NotifyChannel[] = []
-    if (channels.includes("bell")) {
-      const item: FeedItem = { id: randomUUID(), event, group: def?.group ?? "server", title: m.title, body: m.body, url: m.url, at: new Date(this.now()).toISOString(), read: false }
-      await this.d.store.putState("notify.feed", [item, ...(await this.feed())].slice(0, FEED_MAX))
-      sent.push("bell")
-    }
+    if (channels.includes("bell")) sent.push("bell")
     const mem = await this.mem()
     for (const ch of ["ntfy", "email"] as const) {
       if (!channels.includes(ch)) continue
@@ -126,6 +122,11 @@ export class Notifier {
       } catch (e) {
         mem.deliveryErrors[ch] = { at: new Date(this.now()).toISOString(), message: (e as Error).message }
       }
+    }
+    if (sent.includes("bell") || sent.includes("ntfy")) {
+      const at = new Date(this.now()).toISOString()
+      const item: FeedItem = { id: randomUUID(), event, group: def?.group ?? "server", title: m.title, body: m.body, url: m.url, at, read: false, ...(sent.includes("ntfy") ? { ntfyAt: at } : {}) }
+      await this.d.store.putState("notify.feed", [item, ...(await this.feed())].slice(0, FEED_MAX))
     }
     await this.saveMem()
     return sent

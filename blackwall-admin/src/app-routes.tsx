@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate, useLocation, useParams } from "react-router-dom"
+import { createBrowserRouter, Navigate, useLocation, useParams, type RouteObject } from "react-router-dom"
 import type { ReactNode } from "react"
 import { InsightsPage, SiteAnalyticsPage } from "@/features/analytics/analytics-page"
 import { PostEditor } from "@/features/content/post-editor"
@@ -48,12 +48,8 @@ function MovedAnalytics() {
   return <Navigate to={new URLSearchParams(search).get("view") === "website" ? "/cms/analytics" : "/productivity/insights"} replace />
 }
 
-export function createBlackwallRouter(shell: ReactNode) {
-  return createBrowserRouter([
-  {
-    element: shell,
-    errorElement: <RouteError />,
-    children: [
+/** Shared page map also lets each Mac desktop window retain its own route. */
+export const blackwallPages: RouteObject[] = [
       { index: true, element: <HomePage /> },
       { path: "productivity", element: <PlannerPage /> },
       { path: "productivity/tasks", element: <ToPlanner /> },
@@ -92,7 +88,8 @@ export function createBlackwallRouter(shell: ReactNode) {
       { path: "settings", element: <SettingsRoute /> },
       { path: "settings/:section", element: <SettingsRoute /> },
       { path: "*", element: <NotFound /> },
-    ],
-  },
-  ])
+]
+
+export function createBlackwallRouter(shell: ReactNode) {
+  return createBrowserRouter([{ element: shell, errorElement: <RouteError />, children: blackwallPages }])
 }
