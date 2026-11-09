@@ -1,4 +1,6 @@
-import { Check, ChevronDown, Globe, Plus } from "lucide-react"
+import { Check, ChevronDown, Globe, LayoutGrid, Plus } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { sitesHref } from "@/lib/routes"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useUi } from "@/stores/ui"
@@ -10,6 +12,7 @@ export function SiteSwitcher() {
   const sites = useWorkspace((s) => s.sites)
   const current = useCurrentSite()
   const openForm = useUi((s) => s.openForm)
+  const navigate = useNavigate()
   if (!sites.length) return null
   return (
     <DropdownMenu>
@@ -30,6 +33,7 @@ export function SiteSwitcher() {
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => navigate(sitesHref)}><LayoutGrid /> All sites</DropdownMenuItem>
         <DropdownMenuItem onSelect={() => openForm({ kind: "site" })}><Plus /> New site…</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -249,6 +249,35 @@ export interface SitePage {
   updatedAt: Timestamp
 }
 
+/**
+ * A picture in the asset library. The bytes live in the Nextcloud folder it names (Blackwall keeps no copy);
+ * this record is what Pagesmith picks from. `file` is fixed once saved, because pages point at it.
+ */
+export interface Asset {
+  id: ID
+  /** What you call it in the library. */
+  name: string
+  /** File name in the library folder and on the site: `images/<file>`. */
+  file: string
+  /** Nextcloud folder the file is in, e.g. "/Blackwall/assets". */
+  folder: string
+  mime: string
+  width: number
+  height: number
+  bytes: number
+  /** What the picture shows, for people who can't see it. Used as the default for every place it is used. */
+  alt: string
+  tags?: string[]
+  /** Where it came from: "nextcloud:/Photos/a.jpg" or "device:a.jpg". */
+  source?: string
+  /** The size of the picture before it was processed, for "was 3.2 MB". */
+  originalBytes?: number
+  originalWidth?: number
+  originalHeight?: number
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+
 export interface SiteFormField { id: string; label: string; type: "text" | "email" | "textarea" | "select" | "checkbox"; required: boolean; options?: string[] }
 
 /** A reusable form (library) usable on any site's pages. Email is always collected and verified. */

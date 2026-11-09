@@ -17,7 +17,7 @@ export function crc32(data: Uint8Array): number {
 }
 
 /** Files by path (forward slashes, no leading slash) → the bytes of a .zip. */
-export function makeZip(files: Record<string, string>, when = new Date()): Uint8Array<ArrayBuffer> {
+export function makeZip(files: Record<string, string | Uint8Array>, when = new Date()): Uint8Array<ArrayBuffer> {
   const enc = new TextEncoder()
   const dosTime = (when.getHours() << 11) | (when.getMinutes() << 5) | (when.getSeconds() >> 1)
   const dosDate = (Math.max(0, when.getFullYear() - 1980) << 9) | ((when.getMonth() + 1) << 5) | when.getDate()
@@ -27,7 +27,7 @@ export function makeZip(files: Record<string, string>, when = new Date()): Uint8
   const push = (bytes: Uint8Array) => { parts.push(bytes); offset += bytes.length }
   for (const [path, text] of Object.entries(files)) {
     const name = enc.encode(path.replace(/^\/+/, ""))
-    const data = enc.encode(text)
+    const data = typeof text === "string" ? enc.encode(text) : text
     const crc = crc32(data)
     const local = new DataView(new ArrayBuffer(30))
     local.setUint32(0, 0x04034b50, true); local.setUint16(4, 20, true); local.setUint16(6, 0x0800, true); local.setUint16(8, 0, true)

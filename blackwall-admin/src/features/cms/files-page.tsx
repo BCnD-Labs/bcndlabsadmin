@@ -2,6 +2,7 @@ import { AlertTriangle, Check, Copy, Download, FileCode2, Info, Rocket } from "l
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { toast } from "sonner"
+import { SITE_IMAGES_DIR, assetCloudPath, humanBytes, usedAssets } from "@shared/assets"
 import { buildSite, checkSite, type SiteIssue } from "@shared/sitebuilder"
 import { makeZip } from "@shared/zip"
 import { Button } from "@/components/ui/button"
@@ -10,7 +11,6 @@ import { PageHeader } from "@/components/common/page-header"
 import { Panel } from "@/components/common/panel"
 import { GridItem, WorkspaceGrid } from "@/components/common/workspace-grid"
 import { draftHref, formsHref, postsHref, siteLookHref, siteSettingsHref, sitePageHref } from "@/lib/routes"
-import type { SiteBlock } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useConnections } from "@/services/connector"
 import { useUi } from "@/stores/ui"
@@ -18,18 +18,11 @@ import { useWorkspace } from "@/stores/workspace"
 import { PublishBar } from "./pages-tab"
 import { SiteSwitcher } from "./site-switcher"
 import { SiteTabs } from "./site-tabs"
+import { AssetImage } from "@/features/assets/asset-flow"
+import { fetchFile } from "@/features/mikoshi/storage-api"
 import { publishSite, saveFile, useCurrentSite } from "./use-cms"
 
 const kb = (n: number) => (n < 1024 ? `${n} B` : `${(n / 1024).toFixed(1)} KB`)
-
-/** Image files the pages point at (a site address, not a web address): they have to be copied next to the site. */
-function localImages(blocks: SiteBlock[], out = new Set<string>()) {
-  for (const b of blocks) {
-    if (b.type === "image" && typeof b.src === "string" && b.src.trim() && !/^(https?:)?\/\//i.test(b.src.trim()) && !b.src.startsWith("data:")) out.add(b.src.trim())
-    if (b.kids) localImages(b.kids, out)
-  }
-  return out
-}
 
 /** The checks, one row per page (or per area of the site), problems before tips, each with its own plain-words lines. */
 function groupIssues(issues: SiteIssue[], pages: { id: string; title: string }[]) {
@@ -65,13 +58,17 @@ export function CmsFilesPage() {
   const [busy, setBusy] = useState(false)
   useEffect(() => { void refresh() }, [refresh])
 
-  const files = useMemo(() => (site ? buildSite(site, pages, drafts, forms) : {}), [site, pages, drafts, forms])
-  const issues = useMemo(() => (site ? checkSite(site, pages, drafts, forms) : []), [site, pages, drafts, forms])
-  const images = useMemo(() => [...pages.filter((p) => p.siteId === site?.id).reduce((all, p) => localImages(p.sections, all), new Set<string>())].sort(), [pages, site?.id])
+  const library = useWorkspace((s) => s.assets)
+  const files = useMemo(() => (site ? buildSite(site, pages, drafts, forms, [], library) : {}), [site, pages, drafts, forms, library])
+  const issues = useMemo(() => (site ? checkSite(site, pages, drafts, forms, library) : []), [site, pages, drafts, forms, library])
+  const pictures = useMemo(() => (site ? usedAssets(library, site.id, pages, drafts) : []), [site, library, pages, drafts])
   if (!site) return <><PageHeader title="Website" /><Panel category="website" title="Get files"><EmptyState title="No site yet" action={<Button onClick={() => useUi.getState().openForm({ kind: "site" })}>New site</Button>} /></Panel></>
 
-  const paths = Object.keys(files).sort((a, b) => (a === "index.html" ? -1 : b === "index.html" ? 1 : a.localeCompare(b)))
-  const shown = files[picked] !== undefined ? picked : paths[0]
+  const pictureFile = (a: { file: string }) => `${SITE_IMAGES_DIR}/${a.file}`
+  const paths = [...Object.keys(files), ...pictures.map(pictureFile)].sort((a, b) => (a === "index.html" ? -1 : b === "index.html" ? 1 : a.localeCompare(b)))
+  const pictureAt = (path: string) => pictures.find((a) => pictureFile(a) === path)
+  const shown = paths.includes(picked) ? picked : paths[0]
+  const shownPicture = pictureAt(shown)
   const fix = issues.filter((i) => i.level === "fix")
   const groups = groupIssues(issues, pages)
   const repo = list.some((c) => c.provider === "website")
@@ -81,7 +78,7 @@ export function CmsFilesPage() {
 
   return (
     <>
-      <PageHeader title="Website" badge={<SiteSwitcher />} />
+      <PageHeader title={site?.name ?? "Website"} badge={<SiteSwitcher />} />
       <WorkspaceGrid>
         <GridItem span="full"><SiteTabs current="files" /></GridItem>
         <GridItem span="full"><PublishBar site={site} /></GridItem>
@@ -107,7 +104,14 @@ export function CmsFilesPage() {
         <GridItem span={2}>
           <Panel category="website" title="Put it online" bodyClassName="grid content-start gap-3 px-3.5 py-3 text-[13px]">
             <div className="grid gap-1.5">
-              <Button onClick={() => { saveFile(`${zipName}.zip`, makeZip(files), "application/zip"); markExported(); toast.success(`Downloaded ${paths.length} files`, { description: "Unzip them into your site's folder." }) }}><Download /> Download all {paths.length} files (.zip)</Button>
+              <Button onClick={async () => {
+                try {
+                  const all: Record<string, string | Uint8Array> = { ...files }
+                  for (const a of pictures) all[pictureFile(a)] = new Uint8Array(await (await fetchFile(assetCloudPath(a))).arrayBuffer())
+                  saveFile(`${zipName}.zip`, makeZip(all), "application/zip"); markExported()
+                  toast.success(`Downloaded ${paths.length} files`, { description: "Unzip them into your site's folder." })
+                } catch (e) { toast.error(`Couldn't get your pictures from Nextcloud: ${(e as Error).message}`) }
+              }}><Download /> Download all {paths.length} files (.zip)</Button>
               <p className="text-xs text-muted-foreground">Unzip into your site's folder (or repository), replacing what's there, then upload or push it the way you do now.{site.root ? <> Blackwall's Settings say this site lives in <code className="font-mono">{site.root}/</code>.</> : null}</p>
             </div>
             {repo && (
@@ -116,11 +120,11 @@ export function CmsFilesPage() {
                 <p className="text-xs text-muted-foreground">One click: Blackwall writes these same files to your GitHub repository in a single commit.</p>
               </div>
             )}
-            {images.length > 0 && (
+            {pictures.length > 0 && (
               <div className="border-t border-line-soft pt-3">
-                <p className="font-semibold text-ink">Pictures to copy over</p>
-                <p className="mb-1.5 text-xs text-muted-foreground">Your pages point at these image files. Blackwall doesn't store them: put each one at the same place in your site.</p>
-                <ul className="grid gap-0.5 font-mono text-xs text-ink-2">{images.map((p) => <li key={p}>{p}</li>)}</ul>
+                <p className="font-semibold text-ink">{pictures.length} {pictures.length === 1 ? "picture" : "pictures"} from your library</p>
+                <p className="mb-1.5 text-xs text-muted-foreground">They're in the .zip, in the <span className="font-mono">images/</span> folder. Copying files one by one? Download these from the list below.</p>
+                <ul className="grid gap-0.5 font-mono text-xs text-ink-2">{pictures.map((a) => <li key={a.id} className="flex justify-between gap-3"><span className="min-w-0 truncate">{pictureFile(a)}</span><span className="shrink-0 text-faint">{humanBytes(a.bytes)}</span></li>)}</ul>
               </div>
             )}
             {post && <p className="border-t border-line-soft pt-3 text-xs text-muted-foreground">Drafts stay out of the files until you publish them: <Link className="underline" to={draftHref(post.id)}>{post.title || "Untitled"}</Link>.</p>}
@@ -133,7 +137,7 @@ export function CmsFilesPage() {
                 {paths.map((p) => (
                   <li key={p}>
                     <button type="button" onClick={() => setPicked(p)} aria-current={p === shown} className={cn("flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-xs hover:bg-raised", p === shown && "bg-selected text-ink")}>
-                      <FileCode2 className="size-3.5 shrink-0 text-faint" /><span className="min-w-0 flex-1 truncate">{p}</span><span className="shrink-0 text-[10.5px] text-faint">{kb(files[p].length)}</span>
+                      <FileCode2 className="size-3.5 shrink-0 text-faint" /><span className="min-w-0 flex-1 truncate">{p}</span><span className="shrink-0 text-[10.5px] text-faint">{files[p] !== undefined ? kb(files[p].length) : humanBytes(pictureAt(p)?.bytes ?? 0)}</span>
                     </button>
                   </li>
                 ))}
@@ -141,9 +145,11 @@ export function CmsFilesPage() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2 border-b border-line-soft px-3 py-1.5">
                   <span className="min-w-0 flex-1 truncate font-mono text-xs text-ink">{shown}</span>
-                  <Button size="xs" variant="outline" onClick={() => { void navigator.clipboard.writeText(files[shown]).then(() => { setCopied(shown); markExported(); setTimeout(() => setCopied(null), 1500) }) }}>{copied === shown ? <><Check /> Copied</> : <><Copy /> Copy</>}</Button>
+                  {shownPicture ? <Button size="xs" variant="outline" onClick={() => void fetchFile(assetCloudPath(shownPicture)).then((b) => { saveFile(shownPicture.file, b, shownPicture.mime); markExported() }).catch((e: Error) => toast.error(e.message))}><Download /> Download</Button>
+                    : <Button size="xs" variant="outline" onClick={() => { void navigator.clipboard.writeText(files[shown]).then(() => { setCopied(shown); markExported(); setTimeout(() => setCopied(null), 1500) }) }}>{copied === shown ? <><Check /> Copied</> : <><Copy /> Copy</>}</Button>}
                 </div>
-                <pre className="max-h-96 overflow-auto p-3 font-mono text-[11.5px] leading-relaxed text-ink-2" tabIndex={0}>{files[shown] || "(an empty file)"}</pre>
+                {shownPicture ? <div className="grid place-items-center bg-[repeating-conic-gradient(#0003_0%_25%,transparent_0%_50%)] bg-[length:16px_16px] p-4"><AssetImage asset={shownPicture} className="max-h-80 max-w-full object-contain" /></div>
+                  : <pre className="max-h-96 overflow-auto p-3 font-mono text-[11.5px] leading-relaxed text-ink-2" tabIndex={0}>{files[shown] || "(an empty file)"}</pre>}
               </div>
             </div>
           </Panel>

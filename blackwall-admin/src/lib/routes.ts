@@ -21,13 +21,17 @@ export const projectsHref = `${PRODUCTIVITY}/projects`
 export const learningHref = `${PRODUCTIVITY}/learning`
 export const insightsHref = `${PRODUCTIVITY}/insights`
 
-export const cmsPagesHref = CMS
+/** Every site you manage, as cards: view one, or open it to edit. */
+export const sitesHref = CMS
+export const cmsPagesHref = `${CMS}/pages`
 export const postsHref = `${CMS}/posts`
 export const draftsHref = `${CMS}/posts?show=drafts`
 export const formsHref = `${CMS}/forms`
 export const siteSettingsHref = `${CMS}/settings`
 export const siteLookHref = `${CMS}/look`
 export const siteFilesHref = `${CMS}/files`
+/** The asset library belongs to Blackwall, not to one site: every site picks from it. */
+export const assetsHref = "/assets"
 export const sitePageHref = (id: string) => `${CMS}/pages/${id}`
 export const mediaHref = `${CMS}/media`
 export const siteAnalyticsHref = `${CMS}/analytics`

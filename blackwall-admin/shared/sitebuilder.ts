@@ -9,7 +9,8 @@
 import { renderMarkdown } from "./site.ts"
 import { STARTERS } from "./site-starters.ts"
 import type { InboxItem } from "./site-inbox.ts"
-import type { Draft, Site, SiteBlock, SiteForm, SitePage } from "../src/lib/types.ts"
+import { findAsset, imagePathsInPost } from "./assets.ts"
+import type { Asset, Draft, Site, SiteBlock, SiteForm, SitePage } from "../src/lib/types.ts"
 
 /* ------------------------------------------------------------------ colours */
 
@@ -75,10 +76,20 @@ export interface BuildCtx {
   where: "header" | "page" | "footer"
   h1: boolean
   preview: boolean
+  /** The asset library: gives pictures their size in the published markup. */
+  assets: Asset[]
+  /** Previews only: where to load each library picture from (site path → a URL the editor can show). */
+  assetUrls: Record<string, string>
+}
+
+/** A picture's address (in a preview, the library's own copy) and its width and height attributes when it is a library picture. */
+function pic(ctx: Pick<BuildCtx, "assets" | "assetUrls" | "preview">, src: string) {
+  const a = findAsset(ctx.assets, src)
+  return { src: (ctx.preview && ctx.assetUrls[src]) || src, size: a ? ` width="${a.width}" height="${a.height}"` : "" }
 }
 
 /** What a block's editor shows: the field key, its label, and the kind of input. */
-export interface BlockField { k: string; l: string; kind?: "text" | "big" | "select" | "number" | "form" | "url"; note?: string; options?: { value: string; label: string }[] }
+export interface BlockField { k: string; l: string; kind?: "text" | "big" | "select" | "number" | "form" | "url" | "asset"; note?: string; options?: { value: string; label: string }[] }
 
 export interface BlockDef {
   name: string
@@ -95,9 +106,9 @@ export const pageHref = (p: Pick<SitePage, "slug">) => (p.slug ? `/${p.slug}/` :
 export const postHref = (d: Pick<Draft, "slug">) => `/posts/${d.slug}/`
 const fmtDate = (key?: string) => (key ? new Date(`${key}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }) : "")
 
-function postCard(d: Draft, show: string[]) {
+function postCard(d: Draft, show: string[], ctx: BuildCtx) {
   const o = [`<a class="post-card" href="${esc(postHref(d))}">`]
-  if (show.includes("cover")) o.push(d.cover ? `  <img src="${esc(d.cover)}" alt="${esc(d.coverAlt ?? "")}" loading="lazy">` : '  <div class="post-card__cover"></div>')
+  if (show.includes("cover")) o.push(d.cover ? `  <img src="${esc(pic(ctx, d.cover).src)}"${pic(ctx, d.cover).size} alt="${esc(d.coverAlt ?? "")}" loading="lazy">` : '  <div class="post-card__cover"></div>')
   o.push('  <div class="post-card__body">')
   const kicker = [show.includes("course") && d.course, show.includes("week") && d.week != null && `Week ${d.week}`].filter(Boolean).join(" · ")
   if (kicker) o.push(`    <span class="post-card__kicker">${esc(kicker)}</span>`)
@@ -151,11 +162,12 @@ export const BLOCKS: Record<string, BlockDef> = {
   },
   image: {
     name: "Picture", def: { src: "", alt: "", shape: "wide" },
-    edit: [{ k: "src", l: "Image", kind: "url", note: "A path on your site like /images/me.jpg (copy the file there yourself), or a full https:// image address" }, { k: "alt", l: "Describe it" }, { k: "shape", l: "Shape", kind: "select", options: [{ value: "wide", label: "Wide" }, { value: "square", label: "Square" }, { value: "tall", label: "Tall" }] }],
-    html: (b) => {
+    edit: [{ k: "src", l: "Image", kind: "asset", note: "Pictures come from your asset library, where you can crop and shrink them first." }, { k: "alt", l: "Describe it" }, { k: "shape", l: "Shape", kind: "select", options: [{ value: "wide", label: "Wide" }, { value: "square", label: "Square" }, { value: "tall", label: "Tall" }] }],
+    html: (b, _ctx) => {
       const shape = b.shape === "square" ? " ph--square" : b.shape === "tall" ? " ph--tall" : ""
       const src = str(b.src).trim()
-      return src ? [`<img class="pic${shape}" src="${esc(src)}" alt="${esc(b.alt)}" loading="lazy">`] : [`<div class="ph${shape}">${txt(b.alt, "Picture")}</div>`]
+      const p = pic(_ctx, src)
+      return src ? [`<img class="pic${shape}" src="${esc(p.src)}"${p.size} alt="${esc(b.alt)}" loading="lazy">`] : [`<div class="ph${shape}">${txt(b.alt, "Picture")}</div>`]
     },
   },
   divider: { name: "Divider", def: {}, html: () => ["<hr>"] },
@@ -190,7 +202,7 @@ export const BLOCKS: Record<string, BlockDef> = {
         `<div class="week" id="week-${String(w).padStart(2, "0")}">`,
         `  <h2 class="week__label">Week ${w}</h2>`,
         '  <div class="post-grid">',
-        ...posts.filter((p) => p.week === w).sort((a, c) => a.title.localeCompare(c.title, undefined, { numeric: true })).flatMap((p) => postCard(p, show).map((l) => `    ${l}`)),
+        ...posts.filter((p) => p.week === w).sort((a, c) => a.title.localeCompare(c.title, undefined, { numeric: true })).flatMap((p) => postCard(p, show, ctx).map((l) => `    ${l}`)),
         "  </div>",
         "</div>",
       ])
@@ -203,7 +215,7 @@ export const BLOCKS: Record<string, BlockDef> = {
       const n = Math.max(1, Math.min(24, Number(b.count) || 3))
       const show = str(b.show || "cover,title,summary").split(",").map((s) => s.trim())
       const posts = [...ctx.posts].sort((a, c) => (c.publishedAt ?? c.updatedAt).localeCompare(a.publishedAt ?? a.updatedAt)).slice(0, n)
-      return posts.length ? ['<div class="post-grid">', ...posts.flatMap((p) => postCard(p, show).map((l) => `  ${l}`)), "</div>"] : ['<p class="muted">No posts yet.</p>']
+      return posts.length ? ['<div class="post-grid">', ...posts.flatMap((p) => postCard(p, show, ctx).map((l) => `  ${l}`)), "</div>"] : ['<p class="muted">No posts yet.</p>']
     },
   },
   newsletter: {
@@ -368,8 +380,8 @@ const PREVIEW_CSS = ".bw-hover { outline: 1px dashed #4c8dff; outline-offset: 3p
 
 interface Doc { title: string; description: string; body: string[]; current?: string; bodyClass: string }
 
-function documentHtml(site: Site, pages: SitePage[], doc: Doc, opts: { preview: boolean; posts: Draft[]; forms: SiteForm[] }) {
-  const ctx: BuildCtx = { site, pages, posts: opts.posts, forms: opts.forms, current: doc.current, where: "header", h1: false, preview: opts.preview }
+function documentHtml(site: Site, pages: SitePage[], doc: Doc, opts: { preview: boolean; posts: Draft[]; forms: SiteForm[]; assets?: Asset[]; assetUrls?: Record<string, string> }) {
+  const ctx: BuildCtx = { site, pages, posts: opts.posts, forms: opts.forms, current: doc.current, where: "header", h1: false, preview: opts.preview, assets: opts.assets ?? [], assetUrls: opts.assetUrls ?? {} }
   const head: string[] = [], foot: string[] = []
   emit([mk("sitename"), mk("nav")], "      ", ctx, head)
   ctx.where = "footer"
@@ -395,17 +407,17 @@ function documentHtml(site: Site, pages: SitePage[], doc: Doc, opts: { preview: 
 
 const slugClass = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "page"
 
-export function renderPage(site: Site, pages: SitePage[], page: SitePage, opts: { preview?: boolean; posts?: Draft[]; forms?: SiteForm[] } = {}) {
-  const ctx: BuildCtx = { site, pages, posts: opts.posts ?? [], forms: opts.forms ?? [], current: page.id, where: "page", h1: false, preview: !!opts.preview }
+export function renderPage(site: Site, pages: SitePage[], page: SitePage, opts: { preview?: boolean; posts?: Draft[]; forms?: SiteForm[]; assets?: Asset[]; assetUrls?: Record<string, string> } = {}) {
+  const ctx: BuildCtx = { site, pages, posts: opts.posts ?? [], forms: opts.forms ?? [], current: page.id, where: "page", h1: false, preview: !!opts.preview, assets: opts.assets ?? [], assetUrls: opts.assetUrls ?? {} }
   const body: string[] = []
   emit(page.sections, "      ", ctx, body)
   const title = page.slug ? `${page.title} — ${site.name}` : site.name
-  return documentHtml(site, pages, { title, description: page.description, body, current: page.id, bodyClass: `page-${slugClass(page.slug || "home")}` }, { preview: !!opts.preview, posts: opts.posts ?? [], forms: opts.forms ?? [] })
+  return documentHtml(site, pages, { title, description: page.description, body, current: page.id, bodyClass: `page-${slugClass(page.slug || "home")}` }, { preview: !!opts.preview, posts: opts.posts ?? [], forms: opts.forms ?? [], assets: opts.assets, assetUrls: opts.assetUrls })
 }
 
 /** Approved comments and the comment form, under a post (when the site has comments on). */
 function commentsHtml(site: Site, pages: SitePage[], post: Draft, comments: InboxItem[], preview: boolean) {
-  const ctx: BuildCtx = { site, pages, posts: [], forms: [], where: "page", h1: true, preview }
+  const ctx: BuildCtx = { site, pages, posts: [], forms: [], where: "page", h1: true, preview, assets: [], assetUrls: {} }
   const mine = comments.filter((c) => c.post === post.slug)
   const when = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
   return [
@@ -426,18 +438,21 @@ function commentsHtml(site: Site, pages: SitePage[], post: Draft, comments: Inbo
   ]
 }
 
-export function renderPost(site: Site, pages: SitePage[], post: Draft, opts: { preview?: boolean; forms?: SiteForm[]; comments?: InboxItem[] } = {}) {
+export function renderPost(site: Site, pages: SitePage[], post: Draft, opts: { preview?: boolean; forms?: SiteForm[]; comments?: InboxItem[]; assets?: Asset[]; assetUrls?: Record<string, string> } = {}) {
+  const pc = { assets: opts.assets ?? [], assetUrls: opts.assetUrls ?? {}, preview: !!opts.preview }
+  /** Library pictures typed into the Markdown get their address swapped for the preview's copy. */
+  const bodyHtml = renderMarkdown(post.body).replace(/(<img\b[^>]*?\bsrc=")([^"]+)(")/g, (m, a: string, u: string, z: string) => (pc.preview && pc.assetUrls[u] ? `${a}${pc.assetUrls[u]}${z}` : m))
   const kicker = [post.course, post.week != null && `Week ${post.week}`, post.due && `Due ${fmtDate(post.due)}`].filter(Boolean).join(" · ")
   const body = [
     '      <article class="section post">', '        <div class="container container--narrow">',
     kicker ? `          <p class="post__kicker">${esc(kicker)}</p>` : "",
     `          <h1>${esc(post.title || "Untitled")}</h1>`,
-    post.cover ? `          <img class="post__cover" src="${esc(post.cover)}" alt="${esc(post.coverAlt ?? "")}">` : "",
-    '          <div class="prose">', renderMarkdown(post.body), "          </div>",
+    post.cover ? `          <img class="post__cover" src="${esc(pic(pc, post.cover).src)}"${pic(pc, post.cover).size} alt="${esc(post.coverAlt ?? "")}">` : "",
+    '          <div class="prose">', bodyHtml, "          </div>",
     "        </div>", "      </article>",
     ...(site.comments ? commentsHtml(site, pages, post, opts.comments ?? [], !!opts.preview) : []),
   ].filter(Boolean)
-  return documentHtml(site, pages, { title: `${post.title} — ${site.name}`, description: post.excerpt, body, bodyClass: "page-post" }, { preview: !!opts.preview, posts: [], forms: opts.forms ?? [] })
+  return documentHtml(site, pages, { title: `${post.title} — ${site.name}`, description: post.excerpt, body, bodyClass: "page-post" }, { preview: !!opts.preview, posts: [], forms: opts.forms ?? [], assets: opts.assets, assetUrls: opts.assetUrls })
 }
 
 /** theme.css: the palette as CSS variables, dark mode, then your own CSS. */
@@ -524,12 +539,12 @@ const redirectHtml = (to: string) => `<!doctype html><html lang="en"><head><meta
 const cleanPath = (p: string) => "/" + p.replace(/^\/+|\/+$/g, "")
 
 /** Every file of the site, keyed by path relative to the site's root folder. */
-export function buildSite(site: Site, pages: SitePage[], posts: Draft[], forms: SiteForm[], comments: InboxItem[] = []): Record<string, string> {
+export function buildSite(site: Site, pages: SitePage[], posts: Draft[], forms: SiteForm[], comments: InboxItem[] = [], assets: Asset[] = []): Record<string, string> {
   const files: Record<string, string> = {}
   const live = posts.filter((p) => p.siteId === site.id && p.publishedAt)
   const own = pages.filter((p) => p.siteId === site.id)
-  for (const pg of own) files[pg.slug ? `${pg.slug}/index.html` : "index.html"] = renderPage(site, own, pg, { posts: live, forms })
-  for (const p of live) files[`posts/${p.slug}/index.html`] = renderPost(site, own, p, { forms, comments })
+  for (const pg of own) files[pg.slug ? `${pg.slug}/index.html` : "index.html"] = renderPage(site, own, pg, { posts: live, forms, assets })
+  for (const p of live) files[`posts/${p.slug}/index.html`] = renderPost(site, own, p, { forms, comments, assets })
   files["theme.css"] = buildTheme(site)
   files["style.css"] = buildCss()
   const base = site.domain ? `https://${site.domain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}` : ""
@@ -618,7 +633,7 @@ function walk(list: SiteBlock[], fn: (b: SiteBlock) => void) {
 const has = (v: unknown) => typeof v === "string" && v.trim().length > 0
 
 /** Plain-language problems to sort out before the files go live: placeholders, broken links, empty pages, forms that can't send. */
-export function checkSite(site: Site, pages: SitePage[], posts: Draft[], forms: SiteForm[]): SiteIssue[] {
+export function checkSite(site: Site, pages: SitePage[], posts: Draft[], forms: SiteForm[], assets: Asset[] = []): SiteIssue[] {
   const out: SiteIssue[] = []
   const own = pages.filter((p) => p.siteId === site.id)
   const live = posts.filter((p) => p.siteId === site.id && p.publishedAt)
@@ -634,14 +649,14 @@ export function checkSite(site: Site, pages: SitePage[], posts: Draft[], forms: 
   for (const page of own) {
     const name = page.title || "Untitled page"
     if (!page.sections.length) out.push({ level: "fix", text: `${name} is empty. Add a section to it, or delete it.`, pageId: page.id })
-    let blank = 0, noAlt = 0, noImage = 0, bad = 0, noForm = 0, h1 = 0
+    let blank = 0, noAlt = 0, noImage = 0, bad = 0, noForm = 0, h1 = 0, outside = 0
     walk(page.sections, (b) => {
       if (b.type === "heading") { if (!has(b.text) || SAMPLE_TEXT.has(String(b.text).trim().toLowerCase())) blank++; if (b.level === "1") h1++ }
       else if (b.type === "text" && !has(b.text)) blank++
       else if (b.type === "richtext" && !has(b.md)) blank++
       else if (b.type === "button" && !has(b.text)) blank++
       else if (b.type === "list" && !has(b.items)) blank++
-      else if (b.type === "image") { if (!has(b.src)) noImage++; else if (!has(b.alt)) noAlt++ }
+      else if (b.type === "image") { if (!has(b.src)) noImage++; else if (!findAsset(assets, String(b.src).trim())) outside++; else if (!has(b.alt)) noAlt++ }
       else if (b.type === "form") { if (!forms.some((f) => f.id === b.formId)) noForm++; else needsReceiver = true }
       else if (b.type === "newsletter") needsReceiver = true
       if (b.type === "button" || b.type === "link") {
@@ -655,10 +670,15 @@ export function checkSite(site: Site, pages: SitePage[], posts: Draft[], forms: 
     if (blank) out.push({ level: "fix", text: `${name}: ${blank} ${blank === 1 ? "block still shows" : "blocks still show"} placeholder text. Click it in the preview and write your own.`, ...at })
     if (noImage) out.push({ level: "fix", text: `${name}: ${noImage} ${noImage === 1 ? "picture has" : "pictures have"} no image yet.`, ...at })
     if (bad) out.push({ level: "fix", text: `${name}: ${bad} ${bad === 1 ? "button or link goes" : "buttons or links go"} nowhere (or to a page that doesn't exist).`, ...at })
+    if (outside) out.push({ level: "fix", text: `${name}: ${outside} ${outside === 1 ? "picture isn't" : "pictures aren't"} from your asset library, so Blackwall can't include ${outside === 1 ? "it" : "them"} in your files. Pick ${outside === 1 ? "it" : "them"} again from the library.`, ...at })
     if (noForm) out.push({ level: "fix", text: `${name}: a form block has no form chosen.`, ...at })
     if (noAlt) out.push({ level: "tip", text: `${name}: ${noAlt} ${noAlt === 1 ? "picture needs" : "pictures need"} a description for people who can't see it.`, ...at })
     if (!has(page.description)) out.push({ level: "tip", text: `${name}: add a one-sentence description; search results and shared links use it.`, ...at })
     if (h1 > 1) out.push({ level: "tip", text: `${name} has ${h1} big page titles; one is best for search.`, ...at })
+  }
+  for (const post of live) {
+    const missing = imagePathsInPost(post).filter((p) => !findAsset(assets, p))
+    if (missing.length) out.push({ level: "fix", text: `The post “${post.title || post.slug}” uses ${missing.length === 1 ? "a picture" : `${missing.length} pictures`} that ${missing.length === 1 ? "isn't" : "aren't"} in your asset library (${missing[0]}).`, area: "posts" })
   }
   for (const post of live) if (!has(post.body)) out.push({ level: "fix", text: `The post “${post.title || post.slug}” is published but empty.`, area: "posts" })
   if (needsReceiver && !has(site.formEndpoint)) out.push({ level: "fix", text: "Forms, sign-ups or comments are on the site but can't send yet: add your form receiver address in Site settings.", area: "settings" })

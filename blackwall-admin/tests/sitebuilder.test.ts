@@ -129,3 +129,42 @@ test("an older saved site (no look, template or guide fields) still loads, and s
   const newer = { ...emptyWorkspace(), sites: [{ ...site, font: "serif", corners: "round", width: "wide", template: true, templateAbout: "x", guideHidden: true, exportedAt: ts }], pages }
   assert.ok(validWorkspace(structuredClone(newer)))
 })
+
+import { findAsset } from "../shared/assets.ts"
+test("library pictures go into the published markup with their size, previews use the editor's copy, and pictures from outside the library are flagged", () => {
+  const { site, pages } = portal()
+  const asset = { id: "a1", name: "Team", file: "team.webp", folder: "/Blackwall/assets", mime: "image/webp", width: 1200, height: 675, bytes: 34000, alt: "The team", createdAt: ts, updatedAt: ts }
+  const page: SitePage = { ...pages[0], description: "d", sections: [mk("section", {}, [mk("heading", { level: "1", text: "Hi" }), mk("image", { src: "/images/team.webp", alt: "The team" })])] }
+  const live = renderPage(site, pages, page, { assets: [asset] })
+  assert.match(live, /<img class="pic" src="\/images\/team.webp" width="1200" height="675" alt="The team" loading="lazy">/)
+  const preview = renderPage(site, pages, page, { preview: true, assets: [asset], assetUrls: { "/images/team.webp": "blob:abc" } })
+  assert.ok(preview.includes('src="blob:abc"'))
+  assert.ok(!live.includes("blob:"))
+  assert.equal(findAsset([asset], "/images/team.webp")?.id, "a1")
+  assert.ok(!checkSite(site, [page, pages[1]], [], [], [asset]).some((i) => /asset library/.test(i.text) && i.pageId === page.id), "a library picture is fine")
+  const stray: SitePage = { ...page, sections: [mk("section", {}, [mk("image", { src: "https://elsewhere/x.png", alt: "x" })])] }
+  assert.match(checkSite(site, [stray], [], [], [asset]).map((i) => i.text).join("\n"), /aren't from your asset library|isn't from your asset library/)
+  const post = { id: "d", title: "T", slug: "t", kind: "post" as const, status: "ready" as const, excerpt: "", body: "![x](/images/gone.webp)", siteId: "s1", cover: "/images/team.webp", publishedAt: ts, createdAt: ts, updatedAt: ts }
+  assert.match(checkSite(site, [page], [post], [], [asset]).map((i) => i.text).join("\n"), /gone\.webp/)
+  const files = buildSite(site, [page], [post], [], [], [asset])
+  assert.match(files["posts/t/index.html"], /class="post__cover" src="\/images\/team.webp" width="1200"/)
+})
+
+test("a .zip can carry picture bytes next to text files, with the right checksum", () => {
+  const png = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0, 1, 2, 3, 255])
+  const zip = makeZip({ "index.html": "<p>x</p>", "images/a.png": png })
+  const view = new DataView(zip.buffer)
+  let at = 0, found = false
+  while (at < zip.length - 30 && view.getUint32(at, true) === 0x04034b50) {
+    const size = view.getUint32(at + 18, true), nameLen = view.getUint16(at + 26, true)
+    const name = new TextDecoder().decode(zip.subarray(at + 30, at + 30 + nameLen))
+    if (name === "images/a.png") {
+      found = true
+      assert.equal(size, png.length)
+      assert.equal(view.getUint32(at + 14, true), crc32(png))
+      assert.deepEqual([...zip.subarray(at + 30 + nameLen, at + 30 + nameLen + size)], [...png])
+    }
+    at += 30 + nameLen + size
+  }
+  assert.ok(found)
+})
