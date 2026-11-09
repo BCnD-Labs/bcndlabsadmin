@@ -78,7 +78,7 @@ export function CmsLookPage() {
 
   return (
     <>
-      <PageHeader title="Website" badge={<SiteSwitcher />} />
+      <PageHeader title={site?.name ?? "Website"} badge={<SiteSwitcher />} />
       <div className="@container/main mx-auto grid w-full max-w-[var(--bw-page-max)] gap-[var(--bw-grid-gap)]">
         <SiteTabs current="look" />
         <div className="grid grid-cols-1 items-start gap-[var(--bw-grid-gap)] @4xl/main:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">

@@ -4,6 +4,7 @@ import { InsightsPage, SiteAnalyticsPage } from "@/features/analytics/analytics-
 import { PostEditor } from "@/features/content/post-editor"
 import { MediaPage } from "@/features/content/media-page"
 import { CmsPagesPage } from "@/features/cms/pages-tab"
+import { CmsSitesPage } from "@/features/cms/sites-page"
 import { CmsPostsPage } from "@/features/cms/posts-tab"
 import { CmsFormsPage } from "@/features/cms/forms-tab"
 import { CmsSiteSettingsPage } from "@/features/cms/site-settings"
@@ -68,14 +69,16 @@ export const blackwallPages: RouteObject[] = [
       { path: "productivity/insights", element: <InsightsPage /> },
       { path: "development", element: <DevelopmentPage /> },
       { path: "development/*", element: <Navigate to="/development" replace /> },
-      { path: "cms", element: <CmsPagesPage /> },
+      { path: "cms", element: <CmsSitesPage /> },
+      { path: "cms/pages", element: <CmsPagesPage /> },
       { path: "cms/posts", element: <CmsPostsPage /> },
       { path: "cms/pages/:id", element: <PageEditor /> },
       { path: "cms/forms", element: <CmsFormsPage /> },
       { path: "cms/settings", element: <CmsSiteSettingsPage /> },
       { path: "cms/look", element: <CmsLookPage /> },
       { path: "cms/files", element: <CmsFilesPage /> },
-      { path: "cms/assets", element: <AssetsPage /> },
+      { path: "cms/assets", element: <Navigate to="/assets" replace /> },
+      { path: "assets", element: <AssetsPage /> },
       { path: "cms/posts/:id", element: <PostEditor /> },
       { path: "cms/drafts", element: <Navigate to="/cms/posts?show=drafts" replace /> },
       { path: "cms/drafts/:id", element: <Moved from="/cms/drafts" to="/cms/posts" /> },

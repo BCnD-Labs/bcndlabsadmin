@@ -40,7 +40,7 @@ All new site fields are optional. An older saved workspace loads unchanged (see 
 
 ## Asset library (added after the first pass)
 
-Pictures now come from one place, the **Assets** tab, and Pagesmith can only use pictures from it.
+Pictures now come from one place, **Assets**, and Pagesmith can only use pictures from it. Assets is its own app in the sidebar (and its own window on the Mac), not a tab of one website, because every site picks from the same library.
 
 - **Where the files live:** in your Nextcloud, in one folder (default `/Blackwall/assets`, changeable on the Assets tab). Blackwall stores no image bytes; the library is a list of small records (name, file, size, description, tags, where it came from) kept with the rest of your workspace. This uses the Nextcloud connection and the Mikoshi storage endpoints that already exist, so nothing new runs on the server.
 - **Adding a picture:** from Nextcloud (a folder browser) or from this computer (a file picker or drag and drop). The original is never changed.
@@ -51,3 +51,9 @@ Pictures now come from one place, the **Assets** tab, and Pagesmith can only use
 - **Get files:** the .zip contains the pictures a site uses, in `images/`.
 
 Not yet: publishing to GitHub doesn't carry the library's pictures (the .zip does), and the library isn't offered in the classic Posts flow or outside Pagesmith. AVIF isn't offered because the browser can't encode it.
+
+## Many sites
+
+Website opens on **Websites**: one card per site, each showing its front page as it looks, its domain, whether its files are up to date, and how many pages and posts it has. From a card you can **Edit** (opens that site), **View** (walks through the site's pages and posts as visitors see them, with the menu and links working and a phone/tablet width toggle, without opening the editor), **Get files**, or open the live address. Inside a site, the tabs start with **All sites** and the site's name, and the window title is the site's name, so you always know which one you're in. Opening any page or post of a site makes that site current. The site switcher still works for a quick hop.
+
+Only Pagesmith sites are listed. A website connected the old way (a GitHub repository with posts and pages) isn't a card yet.

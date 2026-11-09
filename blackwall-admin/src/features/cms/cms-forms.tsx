@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Field, OptionSelect } from "@/components/forms/fields"
 import { FormFrame } from "@/components/forms/form-frame"
-import { sitePageHref } from "@/lib/routes"
+import { cmsPagesHref, sitePageHref } from "@/lib/routes"
 import type { SiteForm, SiteFormField } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useWorkspace } from "@/stores/workspace"
@@ -20,6 +20,7 @@ export const slugify = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9]+
 
 /** New site: a name, a domain and a starting point (one of Pagesmith's templates, or a site you kept as a template). */
 export function NewSiteForm({ onDone }: { onDone: () => void }) {
+  const navigate = useNavigate()
   const sites = useWorkspace((s) => s.sites)
   const pageCount = useWorkspace((s) => s.pages)
   const mine = useMemo(() => sites.filter((x) => x.template), [sites])
@@ -36,8 +37,9 @@ export function NewSiteForm({ onDone }: { onDone: () => void }) {
         const host = domain.trim().replace(/^https?:\/\//, "").replace(/\/+$/, "")
         if (own) createSiteFromSite(name.trim(), own.id, host)
         else createSite(name.trim(), template, host)
-        toast.success(`${name.trim()} created`, { description: "Follow the checklist on the Pages tab to finish it." })
+        toast.success(`${name.trim()} created`, { description: "Follow the checklist to finish it." })
         onDone()
+        navigate(cmsPagesHref)
       }}
     >
       <div className="grid gap-x-4 gap-y-3.5 sm:grid-cols-2">
