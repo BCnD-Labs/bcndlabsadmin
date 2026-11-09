@@ -75,8 +75,10 @@ function initialWindows(): Windows {
   const width = window.innerWidth, height = window.innerHeight
   const defaults = {
     notes: { x: Math.max(80, Math.round(width * .12)), y: Math.min(height - 44, 680), width: Math.min(360, width - 95), height: 280, open: true, collapsed: true, expanded: false, pinned: false, z: 1 },
-    ...Object.fromEntries(APP_IDS.map((id, listed) => [id, id === "browser" ? 2 : listed] as const).map(([id, index]) => [id, { x: Math.max(75, Math.round(width * .12) + index * 28), y: Math.max(60, Math.round(height * .08) + index * 22), width: Math.min(id === "planner_app" || id === "learning" ? 1000 : 820, width - 105), height: Math.min(id === "planner_app" || id === "learning" ? 650 : 560, height - 90), open: false, collapsed: false, expanded: false, pinned: false, z: index + 3, path: APP[id].route }])),
+    ...Object.fromEntries(APP_IDS.map((id, listed) => [id, id === "browser" ? 2 : listed] as const).map(([id, index]) => [id, { x: Math.max(75, Math.round(width * .12) + index * 28), y: Math.max(60, Math.round(height * .08) + index * 22), width: Math.min(id === "website" ? 1320 : id === "planner_app" || id === "learning" ? 1000 : 820, width - 105), height: Math.min(id === "website" ? 820 : id === "planner_app" || id === "learning" ? 650 : 560, height - 90), open: false, collapsed: false, expanded: false, pinned: false, z: index + 3, path: APP[id].route }])),
   } as Windows
+  const fit = (id: Id) => { defaults[id] = { ...defaults[id], x: Math.max(75, Math.min(defaults[id].x, width - defaults[id].width - 10)), y: Math.max(TOP_MIN, Math.min(defaults[id].y, height - defaults[id].height - 10)) } }
+  fit("website")
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) ?? localStorage.getItem("blackwall-mac-desktop-windows-v1") ?? "null") as Partial<Record<Id | "app", Partial<WindowState>>> | null
     if (!saved || typeof saved !== "object") return defaults
@@ -84,7 +86,10 @@ function initialWindows(): Windows {
     for (const id of IDS) {
       const value = saved[id] ?? (id === migratedApp ? saved.app : undefined)
       if (!value || [value.x, value.y, value.width, value.height].some(n => typeof n !== "number" || !Number.isFinite(n))) continue
-      defaults[id] = { ...defaults[id], x: Math.max(45, Math.min(width - 100, value.x!)), y: Math.max(TOP_MIN, Math.min(height - 32, value.y!)), width: Math.max(280, Math.min(width - 50, value.width!)), height: Math.max(200, Math.min(height - 50, value.height!)), open: (isWidget(id) || usePrefs.getState().restoreWindows) && value.open !== false, collapsed: value.collapsed === true, pinned: isWidget(id) && value.pinned === true, expanded: false, path: !isWidget(id) && typeof value.path === "string" && value.path.startsWith("/") ? value.path : id === migratedApp && saved.app ? window.location.pathname + window.location.search : defaults[id].path }
+      // The Website window used to open small; a size still at that old default isn't one anyone chose, so the editor gets its large one.
+      const large = id === "website" && value.width === 820 && value.height === 560 ? { width: defaults[id].width, height: defaults[id].height } : {}
+      defaults[id] = { ...defaults[id], x: Math.max(45, Math.min(width - 100, value.x!)), y: Math.max(TOP_MIN, Math.min(height - 32, value.y!)), width: Math.max(280, Math.min(width - 50, value.width!)), height: Math.max(200, Math.min(height - 50, value.height!)), open: (isWidget(id) || usePrefs.getState().restoreWindows) && value.open !== false, collapsed: value.collapsed === true, pinned: isWidget(id) && value.pinned === true, expanded: false, path: !isWidget(id) && typeof value.path === "string" && value.path.startsWith("/") ? value.path : id === migratedApp && saved.app ? window.location.pathname + window.location.search : defaults[id].path, ...large }
+      if ("width" in large) fit(id)
     }
   } catch { /* Use a fresh local layout when storage is unavailable. */ }
   return defaults

@@ -258,11 +258,17 @@ export const BLOCKS: Record<string, BlockDef> = {
   },
   nav: {
     name: "Page links", def: {},
-    html: (_b, ctx) => [
-      `<nav class="site-nav" aria-label="${ctx.where === "footer" ? "Footer" : "Main"}">`, "  <ul>",
-      ...menuPages(ctx.pages).map((p) => `    <li><a href="${esc(pageHref(p))}"${p.id === ctx.current ? ' aria-current="page"' : ""}>${esc(p.title)}</a></li>`),
-      "  </ul>", "</nav>",
-    ],
+    html: (_b, ctx) => {
+      const link = (p: SitePage) => `<a href="${esc(pageHref(p))}"${p.id === ctx.current ? ' aria-current="page"' : ""}>${esc(p.title)}</a>`
+      const open = [`<nav class="site-nav" aria-label="${ctx.where === "footer" ? "Footer" : "Main"}">`, "  <ul>"], close = ["  </ul>", "</nav>"]
+      if (ctx.where === "footer") {
+        const list = footerPages(ctx.pages)
+        return !list.length && ctx.pages.some((p) => p.inFooter != null) ? [] : [...open, ...list.map((p) => `    <li>${link(p)}</li>`), ...close]
+      }
+      return [...open, ...menuTree(ctx.pages).flatMap(({ page, kids }) => (kids.length
+        ? [`    <li class="has-sub">${link(page)}`, `      <ul class="sub" aria-label="${esc(page.title)} pages">`, ...kids.map((k) => `        <li>${link(k)}</li>`), "      </ul>", "    </li>"]
+        : [`    <li>${link(page)}</li>`])), ...close]
+    },
   },
 }
 
@@ -292,6 +298,18 @@ function formClose(ctx: BuildCtx, done: string, button?: string) {
 export const ADDABLE = ["heading", "text", "richtext", "button", "link", "list", "image", "table", "divider", "html", "postsByWeek", "postList", "form", "newsletter", "row", "card"]
 
 export const menuPages = (pages: SitePage[]) => [...pages].filter((p) => p.inMenu).sort((a, b) => a.order - b.order)
+
+/** The main menu as it is drawn: top-level pages, each with its drop-down. A page whose parent can't hold it (gone, hidden or itself nested) sits at the top level. */
+export function menuTree(pages: SitePage[]): { page: SitePage; kids: SitePage[] }[] {
+  const listed = menuPages(pages)
+  const nested = (p: SitePage) => !!p.parentId && listed.some((x) => x.id === p.parentId && !x.parentId)
+  return listed.filter((p) => !nested(p)).map((page) => ({ page, kids: listed.filter((k) => k.parentId === page.id && nested(k)) }))
+}
+
+/** The footer menu: the pages picked for it, or the main menu flat while nothing has been picked. */
+export function footerPages(pages: SitePage[]): SitePage[] {
+  return pages.some((p) => p.inFooter != null) ? [...pages].filter((p) => p.inFooter).sort((a, b) => a.order - b.order) : menuPages(pages)
+}
 
 let uid = 0
 export const rid = (p: string) => `${p}${(++uid).toString(36)}${Math.random().toString(36).slice(2, 6)}`
@@ -333,26 +351,41 @@ export const TEMPLATES: Record<string, { name: string; about: string; starter: s
 
 /* --------------------------------------------------------------------- emit */
 
+/** These blocks can draw more than one element, so their editor wrapper is a real box the outline can go around. */
+const MANY_ROOTS = new Set(["text", "postsByWeek", "html"])
+
 function emit(list: SiteBlock[], indent: string, ctx: BuildCtx, out: string[]) {
   for (const b of list) {
     const def = BLOCKS[b.type]
     if (!def) continue
     // In the editor's preview every block sits in a transparent wrapper, so a click can be traced back to its block.
     const marked = ctx.preview && ctx.where === "page"
-    if (marked) out.push(`${indent}<div data-bw="${esc(b.id)}" style="display:contents">`)
+    if (marked) out.push(`${indent}<div data-bw="${esc(b.id)}" data-bw-t="${esc(b.type)}" style="display:${MANY_ROOTS.has(b.type) ? "block" : "contents"}">`)
     emitBlock(b, def, indent, ctx, out)
     if (marked) out.push(`${indent}</div>`)
   }
 }
 
+const DESIGN_VALUES = { align: ["center", "right"], top: ["none", "s", "m", "l"], bottom: ["none", "s", "m", "l"], bg: ["surface", "accent"] } as const
+const DESIGN_PREFIX = { align: "bs-a-", top: "bs-t-", bottom: "bs-b-", bg: "bs-bg-" } as const
+
+/** The classes for a block's Style tab choices; only known values get through. Empty for a block with none. */
+function designClass(b: SiteBlock) {
+  if (!b.design) return ""
+  return (Object.keys(DESIGN_VALUES) as (keyof typeof DESIGN_VALUES)[]).flatMap((k) => ((DESIGN_VALUES[k] as readonly string[]).includes(String(b.design?.[k])) ? [`${DESIGN_PREFIX[k]}${b.design?.[k]}`] : [])).join(" ")
+}
+
 function emitBlock(b: SiteBlock, def: BlockDef, indent: string, ctx: BuildCtx, out: string[]) {
-  {
-    if (def.container) {
-      def.open!(b, ctx).forEach((l) => out.push(indent + l))
-      emit(b.kids ?? [], indent + "  ".repeat(def.inset ?? 1), ctx, out)
-      def.close!(b, ctx).forEach((l) => out.push(indent + l))
-    } else def.html!(b, ctx).forEach((l) => out.push(indent + l))
-  }
+  const cls = designClass(b)
+  if (def.container) {
+    def.open!(b, ctx).forEach((l, i) => out.push(indent + (i === 0 && cls ? l.replace('class="', `class="${cls} `) : l)))
+    emit(b.kids ?? [], indent + "  ".repeat(def.inset ?? 1), ctx, out)
+    def.close!(b, ctx).forEach((l) => out.push(indent + l))
+  } else if (cls) {
+    out.push(`${indent}<div class="bs ${cls}">`)
+    def.html!(b, ctx).forEach((l) => out.push(`${indent}  ${l}`))
+    out.push(`${indent}</div>`)
+  } else def.html!(b, ctx).forEach((l) => out.push(indent + l))
 }
 
 const FORM_SCRIPT = `<script>
@@ -376,7 +409,20 @@ document.querySelectorAll("form[data-blackwall-form]").forEach(function (f) {
 </script>`
 
 /** Editor-only marks in a preview: the block under the pointer and the block being edited. */
-const PREVIEW_CSS = ".bw-hover { outline: 1px dashed #4c8dff; outline-offset: 3px; cursor: pointer; } .bw-sel { outline: 2px solid #4c8dff; outline-offset: 3px; }"
+const PREVIEW_CSS = `.bw-hover { outline: 1px dashed #4c8dff; outline-offset: 3px; cursor: pointer; } .bw-sel { outline: 2px solid #4c8dff; outline-offset: 3px; }
+.bw-editing { outline: 2px solid #4c8dff; outline-offset: 3px; cursor: text; white-space: pre-wrap; min-width: 2ch; min-height: 1em; }
+.bw-editing:empty::before { content: attr(data-placeholder); opacity: .45; }
+#bw-tag { position: absolute; z-index: 9999; padding: 1px 6px; border-radius: 3px 3px 0 0; background: #4c8dff; color: #fff; font: 600 11px/16px system-ui, sans-serif; pointer-events: none; }
+.bw-insert { position: relative; height: 0; z-index: 30; }
+.bw-insert::before { content: ""; position: absolute; left: 0; right: 0; top: -14px; height: 28px; }
+.bw-insert button { position: absolute; left: 50%; top: -13px; width: 26px; height: 26px; margin-left: -13px; padding: 0; border: 0; border-radius: 50%; background: #4c8dff; color: #fff; font: 400 20px/26px system-ui, sans-serif; cursor: pointer; opacity: 0; transition: opacity .1s; }
+.bw-insert:hover button { opacity: 1; }
+.bw-insert--empty { height: auto; padding: 96px 20px; text-align: center; }
+.bw-insert--empty::before { display: none; }
+.bw-insert--empty button { position: static; width: auto; height: auto; margin: 0; padding: 8px 16px; border-radius: 8px; font-size: 14px; line-height: 20px; opacity: 1; }`
+
+/** The strip between sections where the editor offers to add one; only ever in the editor's own preview. */
+const insertStrip = (at: number, indent: string, empty = false) => `${indent}<div class="bw-insert${empty ? " bw-insert--empty" : ""}" data-bw-insert="${at}"><button type="button" tabindex="-1" aria-label="Add a section here">${empty ? "+ Add a section" : "+"}</button></div>`
 
 interface Doc { title: string; description: string; body: string[]; current?: string; bodyClass: string }
 
@@ -387,7 +433,7 @@ function documentHtml(site: Site, pages: SitePage[], doc: Doc, opts: { preview: 
   ctx.where = "footer"
   emit([mk("sitename"), mk("nav")], "      ", ctx, foot)
   const hasForm = doc.body.some((l) => l.includes("data-blackwall-form"))
-  const css = opts.preview ? `    <style>\n${buildTheme(site)}\n${buildCss()}\n${PREVIEW_CSS}\n    </style>` : '    <link rel="stylesheet" href="/theme.css">\n    <link rel="stylesheet" href="/style.css">'
+  const css = opts.preview ? `    <style>\n${buildTheme(site)}\n${buildCss(pages)}\n${PREVIEW_CSS}\n    </style>` : '    <link rel="stylesheet" href="/theme.css">\n    <link rel="stylesheet" href="/style.css">'
   return [
     "<!doctype html>", '<html lang="en">', "  <head>", '    <meta charset="UTF-8">', '    <meta name="viewport" content="width=device-width, initial-scale=1.0">',
     `    <title>${esc(doc.title)}</title>`,
@@ -407,10 +453,14 @@ function documentHtml(site: Site, pages: SitePage[], doc: Doc, opts: { preview: 
 
 const slugClass = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "page"
 
-export function renderPage(site: Site, pages: SitePage[], page: SitePage, opts: { preview?: boolean; posts?: Draft[]; forms?: SiteForm[]; assets?: Asset[]; assetUrls?: Record<string, string> } = {}) {
+export function renderPage(site: Site, pages: SitePage[], page: SitePage, opts: { preview?: boolean; edit?: boolean; posts?: Draft[]; forms?: SiteForm[]; assets?: Asset[]; assetUrls?: Record<string, string> } = {}) {
   const ctx: BuildCtx = { site, pages, posts: opts.posts ?? [], forms: opts.forms ?? [], current: page.id, where: "page", h1: false, preview: !!opts.preview, assets: opts.assets ?? [], assetUrls: opts.assetUrls ?? {} }
   const body: string[] = []
-  emit(page.sections, "      ", ctx, body)
+  if (opts.edit && opts.preview) {
+    if (!page.sections.length) body.push(insertStrip(0, "      ", true))
+    page.sections.forEach((s, i) => { body.push(insertStrip(i, "      ")); emit([s], "      ", ctx, body) })
+    if (page.sections.length) body.push(insertStrip(page.sections.length, "      "))
+  } else emit(page.sections, "      ", ctx, body)
   const title = page.slug ? `${page.title} — ${site.name}` : site.name
   return documentHtml(site, pages, { title, description: page.description, body, current: page.id, bodyClass: `page-${slugClass(page.slug || "home")}` }, { preview: !!opts.preview, posts: opts.posts ?? [], forms: opts.forms ?? [], assets: opts.assets, assetUrls: opts.assetUrls })
 }
@@ -471,7 +521,7 @@ export function buildTheme(site: Site) {
 }
 
 /** style.css: layout and components; colours come from theme.css. */
-export function buildCss() {
+export function buildCss(pages: SitePage[] = []) {
   return `/* Layout (generated by Blackwall) */
 * { box-sizing: border-box; }
 body { margin: 0; font-family: var(--font, ${FONT}); font-size: 16px; line-height: 1.6; background: var(--bg); color: var(--text); }
@@ -531,8 +581,32 @@ th { background: var(--surface); }
 .site-nav ul { display: flex; flex-wrap: wrap; gap: 20px; list-style: none; margin: 0; padding: 0; }
 .site-nav a { text-decoration: none; }
 .site-nav a[aria-current=page] { font-weight: 700; }
-`
+${pages.some((p) => p.parentId) ? MENU_CSS : ""}${pages.some((p) => usesDesign(p.sections)) ? DESIGN_CSS : ""}`
 }
+
+const usesDesign = (list: SiteBlock[]): boolean => list.some((b) => (b.design && designClass(b)) || (b.kids && usesDesign(b.kids)))
+
+/** Drop-down menus, no script needed: open on hover and on keyboard focus; on phones they are simply listed. */
+const MENU_CSS = `.site-nav .has-sub { position: relative; }
+.site-nav .has-sub > a::after { content: " \\25BE"; font-size: .8em; }
+.site-nav .sub { display: none; position: absolute; top: 100%; left: -14px; z-index: 20; flex-direction: column; flex-wrap: nowrap; gap: 0; min-width: 180px; padding: 6px 0; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius, 8px); }
+.site-nav .has-sub:hover > .sub, .site-nav .has-sub:focus-within > .sub { display: flex; }
+.site-nav .sub a { display: block; padding: 6px 14px; white-space: nowrap; }
+@media (max-width: 560px) { .site-nav .sub { display: flex; position: static; min-width: 0; padding: 4px 0 0 12px; background: none; border: 0; } .site-nav .sub a { padding: 3px 0; } }
+`
+
+/** One block's own alignment, spacing and background (the inspector's Style tab). */
+const DESIGN_CSS = `.bs-a-center { text-align: center; } .bs-a-right { text-align: right; }
+.bs-a-center .form, .bs-a-center .prose { margin-left: auto; margin-right: auto; text-align: left; }
+.bs-t-none { margin-top: 0; } .bs-t-s { margin-top: 12px; } .bs-t-m { margin-top: 28px; } .bs-t-l { margin-top: 56px; }
+.bs-b-none { margin-bottom: 0; } .bs-b-s { margin-bottom: 12px; } .bs-b-m { margin-bottom: 28px; } .bs-b-l { margin-bottom: 56px; }
+div.bs[class*="bs-t-"] > :first-child { margin-top: 0; } div.bs[class*="bs-b-"] > :last-child { margin-bottom: 0; }
+.section.bs-t-none { padding-top: 0; } .section.bs-t-s { margin-top: 0; padding-top: 24px; } .section.bs-t-m { margin-top: 0; padding-top: 64px; } .section.bs-t-l { margin-top: 0; padding-top: 120px; }
+.section.bs-b-none { padding-bottom: 0; } .section.bs-b-s { margin-bottom: 0; padding-bottom: 24px; } .section.bs-b-m { margin-bottom: 0; padding-bottom: 64px; } .section.bs-b-l { margin-bottom: 0; padding-bottom: 120px; }
+.bs-bg-surface { background: var(--surface); } .bs-bg-accent { background: var(--accent); color: var(--accent-text); }
+div.bs.bs-bg-surface, div.bs.bs-bg-accent { padding: 16px; border-radius: var(--radius, 8px); }
+.bs-bg-accent a:not(.btn) { color: inherit; } .bs-bg-accent .btn { background: var(--accent-text); border-color: var(--accent-text); color: var(--accent); }
+`
 
 const redirectHtml = (to: string) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Moved</title><link rel="canonical" href="${esc(to)}"><meta http-equiv="refresh" content="0; url=${esc(to)}"></head><body><p>This page moved to <a href="${esc(to)}">${esc(to)}</a>.</p></body></html>\n`
 
@@ -546,7 +620,7 @@ export function buildSite(site: Site, pages: SitePage[], posts: Draft[], forms: 
   for (const pg of own) files[pg.slug ? `${pg.slug}/index.html` : "index.html"] = renderPage(site, own, pg, { posts: live, forms, assets })
   for (const p of live) files[`posts/${p.slug}/index.html`] = renderPost(site, own, p, { forms, comments, assets })
   files["theme.css"] = buildTheme(site)
-  files["style.css"] = buildCss()
+  files["style.css"] = buildCss(own)
   const base = site.domain ? `https://${site.domain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}` : ""
   const urls = [...own.map(pageHref), ...live.map(postHref)]
   files["sitemap.xml"] = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${esc(base + u)}</loc></url>`).join("\n")}\n</urlset>\n`
@@ -606,7 +680,7 @@ export function siteFromSite(name: string, source: Site, sourcePages: SitePage[]
   const { id: _id, createdAt: _c, updatedAt: _u, publishedAt: _p, publishedSha: _s, exportedAt: _e, connectionId: _k, template: _t, templateAbout: _a, guideHidden: _g, ...look } = source
   return {
     site: { ...structuredClone(look), name, domain: "", footerText: look.footerText === `© ${source.name}` ? "" : look.footerText, redirects: [] },
-    pages: [...sourcePages].sort((a, b) => a.order - b.order).map((p, i) => ({ title: p.title, slug: p.slug, description: p.description, inMenu: p.inMenu, order: i, sections: cloneBlocks(p.sections) })),
+    pages: [...sourcePages].sort((a, b) => a.order - b.order).map((p, i) => ({ title: p.title, slug: p.slug, description: p.description, inMenu: p.inMenu, ...(p.inFooter != null ? { inFooter: p.inFooter } : {}), order: i, sections: cloneBlocks(p.sections) })),
   }
 }
 

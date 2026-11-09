@@ -168,3 +168,176 @@ test("a .zip can carry picture bytes next to text files, with the right checksum
   }
   assert.ok(found)
 })
+
+/* ------------------------------------------------- the site workspace */
+import { canHold, canNest, duplicateBlock, findBlock, indentBlock, moveBlock, movePage, nudgeBlock, outdentBlock, pageTree, projectDrop } from "../shared/sitebuilder-tree.ts"
+import { EditHistory, changeKey } from "../shared/edit-history.ts"
+import { footerPages, menuTree } from "../shared/sitebuilder.ts"
+
+const page = (id: string, order: number, more: Partial<SitePage> = {}): SitePage => ({ id, siteId: "s1", title: id.toUpperCase(), slug: id === "home" ? "" : id, description: "", inMenu: true, order, sections: [], createdAt: ts, updatedAt: ts, ...more })
+
+test("a site with none of the new fields publishes exactly as it did: no drop-down markup, no extra CSS, the same footer", () => {
+  const { site, pages, posts } = portal()
+  const files = buildSite(site, pages, posts, [])
+  const html = files["index.html"]
+  assert.ok(!html.includes("has-sub") && !html.includes('class="bs') && !html.includes("data-bw"))
+  assert.equal(files["style.css"], buildCss())
+  assert.ok(!files["style.css"].includes(".site-nav .sub") && !files["style.css"].includes(".bs-a-center"))
+  const footer = html.slice(html.indexOf('<footer'))
+  for (const p of pages) assert.ok(footer.includes(`>${p.title}</a>`), `${p.title} in footer`)
+})
+
+test("a nested page becomes a drop-down that needs no script, and is reachable by keyboard", () => {
+  const { site } = portal()
+  const pages = [page("home", 0), page("work", 1), page("one", 2, { parentId: "work" }), page("two", 3, { parentId: "work" })]
+  const files = buildSite(site, pages, [], [])
+  const html = files["index.html"]
+  assert.match(html, /<li class="has-sub"><a href="\/work\/">WORK<\/a>\n\s*<ul class="sub" aria-label="WORK pages">\n\s*<li><a href="\/one\/">ONE<\/a><\/li>/)
+  assert.match(files["style.css"], /\.has-sub:focus-within > \.sub/)
+  assert.match(files["style.css"], /\.has-sub:hover > \.sub/)
+  assert.ok(!/<script/.test(html), "no script for the menu")
+  assert.equal(menuTree(pages)[1].kids.length, 2)
+})
+
+test("a nested page whose parent is gone, hidden or nested itself sits at the top level", () => {
+  const tree = menuTree([page("a", 0, { parentId: "gone" }), page("b", 1, { inMenu: false }), page("c", 2, { parentId: "b" }), page("d", 3), page("e", 4, { parentId: "d" }), page("f", 5, { parentId: "e" })])
+  assert.deepEqual(tree.map((r) => r.page.id), ["a", "c", "d", "f"])
+  assert.deepEqual(tree[2].kids.map((k) => k.id), ["e"])
+})
+
+test("the footer menu is its own list once a page is picked for it, and repeats the main menu until then", () => {
+  const { site } = portal()
+  assert.deepEqual(footerPages([page("home", 0), page("a", 1), page("b", 2, { inMenu: false })]).map((p) => p.id), ["home", "a"])
+  const pages = [page("home", 0, { inFooter: false }), page("a", 1, { inFooter: true }), page("b", 2, { inMenu: false, inFooter: true })]
+  assert.deepEqual(footerPages(pages).map((p) => p.id), ["a", "b"])
+  const footer = renderPage(site, pages, pages[0]).split("<footer")[1]
+  assert.ok(footer.includes(">B</a>") && !footer.includes(">HOME</a>"))
+  const none = pages.map((p) => ({ ...p, inFooter: false }))
+  assert.ok(!renderPage(site, none, none[0]).split("<footer")[1].includes("site-nav"), "an empty footer menu draws nothing")
+})
+
+test("Style choices become classes on the block; unknown values are ignored and the CSS only ships when used", () => {
+  const { site } = portal()
+  const h = mk("heading", { text: "Hi", design: { align: "center", top: "l", bg: "accent" } })
+  const sec = mk("section", { design: { bottom: "none" } }, [h, mk("text", { text: "Plain", design: { align: "<script>" as never } })])
+  const p = page("home", 0, { sections: [sec] })
+  const html = renderPage(site, [p], p)
+  assert.match(html, /<section class="bs-b-none section">/)
+  assert.match(html, /<div class="bs bs-a-center bs-t-l bs-bg-accent">\n\s*<h2>Hi<\/h2>/)
+  assert.ok(!html.includes("<script>"))
+  assert.match(buildCss([p]), /\.bs-a-center/)
+})
+
+test("editor marks and the add-section strips exist only in the editor's own preview", () => {
+  const { site } = portal()
+  const p = page("home", 0, { sections: [section("hero"), section("plainText")] })
+  const edit = renderPage(site, [p], p, { preview: true, edit: true })
+  assert.equal(edit.match(/data-bw-insert=/g)?.length, 3)
+  assert.ok(edit.includes(`data-bw="${p.sections[0].id}" data-bw-t="section"`))
+  assert.ok(!renderPage(site, [p], p, { preview: true }).includes("data-bw-insert"))
+  assert.ok(!renderPage(site, [p], p).includes("data-bw"))
+  const empty = page("e", 0)
+  assert.match(renderPage(site, [empty], empty, { preview: true, edit: true }), /bw-insert--empty/)
+})
+
+test("older saved pages load, new page fields are checked, and a copied template keeps its footer picks", () => {
+  const { pages, site } = portal()
+  const older = { ...emptyWorkspace(), sites: [site], pages }
+  assert.ok(validWorkspace(older), "pages without parentId or inFooter still load")
+  assert.ok(validWorkspace({ ...older, pages: [{ ...pages[0], parentId: "p1", inFooter: true, sections: [{ id: "b", type: "text", design: { align: "center" } }] }] }))
+  assert.ok(!validWorkspace({ ...older, pages: [{ ...pages[0], parentId: 3 }] }))
+  assert.ok(!validWorkspace({ ...older, pages: [{ ...pages[0], inFooter: "yes" }] }))
+  const copy = siteFromSite("New", site, [page("home", 0, { inFooter: true }), page("a", 1)])
+  assert.equal(copy.pages[0].inFooter, true)
+  assert.equal("inFooter" in copy.pages[1], false)
+})
+
+function tree() {
+  return [mk("section", { id: "s1" }, [mk("heading", { id: "h" }), mk("row", { id: "r" }, [mk("card", { id: "c" }, [mk("text", { id: "t" })])])]), mk("section", { id: "s2" }, [mk("button", { id: "b" })])]
+}
+const ids = (l: ReturnType<typeof tree>): unknown => l.map((b) => (b.kids ? [b.id, ids(b.kids)] : b.id))
+
+test("blocks move in and out of containers, and the nesting rules hold", () => {
+  const t = tree()
+  assert.deepEqual(ids(moveBlock(t, "b", "c", null)), [["s1", ["h", ["r", [["c", ["t", "b"]]]]]], ["s2", []]])
+  assert.deepEqual(ids(moveBlock(t, "h", "s1", null)), [["s1", [["r", [["c", ["t"]]]], "h"]], ["s2", ["b"]]])
+  assert.deepEqual(ids(moveBlock(t, "s2", null, "s1")), [["s2", ["b"]], ["s1", ["h", ["r", [["c", ["t"]]]]]]])
+  assert.equal(moveBlock(t, "h", null, null), t, "a block can't sit outside a section")
+  assert.equal(moveBlock(t, "s1", "s2", null), t, "a section can't nest")
+  assert.equal(moveBlock(t, "r", "c", null), t, "can't go inside itself")
+  assert.ok(!canHold({ type: "row" }, { type: "row" }) && canHold({ type: "card" }, { type: "row" }) && !canHold({ type: "heading" }, { type: "text" }))
+})
+
+test("Alt+arrow moves: along siblings, out of a container, into the one above", () => {
+  const t = tree()
+  assert.deepEqual(ids(nudgeBlock(t, "r", -1))[0], ["s1", [["r", [["c", ["t"]]]], "h"]])
+  assert.deepEqual(ids(nudgeBlock(t, "h", 1))[0], ["s1", [["r", [["c", ["t"]]]], "h"]])
+  assert.equal(nudgeBlock(t, "h", -1), t)
+  assert.deepEqual(ids(outdentBlock(t, "t"))[0], ["s1", ["h", ["r", [["c", []], "t"]]]])
+  assert.equal(outdentBlock(t, "h"), t, "a block can't leave its section for the page")
+  assert.deepEqual(ids(indentBlock(moveBlock(t, "b", "s1", null), "b"))[0], ["s1", ["h", ["r", [["c", ["t"]], "b"]]]])
+})
+
+test("a duplicate is a deep copy with fresh ids, right after the original", () => {
+  const { list, copyId } = duplicateBlock(tree(), "r")
+  const s1 = list[0].kids!
+  assert.equal(s1[2].id, copyId)
+  assert.notEqual(s1[2].kids![0].id, "c")
+  assert.ok(findBlock(list, "c"))
+})
+
+test("pages reorder and nest; home and pages with drop-downs stay at the top", () => {
+  const pages = [page("home", 0), page("a", 1), page("b", 2), page("c", 3)]
+  const apply = (ps: SitePage[], patches: ReturnType<typeof movePage>) => ps.map((p) => { const x = patches.find((y) => y.id === p.id); return x ? { ...p, order: x.order, parentId: x.parentId } : p })
+  const reordered = apply(pages, movePage(pages, "c", null, "a"))
+  assert.deepEqual(pageTree(reordered).map((r) => r.page.id), ["home", "c", "a", "b"])
+  const nested = apply(pages, movePage(pages, "b", "a", null))
+  assert.deepEqual(pageTree(nested).map((r) => [r.page.id, r.kids.map((k) => k.id)]), [["home", []], ["a", ["b"]], ["c", []]])
+  assert.deepEqual(movePage(nested, "a", "c", null), [], "a page with a drop-down can't nest")
+  assert.deepEqual(movePage(pages, "home", "a", null), [], "the home page stays at the top")
+  assert.ok(!canNest(nested.find((p) => p.id === "a")!, nested))
+  const out = apply(nested, movePage(nested, "b", null, null))
+  assert.equal(out.find((p) => p.id === "b")!.parentId, undefined)
+})
+
+test("dragging: sideways pull picks the depth, and only legal places count", () => {
+  const rows = [{ id: "s1", depth: 0, parentId: null, t: "section" }, { id: "h", depth: 1, parentId: "s1", t: "heading" }, { id: "c", depth: 1, parentId: "s1", t: "card" }, { id: "t", depth: 2, parentId: "c", t: "text" }, { id: "s2", depth: 0, parentId: null, t: "section" }, { id: "b", depth: 1, parentId: "s2", t: "button" }]
+  const allow = (a: (typeof rows)[number], p: (typeof rows)[number] | null) => canHold(p ? { type: p.t } : null, { type: a.t })
+  assert.deepEqual(projectDrop(rows, "b", "h", 0, 16, allow), { depth: 1, parentId: "s1", beforeId: "h" })
+  assert.deepEqual(projectDrop(rows, "b", "t", 0, 16, allow), { depth: 2, parentId: "c", beforeId: "t" }, "between a card and its first block it can only be in the card")
+  assert.deepEqual(projectDrop(rows, "b", "s2", 16, 16, allow), { depth: 2, parentId: "c", beforeId: null }, "pulled right, it joins the end of the card")
+  assert.deepEqual(projectDrop(rows, "b", "s2", 0, 16, allow), { depth: 1, parentId: "s1", beforeId: null }, "straight, it stays in the section after the card")
+  assert.deepEqual(projectDrop(rows, "b", "s2", 48, 16, allow), { depth: 2, parentId: "c", beforeId: null }, "too far right falls back to the nearest legal place")
+  assert.equal(projectDrop(rows, "s2", "t", 0, 16, allow), null, "a section can't land inside a card")
+  assert.deepEqual(projectDrop(rows, "s2", "s1", 0, 16, allow), { depth: 0, parentId: null, beforeId: "s1" }, "a section moves among sections")
+  assert.equal(projectDrop(rows.slice(0, 2), "h", "s1", 0, 16, allow), null, "above the first section is nowhere")
+})
+
+test("undo steps: typing in one field is one step, separate actions are separate, redo clears on a new edit", () => {
+  const h = new EditHistory<number>()
+  h.record(0, "page:x:title", 1000)
+  h.record(1, "page:x:title", 1500)
+  h.record(2, "page:x:slug", 1600)
+  h.record(3, "", 5000)
+  h.record(4, "", 5010)
+  assert.equal(h.undo(5), 3)
+  assert.equal(h.undo(3), 2)
+  assert.equal(h.undo(2), 0)
+  assert.equal(h.canUndo, false)
+  assert.equal(h.redo(0), 2)
+  h.record(2, "", 9000)
+  assert.equal(h.canRedo, false)
+})
+
+test("what counts as one bit of typing", () => {
+  const { site } = portal()
+  const h = mk("heading", { id: "h1", text: "a" }), t = mk("text", { id: "t1", text: "x" })
+  const p = page("home", 0, { sections: [mk("section", { id: "s" }, [h, t])] })
+  const withBlock = (id: string, patch: object) => ({ ...p, sections: [{ ...p.sections[0], kids: p.sections[0].kids!.map((b) => (b.id === id ? { ...b, ...patch } : b)) }] })
+  const snap = (pg: SitePage, s = site) => ({ site: s, pages: [pg] })
+  assert.equal(changeKey(snap(p), snap(withBlock("h1", { text: "ab" }))), "page:home:h1.text")
+  assert.equal(changeKey(snap(p), snap(withBlock("h1", { design: { align: "center" } }))), "", "a style pick is its own step")
+  assert.equal(changeKey(snap(p), snap({ ...p, title: "New" })), "page:home:title")
+  assert.equal(changeKey(snap(p), snap(p, { ...site, font: "serif" })), "site:font")
+  assert.equal(changeKey(snap(p), { site, pages: [] }), "", "removing a page is its own step")
+})

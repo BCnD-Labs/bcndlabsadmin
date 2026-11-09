@@ -30,9 +30,12 @@ export function createSiteFromSite(name: string, sourceId: string, domain = "") 
   const { create, sites, pages } = useWorkspace.getState()
   const source = sites.find((s) => s.id === sourceId)
   if (!source) return createSite(name, "simple", domain)
-  const t = siteFromSite(name, source, pages.filter((p) => p.siteId === source.id))
+  const own = pages.filter((p) => p.siteId === source.id).sort((a, b) => a.order - b.order)
+  const t = siteFromSite(name, source, own)
   const site = create("sites", { ...t.site, domain })
-  for (const p of t.pages) create("pages", { ...p, siteId: site.id })
+  // Pages get new ids here, so a nested page's link to its parent is rebuilt from the copies.
+  const made = t.pages.map((p) => create("pages", { ...p, siteId: site.id }))
+  own.forEach((p, i) => { const up = own.findIndex((x) => x.id === p.parentId); if (up >= 0) useWorkspace.getState().update("pages", made[i].id, { parentId: made[up].id }) })
   selectSite(site.id)
   return site
 }

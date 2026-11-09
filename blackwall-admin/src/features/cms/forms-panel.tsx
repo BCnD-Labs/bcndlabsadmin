@@ -2,22 +2,18 @@ import { Check, EyeOff, Inbox, Mail, MailCheck, Plus, RefreshCw, Trash2 } from "
 import { Fragment, useEffect, useState } from "react"
 import { toast } from "sonner"
 import type { InboxItem, InboxKind } from "@shared/site-inbox"
+import type { Site } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/common/empty-state"
-import { PageHeader } from "@/components/common/page-header"
 import { Panel } from "@/components/common/panel"
 import { SegmentedTabs } from "@/components/common/segmented-tabs"
 import { StatusMarker } from "@/components/common/tags"
-import { GridItem, WorkspaceGrid } from "@/components/common/workspace-grid"
 import { timeAgo } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import { useConnections } from "@/services/connector"
 import { useInbox } from "@/services/inbox"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
-import { SiteSwitcher } from "./site-switcher"
-import { SiteTabs } from "./site-tabs"
-import { useCurrentSite } from "./use-cms"
 
 type Show = "all" | InboxKind
 const KIND_LABEL: Record<InboxKind, string> = { form: "Message", comment: "Comment", newsletter: "Sign-up" }
@@ -66,11 +62,10 @@ function InboxRow({ item, open, onToggle }: { item: InboxItem; open: boolean; on
 }
 
 /** Website → Forms: what visitors sent (messages, comments to approve, sign-ups) and the reusable form library. */
-export function CmsFormsPage() {
+export function FormsPanel({ site }: { site: Site }) {
   const forms = useWorkspace((s) => s.forms)
   const pages = useWorkspace((s) => s.pages)
   const sites = useWorkspace((s) => s.sites)
-  const site = useCurrentSite()
   const openForm = useUi((s) => s.openForm)
   const inbox = useInbox()
   const receiver = useConnections((s) => s.list).find((c) => c.provider === "forms")
@@ -83,7 +78,7 @@ export function CmsFormsPage() {
   }, [])
   const usedOn = (id: string) => pages.filter((p) => JSON.stringify(p.sections).includes(id)).map((p) => `${sites.find((s) => s.id === p.siteId)?.name ?? "?"} · ${p.title}`)
 
-  const mine = inbox.items.filter((i) => !site || i.site === site.id)
+  const mine = inbox.items.filter((i) => i.site === site.id)
   const count = (k: InboxKind) => mine.filter((i) => i.kind === k).length
   const waiting = mine.filter((i) => i.status === "new").length
   const shown = mine.filter((i) => show === "all" || i.kind === show).sort((a, b) => Number(b.status === "new") - Number(a.status === "new") || b.at.localeCompare(a.at))
@@ -97,11 +92,7 @@ export function CmsFormsPage() {
   }
 
   return (
-    <>
-      <PageHeader title={site?.name ?? "Website"} badge={<SiteSwitcher />} actions={<Button onClick={() => openForm({ kind: "siteForm" })}><Plus /> Form</Button>} />
-      <WorkspaceGrid>
-        <GridItem span="full"><SiteTabs current="forms" /></GridItem>
-        <GridItem span={3}>
+    <div className="grid content-start gap-[var(--bw-grid-gap)]">
           <Panel
             category="website"
             title="Inbox"
@@ -123,24 +114,20 @@ export function CmsFormsPage() {
               <ul>{shown.map((i) => <InboxRow key={i.id} item={i} open={open === i.id} onToggle={() => setOpen(open === i.id ? undefined : i.id)} />)}</ul>
             ) : (
               <EmptyState icon={Inbox} title={mine.length ? "Nothing here" : "Nothing sent yet"}>
-                {site && !site.formEndpoint ? "Set Form receiver in Site settings so this site's forms post to your Worker." : "Messages, comments and sign-ups show up here within a minute of being confirmed."}
+                {!site.formEndpoint ? "Set Form receiver in Site settings so this site's forms post to your Worker." : "Messages, comments and sign-ups show up here within a minute of being confirmed."}
               </EmptyState>
             )}
           </Panel>
-        </GridItem>
-        <GridItem>
           <Panel category="website" title="Receiver" bodyClassName="grid content-start gap-2 px-3.5 py-3 text-[12.5px]">
             <p className="flex items-center gap-2 text-ink-2"><StatusMarker tone={!receiver ? "off" : receiver.status === "ok" ? "ok" : receiver.status === "error" ? "error" : "warn"} />{!receiver ? "Not connected" : receiver.status === "ok" ? "Connected" : receiver.status === "error" ? "Needs attention" : "Not tested yet"}</p>
             {receiver?.summary?.slice(1).map((s) => <p key={s.label} className="flex justify-between gap-2"><span className="text-muted-foreground">{s.label}</span><span className="text-ink-2">{s.value}</span></p>)}
             {receiver?.status === "error" && receiver.message && <p className="text-red-light">{receiver.message}</p>}
             <p className="text-[11.5px] text-muted-foreground">Comments only appear on the site after you approve them and publish.</p>
           </Panel>
-        </GridItem>
-        <GridItem span="full">
-          <Panel category="website" title="Form library" meta="reusable on any site">
+          <Panel category="website" title="Form library" meta="reusable on any site" actions={<Button variant="outline" size="xs" onClick={() => openForm({ kind: "siteForm" })}><Plus /> Form</Button>}>
             {forms.length ? (
               <table className="w-full table-fixed text-left text-[13px]">
-                <thead className="text-[11px] text-faint"><tr><th className="py-2 pl-3.5 font-normal">Form</th><th className="font-normal">Used on</th><th className="hidden w-24 font-normal sm:table-cell">Edited</th></tr></thead>
+                <thead className="text-[11px] text-faint"><tr><th className="py-2 pl-3.5 font-normal">Form</th><th className="font-normal">Used on</th><th className="hidden w-24 font-normal @2xl:table-cell">Edited</th></tr></thead>
                 <tbody>
                   {forms.map((f) => {
                     const used = usedOn(f.id)
@@ -148,7 +135,7 @@ export function CmsFormsPage() {
                       <tr key={f.id} className="cursor-pointer border-t border-line-soft hover:bg-raised" onClick={() => openForm({ kind: "siteForm", id: f.id })}>
                         <td className="py-2 pl-3.5"><b className="text-ink">{f.name}</b><span className="block truncate text-[11.5px] text-muted-foreground">{f.fields.map((x) => x.label).join(" · ")}</span></td>
                         <td className="truncate text-xs text-muted-foreground">{used.length ? used.join(", ") : "Not on a page yet"}</td>
-                        <td className="hidden text-xs text-muted-foreground sm:table-cell">{timeAgo(f.updatedAt)}</td>
+                        <td className="hidden text-xs text-muted-foreground @2xl:table-cell">{timeAgo(f.updatedAt)}</td>
                       </tr>
                     )
                   })}
@@ -160,8 +147,6 @@ export function CmsFormsPage() {
               </EmptyState>
             )}
           </Panel>
-        </GridItem>
-      </WorkspaceGrid>
-    </>
+    </div>
   )
 }

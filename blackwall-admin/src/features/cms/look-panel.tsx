@@ -1,30 +1,19 @@
 import { Check } from "lucide-react"
-import { useMemo, useState } from "react"
 import { toast } from "sonner"
-import { imagePathsIn } from "@shared/assets"
-import { usePreviewPictures } from "@/features/assets/use-assets"
-import { CORNERS, FONTS, STARTERS, SWATCH_INFO, SWATCH_KEYS, WIDTHS, contrast, renderPage } from "@shared/sitebuilder"
-import { Button } from "@/components/ui/button"
+import { CORNERS, FONTS, STARTERS, SWATCH_INFO, SWATCH_KEYS, WIDTHS, contrast } from "@shared/sitebuilder"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { EmptyState } from "@/components/common/empty-state"
-import { PageHeader } from "@/components/common/page-header"
 import { Panel } from "@/components/common/panel"
 import { OptionSelect } from "@/components/forms/fields"
 import type { Site, SitePalette } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
-import { SitePreview } from "./site-preview"
-import { SiteSwitcher } from "./site-switcher"
-import { SiteTabs } from "./site-tabs"
-import { useCurrentSite } from "./use-cms"
 
 function Palette({ site, mode, onChange }: { site: Site; mode: "light" | "dark"; onChange: (p: SitePalette) => void }) {
   const pal = site[mode]
   return (
-    <div className="grid gap-1.5 sm:grid-cols-2">
+    <div className="grid gap-1.5 @md:grid-cols-2">
       {SWATCH_KEYS.map((k) => {
         const ratio = k === "text" || k === "muted" || k === "accent" ? contrast(pal[k], pal.bg) : undefined
         return (
@@ -42,7 +31,7 @@ function Palette({ site, mode, onChange }: { site: Site; mode: "light" | "dark";
 /** A row of big choices, one selected. */
 function Choice<V extends string>({ label, value, options, onPick }: { label: string; value: V; options: { value: V; node: React.ReactNode; name: string; about?: string }[]; onPick: (v: V) => void }) {
   return (
-    <div role="radiogroup" aria-label={label} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+    <div role="radiogroup" aria-label={label} className="grid grid-cols-2 gap-2 @md:grid-cols-4">
       {options.map((o) => (
         <button key={o.value} type="button" role="radio" aria-checked={o.value === value} onClick={() => onPick(o.value)} className={cn("flex flex-col items-start gap-0.5 rounded-[10px] bg-raised px-2.5 py-2 text-left transition-colors hover:bg-selected", o.value === value && "ring-2 ring-[var(--bw-red)]")}>
           <span className="flex w-full items-center justify-between text-lg leading-none text-ink">{o.node}{o.value === value && <Check className="size-3.5 text-[var(--bw-red)]" aria-hidden />}</span>
@@ -54,35 +43,16 @@ function Choice<V extends string>({ label, value, options, onPick }: { label: st
   )
 }
 
-/** Look: colors, type, corners and width in one place, with the site shown beside it so every click is visible. */
-export function CmsLookPage() {
-  const site = useCurrentSite()
-  const pages = useWorkspace((s) => s.pages)
-  const drafts = useWorkspace((s) => s.drafts)
-  const forms = useWorkspace((s) => s.forms)
+/** Look: colors, type, corners and width. The canvas beside it is the live preview, so every click shows straight away. */
+export function LookPanel({ site }: { site: Site }) {
   const sites = useWorkspace((s) => s.sites)
   const { update } = useWorkspace.getState()
-  const [previewPage, setPreviewPage] = useState("")
-  const own = useMemo(() => pages.filter((p) => p.siteId === site?.id).sort((a, b) => a.order - b.order), [pages, site?.id])
-  const page = own.find((p) => p.id === previewPage) ?? own.find((p) => p.slug === "") ?? own[0]
-  const posts = useMemo(() => drafts.filter((d) => d.siteId === site?.id && d.publishedAt), [drafts, site?.id])
-  const library = useWorkspace((s) => s.assets)
-  const paths = useMemo(() => (page ? imagePathsIn(page.sections) : []), [page])
-  const pictures = usePreviewPictures(paths)
-  const html = useMemo(() => (site && page ? renderPage(site, own, page, { preview: true, posts, forms, assets: library, assetUrls: pictures }) : ""), [site, page, own, posts, forms, library, pictures])
-
-  if (!site) return <><PageHeader title="Website" /><Panel category="website" title="Look"><EmptyState title="No site yet" action={<Button onClick={() => useUi.getState().openForm({ kind: "site" })}>New site</Button>} /></Panel></>
   const set = (patch: Partial<Site>) => update("sites", site.id, patch)
   const others = sites.filter((s) => s.id !== site.id)
   const starterHere = (k: string) => JSON.stringify(STARTERS[k].light) === JSON.stringify(site.light) && JSON.stringify(STARTERS[k].dark) === JSON.stringify(site.dark)
 
   return (
-    <>
-      <PageHeader title={site?.name ?? "Website"} badge={<SiteSwitcher />} />
-      <div className="@container/main mx-auto grid w-full max-w-[var(--bw-page-max)] gap-[var(--bw-grid-gap)]">
-        <SiteTabs current="look" />
-        <div className="grid grid-cols-1 items-start gap-[var(--bw-grid-gap)] @4xl/main:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
-          <div className="grid gap-[var(--bw-grid-gap)]">
+    <div className="grid content-start gap-[var(--bw-grid-gap)]">
             <Panel category="website" title="Theme" meta="colors, light and dark" bodyClassName="grid gap-3 px-3.5 py-3">
               <div role="radiogroup" aria-label="Theme" className="grid grid-cols-2 gap-2">
                 {Object.entries(STARTERS).map(([k, t]) => (
@@ -120,14 +90,6 @@ export function CmsLookPage() {
               <Textarea rows={5} value={site.customCss} onChange={(e) => set({ customCss: e.target.value })} className="font-mono text-xs" placeholder=".site-title { letter-spacing: .05em; }" aria-label="Custom CSS" />
               <p className="mt-1.5 text-[11px] text-faint">Added at the end of theme.css on every page.</p>
             </Panel>
-          </div>
-          <Panel category="website" title="Preview" subtitle={page ? <span className="font-mono">/{page.slug}</span> : undefined}
-            actions={own.length > 1 ? <OptionSelect label="Page to preview" value={page?.id ?? ""} onChange={setPreviewPage} options={own.map((p) => ({ value: p.id, label: p.title || "Untitled" }))} className="w-40" /> : undefined}
-            bodyClassName="flex justify-center bg-well p-3" className="@4xl/main:sticky @4xl/main:top-[calc(var(--bw-header-h,88px)+12px)]">
-            {page ? <SitePreview html={html} title={`Preview of ${page.title}`} onLink={(href) => { const t = own.find((p) => (p.slug ? `/${p.slug}/` : "/") === href); if (t) setPreviewPage(t.id) }} /> : <EmptyState title="No pages to preview" />}
-          </Panel>
-        </div>
-      </div>
-    </>
+    </div>
   )
 }

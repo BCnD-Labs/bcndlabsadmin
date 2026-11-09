@@ -3,15 +3,10 @@ import type { ReactNode } from "react"
 import { InsightsPage, SiteAnalyticsPage } from "@/features/analytics/analytics-page"
 import { PostEditor } from "@/features/content/post-editor"
 import { MediaPage } from "@/features/content/media-page"
-import { CmsPagesPage } from "@/features/cms/pages-tab"
 import { CmsSitesPage } from "@/features/cms/sites-page"
-import { CmsPostsPage } from "@/features/cms/posts-tab"
-import { CmsFormsPage } from "@/features/cms/forms-tab"
-import { CmsSiteSettingsPage } from "@/features/cms/site-settings"
-import { CmsLookPage } from "@/features/cms/look-page"
-import { CmsFilesPage } from "@/features/cms/files-page"
+import { CmsPostsRoute } from "@/features/cms/posts-panel"
 import { AssetsPage } from "@/features/assets/assets-page"
-import { PageEditor } from "@/features/cms/page-editor"
+import { SiteWorkspace } from "@/features/cms/site-workspace"
 import { SocialPage } from "@/features/social/social-page"
 import { SocialPostPage } from "@/features/social/social-post"
 import { DevelopmentPage } from "@/features/development/development-page"
@@ -70,13 +65,14 @@ export const blackwallPages: RouteObject[] = [
       { path: "development", element: <DevelopmentPage /> },
       { path: "development/*", element: <Navigate to="/development" replace /> },
       { path: "cms", element: <CmsSitesPage /> },
-      { path: "cms/pages", element: <CmsPagesPage /> },
-      { path: "cms/posts", element: <CmsPostsPage /> },
-      { path: "cms/pages/:id", element: <PageEditor /> },
-      { path: "cms/forms", element: <CmsFormsPage /> },
-      { path: "cms/settings", element: <CmsSiteSettingsPage /> },
-      { path: "cms/look", element: <CmsLookPage /> },
-      { path: "cms/files", element: <CmsFilesPage /> },
+      { path: "cms/pages", element: <SiteWorkspace /> },
+      { path: "cms/posts", element: <CmsPostsRoute /> },
+      { path: "cms/pages/:id", element: <SiteWorkspace /> },
+      // The old tabs are panels of the workspace now.
+      { path: "cms/forms", element: <Navigate to="/cms/pages?panel=forms" replace /> },
+      { path: "cms/settings", element: <Navigate to="/cms/pages?panel=settings" replace /> },
+      { path: "cms/look", element: <Navigate to="/cms/pages?panel=look" replace /> },
+      { path: "cms/files", element: <Navigate to="/cms/pages?panel=files" replace /> },
       { path: "cms/assets", element: <Navigate to="/assets" replace /> },
       { path: "assets", element: <AssetsPage /> },
       { path: "cms/posts/:id", element: <PostEditor /> },

@@ -191,7 +191,16 @@ export interface SiteBlock {
   kids?: SiteBlock[]
   /** The section preset it came from, e.g. "hero". */
   preset?: string
+  /** Optional look for this one block (the inspector's Style tab). Old blocks have none and render as before. */
+  design?: BlockDesign
   [prop: string]: unknown
+}
+
+export interface BlockDesign {
+  align?: "center" | "right"
+  top?: "none" | "s" | "m" | "l"
+  bottom?: "none" | "s" | "m" | "l"
+  bg?: "surface" | "accent"
 }
 
 export interface SitePalette { bg: string; surface: string; text: string; muted: string; border: string; accent: string }
@@ -245,6 +254,10 @@ export interface SitePage {
   inMenu: boolean
   order: number
   sections: SiteBlock[]
+  /** Nests this page under another in the menu, which makes a drop-down. One level. */
+  parentId?: ID
+  /** In the footer menu. While no page of the site has this set, the footer repeats the main menu. */
+  inFooter?: boolean
   createdAt: Timestamp
   updatedAt: Timestamp
 }
