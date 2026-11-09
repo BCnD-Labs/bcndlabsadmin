@@ -14,6 +14,7 @@ import { PageHeadStoreContext, type PageHead } from "@/stores/page-head"
 import { usePrefs } from "@/stores/prefs"
 import { useUi } from "@/stores/ui"
 import { NotesTool } from "./dock/tools"
+import { BrowserApp, BrowserTitle, useBrowser } from "./browser-window"
 import { PlannerSidebar } from "./planner-sidebar"
 import { todayKey } from "@/lib/dates"
 import { useWorkspace } from "@/stores/workspace"
@@ -31,6 +32,8 @@ const APP = {
   website: { title: "Website", route: "/cms", icon: Globe, tone: "website" },
   social: { title: "Social", route: "/social", icon: Share2, tone: "neutral" },
   mikoshi: { title: "Mikoshi", route: "/mikoshi", icon: Server, tone: "neutral" },
+  /** Not a page: its window holds the browser (browser-window.tsx), so the route is never navigated to. */
+  browser: { title: "Browser", route: "/browser", icon: Globe, tone: "neutral" },
   settings: { title: "Settings", route: "/settings", icon: Settings2, tone: "neutral" },
 } as const
 type AppId = keyof typeof APP
@@ -42,7 +45,7 @@ type Gesture = { id: Id; pointer: number; startX: number; startY: number; lastX:
 const EDGES: Edge[] = ["n", "s", "e", "w", "ne", "nw", "se", "sw"]
 const APP_IDS = Object.keys(APP) as AppId[]
 const IDS: Id[] = ["notes", ...APP_IDS]
-const RAIL_IDS: Id[] = ["home", "learning", "journal", "notes", "projects", "insights", "development", "website", "social", "mikoshi"]
+const RAIL_IDS: Id[] = ["home", "browser", "learning", "journal", "notes", "projects", "insights", "development", "website", "social", "mikoshi"]
 const KEY = "blackwall-mac-desktop-windows-v2"
 /** Width of the left rail with names shown; the icon-only rail is 43px. */
 const RAIL_WIDE = 172, RAIL_NARROW = 43
@@ -64,14 +67,13 @@ function appForPath(path: string): AppId {
   return "home"
 }
 const visibleRect = (value: WindowState): WindowRect => ({ x: value.x, y: value.y, width: value.width, height: value.collapsed ? 30 : value.height })
-const openBrowser = () => fetch("/__mac/shell/browser", { method: "POST", headers: { "X-Blackwall": "1" } }).catch(() => undefined)
 const LiveNotes = memo(NotesTool)
 
 function initialWindows(): Windows {
   const width = window.innerWidth, height = window.innerHeight
   const defaults = {
     notes: { x: Math.max(80, Math.round(width * .12)), y: Math.min(height - 44, 680), width: Math.min(360, width - 95), height: 280, open: true, collapsed: true, expanded: false, pinned: false, z: 1 },
-    ...Object.fromEntries(APP_IDS.map((id, index) => [id, { x: Math.max(75, Math.round(width * .12) + index * 28), y: Math.max(60, Math.round(height * .08) + index * 22), width: Math.min(id === "planner_app" || id === "learning" ? 1000 : 820, width - 105), height: Math.min(id === "planner_app" || id === "learning" ? 650 : 560, height - 90), open: false, collapsed: false, expanded: false, pinned: false, z: index + 3, path: APP[id].route }])),
+    ...Object.fromEntries(APP_IDS.map((id, listed) => [id, id === "browser" ? 2 : listed] as const).map(([id, index]) => [id, { x: Math.max(75, Math.round(width * .12) + index * 28), y: Math.max(60, Math.round(height * .08) + index * 22), width: Math.min(id === "planner_app" || id === "learning" ? 1000 : 820, width - 105), height: Math.min(id === "planner_app" || id === "learning" ? 650 : 560, height - 90), open: false, collapsed: false, expanded: false, pinned: false, z: index + 3, path: APP[id].route }])),
   } as Windows
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) ?? localStorage.getItem("blackwall-mac-desktop-windows-v1") ?? "null") as Partial<Record<Id | "app", Partial<WindowState>>> | null
@@ -150,9 +152,17 @@ export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
   const launch = (id: AppId) => {
     open(id)
     update(id, current => ({ ...current, collapsed: false }))
-    navigate(windows[id].path ?? APP[id].route)
+    if (id !== "browser") navigate(windows[id].path ?? APP[id].route)
   }
   const locked = (id: Id) => IDS.filter(other => isWidget(other) && other !== (id as Id) && windows[other].open && windows[other].pinned).map(other => visibleRect(windows[other]))
+  // Links clicked in Blackwall pages arrive here from the Electron side (desktop/src/main/app.ts) and open in the Browser window.
+  const showPage = useRef<(url: string) => void>(() => undefined)
+  useEffect(() => { showPage.current = url => { useBrowser.getState().open(url); launch("browser") } })
+  useEffect(() => {
+    const bridge = window as unknown as { __bwBrowserOpen?: (url: string) => boolean }
+    bridge.__bwBrowserOpen = url => { showPage.current(url); return true }
+    return () => { delete bridge.__bwBrowserOpen }
+  }, [])
   const pin = (id: Id) => update(id, value => {
     if (value.pinned) return { ...value, pinned: false }
     return IDS.some(other => isWidget(other) && other !== (id as Id) && windows[other].open && overlaps(visibleRect(value), visibleRect(windows[other]))) ? value : { ...value, pinned: true }
@@ -248,13 +258,14 @@ export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
     <div className="mac-dw-top">
       <QuickCreate quiet /><Notifications ntfyOnly />
       <button title="Search" aria-label="Search workspace" onClick={() => setSearchOpen(true)}><Search size={15} /></button>
-      <button title="Browser" aria-label="Open browser tab" onClick={() => void openBrowser()}><Globe size={15} /></button>
+      <button title="Browser" aria-label="Open browser window" onClick={() => launch("browser")}><Globe size={15} /></button>
       <button type="button" className="mac-dw-date" aria-label={overdue ? `Planner, ${overdue} overdue tasks` : "Open Planner"} aria-expanded={plannerOpen} onClick={() => setPlannerOpen(value => !value)}><CalendarDays size={14} />{format(now, "EEE, MMM d")}{overdue > 0 && <span className="mac-dw-overdue-dot" aria-hidden />}</button><time>{format(now, "h:mm a")}</time>
     </div>
     {ready && <>
       {frame("notes", "Notes", <FileText size={16} />, <LiveNotes />)}
       {APP_IDS.map(id => {
         const Icon = APP[id].icon
+        if (id === "browser") return frame(id, <BrowserTitle />, <Icon size={16} />, <BrowserApp onFocus={() => focus("browser")} />)
         return frame(id, <WindowTitle store={appStores[id]} fallback={APP[id].title} />, <Icon size={16} />, <AppPage path={windows[id].path ?? APP[id].route} store={appStores[id]} />)
       })}
     </>}

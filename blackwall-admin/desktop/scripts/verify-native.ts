@@ -1,7 +1,7 @@
 /** Smoke test for the bundled Mac workspace and its authenticated API bridge.
  * Run after desktop:compile: npx electron desktop/scripts/verify-native.ts
  */
-import { app } from "electron"
+import { app, webContents } from "electron"
 import { createServer } from "node:http"
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -134,6 +134,17 @@ server.listen(0, "127.0.0.1", () => {
     assert(await wc!.executeJavaScript("!document.querySelector('[aria-label=\"Learning window\"]')"), "The sidebar closes an open window")
     await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Open Learning\"]').click()")
     assert(await wc!.executeJavaScript("!!document.querySelector('[aria-label=\"Learning window\"]')"), "Learning reopens from the sidebar")
+    // The Browser window: a page opens as a locked-down <webview> window next to the others (links from Blackwall pages arrive the same way).
+    assert(await wc!.executeJavaScript(`window.__bwBrowserOpen('http://127.0.0.1:${address.port}/?browser-window')`), "Blackwall pages can hand a link to the Browser window")
+    for (let i = 0; i < 40; i++) {
+      if (await wc!.executeJavaScript("!!document.querySelector('[aria-label=\"Browser window\"] webview')")) break
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+    assert(await wc!.executeJavaScript("!!document.querySelector('[aria-label=\"Browser window\"] webview') && !!document.querySelector('[aria-label=\"Learning window\"]')"), "The Browser opens as a window beside Learning")
+    const guest = webContents.getAllWebContents().find((c) => c.getType() === "webview")
+    assert(!!guest && guest.session === wc!.session, "The page runs in the shared browser session")
+    assert(await guest!.executeJavaScript("typeof require === 'undefined' && typeof process === 'undefined' && typeof window.__bwBrowserOpen === 'undefined'"), "The page has no Node access and no workspace bridge")
+    await wc!.executeJavaScript("document.querySelector('button[aria-label=\"Close browser window\"]').click()")
     // The create menu opens the task form (a selector that built a new array on every render once crashed it).
     const clickAt = async (selector: string, text: string) => {
       const point = await wc!.executeJavaScript(`(() => { const el = [...document.querySelectorAll(${JSON.stringify(selector)})].find(e => e.textContent.trim().startsWith(${JSON.stringify(text)})) ?? document.querySelector(${JSON.stringify(selector)}); if (!el) return null; const b = el.getBoundingClientRect(); return { x: Math.round(b.x + b.width / 2), y: Math.round(b.y + b.height / 2) } })()`)

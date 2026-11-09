@@ -466,7 +466,7 @@ export function DesktopSettings() {
 }
 
 const RAIL_APPS = [
-  { id: "home", label: "Home" }, { id: "learning", label: "Learning" }, { id: "journal", label: "Journal" }, { id: "notes", label: "Notes" }, { id: "projects", label: "Projects" },
+  { id: "home", label: "Home" }, { id: "browser", label: "Browser" }, { id: "learning", label: "Learning" }, { id: "journal", label: "Journal" }, { id: "notes", label: "Notes" }, { id: "projects", label: "Projects" },
   { id: "insights", label: "Insights" }, { id: "development", label: "GitHub activity" }, { id: "website", label: "Website" }, { id: "social", label: "Social" }, { id: "mikoshi", label: "Mikoshi" },
 ]
 
