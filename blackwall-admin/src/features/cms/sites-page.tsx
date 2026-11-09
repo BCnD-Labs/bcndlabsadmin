@@ -1,5 +1,5 @@
 import { Eye, ExternalLink, FileDown, LayoutTemplate, Monitor, Pencil, Plus, Smartphone, Tablet } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { imagePathsIn, imagePathsInPost } from "@shared/assets"
 import { renderPage, renderPost } from "@shared/sitebuilder"
@@ -16,6 +16,8 @@ import { timeAgo } from "@/lib/dates"
 import { cmsPagesHref, siteFilesHref } from "@/lib/routes"
 import type { Site } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { useConnections } from "@/services/connector"
+import { useSiteAnalytics } from "@/services/data"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
 import { STARTERS } from "@shared/sitebuilder"
@@ -43,6 +45,14 @@ function Thumb({ site }: { site: Site }) {
   return home ? <ScaledFrame html={html} title={`${site.name} home page`} /> : <div className="grid aspect-[16/10] place-items-center bg-well text-xs text-muted-foreground">No pages yet</div>
 }
 
+/** The small traffic line on a site's card: real numbers or a plain "no source". */
+function SiteVisits({ site }: { site: Site }) {
+  const traffic = useSiteAnalytics(site)
+  if (traffic.state === "live") return <p className="text-[11px] text-ink-2 tabular-nums" data-testid="site-visits">{traffic.data.traffic.reduce((n, p) => n + p.visitors, 0).toLocaleString("en")} visits · last 30 days</p>
+  if (traffic.state === "unmapped") return <p className="text-[11px] text-faint" data-testid="site-visits">No analytics source mapped</p>
+  return traffic.state === "error" ? <p className="text-[11px] text-faint" data-testid="site-visits">Traffic unavailable</p> : null
+}
+
 function SiteCard({ site, onView }: { site: Site; onView: () => void }) {
   const navigate = useNavigate()
   const { pages, posts } = useSiteParts(site)
@@ -61,6 +71,7 @@ function SiteCard({ site, onView }: { site: Site; onView: () => void }) {
         <div className="flex items-center gap-2"><b className="min-w-0 flex-1 truncate text-[14px] text-ink">{site.name}</b>{site.template && <span className="shrink-0 rounded-full bg-ink-2/8 px-2 text-[10px] font-bold tracking-[0.03em] text-ink-2 uppercase">Template</span>}</div>
         <p className="truncate font-mono text-xs text-muted-foreground">{site.domain || "No domain yet"}</p>
         <p className="flex items-center gap-1.5 text-xs text-ink-2"><StatusMarker tone={status.tone} />{status.text}</p>
+        {!site.template && <SiteVisits site={site} />}
         <p className="text-[11px] text-faint">{pages.length} {pages.length === 1 ? "page" : "pages"} · {posts.length} {posts.length === 1 ? "post" : "posts"} · {STARTERS[site.starter]?.name ?? "Custom"} look · edited {timeAgo(last)}</p>
       </div>
       <div className="mt-auto flex flex-wrap gap-1.5 px-3.5 py-3">
@@ -121,6 +132,7 @@ export function SiteViewer({ site, onClose, inEditor }: { site: Site; onClose: (
 /** Websites: every site you manage as a card with its front page showing. Click one to edit it; View walks through it first. */
 export function CmsSitesPage() {
   const sites = useWorkspace((s) => s.sites)
+  useEffect(() => { void useConnections.getState().refresh() }, [])
   const openForm = useUi((s) => s.openForm)
   const [viewing, setViewing] = useState<string | null>(null)
   const viewed = sites.find((s) => s.id === viewing)

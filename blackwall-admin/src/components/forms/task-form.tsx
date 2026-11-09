@@ -1,4 +1,7 @@
-import { Star } from "lucide-react"
+import { Globe, Star } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { useNavigate } from "react-router-dom"
+import { useUi } from "@/stores/ui"
 import { useMemo, useState } from "react"
 import { DocLinksField, cleanLinks } from "@/components/common/doc-links"
 import { toast } from "sonner"
@@ -60,6 +63,8 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
   const tracked = !!draft.courseId && draft.learningType !== "event"
   const finished = (status?: WorkStatus) => status === "submitted" || status === "graded"
 
+  const canSave = draft.title.trim().length > 0 && !(scored && scoreBad)
+  const navigate = useNavigate()
   const save = () => {
     const values = {
       title: draft.title.trim(),
@@ -94,7 +99,7 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
     <FormFrame
       title={existing ? `Edit ${noun.toLowerCase()}` : `New ${noun.toLowerCase()}`}
       onSubmit={save}
-      canSubmit={draft.title.trim().length > 0 && !(scored && scoreBad)}
+      canSubmit={canSave}
       onDelete={
         existing
           ? () => {
@@ -191,8 +196,9 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
       {existing && (draft.learningType === "exam" || draft.learningType === "quiz") && !!draft.courseId && !draft.done && !!draft.due && (
         <div><StudyPlanButton taskId={existing.id} draft={{ task: { ...existing, due: draft.due || undefined, learningType: draft.learningType, topicIds: draft.topicIds, subtasks: draft.subtasks }, onChange: (t) => set({ subtasks: t.subtasks ?? [] }) }} /></div>
       )}
-      <Field label="Linked notes and tasks" htmlFor="task-records" hint="Notes and other tasks that belong with this. The links show on both sides.">
-        <LinkedRecordsField value={draft.recordLinks} onChange={(recordLinks) => set({ recordLinks })} selfId={existing?.id} backlinks={existing ? tasksLinkingTask({ tasks: allTasks }, existing.id) : []} />
+      <Field label="Linked notes, tasks and pages" htmlFor="task-records" hint="Notes, other tasks, and website pages or posts that belong with this. The links show on both sides.">
+        <LinkedRecordsField value={draft.recordLinks} onChange={(recordLinks) => set({ recordLinks })} selfId={existing?.id} backlinks={existing ? tasksLinkingTask({ tasks: allTasks }, existing.id) : []} onOpenSite={canSave ? (href) => { save(); navigate(href) } : undefined} />
+        {existing && <Button type="button" variant="outline" size="sm" className="mt-2 self-start" onClick={() => { if (canSave) save(); useUi.getState().openForm({ kind: "pageFromTask", id: existing.id }) }}><Globe /> Create page from this task</Button>}
       </Field>
       <Field label="Linked documents" htmlFor="task-links" hint="Notes, specs or files that live elsewhere. They open in their own app.">
         <DocLinksField value={draft.links} onChange={(links) => set({ links })} />

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Panel } from "@/components/common/panel"
 import { OptionSelect } from "@/components/forms/fields"
+import { siteAnalyticsConnection } from "@shared/site-links"
 import { sitesHref } from "@/lib/routes"
 import type { Site } from "@/lib/types"
 import { useConnections } from "@/services/connector"
@@ -30,6 +31,8 @@ export function SettingsPanel({ site }: { site: Site }) {
   useEffect(() => { void refresh() }, [refresh])
   const set = (patch: Partial<Site>) => update("sites", site.id, patch)
   const repos = list.filter((c) => c.provider === "website")
+  const sources = list.filter((c) => c.provider === "analytics")
+  const mapped = siteAnalyticsConnection(site, list)
 
   return (
     <div className="grid content-start gap-[var(--bw-grid-gap)]">
@@ -50,6 +53,12 @@ export function SettingsPanel({ site }: { site: Site }) {
             <Row label="Form receiver" htmlFor="ss-forms" hint="Your form receiver Worker's address (worker/forms). Forms, comments and sign-ups post here."><Input id="ss-forms" className="h-8 font-mono text-xs" value={site.formEndpoint ?? ""} onChange={(e) => set({ formEndpoint: e.target.value.trim() || undefined })} placeholder="https://forms.example.workers.dev" /></Row>
             <Row label="Turnstile site key" htmlFor="ss-turnstile" hint="From Cloudflare Turnstile; shows the bot check on forms."><Input id="ss-turnstile" className="h-8 font-mono text-xs" value={site.turnstileKey ?? ""} onChange={(e) => set({ turnstileKey: e.target.value.trim() || undefined })} /></Row>
             <Row label="Comments on posts" htmlFor="ss-comments" hint="Visitors can comment under posts. Comments show after you approve them and publish."><Switch id="ss-comments" checked={!!site.comments} onCheckedChange={(comments) => set({ comments })} /></Row>
+          </Panel>
+          <Panel category="website" title="Traffic" bodyClassName="divide-y divide-line-soft">
+            <Row label="Analytics source" htmlFor="ss-analytics" hint={mapped ? `Showing ${mapped.label} in Insights and on this site's card.` : "None is reporting on this site yet, so Insights shows no numbers for it."}>
+              {sources.length ? <OptionSelect id="ss-analytics" value={site.analyticsConnectionId ?? "auto"} onChange={(v) => set({ analyticsConnectionId: v === "auto" ? undefined : v })} options={[{ value: "auto", label: "Match by domain" }, ...sources.map((c) => ({ value: c.id, label: c.label }))]} className="w-full" />
+                : <Button variant="outline" size="sm" onClick={() => useUi.getState().openSettings("connections", "analytics")}>Connect analytics</Button>}
+            </Row>
           </Panel>
           <Panel category="website" title="Redirects" meta="Renaming a published page adds one" bodyClassName="grid gap-1.5 px-3.5 py-3">
             {site.redirects.map((r, i) => (

@@ -88,3 +88,23 @@ test("multi-account GitHub overview assigns repos per connection, skips unusable
     rmSync(root, { recursive: true, force: true })
   }
 })
+
+test("analytics reports carry countries when the source has them, and the rest of the report survives when it doesn't", async () => {
+  const { analyticsReport } = await import("../server/providers/analytics.ts")
+  let countriesWork = true
+  const upstream = createServer((req, res) => {
+    const property = new URL(req.url!, "http://localhost").searchParams.get("property")
+    res.setHeader("Content-Type", "application/json")
+    if (property === "visit:country" && !countriesWork) return void res.writeHead(400).end("{}")
+    res.end(JSON.stringify({ results: property === "visit:country" ? [{ country: "US", visitors: 5 }] : property ? [] : [{ date: "2026-11-01", visitors: 2, pageviews: 3 }] }))
+  })
+  const baseUrl = await listen(upstream)
+  const connection = { id: "a", provider: "analytics", label: "A", config: { provider: "plausible", baseUrl, siteId: "x.dev" }, secrets: { apiKey: "k" }, status: "ok", createdAt: "", updatedAt: "" } as unknown as Parameters<typeof analyticsReport>[0]
+  try {
+    assert.deepEqual((await analyticsReport(connection, 7)).countries, [{ country: "US", visitors: 5 }])
+    countriesWork = false
+    const without = await analyticsReport(connection, 7)
+    assert.equal(without.countries, undefined, "no invented countries")
+    assert.ok(Array.isArray(without.traffic))
+  } finally { await close(upstream) }
+})

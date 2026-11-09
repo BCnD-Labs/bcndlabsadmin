@@ -82,6 +82,7 @@ export function validWorkspace(value: unknown): value is Collections {
       // An uploaded tile logo is a small image data URL (resized in the browser before saving).
       if (key === "services" && row.customLogo != null && (row.customLogo.length > 200_000 || !/^data:image\/(png|webp|jpeg|svg\+xml)[;,]/.test(row.customLogo))) return false
       if (key === "sites" && row.comments !== undefined && typeof row.comments !== "boolean") return false
+      if (key === "sites" && row.analyticsConnectionId != null && typeof row.analyticsConnectionId !== "string") return false
       if (key === "sites" && (!isPalette(row.light) || !isPalette(row.dark) || typeof row.darkMode !== "boolean" || !Array.isArray(row.redirects) || !row.redirects.every((x: unknown) => !!x && typeof (x as { from?: unknown }).from === "string" && typeof (x as { to?: unknown }).to === "string"))) return false
       if (key === "assets" && (["width", "height", "bytes"].some((f) => typeof row[f] !== "number" || !Number.isFinite(row[f]) || row[f] < 0) || !/^[\w][\w.-]{0,120}$/.test(row.file) || row.file.includes(".."))) return false
       if (key === "pages" && (typeof row.inMenu !== "boolean" || typeof row.order !== "number" || !Array.isArray(row.sections) || JSON.stringify(row.sections).length > 2_000_000)) return false

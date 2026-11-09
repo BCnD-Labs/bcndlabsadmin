@@ -16,6 +16,8 @@ import { Input } from "@/components/ui/input"
 import { EmptyState } from "@/components/common/empty-state"
 import { PageHeader } from "@/components/common/page-header"
 import { SitePreview } from "@/features/cms/site-preview"
+import { RecordTasks } from "@/features/cms/page-links"
+import { SharePostButton } from "@/features/social/share-post"
 import { deployedAt, publishSite as publishSiteNow, selectSite } from "@/features/cms/use-cms"
 import { useConnections } from "@/services/connector"
 import { SourceBadge } from "@/components/common/source-badge"
@@ -221,6 +223,12 @@ function Editor({ draft }: { draft: Draft }) {
           ) : (
             <Panel category="website" title="Page draft" tool="page" command="publish" bodyClassName="px-3.5 py-3 text-xs leading-relaxed text-muted-foreground">
               Blackwall publishes posts. Your site's pages are hand-built HTML; use this draft to write the copy, then paste it into the page.
+            </Panel>
+          )}
+          {value.kind === "post" && (
+            <Panel category="website" title="Connected" bodyClassName="grid gap-3 px-3.5 py-3">
+              <SharePostButton post={current} />
+              {draft.siteId && <RecordTasks kind="post" id={draft.id} name={value.title || "this post"} />}
             </Panel>
           )}
           <Panel category="website" title="Post details" tool="post" command="details" bodyClassName="flex flex-col gap-3 px-3.5 py-3">

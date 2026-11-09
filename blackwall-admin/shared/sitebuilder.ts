@@ -56,6 +56,7 @@ export const WIDTHS = { narrow: { name: "Narrow", px: 880 }, normal: { name: "No
 const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
 const LOREM = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
 
+export const slugify = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
 export const esc = (s: unknown) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
 const txt = (v: unknown, fb: string) => esc(String(v ?? "").trim() || fb)
 const str = (v: unknown) => (typeof v === "string" ? v : "")
@@ -336,9 +337,10 @@ export const SECTIONS: Record<string, SectionPreset> = {
   callToAction: { name: "Closing nudge", about: "A shaded strip with a heading and a button.", make: () => mk("section", { tone: "tinted" }, [mk("heading", { text: "Ready to talk?" }), mk("text"), mk("button", { text: "Contact me", href: "/contact/" })]) },
   coursePortal: { name: "Posts by week", about: "Course portal: posts grouped by week, newest first.", make: () => mk("section", {}, [mk("heading", { level: "1", text: "Course portal" }), mk("postsByWeek")]) },
   latestPosts: { name: "Latest posts", about: "Your newest posts as cards.", make: () => mk("section", {}, [mk("heading", { text: "Latest posts" }), mk("postList")]) },
+  assignment: { name: "Assignment", about: "A title, the course and week, then your write-up.", make: () => mk("section", {}, [mk("heading", { level: "1" }), mk("text"), mk("richtext")]) },
   contact: { name: "Contact form", about: "A heading, a sentence and a form from your library.", make: () => mk("section", {}, [mk("heading", { level: "1", text: "Contact" }), mk("text"), mk("form")]) },
 }
-export const SECTION_ORDER = ["hero", "textPicture", "threeCards", "photoGrid", "profileCard", "sidebar", "plainText", "linkList", "table", "coursePortal", "latestPosts", "callToAction", "contact"]
+export const SECTION_ORDER = ["hero", "textPicture", "threeCards", "photoGrid", "profileCard", "sidebar", "plainText", "linkList", "table", "coursePortal", "assignment", "latestPosts", "callToAction", "contact"]
 export const section = (k: string): SiteBlock => ({ ...SECTIONS[k].make(), preset: k })
 
 export const TEMPLATES: Record<string, { name: string; about: string; starter: string; pages: { title: string; slug: string; sections: string[] }[] }> = {
@@ -666,6 +668,7 @@ export const PAGE_KINDS: Record<string, { name: string; about: string; title: st
   services: { name: "Services", about: "What you offer, then a nudge to get in touch.", title: "Services", slug: "services", sections: ["threeCards", "callToAction"] },
   blog: { name: "Blog", about: "Your newest posts as cards.", title: "Blog", slug: "blog", sections: ["latestPosts"] },
   portal: { name: "Course portal", about: "Posts grouped by week.", title: "Course portal", slug: "portal", sections: ["coursePortal"] },
+  assignment: { name: "Assignment page", about: "The course and week, then your write-up.", title: "Assignment", slug: "assignment", sections: ["assignment"] },
   gallery: { name: "Gallery", about: "A grid of photos.", title: "Gallery", slug: "gallery", sections: ["photoGrid"] },
   links: { name: "Links / resources", about: "A heading and a list.", title: "Resources", slug: "resources", sections: ["linkList"] },
 }

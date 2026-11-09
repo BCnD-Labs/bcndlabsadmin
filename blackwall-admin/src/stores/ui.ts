@@ -14,6 +14,7 @@ export type FormRequest =
   | { kind: "service"; id?: string; defaults?: Partial<Service> }
   | { kind: "site"; id?: string; defaults?: undefined }
   | { kind: "sitePage"; id?: string; defaults?: undefined }
+  | { kind: "pageFromTask"; id: string; defaults?: undefined }
   | { kind: "siteForm"; id?: string; defaults?: undefined }
   | { kind: "socialAccount"; id?: string; defaults?: undefined }
 

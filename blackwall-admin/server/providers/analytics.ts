@@ -31,10 +31,12 @@ async function plausible(c: StoredConnection, days: number): Promise<AnalyticsRe
     get("breakdown?property=event:page&metrics=visitors,pageviews&limit=8"),
     get("breakdown?property=visit:source&metrics=visitors&limit=8"),
   ])
+  const places = await get("breakdown?property=visit:country&metrics=visitors&limit=8").catch(() => undefined)
   return {
     traffic: fill(keys, new Map((series.results as any[]).map((r) => [r.date, r]))),
     pages: (pages.results as any[]).map((r) => ({ path: r.page, visitors: r.visitors, pageviews: r.pageviews })),
     referrers: (refs.results as any[]).map((r) => ({ source: r.source, visitors: r.visitors })),
+    countries: places && (places.results as any[]).map((r) => ({ country: r.country, visitors: r.visitors })),
   }
 }
 
@@ -58,10 +60,12 @@ async function umami(c: StoredConnection, days: number): Promise<AnalyticsReport
   // Newer Umami versions call the URL metric "path".
   const pages = await get(`metrics?${q}&type=path&limit=8`).catch(() => get(`metrics?${q}&type=url&limit=8`))
   const refs = await get(`metrics?${q}&type=referrer&limit=8`).catch(() => [])
+  const places = await get(`metrics?${q}&type=country&limit=8`).catch(() => undefined)
   return {
     traffic: fill(keys, rows),
     pages: (pages as any[]).map((r): PageStat => ({ path: r.x, pageviews: r.y, visitors: 0 })),
     referrers: (refs as any[]).map((r): ReferrerStat => ({ source: r.x || "Direct", visitors: r.y })),
+    countries: places && (places as any[]).map((r) => ({ country: r.x, visitors: r.y })),
   }
 }
 
@@ -79,6 +83,10 @@ async function cloudflareWeb(c: StoredConnection, days: number): Promise<Analyti
     filter: { AND: [{ datetime_geq: from.toISOString(), datetime_lt: daysAgo(0).toISOString() }, { siteTag: need(c.config.siteTag, "Site tag") }] },
   }
   const res = await cfFetch(token, "/graphql", { method: "POST", body: JSON.stringify({ query, variables }) })
+  // Asked for separately so a plan or token without this field still gets the rest of the report.
+  const placesQuery = `query($account: string, $filter: AccountRumPageloadEventsAdaptiveGroupsFilter_InputObject) { viewer { accounts(filter: { accountTag: $account }) { places: rumPageloadEventsAdaptiveGroups(limit: 8, filter: $filter, orderBy: [sum_visits_DESC]) { sum { visits } dimensions { countryName } } } } }`
+  const placesRes = await cfFetch(token, "/graphql", { method: "POST", body: JSON.stringify({ query: placesQuery, variables }) }).catch(() => undefined)
+  const places = placesRes?.errors?.length ? undefined : placesRes?.data?.viewer?.accounts?.[0]?.places
   if (res.errors?.length) throw new ProviderError(`Cloudflare: ${res.errors[0].message}`)
   const acct = res.data?.viewer?.accounts?.[0]
   if (!acct) throw new ProviderError("Cloudflare: account not found for this token")
@@ -86,6 +94,7 @@ async function cloudflareWeb(c: StoredConnection, days: number): Promise<Analyti
     traffic: fill(keys, new Map((acct.series as any[]).map((r) => [r.dimensions.date, { pageviews: r.count, visitors: r.sum.visits }]))),
     pages: (acct.pages as any[]).map((r) => ({ path: r.dimensions.requestPath, pageviews: r.count, visitors: r.sum.visits })),
     referrers: (acct.refs as any[]).map((r) => ({ source: r.dimensions.refererHost || "Direct", visitors: r.sum.visits })),
+    countries: places && (places as any[]).map((r) => ({ country: r.dimensions.countryName, visitors: r.sum.visits })),
   }
 }
 

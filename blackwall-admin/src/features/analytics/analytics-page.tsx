@@ -1,6 +1,6 @@
 import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
-import { useState } from "react"
-import { Link } from "react-router-dom"
+import { useEffect, useState } from "react"
+import { Link, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/common/empty-state"
 import { plannerHref } from "@/lib/routes"
@@ -13,7 +13,11 @@ import { PageHeader } from "@/components/common/page-header"
 import { Panel } from "@/components/common/panel"
 import { SourceBadge } from "@/components/common/source-badge"
 import { cn } from "@/lib/utils"
-import { useAnalytics } from "@/services/data"
+import { useConnections } from "@/services/connector"
+import { useAnalytics, useSiteAnalytics } from "@/services/data"
+import { selectSite } from "@/features/cms/use-cms"
+import { cmsPagesHref } from "@/lib/routes"
+import type { Site } from "@/lib/types"
 import type { TrafficRange } from "@/services/types"
 import { DailyBars, RangeToggle } from "./traffic-chart"
 import { StatStrip } from "@/components/common/stat-strip"
@@ -146,12 +150,55 @@ function PersonalAnalytics() {
   )
 }
 
+const countryNames = new Intl.DisplayNames(["en"], { type: "region" })
+const countryName = (code: string) => { try { return countryNames.of(code) ?? code } catch { return code } }
+
+/** One site's last 30 days, from the analytics source mapped to it. With none, it says so rather than showing anything. */
+function SiteTrafficCard({ site }: { site: Site }) {
+  const traffic = useSiteAnalytics(site)
+  const navigate = useNavigate()
+  const settings = () => { selectSite(site.id); navigate(`${cmsPagesHref}?panel=settings`) }
+  const meta = traffic.state === "unmapped" ? undefined : traffic.source
+  return (
+    <GridItem span={2}>
+      <Panel category="website" title={site.name} meta={meta} bodyClassName="grid gap-3 px-3.5 py-3" data-testid="site-traffic">
+        {traffic.state === "unmapped" && <div className="flex flex-wrap items-center gap-2 text-[13px] text-muted-foreground"><span className="min-w-0 flex-1">No analytics source is mapped to this site, so there are no numbers to show.</span><Button variant="outline" size="xs" onClick={settings}>Site settings</Button></div>}
+        {traffic.state === "loading" && <p className="text-[13px] text-muted-foreground">Loading…</p>}
+        {traffic.state === "error" && <div className="flex flex-wrap items-center gap-2 text-[13px] text-red-text"><span className="min-w-0 flex-1">Couldn't get this site's numbers: {traffic.message}</span><Button variant="outline" size="xs" onClick={settings}>Site settings</Button></div>}
+        {traffic.state === "live" && (() => {
+          const { traffic: days, referrers, countries } = traffic.data
+          const visits = days.reduce((n, p) => n + p.visitors, 0)
+          const maxRef = Math.max(1, ...referrers.map((r) => r.visitors))
+          const maxPlace = Math.max(1, ...(countries ?? []).map((c) => c.visitors))
+          return (
+            <>
+              <p className="text-[13px] text-ink-2"><b className="text-lg text-ink tabular-nums">{fmt.format(visits)}</b> visits in the last 30 days</p>
+              <div className="grid gap-4 @lg:grid-cols-2">
+                <div><h3 className="bw-label mb-1.5">Referrers</h3>{referrers.length ? <ul className="grid gap-1.5">{referrers.slice(0, 5).map((r) => <BarRow key={r.source} label={r.source} value={r.visitors} max={maxRef} />)}</ul> : <p className="text-xs text-muted-foreground">None in this period.</p>}</div>
+                <div><h3 className="bw-label mb-1.5">Countries</h3>{countries?.length ? <ul className="grid gap-1.5">{countries.slice(0, 5).map((c) => <BarRow key={c.country} label={countryName(c.country)} value={c.visitors} max={maxPlace} />)}</ul> : <p className="text-xs text-muted-foreground">{countries ? "None in this period." : "This source doesn't report countries."}</p>}</div>
+              </div>
+            </>
+          )
+        })()}
+      </Panel>
+    </GridItem>
+  )
+}
+
+function SiteTrafficCards() {
+  const sites = useWorkspace((s) => s.sites)
+  useEffect(() => { void useConnections.getState().refresh() }, [])
+  const own = sites.filter((s) => !s.template)
+  return own.length ? <div className="mt-[var(--bw-grid-gap)]"><WorkspaceGrid>{own.map((s) => <SiteTrafficCard key={s.id} site={s} />)}</WorkspaceGrid></div> : null
+}
+
 /** Productivity → Insights: worked out from your own tasks and logs. */
 export function InsightsPage() {
   return (
     <>
       <PageHeader title="Activity insights" />
       <PersonalAnalytics />
+      <SiteTrafficCards />
     </>
   )
 }

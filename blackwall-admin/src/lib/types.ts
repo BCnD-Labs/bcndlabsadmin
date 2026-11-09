@@ -71,7 +71,7 @@ export interface CourseTopic {
 }
 
 export interface RecordLink {
-  kind: "note" | "task" | "log"
+  kind: "note" | "task" | "log" | "page" | "post"
   id: string
 }
 
@@ -235,6 +235,8 @@ export interface Site {
   /** A site kept as a starting point: "New site" lists it under "My templates" and copies its look and pages. */
   template?: boolean
   templateAbout?: string
+  /** The analytics connection that reports on this site. Absent: a source reporting on the site's own domain, if there is one. */
+  analyticsConnectionId?: ID
   /** Guided setup: hidden by the user, and when the site's files were last copied or downloaded. */
   guideHidden?: boolean
   exportedAt?: Timestamp
