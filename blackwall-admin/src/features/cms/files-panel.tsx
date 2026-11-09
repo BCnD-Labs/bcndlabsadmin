@@ -6,21 +6,17 @@ import { SITE_IMAGES_DIR, assetCloudPath, humanBytes, usedAssets } from "@shared
 import { buildSite, checkSite, type SiteIssue } from "@shared/sitebuilder"
 import { makeZip } from "@shared/zip"
 import { Button } from "@/components/ui/button"
-import { EmptyState } from "@/components/common/empty-state"
-import { PageHeader } from "@/components/common/page-header"
 import { Panel } from "@/components/common/panel"
-import { GridItem, WorkspaceGrid } from "@/components/common/workspace-grid"
-import { draftHref, formsHref, postsHref, siteLookHref, siteSettingsHref, sitePageHref } from "@/lib/routes"
+import { draftHref, sitePageHref } from "@/lib/routes"
+import type { Site } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useConnections } from "@/services/connector"
-import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
-import { PublishBar } from "./pages-tab"
-import { SiteSwitcher } from "./site-switcher"
-import { SiteTabs } from "./site-tabs"
+import { PublishBar } from "./publish-bar"
+import type { WorkspacePanel } from "./site-workspace"
 import { AssetImage } from "@/features/assets/asset-flow"
 import { fetchFile } from "@/features/mikoshi/storage-api"
-import { publishSite, saveFile, useCurrentSite } from "./use-cms"
+import { publishSite, saveFile } from "./use-cms"
 
 const kb = (n: number) => (n < 1024 ? `${n} B` : `${(n / 1024).toFixed(1)} KB`)
 
@@ -37,18 +33,17 @@ function groupIssues(issues: SiteIssue[], pages: { id: string; title: string }[]
   return [...map.values()].sort((a, b) => Number(b.items.some((i) => i.level === "fix")) - Number(a.items.some((i) => i.level === "fix")))
 }
 
-function where(i: SiteIssue) {
+function where(i: SiteIssue): { to?: string; panel?: WorkspacePanel; label: string } | null {
   if (i.pageId) return { to: sitePageHref(i.pageId), label: "Open page" }
-  if (i.area === "settings") return { to: siteSettingsHref, label: "Settings" }
-  if (i.area === "look") return { to: siteLookHref, label: "Look" }
-  if (i.area === "forms") return { to: formsHref, label: "Forms" }
-  if (i.area === "posts") return { to: postsHref, label: "Posts" }
+  if (i.area === "settings") return { panel: "settings", label: "Settings" }
+  if (i.area === "look") return { panel: "look", label: "Look" }
+  if (i.area === "forms") return { panel: "forms", label: "Forms" }
+  if (i.area === "posts") return { panel: "posts", label: "Posts" }
   return null
 }
 
 /** Get files: the problems worth fixing first, then every file the site is made of, to download or copy. */
-export function CmsFilesPage() {
-  const site = useCurrentSite()
+export function FilesPanel({ site, onPanel }: { site: Site; onPanel: (panel: WorkspacePanel) => void }) {
   const pages = useWorkspace((s) => s.pages)
   const drafts = useWorkspace((s) => s.drafts)
   const forms = useWorkspace((s) => s.forms)
@@ -59,10 +54,9 @@ export function CmsFilesPage() {
   useEffect(() => { void refresh() }, [refresh])
 
   const library = useWorkspace((s) => s.assets)
-  const files = useMemo(() => (site ? buildSite(site, pages, drafts, forms, [], library) : {}), [site, pages, drafts, forms, library])
-  const issues = useMemo(() => (site ? checkSite(site, pages, drafts, forms, library) : []), [site, pages, drafts, forms, library])
-  const pictures = useMemo(() => (site ? usedAssets(library, site.id, pages, drafts) : []), [site, library, pages, drafts])
-  if (!site) return <><PageHeader title="Website" /><Panel category="website" title="Get files"><EmptyState title="No site yet" action={<Button onClick={() => useUi.getState().openForm({ kind: "site" })}>New site</Button>} /></Panel></>
+  const files = useMemo(() => buildSite(site, pages, drafts, forms, [], library), [site, pages, drafts, forms, library])
+  const issues = useMemo(() => checkSite(site, pages, drafts, forms, library), [site, pages, drafts, forms, library])
+  const pictures = useMemo(() => usedAssets(library, site.id, pages, drafts), [site, library, pages, drafts])
 
   const pictureFile = (a: { file: string }) => `${SITE_IMAGES_DIR}/${a.file}`
   const paths = [...Object.keys(files), ...pictures.map(pictureFile)].sort((a, b) => (a === "index.html" ? -1 : b === "index.html" ? 1 : a.localeCompare(b)))
@@ -77,12 +71,8 @@ export function CmsFilesPage() {
   const post = drafts.find((d) => d.siteId === site.id && d.kind === "post" && !d.publishedAt)
 
   return (
-    <>
-      <PageHeader title={site?.name ?? "Website"} badge={<SiteSwitcher />} />
-      <WorkspaceGrid>
-        <GridItem span="full"><SiteTabs current="files" /></GridItem>
-        <GridItem span="full"><PublishBar site={site} /></GridItem>
-        <GridItem span={2}>
+    <div className="grid content-start gap-[var(--bw-grid-gap)]">
+          <PublishBar site={site} />
           <Panel category="website" title="Before you go live" meta={fix.length ? `${fix.length} to fix` : "all clear"} bodyClassName="p-0">
             {issues.length ? (
               <ul className="divide-y divide-line-soft">
@@ -93,15 +83,13 @@ export function CmsFilesPage() {
                       <span className="block font-semibold text-ink">{g.title}</span>
                       <ul className="mt-0.5 grid gap-0.5 text-xs leading-snug text-ink-2">{g.items.map((i, n) => <li key={n} className={cn(i.level === "tip" && "text-muted-foreground")}>{i.text}</li>)}</ul>
                     </span>
-                    {g.go && <Button size="xs" variant="outline" asChild><Link to={g.go.to}>{g.go.label}</Link></Button>}
+                    {g.go && (g.go.to ? <Button size="xs" variant="outline" asChild><Link to={g.go.to}>{g.go.label}</Link></Button> : <Button size="xs" variant="outline" onClick={() => onPanel(g.go!.panel!)}>{g.go.label}</Button>)}
                   </li>
                 ))}
               </ul>
             ) : <p className="px-3.5 py-4 text-[13px] text-muted-foreground"><Check className="mr-1.5 inline size-3.5 text-green" />Nothing to fix. Every page has content, every link goes somewhere and the forms can send.</p>}
             {fix.length > 0 && <p className="border-t border-line-soft px-3.5 py-2 text-[11px] text-faint">You can still get the files with things left to fix; they're just what visitors would notice.</p>}
           </Panel>
-        </GridItem>
-        <GridItem span={2}>
           <Panel category="website" title="Put it online" bodyClassName="grid content-start gap-3 px-3.5 py-3 text-[13px]">
             <div className="grid gap-1.5">
               <Button onClick={async () => {
@@ -129,8 +117,6 @@ export function CmsFilesPage() {
             )}
             {post && <p className="border-t border-line-soft pt-3 text-xs text-muted-foreground">Drafts stay out of the files until you publish them: <Link className="underline" to={draftHref(post.id)}>{post.title || "Untitled"}</Link>.</p>}
           </Panel>
-        </GridItem>
-        <GridItem span="full">
           <Panel category="website" title="Every file" meta={`${paths.length} files`} bodyClassName="p-0">
             <div className="grid @3xl/main:grid-cols-[16rem_minmax(0,1fr)]">
               <ul className="max-h-96 overflow-y-auto border-b border-line-soft @3xl/main:border-r @3xl/main:border-b-0" aria-label="Files">
@@ -153,8 +139,6 @@ export function CmsFilesPage() {
               </div>
             </div>
           </Panel>
-        </GridItem>
-      </WorkspaceGrid>
-    </>
+    </div>
   )
 }

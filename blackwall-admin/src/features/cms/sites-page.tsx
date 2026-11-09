@@ -76,7 +76,7 @@ function SiteCard({ site, onView }: { site: Site; onView: () => void }) {
 const WIDTHS = { desktop: "100%", tablet: "820px", phone: "390px" } as const
 
 /** View a whole site: its pages and posts as visitors will see them, following the menu and links, without opening the editor. */
-function SiteViewer({ site, onClose }: { site: Site; onClose: () => void }) {
+export function SiteViewer({ site, onClose, inEditor }: { site: Site; onClose: () => void; inEditor?: boolean }) {
   const navigate = useNavigate()
   const { pages, posts, live, forms, assets } = useSiteParts(site)
   const [target, setTarget] = useState<{ kind: "page" | "post"; id: string } | null>(null)
@@ -109,7 +109,7 @@ function SiteViewer({ site, onClose }: { site: Site; onClose: () => void }) {
             <button key={w} type="button" role="radio" aria-checked={width === w} aria-label={w} title={w} onClick={() => setWidth(w)} className={cn("flex size-7 items-center justify-center rounded-[6px]", width === w ? "bg-selected text-ink" : "text-muted-foreground hover:text-ink")}><Icon className="size-3.5" /></button>
           ))}
         </div>
-        <Button size="sm" onClick={() => { selectSite(site.id); onClose(); navigate(cmsPagesHref) }}><Pencil /> Edit this site</Button>
+        {!inEditor && <Button size="sm" onClick={() => { selectSite(site.id); onClose(); navigate(cmsPagesHref) }}><Pencil /> Edit this site</Button>}
       </div>
       <div className="flex min-h-0 flex-1 justify-center overflow-auto bg-well p-3">
         {html ? <SitePreview html={html} title={`${site.name} preview`} width={WIDTHS[width]} onLink={follow} className="h-[68dvh]" /> : <p className="grid place-items-center text-sm text-muted-foreground">This site has no pages yet.</p>}

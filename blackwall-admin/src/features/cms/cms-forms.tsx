@@ -101,7 +101,7 @@ export function NewPageForm({ onDone }: { onDone: () => void }) {
       canSubmit={!!shownTitle.trim() && !!finalSlug && !clash && (kind !== "import" || !!imported?.body)}
       onSubmit={() => {
         const sections = kind === "import" ? [mk("section", {}, [mk("html", { code: imported!.body })])] : nameFirstHeading((k?.sections ?? []).map(section), shownTitle.trim())
-        const p = useWorkspace.getState().create("pages", { siteId: site.id, title: shownTitle.trim(), slug: finalSlug, description: imported?.description ?? "", inMenu, order: pages.length, sections })
+        const p = useWorkspace.getState().create("pages", { siteId: site.id, title: shownTitle.trim(), slug: finalSlug, description: imported?.description ?? "", inMenu, order: Math.max(-1, ...pages.map((x) => x.order)) + 1, sections })
         onDone()
         navigate(sitePageHref(p.id))
       }}

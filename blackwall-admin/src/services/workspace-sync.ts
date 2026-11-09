@@ -34,6 +34,8 @@ function apply(data: Collections) {
   applying = true
   try { useWorkspace.setState(data) } finally { applying = false }
 }
+/** True while a store change is coming from the server rather than from something done on this device. */
+export const isApplyingRemote = () => applying
 function later() {
   clearTimeout(timer)
   timer = setTimeout(() => void syncWorkspace(), 700)

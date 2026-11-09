@@ -33,10 +33,10 @@ All new site fields are optional. An older saved workspace loads unchanged (see 
 
 ## Not done yet (in the order I'd do them)
 
-1. **Drag to reorder** blocks and sections (today: up/down arrows).
-2. **Menu structure**: drop-down menus and a separate footer menu (today the menu is every page marked "in the menu", in order).
-3. **Per-site Mac window integration**: open Look beside the page you are editing as two windows.
-4. **Posts**: tags page, post list on its own page with paging, RSS.
+1. **Per-site Mac window integration**: open Look beside the page you are editing as two windows.
+2. **Posts**: tags page, post list on its own page with paging, RSS.
+
+Drag to reorder and drop-down and footer menus are done: see `pagesmith-workspace-brief.md`.
 
 ## Asset library (added after the first pass)
 

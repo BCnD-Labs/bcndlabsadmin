@@ -315,6 +315,8 @@ html[data-font="mono"] {
 
 @layer components {
   .bw-workspace { width: 100%; max-width: var(--bw-page-max); margin-inline: auto; }
+  /* The site editor fills the space under the header, edge to edge, instead of scrolling with the page. */
+  .bw-workspace:has(> .bw-site-workspace) { display: flex; flex-direction: column; max-width: none; height: calc(100dvh - var(--bw-header-h, 88px)); padding-bottom: 0; overflow: hidden; }
   .bw-grid-region { container-type: inline-size; min-width: 0; }
   .bw-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--bw-grid-gap); align-items: stretch; }
   .bw-grid-item { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
