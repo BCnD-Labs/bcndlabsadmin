@@ -1,12 +1,14 @@
-import { Globe, Rocket } from "lucide-react"
-import { useEffect, useState } from "react"
+import { CheckCircle2, Globe, Loader2, RefreshCw, Rocket, TriangleAlert } from "lucide-react"
+import { useEffect } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { StatusMarker } from "@/components/common/tags"
 import { timeAgo } from "@/lib/dates"
 import type { Site, SitePage } from "@/lib/types"
 import { useConnections } from "@/services/connector"
-import { deployedAt, publishSite, useUnpublished } from "./use-cms"
+import { liveConfirmed } from "@shared/site-live"
+import { siteOrigin } from "@shared/sitebuilder"
+import { confirmLive, deployedAt, publishSite, usePublishRuns, useUnpublished } from "./use-cms"
 export function pageState(p: SitePage, site: Site): "published" | "changed" | "draft" {
   const since = deployedAt(site)
   if (!since || p.createdAt > since) return "draft"
@@ -23,7 +25,8 @@ export function StateChip({ state }: { state: keyof typeof STATE_LABEL }) {
 export function PublishBar({ site }: { site: Site }) {
   const changes = useUnpublished(site)
   const { list, refresh } = useConnections()
-  const [busy, setBusy] = useState(false)
+  const run = usePublishRuns((s) => s.runs[site.id])
+  const busy = run?.state === "publishing"
   useEffect(() => { void refresh() }, [refresh])
   const since = deployedAt(site)
   const repo = list.some((c) => c.provider === "website")
@@ -37,10 +40,32 @@ export function PublishBar({ site }: { site: Site }) {
         {!since ? <b className="text-ink">Nothing has left Blackwall yet. </b> : dirty ? <><b className="text-ink">Changed since then: {what}.</b> </> : <b className="text-ink">Everything is up to date. </b>}
         <span className="text-muted-foreground">{last}</span>
       </span>
-      {site.domain && <Button variant="ghost" size="sm" asChild><a href={`https://${site.domain}`} target="_blank" rel="noreferrer"><Globe /> Open site</a></Button>}
-      {repo && <Button size="sm" disabled={busy || !dirty} onClick={async () => { setBusy(true); try { await publishSite(site) } catch (e) { toast.error((e as Error).message) } finally { setBusy(false) } }}>
+      {site.domain && <Button variant="ghost" size="sm" asChild><a href={siteOrigin(site.domain)} target="_blank" rel="noreferrer"><Globe /> Open site</a></Button>}
+      {repo && <Button size="sm" disabled={busy || !dirty} onClick={() => { publishSite(site).catch((e: Error) => toast.error(e.message)) }}>
         <Rocket /> {busy ? "Publishing…" : "Publish changes"}
       </Button>}
+    </div>
+  )
+}
+
+/** After a publish: is the real site showing it? Says exactly which pages aren't, and never claims more than it checked. */
+export function LiveStatus({ site }: { site: Site }) {
+  const run = usePublishRuns((s) => s.runs[site.id])
+  if (!run) return null
+  const again = () => void confirmLive(site, "removed" in run ? run.removed : [], 1)
+  const row = "flex flex-wrap items-center gap-2 text-[12.5px]"
+  if (run.state === "publishing") return <p className={row} data-testid="live-status" data-state="publishing"><Loader2 className="size-3.5 animate-spin" /> Publishing…</p>
+  if (run.state === "checking") return <p className={row} data-testid="live-status" data-state="checking"><Loader2 className="size-3.5 animate-spin" /> Published. Waiting for your live site to show it…</p>
+  if (run.state === "failed") return <p className={`${row} text-red-text`} data-testid="live-status" data-state="failed"><TriangleAlert className="size-3.5" /> {run.message} <Button variant="outline" size="xs" onClick={again}>Try the check again</Button></p>
+  const { report } = run
+  if (!report.origin) return <p className={row} data-testid="live-status" data-state="no-domain">Published. Add your domain in Settings so Blackwall can confirm it's live.</p>
+  if (liveConfirmed(report)) return <p className={`${row} text-green`} data-testid="live-status" data-state="confirmed"><CheckCircle2 className="size-3.5" /> Confirmed live: {report.pages.length} {report.pages.length === 1 ? "page matches" : "pages match"} what you published{report.removed.length ? `, ${report.removed.length} removed ${report.removed.length === 1 ? "page is" : "pages are"} gone` : ""}.</p>
+  const off = [...report.pages, ...report.removed].filter((p) => p.state !== "current" && p.state !== "gone")
+  const say = { old: "still the old version", missing: "not found", "still-there": "still online", current: "", gone: "" }
+  return (
+    <div className="grid gap-1 text-[12.5px]" data-testid="live-status" data-state="not-yet">
+      <p className="flex flex-wrap items-center gap-2 text-amber"><TriangleAlert className="size-3.5" /> Not live yet: {off.length} of {report.pages.length + report.removed.length} {off.length === 1 ? "page doesn't" : "pages don't"} match.<Button variant="outline" size="xs" onClick={again}><RefreshCw /> Check again</Button></p>
+      <ul className="grid gap-0.5 font-mono text-[11.5px] text-ink-2">{off.slice(0, 8).map((p) => <li key={p.path}>{p.path}: {say[p.state]}</li>)}</ul>
     </div>
   )
 }

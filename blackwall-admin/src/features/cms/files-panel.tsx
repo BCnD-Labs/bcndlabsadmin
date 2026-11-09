@@ -12,11 +12,11 @@ import type { Site } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useConnections } from "@/services/connector"
 import { useWorkspace } from "@/stores/workspace"
-import { PublishBar } from "./publish-bar"
+import { LiveStatus, PublishBar } from "./publish-bar"
 import type { WorkspacePanel } from "./site-workspace"
 import { AssetImage } from "@/features/assets/asset-flow"
 import { fetchFile } from "@/features/mikoshi/storage-api"
-import { publishSite, saveFile } from "./use-cms"
+import { publishSite, saveFile, usePublishRuns } from "./use-cms"
 
 const kb = (n: number) => (n < 1024 ? `${n} B` : `${(n / 1024).toFixed(1)} KB`)
 
@@ -50,7 +50,7 @@ export function FilesPanel({ site, onPanel }: { site: Site; onPanel: (panel: Wor
   const { list, refresh } = useConnections()
   const [picked, setPicked] = useState("index.html")
   const [copied, setCopied] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
+  const busy = usePublishRuns((s) => s.runs[site.id]?.state === "publishing")
   useEffect(() => { void refresh() }, [refresh])
 
   const library = useWorkspace((s) => s.assets)
@@ -73,6 +73,7 @@ export function FilesPanel({ site, onPanel }: { site: Site; onPanel: (panel: Wor
   return (
     <div className="grid content-start gap-[var(--bw-grid-gap)]">
           <PublishBar site={site} />
+          <LiveStatus site={site} />
           <Panel category="website" title="Before you go live" meta={fix.length ? `${fix.length} to fix` : "all clear"} bodyClassName="p-0">
             {issues.length ? (
               <ul className="divide-y divide-line-soft">
@@ -104,8 +105,8 @@ export function FilesPanel({ site, onPanel }: { site: Site; onPanel: (panel: Wor
             </div>
             {repo && (
               <div className="grid gap-1.5 border-t border-line-soft pt-3">
-                <Button variant="outline" disabled={busy || fix.some((i) => i.area === "settings")} onClick={async () => { setBusy(true); try { await publishSite(site) } catch (e) { toast.error((e as Error).message) } finally { setBusy(false) } }}><Rocket /> {busy ? "Publishing…" : "Publish to your repository"}</Button>
-                <p className="text-xs text-muted-foreground">One click: Blackwall writes these same files to your GitHub repository in a single commit.</p>
+                <Button variant="outline" disabled={busy || fix.some((i) => i.area === "settings")} onClick={() => { publishSite(site).catch((e: Error) => toast.error(e.message)) }}><Rocket /> {busy ? "Publishing…" : "Publish to your repository"}</Button>
+                <p className="text-xs text-muted-foreground">One click: Blackwall writes these same files, pictures included, to your GitHub repository in a single commit, then checks your live site shows them.</p>
               </div>
             )}
             {pictures.length > 0 && (

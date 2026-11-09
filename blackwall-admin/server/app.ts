@@ -15,7 +15,7 @@ import { serviceIcon } from "./icons.ts"
 import { checkServices, validStatusUrls } from "./service-status.ts"
 import { Notifier } from "./notify.ts"
 import { collectInbox, deleteInbox, readInbox, setInboxStatus } from "./forms-inbox.ts"
-import { publishSite } from "./site-publish.ts"
+import { checkLive, publishSite } from "./site-publish.ts"
 import { handleStorage } from "./storage.ts"
 import type { WorkspaceStore } from "./workspace.ts"
 import type { System } from "./system.ts"
@@ -262,6 +262,10 @@ export function createApi(opts: ApiOptions) {
     // --- CMS sites: build and commit ------------------------------------------
     if (parts[0] === "sites" && parts[2] === "publish" && method === "POST" && parts[1]) {
       return send(res, 200, await publishSite(store, (await opts.workspace.readWorkspace()).data, parts[1]))
+    }
+    if (parts[0] === "sites" && parts[2] === "live" && method === "POST" && parts[1]) {
+      const body = await readJson(req) as { removed?: unknown }
+      return send(res, 200, await checkLive(store, (await opts.workspace.readWorkspace()).data, parts[1], Array.isArray(body?.removed) ? body.removed.filter((p): p is string => typeof p === "string") : []))
     }
 
     // --- site inbox (form receiver) ----------------------------------------------
