@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom"
-import { cmsPagesHref, formsHref, postsHref, siteFilesHref, siteLookHref, siteSettingsHref } from "@/lib/routes"
+import { assetsHref, cmsPagesHref, formsHref, postsHref, siteFilesHref, siteLookHref, siteSettingsHref } from "@/lib/routes"
 import { cn } from "@/lib/utils"
 import { useWorkspace } from "@/stores/workspace"
 import { useCurrentSite } from "./use-cms"
@@ -7,6 +7,7 @@ import { useCurrentSite } from "./use-cms"
 const TABS = [
   { id: "pages", label: "Pages", to: cmsPagesHref },
   { id: "posts", label: "Posts", to: postsHref },
+  { id: "assets", label: "Assets", to: assetsHref },
   { id: "look", label: "Look", to: siteLookHref },
   { id: "forms", label: "Forms", to: formsHref },
   { id: "settings", label: "Settings", to: siteSettingsHref },
@@ -19,7 +20,8 @@ export function SiteTabs({ current }: { current: SiteTab }) {
   const site = useCurrentSite()
   const pages = useWorkspace((s) => s.pages.filter((p) => p.siteId === site?.id).length)
   const posts = useWorkspace((s) => s.drafts.filter((d) => d.siteId === site?.id && d.kind === "post").length)
-  const counts: Partial<Record<SiteTab, number>> = { pages, posts }
+  const assets = useWorkspace((s) => s.assets.length)
+  const counts: Partial<Record<SiteTab, number>> = { pages, posts, assets }
   return (
     <nav aria-label="Website sections" className="flex gap-1 overflow-x-auto rounded-[8px] border border-line-soft bg-well p-0.5 [scrollbar-width:none]">
       {TABS.map((t) => (

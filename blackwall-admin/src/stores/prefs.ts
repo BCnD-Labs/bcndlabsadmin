@@ -67,6 +67,8 @@ interface PrefsState {
   roundness: Roundness
   /** Mac desktop: the left rail shows names next to its icons. */
   railLabels: boolean
+  /** The Nextcloud folder the asset library saves processed pictures to. */
+  assetsFolder: string
   /** Mac desktop: apps hidden from the rail (by app id). */
   railHidden: string[]
   /** Mac desktop: reopen the windows that were open last time. */
@@ -122,6 +124,7 @@ const DEFAULT_PREFS = (): Persisted => ({
   customAccent: "",
   roundness: "default",
   railLabels: false,
+  assetsFolder: "/Blackwall/assets",
   railHidden: [],
   restoreWindows: true,
   planPerDay: 3,
@@ -192,6 +195,7 @@ export const usePrefs = create<PrefsState>()(
           customAccent: cleanHex(p.customAccent),
           roundness: cleanRoundness(p.roundness),
           railLabels: p.railLabels === true,
+          assetsFolder: typeof p.assetsFolder === "string" && /^\/[^\0]{0,200}$/.test(p.assetsFolder) && !p.assetsFolder.includes("..") ? p.assetsFolder.replace(/\/+$/, "") || "/Blackwall/assets" : "/Blackwall/assets",
           railHidden: strList(p.railHidden).slice(0, 20),
           restoreWindows: p.restoreWindows !== false,
           planPerDay: Number.isFinite(Number(p.planPerDay)) ? Math.min(6, Math.max(1, Math.round(Number(p.planPerDay)))) : 3,

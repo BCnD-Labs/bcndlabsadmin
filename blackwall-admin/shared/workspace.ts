@@ -1,4 +1,4 @@
-import type { Course, Draft, JournalEntry, Note, Project, RepoLink, Service, Site, SiteForm, SitePage, SocialAccount, SocialPost, Task } from "../src/lib/types.ts"
+import type { Asset, Course, Draft, JournalEntry, Note, Project, RepoLink, Service, Site, SiteForm, SitePage, SocialAccount, SocialPost, Task } from "../src/lib/types.ts"
 import { validJournalItems, validJournalSections } from "./journal-sections.ts"
 import { validPlannerFields } from "./planner.ts"
 
@@ -16,11 +16,12 @@ export interface Collections {
   forms: SiteForm[]
   socialAccounts: SocialAccount[]
   socialPosts: SocialPost[]
+  assets: Asset[]
 }
-export const COLLECTION_KEYS = ["tasks", "notes", "journal", "projects", "repos", "drafts", "courses", "services", "sites", "pages", "forms", "socialAccounts", "socialPosts"] as const
+export const COLLECTION_KEYS = ["tasks", "notes", "journal", "projects", "repos", "drafts", "courses", "services", "sites", "pages", "forms", "socialAccounts", "socialPosts", "assets"] as const
 /** Collections added after the first release: a snapshot written before them simply has none yet. */
-const LATER_KEYS: readonly (keyof Collections)[] = ["services", "sites", "pages", "forms", "socialAccounts", "socialPosts"]
-export const emptyWorkspace = (): Collections => ({ tasks: [], notes: [], journal: [], projects: [], repos: [], drafts: [], courses: [], services: [], sites: [], pages: [], forms: [], socialAccounts: [], socialPosts: [] })
+const LATER_KEYS: readonly (keyof Collections)[] = ["services", "sites", "pages", "forms", "socialAccounts", "socialPosts", "assets"]
+export const emptyWorkspace = (): Collections => ({ tasks: [], notes: [], journal: [], projects: [], repos: [], drafts: [], courses: [], services: [], sites: [], pages: [], forms: [], socialAccounts: [], socialPosts: [], assets: [] })
 export interface WorkspaceSnapshot { id: string; revision: number; data: Collections }
 
 /** Validate both imports and API writes before they can replace durable data. */
@@ -40,6 +41,7 @@ export function validWorkspace(value: unknown): value is Collections {
     forms: ["name", "submitLabel", "successMessage"],
     socialAccounts: ["platform", "name", "brand", "url"],
     socialPosts: ["title", "body", "stage"],
+    assets: ["name", "file", "folder", "mime", "alt"],
   }
   return COLLECTION_KEYS.every((key) => {
     const rows = data[key]
@@ -81,6 +83,7 @@ export function validWorkspace(value: unknown): value is Collections {
       if (key === "services" && row.customLogo != null && (row.customLogo.length > 200_000 || !/^data:image\/(png|webp|jpeg|svg\+xml)[;,]/.test(row.customLogo))) return false
       if (key === "sites" && row.comments !== undefined && typeof row.comments !== "boolean") return false
       if (key === "sites" && (!isPalette(row.light) || !isPalette(row.dark) || typeof row.darkMode !== "boolean" || !Array.isArray(row.redirects) || !row.redirects.every((x: unknown) => !!x && typeof (x as { from?: unknown }).from === "string" && typeof (x as { to?: unknown }).to === "string"))) return false
+      if (key === "assets" && (["width", "height", "bytes"].some((f) => typeof row[f] !== "number" || !Number.isFinite(row[f]) || row[f] < 0) || !/^[\w][\w.-]{0,120}$/.test(row.file) || row.file.includes(".."))) return false
       if (key === "pages" && (typeof row.inMenu !== "boolean" || typeof row.order !== "number" || !Array.isArray(row.sections) || JSON.stringify(row.sections).length > 2_000_000)) return false
       if (key === "forms" && (!Array.isArray(row.fields) || row.fields.length > 40 || !row.fields.every((f: unknown) => !!f && typeof (f as { label?: unknown }).label === "string"))) return false
       if (key === "socialPosts" && (!Array.isArray(row.accountIds) || !row.accountIds.every((a: unknown) => typeof a === "string") || !Array.isArray(row.posted) || !row.posted.every((x: unknown) => !!x && typeof (x as { accountId?: unknown }).accountId === "string" && typeof (x as { at?: unknown }).at === "string"))) return false

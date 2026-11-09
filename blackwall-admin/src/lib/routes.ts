@@ -28,6 +28,7 @@ export const formsHref = `${CMS}/forms`
 export const siteSettingsHref = `${CMS}/settings`
 export const siteLookHref = `${CMS}/look`
 export const siteFilesHref = `${CMS}/files`
+export const assetsHref = `${CMS}/assets`
 export const sitePageHref = (id: string) => `${CMS}/pages/${id}`
 export const mediaHref = `${CMS}/media`
 export const siteAnalyticsHref = `${CMS}/analytics`

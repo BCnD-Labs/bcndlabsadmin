@@ -1,6 +1,8 @@
 import { Check } from "lucide-react"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
+import { imagePathsIn } from "@shared/assets"
+import { usePreviewPictures } from "@/features/assets/use-assets"
 import { CORNERS, FONTS, STARTERS, SWATCH_INFO, SWATCH_KEYS, WIDTHS, contrast, renderPage } from "@shared/sitebuilder"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
@@ -64,7 +66,10 @@ export function CmsLookPage() {
   const own = useMemo(() => pages.filter((p) => p.siteId === site?.id).sort((a, b) => a.order - b.order), [pages, site?.id])
   const page = own.find((p) => p.id === previewPage) ?? own.find((p) => p.slug === "") ?? own[0]
   const posts = useMemo(() => drafts.filter((d) => d.siteId === site?.id && d.publishedAt), [drafts, site?.id])
-  const html = useMemo(() => (site && page ? renderPage(site, own, page, { preview: true, posts, forms }) : ""), [site, page, own, posts, forms])
+  const library = useWorkspace((s) => s.assets)
+  const paths = useMemo(() => (page ? imagePathsIn(page.sections) : []), [page])
+  const pictures = usePreviewPictures(paths)
+  const html = useMemo(() => (site && page ? renderPage(site, own, page, { preview: true, posts, forms, assets: library, assetUrls: pictures }) : ""), [site, page, own, posts, forms, library, pictures])
 
   if (!site) return <><PageHeader title="Website" /><Panel category="website" title="Look"><EmptyState title="No site yet" action={<Button onClick={() => useUi.getState().openForm({ kind: "site" })}>New site</Button>} /></Panel></>
   const set = (patch: Partial<Site>) => update("sites", site.id, patch)
