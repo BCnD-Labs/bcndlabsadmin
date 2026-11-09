@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 
+export type BlockAction = "up" | "down" | "duplicate" | "remove" | "parent"
+
 /** What the site editor adds to the preview: inline text editing, the "+" between sections and its keyboard shortcuts. */
 export interface CanvasEditing {
   /** The block's name, for the label shown on hover. */
@@ -10,6 +12,9 @@ export interface CanvasEditing {
   commit: (id: string, value: string) => void
   insert: (at: number) => void
   deselect: () => void
+  /** The toolbar on the selected block. */
+  act: (id: string, action: BlockAction) => void
+  canGoUp: (id: string) => boolean
   key: (e: KeyboardEvent) => void
   activate: () => void
 }
@@ -59,7 +64,34 @@ export function SitePreview({ html, title, width = "100%", selectedId, onBlock, 
     if (!doc) return
     doc.querySelectorAll(".bw-sel").forEach((el) => el.classList.remove("bw-sel"))
     const id = latest.current.selectedId
-    if (id) boxOf(doc.querySelector(`[data-bw="${CSS.escape(id)}"]`))?.classList.add("bw-sel")
+    const box = id ? boxOf(doc.querySelector(`[data-bw="${CSS.escape(id)}"]`)) : null
+    box?.classList.add("bw-sel")
+    doc.getElementById("bw-bar")?.remove()
+    if (id) doc.getElementById("bw-tag")?.remove()
+    const edit = latest.current.editing
+    if (!box || !id || !edit || inline.current) return
+    // The selected block's own toolbar, drawn in the page right above it.
+    const bar = doc.createElement("div")
+    bar.id = "bw-bar"
+    bar.dataset.for = id
+    const name = doc.createElement("span")
+    name.textContent = edit.label(id) ?? ""
+    bar.append(name)
+    const tools: [BlockAction, string, string][] = [["up", "↑", "Move up"], ["down", "↓", "Move down"], ["duplicate", "⧉", "Duplicate"], ["remove", "✕", "Remove"]]
+    if (edit.canGoUp(id)) tools.unshift(["parent", "⤴", "Select what it's inside"])
+    for (const [act, glyph, title] of tools) {
+      const b = doc.createElement("button")
+      b.type = "button"
+      b.textContent = glyph
+      b.title = title
+      b.setAttribute("aria-label", title)
+      b.dataset.act = act
+      bar.append(b)
+    }
+    doc.documentElement.append(bar)
+    const win = doc.defaultView!, rect = box.getBoundingClientRect()
+    bar.style.left = `${Math.max(2, Math.min(rect.left + win.scrollX - 3, doc.documentElement.clientWidth - bar.offsetWidth - 2))}px`
+    bar.style.top = `${Math.max(2, rect.top + win.scrollY - 31)}px`
   }
 
   const sync = (next: string) => {
@@ -107,6 +139,7 @@ export function SitePreview({ html, title, width = "100%", selectedId, onBlock, 
     if (!doc || !what || !(target instanceof doc.defaultView!.HTMLElement)) return
     const saved = wrapper.innerHTML
     target.classList.remove("bw-sel", "bw-hover")
+    doc.getElementById("bw-bar")?.remove()
     // A text block can be several paragraphs on the page; it is one piece of text while you edit it.
     while (target.nextElementSibling) target.nextElementSibling.remove()
     target.textContent = what.value
@@ -145,7 +178,8 @@ export function SitePreview({ html, title, width = "100%", selectedId, onBlock, 
       hover = boxOf(wrapper)
       hover?.classList.add("bw-hover")
       doc.getElementById("bw-tag")?.remove()
-      const name = wrapper && latest.current.editing?.label(wrapper.getAttribute("data-bw")!)
+      const hoveredId = wrapper?.getAttribute("data-bw")
+      const name = hoveredId && hoveredId !== latest.current.selectedId ? latest.current.editing?.label(hoveredId) : undefined
       if (!hover || !name) return
       const box = hover.getBoundingClientRect()
       const tag = doc.createElement("div")
@@ -163,6 +197,9 @@ export function SitePreview({ html, title, width = "100%", selectedId, onBlock, 
       e.preventDefault()
       const el = e.target as Element
       if (inline.current?.target.contains(el)) return
+      const tool = el.closest?.("#bw-bar button")
+      if (tool) { latest.current.editing?.act(el.closest("#bw-bar")!.getAttribute("data-for")!, tool.getAttribute("data-act") as BlockAction); return }
+      if (el.closest?.("#bw-bar")) return
       const strip = el.closest?.("[data-bw-insert]")
       if (strip) { if (el.closest("button")) latest.current.editing?.insert(Number(strip.getAttribute("data-bw-insert"))); return }
       const block = blockAt(el)
@@ -181,9 +218,11 @@ export function SitePreview({ html, title, width = "100%", selectedId, onBlock, 
 }
 
 /** A whole page shrunk into a card: the page is laid out at `width` and scaled to fit what the card allows. */
-export function ScaledFrame({ html, title, width = 1100, aspect = 16 / 10, className }: { html: string; title: string; width?: number; aspect?: number; className?: string }) {
+export function ScaledFrame({ html, title, width = 1100, aspect = 16 / 10, fit, className }: { html: string; title: string; width?: number; aspect?: number; /** Take the shape of what's inside (within reason) instead of `aspect`. */ fit?: boolean; className?: string }) {
   const box = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(0.3)
+  const [natural, setNatural] = useState<number | null>(null)
+  const shape = fit && natural ? natural : aspect
   useEffect(() => {
     const el = box.current
     if (!el) return
@@ -194,8 +233,9 @@ export function ScaledFrame({ html, title, width = 1100, aspect = 16 / 10, class
     return () => ro.disconnect()
   }, [width])
   return (
-    <div ref={box} className={cn("pointer-events-none relative w-full overflow-hidden bg-white", className)} style={{ aspectRatio: String(aspect) }} aria-hidden>
-      <iframe title={title} srcDoc={html} sandbox="allow-same-origin" tabIndex={-1} className="absolute top-0 left-0 origin-top-left border-0" style={{ width, height: width / aspect, transform: `scale(${scale})` }} />
+    <div ref={box} className={cn("pointer-events-none relative w-full overflow-hidden bg-white", className)} style={{ aspectRatio: String(shape) }} aria-hidden>
+      <iframe title={title} srcDoc={html} sandbox="allow-same-origin" tabIndex={-1} className="absolute top-0 left-0 origin-top-left border-0" style={{ width, height: width / shape, transform: `scale(${scale})` }}
+        onLoad={(e) => { if (!fit) return; const h = (e.currentTarget.contentDocument?.querySelector("main") as HTMLElement | null)?.offsetHeight; if (h) setNatural(Math.min(4.5, Math.max(1.15, width / h))) }} />
     </div>
   )
 }

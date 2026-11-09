@@ -31,7 +31,7 @@ function Row<R extends TreeRow>({ row, depth, selected, invalid, children, onKey
  * A list you can rearrange by dragging: up and down to reorder, right to nest under the row above, left to come out again.
  * `canDrop` says what may go where. Rows are flat; the caller builds them from its own tree.
  */
-export function SortableTree<R extends TreeRow>({ rows, label, canDrop, onMove, onDragging, selectedId, onRowKey, render }: {
+export function SortableTree<R extends TreeRow>({ rows, label, canDrop, onMove, onDragging, selectedId, onRowKey, render, gap = "gap-px" }: {
   rows: R[]
   label: string
   canDrop: (active: R, parent: R | null) => boolean
@@ -40,6 +40,7 @@ export function SortableTree<R extends TreeRow>({ rows, label, canDrop, onMove, 
   selectedId?: string | null
   onRowKey?: (row: R, e: KeyboardEvent<HTMLLIElement>) => void
   render: (row: R) => ReactNode
+  gap?: string
 }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
   const [activeId, setActive] = useState<string | null>(null)
@@ -78,7 +79,7 @@ export function SortableTree<R extends TreeRow>({ rows, label, canDrop, onMove, 
       onDragCancel={reset}
     >
       <SortableContext items={visible.map((r) => r.id)} strategy={verticalListSortingStrategy}>
-        <ul role="tree" aria-label={label} className="grid min-w-0 gap-px">
+        <ul role="tree" aria-label={label} className={cn("grid min-w-0", gap)}>
           {visible.map((row) => (
             <Row key={row.id} row={row} depth={row.id === activeId && drop ? drop.depth : row.depth} selected={selectedId === row.id} invalid={row.id === activeId && !drop} onKey={onRowKey ? (e) => onRowKey(row, e) : undefined}>
               {render(row)}

@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react"
+import { ChevronDown, ChevronRight, GalleryVertical, Plus, Trash2 } from "lucide-react"
 import { useMemo } from "react"
 import { ADDABLE, BLOCKS, SECTIONS } from "@shared/sitebuilder"
 import { canHold, type TreeRow } from "@shared/sitebuilder-tree"
@@ -18,16 +18,16 @@ function flatten(list: SiteBlock[], collapsed: Set<string>, depth = 0, parentId:
 export const blockName = (b: SiteBlock, top: boolean) => (top && b.preset && SECTIONS[b.preset] ? SECTIONS[b.preset].name : BLOCKS[b.type]?.name ?? b.type)
 
 /** Layers: the page's sections and blocks as a tree. Drag to reorder and to move in and out of rows and cards; Alt+arrows do the same from the keyboard. */
-export function LayersPane({ sections, selectedId, collapsed, onToggle, onSelect, onMove, onRemove, onAdd, onAddSection, onDragging }: {
+export function LayersPane({ sections, selectedId, collapsed, onToggle, onSelect, onMove, onRemove, onAdd, onAddSection, onDragging, onPictures }: {
   sections: SiteBlock[]; selectedId: string | null; collapsed: Set<string>
   onToggle: (id: string) => void; onSelect: (id: string) => void
   onMove: (id: string, parentId: string | null, beforeId: string | null) => void
-  onRemove: (id: string) => void; onAdd: (parent: string, type: string) => void; onAddSection: () => void; onDragging: (on: boolean) => void
+  onRemove: (id: string) => void; onAdd: (parent: string, type: string) => void; onAddSection: () => void; onDragging: (on: boolean) => void; onPictures: () => void
 }) {
   const rows = useMemo(() => flatten(sections, collapsed), [sections, collapsed])
   return (
     <div className="flex h-full min-h-0 flex-col" data-testid="layers-pane">
-      <PaneHead title="Layers"><Button variant="quiet" size="xs" className="text-muted-foreground" onClick={onAddSection}><Plus /> Section</Button></PaneHead>
+      <PaneHead title="Layers"><Button variant="quiet" size="icon-xs" aria-label="Show sections as pictures" title="Show sections as pictures" onClick={onPictures}><GalleryVertical /></Button><Button variant="quiet" size="xs" className="text-muted-foreground" onClick={onAddSection}><Plus /> Section</Button></PaneHead>
       <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2">
         {rows.length ? (
           <SortableTree<LayerRow> rows={rows} label="Layers of this page" selectedId={selectedId} onDragging={onDragging}

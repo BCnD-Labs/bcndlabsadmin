@@ -413,6 +413,10 @@ const PREVIEW_CSS = `.bw-hover { outline: 1px dashed #4c8dff; outline-offset: 3p
 .bw-editing { outline: 2px solid #4c8dff; outline-offset: 3px; cursor: text; white-space: pre-wrap; min-width: 2ch; min-height: 1em; }
 .bw-editing:empty::before { content: attr(data-placeholder); opacity: .45; }
 #bw-tag { position: absolute; z-index: 9999; padding: 1px 6px; border-radius: 3px 3px 0 0; background: #4c8dff; color: #fff; font: 600 11px/16px system-ui, sans-serif; pointer-events: none; }
+#bw-bar { position: absolute; z-index: 9998; display: flex; align-items: center; height: 26px; border-radius: 5px; background: #4c8dff; color: #fff; font: 600 11px/26px system-ui, sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+#bw-bar span { padding: 0 8px; white-space: nowrap; }
+#bw-bar button { width: 26px; height: 26px; padding: 0; border: 0; border-left: 1px solid rgba(255,255,255,.3); background: none; color: inherit; font: 400 14px/26px system-ui, sans-serif; cursor: pointer; }
+#bw-bar button:hover { background: rgba(0,0,0,.2); }
 .bw-insert { position: relative; height: 0; z-index: 30; }
 .bw-insert::before { content: ""; position: absolute; left: 0; right: 0; top: -14px; height: 28px; }
 .bw-insert button { position: absolute; left: 50%; top: -13px; width: 26px; height: 26px; margin-left: -13px; padding: 0; border: 0; border-radius: 50%; background: #4c8dff; color: #fff; font: 400 20px/26px system-ui, sans-serif; cursor: pointer; opacity: 0; transition: opacity .1s; }
@@ -426,7 +430,7 @@ const insertStrip = (at: number, indent: string, empty = false) => `${indent}<di
 
 interface Doc { title: string; description: string; body: string[]; current?: string; bodyClass: string }
 
-function documentHtml(site: Site, pages: SitePage[], doc: Doc, opts: { preview: boolean; posts: Draft[]; forms: SiteForm[]; assets?: Asset[]; assetUrls?: Record<string, string> }) {
+function documentHtml(site: Site, pages: SitePage[], doc: Doc, opts: { preview: boolean; bare?: boolean; posts: Draft[]; forms: SiteForm[]; assets?: Asset[]; assetUrls?: Record<string, string> }) {
   const ctx: BuildCtx = { site, pages, posts: opts.posts, forms: opts.forms, current: doc.current, where: "header", h1: false, preview: opts.preview, assets: opts.assets ?? [], assetUrls: opts.assetUrls ?? {} }
   const head: string[] = [], foot: string[] = []
   emit([mk("sitename"), mk("nav")], "      ", ctx, head)
@@ -443,9 +447,9 @@ function documentHtml(site: Site, pages: SitePage[], doc: Doc, opts: { preview: 
     css,
     hasForm && site.turnstileKey && !opts.preview ? '    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>' : "",
     "  </head>", `  <body class="${esc(doc.bodyClass)}">`,
-    '    <header class="site-header">', ...head, "    </header>",
+    ...(opts.bare ? [] : ['    <header class="site-header">', ...head, "    </header>"]),
     "    <main>", ...doc.body, "    </main>",
-    '    <footer class="site-footer">', ...foot, "    </footer>",
+    ...(opts.bare ? [] : ['    <footer class="site-footer">', ...foot, "    </footer>"]),
     hasForm ? FORM_SCRIPT : "",
     "  </body>", "</html>", "",
   ].filter((l) => l !== "").join("\n")
@@ -453,7 +457,7 @@ function documentHtml(site: Site, pages: SitePage[], doc: Doc, opts: { preview: 
 
 const slugClass = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "page"
 
-export function renderPage(site: Site, pages: SitePage[], page: SitePage, opts: { preview?: boolean; edit?: boolean; posts?: Draft[]; forms?: SiteForm[]; assets?: Asset[]; assetUrls?: Record<string, string> } = {}) {
+export function renderPage(site: Site, pages: SitePage[], page: SitePage, opts: { preview?: boolean; edit?: boolean; bare?: boolean; posts?: Draft[]; forms?: SiteForm[]; assets?: Asset[]; assetUrls?: Record<string, string> } = {}) {
   const ctx: BuildCtx = { site, pages, posts: opts.posts ?? [], forms: opts.forms ?? [], current: page.id, where: "page", h1: false, preview: !!opts.preview, assets: opts.assets ?? [], assetUrls: opts.assetUrls ?? {} }
   const body: string[] = []
   if (opts.edit && opts.preview) {
@@ -462,7 +466,13 @@ export function renderPage(site: Site, pages: SitePage[], page: SitePage, opts: 
     if (page.sections.length) body.push(insertStrip(page.sections.length, "      "))
   } else emit(page.sections, "      ", ctx, body)
   const title = page.slug ? `${page.title} — ${site.name}` : site.name
-  return documentHtml(site, pages, { title, description: page.description, body, current: page.id, bodyClass: `page-${slugClass(page.slug || "home")}` }, { preview: !!opts.preview, posts: opts.posts ?? [], forms: opts.forms ?? [], assets: opts.assets, assetUrls: opts.assetUrls })
+  return documentHtml(site, pages, { title, description: page.description, body, current: page.id, bodyClass: `page-${slugClass(page.slug || "home")}` }, { preview: !!opts.preview, bare: opts.bare, posts: opts.posts ?? [], forms: opts.forms ?? [], assets: opts.assets, assetUrls: opts.assetUrls })
+}
+
+/** One section by itself, in the site's own look, with no menu or footer around it: what the section picker and the Sections list show. */
+export function renderSectionPreview(site: Site, block: SiteBlock, opts: { posts?: Draft[]; forms?: SiteForm[]; assets?: Asset[]; assetUrls?: Record<string, string> } = {}) {
+  const page: SitePage = { id: "section-preview", siteId: site.id, title: "", slug: "", description: "", inMenu: false, order: 0, sections: [block], createdAt: "", updatedAt: "" }
+  return renderPage(site, [page], page, { ...opts, preview: true, bare: true })
 }
 
 /** Approved comments and the comment form, under a post (when the site has comments on). */
