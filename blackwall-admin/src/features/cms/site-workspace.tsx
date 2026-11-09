@@ -18,6 +18,7 @@ import { cmsPagesHref, draftHref, sitePageHref, sitesHref } from "@/lib/routes"
 import type { Site, SiteBlock, SitePage } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useWorkspaceSync } from "@/services/workspace-sync"
+import { usePrefs } from "@/stores/prefs"
 import { safeLocalStorage } from "@/stores/storage"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
@@ -26,13 +27,14 @@ import { FormsPanel } from "./forms-panel"
 import { Inspector } from "./inspector"
 import { LayersPane, blockName } from "./layers-pane"
 import { LookPanel } from "./look-panel"
+import { SectionsPane } from "./sections-pane"
 import { PagesPane } from "./pages-pane"
 import { PostsPanel } from "./posts-panel"
 import { StateChip, pageState } from "./publish-bar"
 import { SectionGallery } from "./section-gallery"
 import { SettingsPanel } from "./settings-panel"
 import { SetupGuide } from "./setup-guide"
-import { SitePreview, type CanvasEditing } from "./site-preview"
+import { SitePreview, type BlockAction, type CanvasEditing } from "./site-preview"
 import { SiteViewer } from "./sites-page"
 import { SiteSwitcher } from "./site-switcher"
 import { selectSite, useCurrentSite } from "./use-cms"
@@ -101,6 +103,8 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
   const library = useWorkspace((s) => s.assets)
   const { update } = useWorkspace.getState()
   const { undo, redo, canUndo, canRedo } = useSiteHistory(site.id)
+  const layersTree = usePrefs((s) => s.layersTree)
+  const setPref = usePrefs((s) => s.set)
 
   const [selected, setSelected] = useState<string | null>(null)
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set())
@@ -252,6 +256,15 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
     commit: (id, value) => patchBlock(id, { text: value }),
     insert: (at) => setInsertAt(at),
     deselect: () => setSelected(null),
+    act: (id, action: BlockAction) => {
+      if (!page) return
+      if (action === "remove") return removeBlock(id)
+      if (action === "duplicate") return duplicate(id)
+      if (action === "parent") { const path = pathTo(page.sections, id) ?? []; if (path.length > 1) select(path[path.length - 2]); return }
+      const next = nudgeBlock(page.sections, id, action === "up" ? -1 : 1)
+      if (next !== page.sections) setSections(next)
+    },
+    canGoUp: (id) => (page ? (pathTo(page.sections, id)?.length ?? 0) > 1 : false),
     key: (e) => onKey.current(e),
     activate: () => { activeHere.current = true },
   }
@@ -274,15 +287,19 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
       onPatch={(p) => block && patchBlock(block.id, p)} onDuplicate={() => block && duplicate(block.id)} onRemove={() => block && removeBlock(block.id)} />
   )
   const pagesPane = <PagesPane site={site} pages={pages} currentId={page?.id} onDragging={setDragging} onPanel={setPanel} />
-  const layersPane = page ? (
-    <LayersPane sections={page.sections} selectedId={selectedId} collapsed={collapsed} onDragging={setDragging}
+  const layersPane = page && !layersTree ? (
+    <SectionsPane site={site} sections={page.sections} selectedId={page && selectedId ? pathTo(page.sections, selectedId)?.[0] ?? null : null} posts={posts} forms={forms} assets={library} pictures={pictures} onDragging={setDragging}
+      onSelect={select} onRemove={removeBlock} onDuplicate={duplicate} onAdd={() => setInsertAt(page.sections.length)} onTree={() => setPref({ layersTree: true })}
+      onMove={(id, beforeId) => setSections(moveBlock(page.sections, id, null, beforeId))} />
+  ) : page ? (
+    <LayersPane sections={page.sections} selectedId={selectedId} collapsed={collapsed} onDragging={setDragging} onPictures={() => setPref({ layersTree: false })}
       onToggle={(id) => setCollapsed((c) => { const n = new Set(c); if (n.has(id)) n.delete(id); else n.add(id); return n })}
       onSelect={select} onRemove={removeBlock} onAdd={addBlock} onAddSection={() => setInsertAt(page.sections.length)}
       onMove={(id, parentId, beforeId) => setSections(moveBlock(page.sections, id, parentId, beforeId))} />
   ) : <p className="p-3 text-xs text-muted-foreground">Add a page to see its layers.</p>
   const left = (
     <ResizablePanelGroup orientation="vertical" id="pagesmith-left">
-      <ResizablePanel id="pages" defaultSize="42%" minSize={90}>{pagesPane}</ResizablePanel>
+      <ResizablePanel id="pages" defaultSize="32%" minSize={90}>{pagesPane}</ResizablePanel>
       <ResizableHandle />
       <ResizablePanel id="layers" minSize={90}>{layersPane}</ResizablePanel>
     </ResizablePanelGroup>
@@ -331,7 +348,7 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
           <Sheet open={inspectorSheet || !!panel} onOpenChange={(o) => { if (!o) { setInspectorSheet(false); if (panel) setPanel(null) } }}><SheetContent side="right" showCloseButton={!panel} className={cn("w-[min(30rem,96vw)] gap-0 p-0 sm:max-w-none", !panel && "pt-9")}><SheetTitle className="sr-only">{panel ? PANELS[panel].title : "Inspector"}</SheetTitle>{right}</SheetContent></Sheet>
         </>
       )}
-      <SectionGallery open={insertAt !== null} onOpenChange={(o) => { if (!o) setInsertAt(null) }} site={site} pages={pages} posts={posts} forms={forms} onPick={addSection} />
+      <SectionGallery open={insertAt !== null} onOpenChange={(o) => { if (!o) setInsertAt(null) }} site={site} posts={posts} forms={forms} onPick={addSection} />
       <Dialog open={viewing} onOpenChange={setViewing}><DialogContent className="gap-0 p-0 sm:max-w-5xl" aria-describedby={undefined}>{viewing && <SiteViewer site={site} onClose={() => setViewing(false)} inEditor />}</DialogContent></Dialog>
     </div>
   )
