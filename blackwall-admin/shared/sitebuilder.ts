@@ -102,6 +102,13 @@ export interface BlockDef {
   html?: (b: SiteBlock, ctx: BuildCtx) => string[]
 }
 
+/** The address a site lives at. Only a site on this computer is plain http. */
+export function siteOrigin(domain: string | undefined) {
+  const host = String(domain ?? "").trim().replace(/^https?:\/\//, "").replace(/\/+$/, "")
+  if (!/^[\w.-]+(:\d+)?$/.test(host)) return ""
+  return `${/^(localhost|127\.0\.0\.1)(:|$)/.test(host) ? "http" : "https"}://${host}`
+}
+
 export const pageHref = (p: Pick<SitePage, "slug">) => (p.slug ? `/${p.slug}/` : "/")
 export const postHref = (d: Pick<Draft, "slug">) => `/posts/${d.slug}/`
 const fmtDate = (key?: string) => (key ? new Date(`${key}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }) : "")

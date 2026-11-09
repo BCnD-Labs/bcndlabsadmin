@@ -1,4 +1,4 @@
-import { ChevronLeft, Eye, FileDown, Inbox, Layers, LayoutTemplate, Monitor, Palette, PanelRight, Plus, Redo2, Settings2, Smartphone, Tablet, Undo2, X } from "lucide-react"
+import { ChevronLeft, Eye, FileDown, Inbox, Layers, LayoutTemplate, Monitor, Palette, PanelRight, Plus, Redo2, Rocket, Settings2, Smartphone, Tablet, Undo2, X } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom"
 import { usePanelRef, type Layout } from "react-resizable-panels"
@@ -17,6 +17,7 @@ import { usePreviewPictures } from "@/features/assets/use-assets"
 import { cmsPagesHref, draftHref, sitePageHref, sitesHref } from "@/lib/routes"
 import type { Site, SiteBlock, SitePage } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { useConnections } from "@/services/connector"
 import { useWorkspaceSync } from "@/services/workspace-sync"
 import { usePrefs } from "@/stores/prefs"
 import { safeLocalStorage } from "@/stores/storage"
@@ -37,7 +38,7 @@ import { SetupGuide } from "./setup-guide"
 import { SitePreview, type BlockAction, type CanvasEditing } from "./site-preview"
 import { SiteViewer } from "./sites-page"
 import { SiteSwitcher } from "./site-switcher"
-import { selectSite, useCurrentSite } from "./use-cms"
+import { publishSite, selectSite, useCurrentSite, usePublishRuns } from "./use-cms"
 import { useSiteHistory } from "./use-site-history"
 
 const PANELS = {
@@ -104,6 +105,9 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
   const { update } = useWorkspace.getState()
   const { undo, redo, canUndo, canRedo } = useSiteHistory(site.id)
   const layersTree = usePrefs((s) => s.layersTree)
+  const canPublish = useConnections((s) => s.list).some((c) => c.provider === "website")
+  const publishing = usePublishRuns((s) => s.runs[site.id]?.state === "publishing")
+  useEffect(() => { void useConnections.getState().refresh() }, [])
   const setPref = usePrefs((s) => s.set)
 
   const [selected, setSelected] = useState<string | null>(null)
@@ -329,6 +333,7 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
         <SetupGuide site={site} onPanel={setPanel} />
         <Button variant="quiet" size="sm" title="Walk through the site as visitors see it" onClick={() => setViewing(true)}><Eye /><span className="hidden @4xl/top:inline">View</span></Button>
         {TOOLBAR.map((p) => { const Icon = PANELS[p].icon; return <Button key={p} variant={panel === p ? "secondary" : "quiet"} size="sm" aria-pressed={panel === p} aria-label={PANELS[p].title} title={PANELS[p].title} onClick={() => setPanel(panel === p ? null : p)}><Icon /><span className="hidden @4xl/top:inline">{PANELS[p].title}</span></Button> })}
+        {canPublish && <Button size="sm" disabled={publishing} onClick={() => { setPanel("files"); publishSite(site).catch((e: Error) => toast.error(e.message)) }}><Rocket /> {publishing ? "Publishing…" : "Publish"}</Button>}
         {narrow && <Button variant="quiet" size="icon-sm" aria-label="Inspector" title="Inspector" onClick={() => setInspectorSheet(true)}><PanelRight /></Button>}
       </header>
       <div className="min-h-0 flex-1">
