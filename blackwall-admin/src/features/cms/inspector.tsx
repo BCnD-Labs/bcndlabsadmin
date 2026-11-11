@@ -1,10 +1,12 @@
-import { Copy, Plus, Trash2 } from "lucide-react"
+import { Copy, Plus, Replace, Trash2 } from "lucide-react"
 import { useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import { BLOCKS, footerPages, type BlockField } from "@shared/sitebuilder"
 import { ANIMATIONS } from "@shared/site-bootstrap"
 import { canNest, pageTree } from "@shared/sitebuilder-tree"
+import { HEADER_KINDS, type ConvertTarget } from "@shared/site-convert"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -81,8 +83,44 @@ function StyleFields({ block, onPatch }: { block: SiteBlock; onPatch: (p: Record
   )
 }
 
+/** Extra pieces in the header beside the menu, on every page. Click one in the preview to edit or change it. */
+function HeaderItems({ items, onAdd, onSelect }: { items: SiteBlock[]; onAdd: (type: string) => void; onSelect: (id: string) => void }) {
+  return (
+    <div className="grid gap-1.5 border-t border-line-soft pt-3" data-testid="header-items">
+      <h3 className={fieldLabel}>Header items</h3>
+      <p className="text-[11px] text-faint">Extra pieces beside the menu on every page: a button, a badge, a dropdown. Click one in the preview to edit it or change it to something else.</p>
+      {items.map((b) => (
+        <button key={b.id} type="button" onClick={() => onSelect(b.id)} className="flex items-center gap-2 rounded-[8px] bg-raised px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-selected">
+          <b className="text-ink">{BLOCKS[b.type]?.name ?? b.type}</b><span className="min-w-0 flex-1 truncate text-muted-foreground">{String(b.text ?? b.label ?? b.month ?? "")}</span>
+        </button>
+      ))}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild><Button size="xs" variant="outline" className="justify-self-start"><Plus /> Add to header</Button></DropdownMenuTrigger>
+        <DropdownMenuContent align="start">{HEADER_KINDS.map((t) => <DropdownMenuItem key={t} onSelect={() => onAdd(t)}>{BLOCKS[t].name}</DropdownMenuItem>)}</DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  )
+}
+
+/** "Change to…": the other kinds this block can become, keeping its words, link and style. */
+function ChangeMenu({ targets, open, onOpenChange, onConvert }: { targets: ConvertTarget[]; open: boolean; onOpenChange: (o: boolean) => void; onConvert: (type: string) => void }) {
+  if (!targets.length) return null
+  return (
+    <DropdownMenu open={open} onOpenChange={onOpenChange}>
+      <DropdownMenuTrigger asChild><Button variant="outline" size="xs" data-testid="change-to" aria-label="Change to another component"><Replace /> Change to…</Button></DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="max-h-[min(24rem,70vh)] w-64 overflow-y-auto">
+        {targets.map((t) => (
+          <DropdownMenuItem key={t.type} onSelect={() => onConvert(t.type)} data-testid={`change-to-${t.type}`}>
+            <span className="grid"><b className="text-[13px] text-ink">{t.name}</b><span className="text-[11px] text-muted-foreground">{t.about}</span></span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 /** With nothing selected: this page's title, address, description and where it shows in the menus. */
-function PageFields({ site, page, pages }: { site: Site; page: SitePage; pages: SitePage[] }) {
+function PageFields({ site, page, pages, header }: { site: Site; page: SitePage; pages: SitePage[]; header: { items: SiteBlock[]; onAdd: (type: string) => void; onSelect: (id: string) => void } }) {
   const { update, remove } = useWorkspace.getState()
   const navigate = useNavigate()
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -132,6 +170,7 @@ function PageFields({ site, page, pages }: { site: Site; page: SitePage; pages: 
           <OptionSelect id="pg-parent" value={page.parentId ?? "none"} onChange={(v) => placePage(pages, page.id, v === "none" ? null : v, null)} options={[{ value: "none", label: "Nothing (top level)" }, ...parents.map((p) => ({ value: p.id, label: p.title || "Untitled" }))]} className="w-full" />
         </div>
       )}
+      <HeaderItems items={header.items} onAdd={header.onAdd} onSelect={header.onSelect} />
       <div className="grid gap-1.5 border-t border-line-soft pt-3"><h3 className={fieldLabel}>Linked tasks</h3><RecordTasks kind="page" id={page.id} name={page.title} /></div>
       <div className="flex flex-wrap gap-2 border-t border-line-soft pt-3">
         <Button size="xs" variant="outline" onClick={() => { const c = duplicatePage(page); toast.success(`Duplicated as ${c.title}`); navigate(sitePageHref(c.id)) }}><Copy /> Duplicate page</Button>
@@ -149,14 +188,16 @@ function PageFields({ site, page, pages }: { site: Site; page: SitePage; pages: 
 }
 
 /** The right pane when no panel is open: the selected block's Content, Style and Links, or the page's settings. */
-export function Inspector({ site, page, pages, block, blockTitle, trail, onPatch, onDuplicate, onRemove }: {
+export function Inspector({ site, page, pages, block, blockTitle, trail, targets, changeOpen, onChangeOpen, onConvert, header, onPatch, onDuplicate, onRemove }: {
   site: Site; page: SitePage | undefined; pages: SitePage[]; block: SiteBlock | undefined; blockTitle: string; trail: string
+  targets: ConvertTarget[]; changeOpen: boolean; onChangeOpen: (open: boolean) => void; onConvert: (type: string) => void
+  header: { items: SiteBlock[]; onAdd: (type: string) => void; onSelect: (id: string) => void }
   onPatch: (patch: Record<string, unknown>) => void; onDuplicate: () => void; onRemove: () => void
 }) {
   // The tab stays put as you click from block to block, so styling several in a row stays on Style.
   const [tab, setTab] = useState("content")
   if (!page) return <p className="p-4 text-xs text-muted-foreground">Add a page to start.</p>
-  if (!block) return <div className="h-full overflow-y-auto"><PageFields key={page.id} site={site} page={page} pages={pages} /></div>
+  if (!block) return <div className="h-full overflow-y-auto"><PageFields key={page.id} site={site} page={page} pages={pages} header={header} /></div>
   const def = BLOCKS[block.type]
   const fields = (def?.edit ?? []).filter((f) => !(block.type === "section" && f.k === "tone"))
   return (
@@ -164,6 +205,7 @@ export function Inspector({ site, page, pages, block, blockTitle, trail, onPatch
       <div className="grid shrink-0 gap-1.5 border-b border-line-soft p-2.5">
         <div className="flex items-center gap-1">
           <span className="min-w-0 flex-1"><b className="block truncate text-[13px] text-ink">{blockTitle}</b>{trail && <span className="block truncate text-[11px] text-faint">{trail}</span>}</span>
+          <ChangeMenu targets={targets} open={changeOpen} onOpenChange={onChangeOpen} onConvert={onConvert} />
           <Button variant="quiet" size="icon-xs" aria-label="Duplicate this block" title="Duplicate (⌘D)" onClick={onDuplicate}><Copy /></Button>
           <Button variant="quiet" size="icon-xs" aria-label="Remove this block" title="Remove (Delete)" onClick={onRemove}><Trash2 /></Button>
         </div>

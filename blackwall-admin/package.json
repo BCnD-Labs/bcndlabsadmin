@@ -27,6 +27,7 @@
     "@material-symbols/svg-400": "0.48.2",
     "@tailwindcss/vite": "^4.3.3",
     "@types/nodemailer": "8.0.2",
+    "bootstrap": "5.3.3",
     "class-variance-authority": "^0.7.1",
     "cmdk": "^1.1.1",
     "cn": "^0.5.0",

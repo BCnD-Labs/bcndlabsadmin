@@ -11,7 +11,7 @@ import { STARTERS } from "./site-starters.ts"
 import type { InboxItem } from "./site-inbox.ts"
 import { findAsset, imagePathsInPost } from "./assets.ts"
 import type { Asset, Draft, Site, SiteBlock, SiteForm, SitePage } from "../src/lib/types.ts"
-import { ANIMATIONS, BOOTSTRAP, BOOTSTRAP_BRIDGE, REDUCED_MOTION_CSS, THEME_SCRIPT, THEME_TOGGLE_SCRIPT, fontName, flatFile, googleFontsHref, isBootstrap, relativize } from "./site-bootstrap.ts"
+import { ANIMATIONS, BOOTSTRAP, previewAssets, BOOTSTRAP_BRIDGE, COMPONENT_CSS, REDUCED_MOTION_CSS, THEME_SCRIPT, THEME_TOGGLE_SCRIPT, fontName, flatFile, googleFontsHref, isBootstrap, relativize } from "./site-bootstrap.ts"
 
 /* ------------------------------------------------------------------ colours */
 
@@ -135,6 +135,36 @@ function postCard(d: Draft, show: string[], ctx: BuildCtx) {
 export function youtubeId(url: string) {
   const m = /^https?:\/\/(?:www\.|m\.)?(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]{11})(?=$|[?&#/])/.exec(url.trim())
   return m?.[1]
+}
+
+/** The colours a badge or an alert can take. */
+export const TONES = [{ value: "primary", label: "Accent" }, { value: "secondary", label: "Quiet" }, { value: "success", label: "Green" }, { value: "warning", label: "Yellow" }, { value: "danger", label: "Red" }]
+const tone = (b: SiteBlock) => (TONES.some((t) => t.value === b.tone) ? String(b.tone) : "primary")
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+/** "Label|detail" lines, blanks dropped: what the dropdown, calendar and accordion blocks keep their content in. */
+export const pairLines = (v: unknown) => str(v).split("\n").map((l) => l.trim()).filter(Boolean).map((l) => { const at = l.indexOf("|"); return at < 0 ? [l, ""] : [l.slice(0, at).trim(), l.slice(at + 1).trim()] })
+const thisMonth = () => new Date().toISOString().slice(0, 7)
+
+/** One month as an accessible table (a caption, column headers, a cell per day) with the listed dates marked. */
+function calendarHtml(b: SiteBlock, boot: boolean) {
+  const m = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(str(b.month).trim())
+  if (!m) return ['<p class="muted">Pick a month like 2026-11.</p>']
+  const year = Number(m[1]), month = Number(m[2])
+  const first = new Date(Date.UTC(year, month - 1, 1)).getUTCDay(), count = new Date(Date.UTC(year, month, 0)).getUTCDate()
+  const events = new Map<string, string[]>()
+  for (const [date, what] of pairLines(b.events)) if (date.startsWith(`${m[1]}-${m[2]}-`) && what) events.set(date, [...(events.get(date) ?? []), what])
+  const cells: string[] = []
+  for (let i = 0; i < first; i++) cells.push('<td class="calendar__empty"></td>')
+  for (let d = 1; d <= count; d++) {
+    const key = `${m[1]}-${m[2]}-${String(d).padStart(2, "0")}`
+    cells.push(`<td><span class="calendar__day">${d}</span>${(events.get(key) ?? []).map((e) => `<span class="calendar__ev">${esc(e)}</span>`).join("")}</td>`)
+  }
+  while (cells.length % 7) cells.push('<td class="calendar__empty"></td>')
+  const rows: string[] = []
+  for (let i = 0; i < cells.length; i += 7) rows.push(`    <tr>${cells.slice(i, i + 7).join("")}</tr>`)
+  const table = [`<table class="${boot ? "table table-bordered " : ""}calendar">`, `  <caption>${MONTHS[month - 1]} ${year}</caption>`, `  <thead><tr>${DAYS.map((d) => `<th scope="col"><abbr title="${d}">${d.slice(0, 3)}</abbr></th>`).join("")}</tr></thead>`, "  <tbody>", ...rows, "  </tbody>", "</table>"]
+  return boot ? ['<div class="table-responsive">', ...table.map((l) => `  ${l}`), "</div>"] : table
 }
 
 export const BLOCKS: Record<string, BlockDef> = {
@@ -308,6 +338,58 @@ export const BLOCKS: Record<string, BlockDef> = {
       return [`<div class="ph">${url ? "That isn't a YouTube or audio address" : "Paste a YouTube link or an audio file"}</div>`]
     },
   },
+  badge: {
+    name: "Badge", def: { text: "", tone: "primary" },
+    edit: [{ k: "text", l: "Label" }, { k: "tone", l: "Colour", kind: "select", options: TONES }],
+    html: (b, ctx) => [ctx.boot ? `<span class="badge text-bg-${tone(b)}">${txt(b.text, "Badge")}</span>` : `<span class="badge badge--${tone(b)}">${txt(b.text, "Badge")}</span>`],
+  },
+  alert: {
+    name: "Alert", def: { text: "", tone: "primary" },
+    edit: [{ k: "text", l: "Message", kind: "big" }, { k: "tone", l: "Colour", kind: "select", options: TONES }],
+    html: (b, ctx) => [`<div class="${ctx.boot ? `alert alert-${tone(b)}` : `callout callout--${tone(b)}`}" role="note">${txt(b.text, "A note worth reading")}</div>`],
+  },
+  dropdown: {
+    name: "Dropdown", def: { label: "Menu", items: "First option|/\nSecond option|/", style: "solid" },
+    edit: [{ k: "label", l: "Button label" }, { k: "items", l: "Options", kind: "big", note: "One per line: the words, then | and where it goes (a page like /about/ or a full address)." }, { k: "style", l: "Style", kind: "select", options: [{ value: "solid", label: "Solid" }, { value: "outline", label: "Outline" }] }],
+    html: (b, ctx) => {
+      const items = pairLines(b.items), label = txt(b.label, "Menu"), outline = b.style === "outline"
+      const link = (cls: string) => (a: string[]) => `<li><a class="${cls}" href="${esc(safeHref(a[1]))}">${esc(a[0])}</a></li>`
+      if (ctx.boot) {
+        const menu = ctx.preview ? '<ul class="dropdown-menu show" style="position: static">' : '<ul class="dropdown-menu">'
+        return ['<div class="dropdown">', `  <button class="btn ${outline ? "btn-outline-primary" : "btn-primary"} dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">${label}</button>`, `  ${menu}`, ...items.map((a) => `    ${link("dropdown-item")(a)}`), "  </ul>", "</div>"]
+      }
+      return ['<details class="dd">', `  <summary class="btn${outline ? " btn--outline" : ""}">${label}</summary>`, '  <ul class="dd__menu">', ...items.map((a) => `    ${link("")(a).replace(' class=""', "")}`), "  </ul>", "</details>"]
+    },
+  },
+  tooltip: {
+    name: "Tooltip", def: { text: "", tip: "" },
+    edit: [{ k: "text", l: "Words people hover or tab to" }, { k: "tip", l: "What it says", kind: "big" }],
+    html: (b) => {
+      const id = `tip-${String(b.id).replace(/[^\w-]/g, "")}`
+      return [`<span class="tip" tabindex="0" aria-describedby="${id}">${txt(b.text, "Hover me")}<span class="tip__text" role="tooltip" id="${id}">${txt(b.tip, "A short explanation")}</span></span>`]
+    },
+  },
+  meter: {
+    name: "Progress bar", def: { label: "", value: 50 },
+    edit: [{ k: "label", l: "What it measures" }, { k: "value", l: "Percent done (0 to 100)", kind: "number" }],
+    html: (b) => {
+      const pct = Math.min(100, Math.max(0, Math.round(Number(b.value) || 0))), label = txt(b.label, "Progress")
+      return [`<div class="progress step-progress" role="progressbar" aria-label="${label}" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100">`, `  <div class="progress-bar" style="width: ${pct}%">${label} (${pct}%)</div>`, "</div>"]
+    },
+  },
+  accordion: {
+    name: "Accordion", def: { items: "A question people ask|Its answer.\nAnother question|Another answer." },
+    edit: [{ k: "items", l: "Questions", kind: "big", note: "One per line: the heading, then | and what opens beneath it." }],
+    html: (b) => {
+      const items = pairLines(b.items)
+      return ['<div class="acc-list">', ...(items.length ? items : [["Heading", "What opens beneath it."]]).flatMap(([q, a]) => ["  <details class=\"acc\">", `    <summary>${esc(q)}</summary>`, `    <div class="acc__body"><p>${esc(a)}</p></div>`, "  </details>"]), "</div>"]
+    },
+  },
+  calendar: {
+    name: "Calendar", def: { month: thisMonth(), events: "" },
+    edit: [{ k: "month", l: "Month", note: "Like 2026-11" }, { k: "events", l: "Marked dates", kind: "big", note: "One per line: the date, then | and what it is. Example: 2026-11-20|Report due" }],
+    html: (b, ctx) => calendarHtml(b, ctx.boot),
+  },
   sitename: {
     name: "Site name", def: {},
     html: (_b, ctx) => (ctx.where === "footer" ? [`<p class="site-copy">${esc(ctx.site.footerText || `© ${new Date().getFullYear()} ${ctx.site.name}`)}</p>`] : [`<a class="site-title" href="/">${esc(ctx.site.name)}</a>`]),
@@ -351,7 +433,7 @@ function formClose(ctx: BuildCtx, done: string, button?: string) {
 }
 
 /** Blocks you can add inside a section (containers and content), in menu order. */
-export const ADDABLE = ["heading", "text", "richtext", "button", "link", "list", "image", "video", "progress", "pager", "table", "divider", "html", "postsByWeek", "postList", "form", "newsletter", "row", "card"]
+export const ADDABLE = ["heading", "text", "richtext", "button", "link", "list", "image", "video", "progress", "meter", "pager", "badge", "alert", "dropdown", "tooltip", "accordion", "calendar", "table", "divider", "html", "postsByWeek", "postList", "form", "newsletter", "row", "card"]
 
 export const menuPages = (pages: SitePage[]) => [...pages].filter((p) => p.inMenu).sort((a, b) => a.order - b.order)
 
@@ -514,7 +596,7 @@ interface Doc { title: string; description: string; body: string[]; current?: st
 const toggleButton = (cls: string) => `<button type="button" class="${cls}" data-theme-toggle aria-pressed="false"><span data-theme-label>Dark mode</span></button>`
 
 /** Bootstrap mode's header: a collapsing navbar (a menu button on phones) with drop-downs and the light/dark button. */
-function bootHeader(ctx: BuildCtx, toggle: boolean) {
+function bootHeader(ctx: BuildCtx, toggle: boolean, extras: string[]) {
   const link = (p: SitePage, cls: string) => `<a class="${cls}${p.id === ctx.current ? " active" : ""}" href="${esc(pageHref(p))}"${p.id === ctx.current ? ' aria-current="page"' : ""}>${esc(p.title)}</a>`
   const items = menuTree(ctx.pages).flatMap(({ page, kids }) => (kids.length
     ? ['        <li class="nav-item dropdown">', `          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">${esc(page.title)}</a>`, '          <ul class="dropdown-menu">', `            <li>${link(page, "dropdown-item")}</li>`, ...kids.map((k) => `            <li>${link(k, "dropdown-item")}</li>`), "          </ul>", "        </li>"]
@@ -523,6 +605,7 @@ function bootHeader(ctx: BuildCtx, toggle: boolean) {
     '<nav class="navbar navbar-expand-lg" aria-label="Main">', '  <div class="container">', `    <a class="navbar-brand" href="/">${esc(ctx.site.name)}</a>`,
     '    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#main-menu" aria-controls="main-menu" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>',
     '    <div class="collapse navbar-collapse" id="main-menu">', '      <ul class="navbar-nav ms-auto mb-2 mb-lg-0">', ...items, "      </ul>",
+    ...(extras.length ? ['      <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-3 mb-2 mb-lg-0">', ...extras.map((l) => `  ${l}`), "      </div>"] : []),
     ...(toggle ? [`      ${toggleButton("btn btn-outline-primary btn-sm ms-lg-3 mb-2 mb-lg-0")}`] : []),
     "    </div>", "  </div>", "</nav>",
   ]
@@ -550,9 +633,12 @@ const PRECONNECT = ['    <link rel="preconnect" href="https://fonts.googleapis.c
 function documentHtml(site: Site, pages: SitePage[], doc: Doc, opts: { preview: boolean; bare?: boolean; posts: Draft[]; forms: SiteForm[]; assets?: Asset[]; assetUrls?: Record<string, string> }) {
   const ctx: BuildCtx = { site, pages, posts: opts.posts, forms: opts.forms, current: doc.current, where: "header", h1: false, boot: isBootstrap(site), preview: opts.preview, assets: opts.assets ?? [], assetUrls: opts.assetUrls ?? {} }
   const boot = ctx.boot, toggle = !!site.themeToggle && site.darkMode, fonts = googleFontsHref(site)
-  const head: string[] = [], foot: string[] = []
+  const head: string[] = [], foot: string[] = [], extras: string[] = []
+  // Header items: the editor's preview marks each so a click selects it; the published page draws them plainly.
+  if (!opts.bare && site.headerBlocks?.length) emit(site.headerBlocks, "        ", { ...ctx, where: "page", h1: true }, extras)
   if (!boot) {
     emit([mk("sitename"), mk("nav")], "      ", ctx, head)
+    if (extras.length) head.push('      <div class="site-extras">', ...extras, "      </div>")
     if (toggle) head.push(`      ${toggleButton("btn btn--outline theme-toggle")}`)
     ctx.where = "footer"
     emit([mk("sitename"), mk("nav")], "      ", ctx, foot)
@@ -569,13 +655,13 @@ function documentHtml(site: Site, pages: SitePage[], doc: Doc, opts: { preview: 
     `    <meta property="og:title" content="${esc(doc.title)}">`,
     doc.description ? `    <meta property="og:description" content="${esc(doc.description)}">` : "",
     toggle && !opts.preview ? `    ${THEME_SCRIPT.replace(/\n/g, "\n    ")}` : "",
-    boot ? `    <link rel="stylesheet" href="${BOOTSTRAP.css.href}" integrity="${BOOTSTRAP.css.integrity}" crossorigin="anonymous">` : "",
+    boot ? (opts.preview && previewAssets.bootstrapCssUrl ? `    <link rel="stylesheet" href="${esc(previewAssets.bootstrapCssUrl)}">` : `    <link rel="stylesheet" href="${BOOTSTRAP.css.href}" integrity="${BOOTSTRAP.css.integrity}" crossorigin="anonymous">`) : "",
     ...(fonts ? [...PRECONNECT, `    <link rel="stylesheet" href="${esc(fonts)}">`] : []),
     css,
     hasForm && site.turnstileKey && !opts.preview ? '    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>' : "",
     "  </head>", `  <body class="${esc(doc.bodyClass)}">`,
     ...(opts.bare ? [] : ['    <a class="skip-link" href="#main">Skip to main content</a>']),
-    ...(opts.bare ? [] : boot ? ["    <header>", ...bootHeader(ctx, toggle).map((l) => `      ${l}`), "    </header>"] : ['    <header class="site-header">', ...head, "    </header>"]),
+    ...(opts.bare ? [] : boot ? ["    <header>", ...bootHeader(ctx, toggle, extras).map((l) => `      ${l}`), "    </header>"] : ['    <header class="site-header">', ...head, "    </header>"]),
     '    <main id="main">', ...body, "    </main>",
     ...(opts.bare ? [] : boot ? ['    <footer class="border-top mt-5">', ...bootFooter(ctx).map((l) => `      ${l}`), "    </footer>"] : ['    <footer class="site-footer">', ...foot, "    </footer>"]),
     hasForm ? FORM_SCRIPT : "",
@@ -670,7 +756,7 @@ export function buildTheme(site: Site, extra = "") {
 
 /** css/style.css of a Bootstrap-mode site: the palette and fonts as variables, Bootstrap bridged to them, the layout touches Bootstrap lacks, then your own CSS. */
 export function buildBootstrapCss(site: Site, pages: SitePage[] = []) {
-  return buildTheme(site, [BOOTSTRAP_BRIDGE, pages.some((p) => usesDesign(p.sections)) ? DESIGN_CSS : "", animationCss(pages)].join(""))
+  return buildTheme(site, [BOOTSTRAP_BRIDGE, COMPONENT_CSS, pages.some((p) => usesDesign(p.sections)) ? DESIGN_CSS : "", animationCss(pages)].join(""))
 }
 
 export function buildCss(pages: SitePage[] = []) {
@@ -743,7 +829,7 @@ th { background: var(--surface); }
 audio { width: 100%; }
 .theme-toggle { cursor: pointer; font-size: 14px; padding: 6px 12px; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
-${pages.some((p) => p.parentId) ? MENU_CSS : ""}${pages.some((p) => usesDesign(p.sections)) ? DESIGN_CSS : ""}${animationCss(pages)}`
+${pages.some((p) => p.parentId) ? MENU_CSS : ""}${pages.some((p) => usesDesign(p.sections)) ? DESIGN_CSS : ""}${COMPONENT_CSS}${animationCss(pages)}`
 }
 
 /** The keyframes of the entrance animations a site uses, and the rule that turns them off for visitors who ask for less motion. */

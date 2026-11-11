@@ -81,6 +81,7 @@ export function validWorkspace(value: unknown): value is Collections {
       if ((key === "notes" || key === "services") && typeof row.pinned !== "boolean") return false
       // An uploaded tile logo is a small image data URL (resized in the browser before saving).
       if (key === "services" && row.customLogo != null && (row.customLogo.length > 200_000 || !/^data:image\/(png|webp|jpeg|svg\+xml)[;,]/.test(row.customLogo))) return false
+      if (key === "sites" && row.headerBlocks != null && (!Array.isArray(row.headerBlocks) || row.headerBlocks.length > 12 || !row.headerBlocks.every((b: unknown) => !!b && typeof b === "object" && typeof (b as { id?: unknown }).id === "string" && typeof (b as { type?: unknown }).type === "string"))) return false
       if (key === "sites" && (row.framework != null && row.framework !== "bootstrap" || [row.fontHeading, row.fontBody].some((f) => f != null && (typeof f !== "string" || f.length > 60)) || row.themeToggle != null && typeof row.themeToggle !== "boolean")) return false
       if (key === "sites" && row.comments !== undefined && typeof row.comments !== "boolean") return false
       if (key === "sites" && row.analyticsConnectionId != null && typeof row.analyticsConnectionId !== "string") return false

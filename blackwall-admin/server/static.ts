@@ -20,8 +20,8 @@ const SECURITY_HEADERS: Record<string, string> = {
   "Referrer-Policy": "no-referrer",
   "X-Frame-Options": "DENY",
   "Content-Security-Policy":
-    // Style and font hosts only (never scripts): the site editor's preview loads a Bootstrap site's Bootstrap and Google Fonts from their CDNs.
-    "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'",
+    // Google Fonts hosts for styles and fonts only (never scripts): the site editor's preview shows a site's chosen fonts.
+    "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'",
 }
 
 /** Serves the built panel (dist/) with an SPA fallback to index.html. */

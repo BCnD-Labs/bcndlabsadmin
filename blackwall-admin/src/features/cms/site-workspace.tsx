@@ -28,6 +28,7 @@ import { FormsPanel } from "./forms-panel"
 import { Inspector } from "./inspector"
 import { LayersPane, blockName } from "./layers-pane"
 import { A11yPanel, KIND_INFO } from "./a11y-panel"
+import { convertBlock, convertTargets } from "@shared/site-convert"
 import { LookPanel } from "./look-panel"
 import { auditSite, type A11yItem } from "@shared/site-a11y"
 import { SectionsPane } from "./sections-pane"
@@ -57,7 +58,7 @@ const TOOLBAR: WorkspacePanel[] = ["look", "access", "forms", "settings", "files
 const DEVICES = { desktop: { width: "100%", icon: Monitor }, tablet: { width: "820px", icon: Tablet }, phone: { width: "390px", icon: Smartphone } } as const
 const LAYOUT_KEY = "blackwall.pagesmith-layout"
 const NARROW = 900
-const INLINE_TEXT = new Set(["heading", "text", "button", "link"])
+const INLINE_TEXT = new Set(["heading", "text", "button", "link", "badge", "alert"])
 
 function savedLayout(): Layout | undefined {
   try { return JSON.parse(safeLocalStorage.getItem(LAYOUT_KEY) as string) ?? undefined } catch { return undefined }
@@ -115,6 +116,7 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
 
   const [selected, setSelected] = useState<string | null>(null)
   const [marksOn, setMarksOn] = useState(false)
+  const [changeOpen, setChangeOpen] = useState(false)
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set())
   const [insertAt, setInsertAt] = useState<number | null>(null)
   const [device, setDevice] = useState<keyof typeof DEVICES>("desktop")
@@ -164,9 +166,28 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
     }
   }, [panelOpen, narrow, rightPane])
 
-  const block = page && selected ? findBlock(page.sections, selected) : undefined
+  const headerBlocks = site.headerBlocks ?? []
+  const block = (page && selected ? findBlock(page.sections, selected) : undefined) ?? (selected ? findBlock(headerBlocks, selected) : undefined)
   const selectedId = block?.id ?? null
   const setSections = (sections: SiteBlock[]) => { if (page) update("pages", page.id, { sections }) }
+  const setHeader = (list: SiteBlock[]) => update("sites", site.id, { headerBlocks: list.length ? list : undefined })
+  /** Which list a block lives in: this page's sections, or the site's header items. */
+  const treeOf = (id: string) => (page && findBlock(page.sections, id) ? { list: page.sections, set: setSections, header: false } : findBlock(headerBlocks, id) ? { list: headerBlocks, set: setHeader, header: true } : null)
+  /** The kinds a block can become here: a card can't go inside a card. */
+  const targetsFor = (id: string) => {
+    const t = treeOf(id), b = t && findBlock(t.list, id)
+    if (!t || !b) return []
+    const path = pathTo(t.list, id) ?? [], parent = path.length > 1 ? findBlock(t.list, path[path.length - 2]) : undefined
+    return convertTargets(b, t.header ? "header" : "page").filter((x) => !(x.type === "card" && parent?.type === "card"))
+  }
+  const convert = (id: string, to: string) => {
+    const t = treeOf(id), b = t && findBlock(t.list, id)
+    if (!t || !b) return
+    t.set(mapTree(t.list, id, (x) => convertBlock(x, to, t.header ? "header" : "page")))
+    setChangeOpen(false)
+    toast(`${BLOCKS[b.type]?.name ?? "Block"} changed to ${BLOCKS[to]?.name ?? to}`, { action: { label: "Undo", onClick: doUndo } })
+  }
+  const addHeaderItem = (type: string) => { const nb = mk(type); setHeader([...headerBlocks, nb]); setSelected(nb.id) }
 
   /** After undo or redo, show the page that changed if it isn't the one on screen. */
   const showChanged = (ids: string[]) => {
@@ -195,16 +216,18 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
     else setPanel(null)
   }
   const removeBlock = (id: string) => {
-    if (!page) return
-    const b = findBlock(page.sections, id)
-    setSections(mapTree(page.sections, id, () => null))
+    const t = treeOf(id)
+    if (!t) return
+    const b = findBlock(t.list, id)
+    t.set(mapTree(t.list, id, () => null))
     if (id === selected) setSelected(null)
     if (b) toast(`${BLOCKS[b.type]?.name ?? "Block"} removed`, { action: { label: "Undo", onClick: doUndo } })
   }
   const duplicate = (id: string) => {
-    if (!page) return
-    const { list, copyId } = duplicateBlock(page.sections, id)
-    setSections(list)
+    const t = treeOf(id)
+    if (!t) return
+    const { list, copyId } = duplicateBlock(t.list, id)
+    t.set(list)
     if (copyId) setSelected(copyId)
   }
   const addBlock = (parent: string, type: string) => {
@@ -222,8 +245,9 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
     setSelected(s.id)
   }
   const patchBlock = (id: string, patch: Record<string, unknown>) => {
-    if (!page) return
-    setSections(mapTree(page.sections, id, (b) => {
+    const t = treeOf(id)
+    if (!t) return
+    t.set(mapTree(t.list, id, (b) => {
       const next = { ...b, ...patch }
       if (patch.design === undefined && "design" in patch) delete next.design
       return next
@@ -267,9 +291,9 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
   }, [])
 
   const editing: CanvasEditing = {
-    label: (id) => { const b = page && findBlock(page.sections, id); return b && blockName(b, !!page && page.sections.some((s) => s.id === id)) },
+    label: (id) => { const t = treeOf(id), b = t && findBlock(t.list, id); return t && b ? blockName(b, !t.header && t.list.some((s) => s.id === id)) : undefined },
     text: (id) => {
-      const b = page && findBlock(page.sections, id)
+      const t = treeOf(id), b = t && findBlock(t.list, id)
       if (!b || !INLINE_TEXT.has(b.type)) return undefined
       return { value: String(b.text ?? ""), multiline: b.type === "text", placeholder: BLOCKS[b.type].name }
     },
@@ -277,13 +301,17 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
     insert: (at) => setInsertAt(at),
     deselect: () => setSelected(null),
     act: (id, action: BlockAction) => {
+      if (action === "change") { select(id); setChangeOpen(true); if (narrow) setInspectorSheet(true); return }
       if (!page) return
       if (action === "remove") return removeBlock(id)
       if (action === "duplicate") return duplicate(id)
       if (action === "parent") { const path = pathTo(page.sections, id) ?? []; if (path.length > 1) select(path[path.length - 2]); return }
-      const next = nudgeBlock(page.sections, id, action === "up" ? -1 : 1)
-      if (next !== page.sections) setSections(next)
+      const t = treeOf(id)
+      if (!t) return
+      const next = nudgeBlock(t.list, id, action === "up" ? -1 : 1)
+      if (next !== t.list) t.set(next)
     },
+    canChange: (id) => targetsFor(id).length > 0,
     canGoUp: (id) => (page ? (pathTo(page.sections, id)?.length ?? 0) > 1 : false),
     key: (e) => onKey.current(e),
     activate: () => { activeHere.current = true },
@@ -304,7 +332,9 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
     </div>
   ) : (
     <Inspector site={site} page={page} pages={pages} block={block} blockTitle={block ? blockName(block, !!page?.sections.some((s) => s.id === block.id)) : ""}
-      trail={page && block ? (pathTo(page.sections, block.id) ?? []).slice(0, -1).map((id, i) => { const b = findBlock(page.sections, id); return b ? blockName(b, i === 0) : "" }).join(" › ") : ""}
+      targets={block ? targetsFor(block.id) : []} changeOpen={changeOpen} onChangeOpen={setChangeOpen} onConvert={(to) => block && convert(block.id, to)}
+      header={{ items: headerBlocks, onAdd: addHeaderItem, onSelect: select }}
+      trail={treeOf(block?.id ?? "")?.header ? "In the header" : page && block ? (pathTo(page.sections, block.id) ?? []).slice(0, -1).map((id, i) => { const b = findBlock(page.sections, id); return b ? blockName(b, i === 0) : "" }).join(" › ") : ""}
       onPatch={(p) => block && patchBlock(block.id, p)} onDuplicate={() => block && duplicate(block.id)} onRemove={() => block && removeBlock(block.id)} />
   )
   const pagesPane = <PagesPane site={site} pages={pages} currentId={page?.id} onDragging={setDragging} onPanel={setPanel} />
