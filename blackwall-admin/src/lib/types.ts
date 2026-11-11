@@ -234,7 +234,7 @@ export interface Site {
   font?: "sans" | "serif" | "mono" | "rounded"
   corners?: "sharp" | "soft" | "round"
   width?: "narrow" | "normal" | "wide"
-  /** "bootstrap": pages use Bootstrap 5 from its CDN, then your own css/style.css, as flat .html files that work from any folder (for class projects). Unset: Pagesmith's own CSS. */
+  /** "bootstrap": pages use Bootstrap 5 from its CDN, then your own css/style.css, as flat .html files that work from any folder. Unset: Pagesmith's own CSS. */
   framework?: "bootstrap"
   /** Google Fonts family names for headings and body text (added as a link in every page). */
   fontHeading?: string
