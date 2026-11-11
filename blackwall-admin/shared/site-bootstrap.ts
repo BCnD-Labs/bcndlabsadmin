@@ -1,6 +1,6 @@
 /**
- * Bootstrap mode for class projects: pages load Bootstrap 5 from its CDN first and your own css/style.css second,
- * and the site is flat .html files with relative links, so it works from any folder (a student server's subfolder,
+ * Bootstrap mode: pages load Bootstrap 5 from its CDN first and your own css/style.css second,
+ * and the site is flat .html files with relative links, so it works from any folder (any host's subfolder,
  * a GitHub Pages project address, or straight off a disk). Pagesmith's own sites are untouched by anything here.
  */
 import type { Site } from "../src/lib/types.ts"
