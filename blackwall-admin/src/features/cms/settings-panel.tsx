@@ -39,6 +39,9 @@ export function SettingsPanel({ site }: { site: Site }) {
           <Panel category="website" title="Site" bodyClassName="divide-y divide-line-soft">
             <Row label="Name" htmlFor="ss-name" hint="Shown in the header and page titles."><Input id="ss-name" className="h-8" value={site.name} onChange={(e) => set({ name: e.target.value })} /></Row>
             <Row label="Domain" htmlFor="ss-domain" hint="Used for the sitemap and Open site."><Input id="ss-domain" className="h-8 font-mono text-xs" value={site.domain} onChange={(e) => set({ domain: e.target.value.replace(/^https?:\/\//, "").replace(/\/+$/, "") })} placeholder="bcndlabs.dev" /></Row>
+            <Row label="Built with" htmlFor="ss-framework" hint={site.framework === "bootstrap" ? "Bootstrap 5 from its CDN, then your css/style.css. Pages are flat .html files with relative links, so the folder works anywhere (a student server, GitHub Pages, your disk)." : "Pagesmith's own light styles. Pick Bootstrap for a class project that must use it."}>
+              <OptionSelect id="ss-framework" value={site.framework ?? "own"} onChange={(v) => set({ framework: v === "bootstrap" ? "bootstrap" : undefined })} options={[{ value: "own", label: "Pagesmith's own styles" }, { value: "bootstrap", label: "Bootstrap 5 (class project)" }]} className="w-full" />
+            </Row>
             <Row label="Footer text" htmlFor="ss-footer" hint="Empty shows © year and the site name."><Input id="ss-footer" className="h-8" value={site.footerText} onChange={(e) => set({ footerText: e.target.value })} /></Row>
           </Panel>
           <Panel category="website" title="Publishing" bodyClassName="divide-y divide-line-soft">

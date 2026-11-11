@@ -407,5 +407,5 @@ test("a section preview is that one section in the site's look, with no menu or 
   const html = renderSectionPreview(site, section("hero"))
   assert.ok(html.includes("--accent:") && html.includes(".section {"), "the site's styles are inside it, not linked")
   assert.ok(!html.includes('<header class="site-header"') && !html.includes('<footer class="site-footer"') && !html.includes('href="/theme.css"'))
-  assert.ok(html.includes("<main>"))
+  assert.ok(html.includes("<main"))
 })

@@ -1,6 +1,8 @@
 import { Check } from "lucide-react"
 import { toast } from "sonner"
 import { CORNERS, FONTS, STARTERS, SWATCH_INFO, SWATCH_KEYS, WIDTHS, contrast } from "@shared/sitebuilder"
+import { SUGGESTED_FONTS, fontName } from "@shared/site-bootstrap"
+import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
@@ -80,6 +82,22 @@ export function LookPanel({ site }: { site: Site }) {
               <div className="grid gap-1.5"><span className="text-xs font-semibold text-ink">Page width</span>
                 <Choice label="Page width" value={site.width ?? "normal"} onPick={(width) => set({ width })} options={(Object.keys(WIDTHS) as (keyof typeof WIDTHS)[]).map((k) => ({ value: k, name: WIDTHS[k].name, about: `${WIDTHS[k].px}px`, node: <span className="inline-block h-3 rounded-sm bg-ink-2" style={{ width: `${(WIDTHS[k].px / 1320) * 28}px` }} /> }))} /></div>
             </Panel>
+            <Panel category="website" title="Google Fonts" meta="optional" bodyClassName="grid gap-3 px-3.5 py-3">
+              <datalist id="look-fonts">{SUGGESTED_FONTS.map((f) => <option key={f} value={f} />)}</datalist>
+              {([["fontHeading", "Headings", "Poppins"], ["fontBody", "Body text", "Inter"]] as const).map(([k, label, ph]) => {
+                const v = site[k] ?? ""
+                const bad = v.trim() !== "" && !fontName(v)
+                return (
+                  <div key={k} className="grid gap-1">
+                    <Label htmlFor={`look-${k}`} className="text-xs font-normal text-muted-foreground">{label}</Label>
+                    <Input id={`look-${k}`} list="look-fonts" className="h-8" value={v} placeholder={`${ph}, or any family from fonts.google.com`} aria-invalid={bad} onChange={(e) => set({ [k]: e.target.value.trim() ? e.target.value : undefined })} />
+                    {bad && <span className="text-[11px] text-red-text">Use the family name only: letters, numbers and spaces.</span>}
+                  </div>
+                )
+              })}
+              <p className="text-[11px] text-faint">Added to every page as a Google Fonts link. Empty keeps the Type choice above.</p>
+              <div className="flex items-center gap-2 border-t border-line-soft pt-3"><Switch id="look-toggle" checked={!!site.themeToggle} onCheckedChange={(themeToggle) => set({ themeToggle, ...(themeToggle ? { darkMode: true } : {}) })} /><Label htmlFor="look-toggle" className="text-xs font-normal">A light / dark button in the menu (remembers the visitor's choice)</Label></div>
+            </Panel>
             <Panel category="website" title="Fine-tune colors" meta="optional" bodyClassName="grid gap-3 px-3.5 py-3">
               <p className="text-[11px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Light</p>
               <Palette site={site} mode="light" onChange={(light) => set({ light })} />
@@ -88,7 +106,7 @@ export function LookPanel({ site }: { site: Site }) {
             </Panel>
             <Panel category="website" title="Your CSS" meta="for anything else" bodyClassName="px-3.5 py-3">
               <Textarea rows={5} value={site.customCss} onChange={(e) => set({ customCss: e.target.value })} className="font-mono text-xs" placeholder=".site-title { letter-spacing: .05em; }" aria-label="Custom CSS" />
-              <p className="mt-1.5 text-[11px] text-faint">Added at the end of theme.css on every page.</p>
+              <p className="mt-1.5 text-[11px] text-faint">Added at the end of {site.framework === "bootstrap" ? "css/style.css" : "theme.css"} on every page.</p>
             </Panel>
     </div>
   )

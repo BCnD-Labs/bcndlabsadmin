@@ -201,6 +201,8 @@ export interface BlockDesign {
   top?: "none" | "s" | "m" | "l"
   bottom?: "none" | "s" | "m" | "l"
   bg?: "surface" | "accent"
+  /** An entrance animation (Animista-style keyframes), skipped for visitors who ask for less motion. */
+  anim?: "fade-in" | "slide-in-bottom" | "slide-in-left" | "scale-in" | "bounce-in-top" | "pulsate"
 }
 
 export interface SitePalette { bg: string; surface: string; text: string; muted: string; border: string; accent: string }
@@ -232,6 +234,13 @@ export interface Site {
   font?: "sans" | "serif" | "mono" | "rounded"
   corners?: "sharp" | "soft" | "round"
   width?: "narrow" | "normal" | "wide"
+  /** "bootstrap": pages use Bootstrap 5 from its CDN, then your own css/style.css, as flat .html files that work from any folder (for class projects). Unset: Pagesmith's own CSS. */
+  framework?: "bootstrap"
+  /** Google Fonts family names for headings and body text (added as a link in every page). */
+  fontHeading?: string
+  fontBody?: string
+  /** A light/dark button in the menu (remembers the visitor's choice; needs the dark palette). */
+  themeToggle?: boolean
   /** A site kept as a starting point: "New site" lists it under "My templates" and copies its look and pages. */
   template?: boolean
   templateAbout?: string

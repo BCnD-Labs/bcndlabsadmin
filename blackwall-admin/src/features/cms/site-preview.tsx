@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 
+/** A small badge drawn on a block in the page, e.g. the accessibility check's findings. */
+export interface CanvasMark { id: string; glyph: string; color: string; text: string }
+
 export type BlockAction = "up" | "down" | "duplicate" | "remove" | "parent"
 
 /** What the site editor adds to the preview: inline text editing, the "+" between sections and its keyboard shortcuts. */
@@ -47,9 +50,9 @@ function patchChildren(live: Element, before: Element, after: Element, depth: nu
  * link reports where it goes, and the page keeps its scroll position while you type. With `editing`
  * it is the editor's canvas: a second click on a selected heading, text, button or link edits it in place.
  */
-export function SitePreview({ html, title, width = "100%", selectedId, onBlock, onLink, editing, className }: {
+export function SitePreview({ html, title, width = "100%", selectedId, onBlock, onLink, editing, marks, className }: {
   html: string; title: string; width?: string; selectedId?: string | null
-  onBlock?: (id: string) => void; onLink?: (href: string) => void; editing?: CanvasEditing; className?: string
+  onBlock?: (id: string) => void; onLink?: (href: string) => void; editing?: CanvasEditing; marks?: CanvasMark[]; className?: string
 }) {
   const frame = useRef<HTMLIFrameElement>(null)
   const [firstHtml] = useState(html)
@@ -57,11 +60,30 @@ export function SitePreview({ html, title, width = "100%", selectedId, onBlock, 
   const scroll = useRef(0)
   const inline = useRef<Inline | null>(null)
   const scrolledTo = useRef<string | null | undefined>(undefined)
-  const latest = useRef({ onBlock, onLink, selectedId, editing })
+  const latest = useRef({ onBlock, onLink, selectedId, editing, marks })
+
+  /** The marks sit in the page's own document, beside the block they are about; they never touch the site's markup. */
+  const drawMarks = (doc: Document) => {
+    doc.querySelectorAll(".bw-a11y").forEach((el) => el.remove())
+    const win = doc.defaultView!, seen = new Map<string, number>()
+    for (const m of latest.current.marks ?? []) {
+      const box = boxOf(doc.querySelector(`[data-bw="${CSS.escape(m.id)}"]`))
+      if (!box) continue
+      const n = seen.get(m.id) ?? 0
+      seen.set(m.id, n + 1)
+      const r = box.getBoundingClientRect(), b = doc.createElement("span")
+      b.className = "bw-a11y"
+      b.textContent = m.glyph
+      b.title = m.text
+      b.style.cssText = `position:absolute;z-index:9997;left:${Math.max(2, r.left + win.scrollX - 8 + n * 22)}px;top:${Math.max(2, r.top + win.scrollY - 10)}px;min-width:20px;height:20px;padding:0 4px;box-sizing:border-box;border-radius:10px;background:${m.color};color:#fff;font:700 12px/20px system-ui,sans-serif;text-align:center;pointer-events:none;box-shadow:0 0 0 2px #fff`
+      doc.documentElement.append(b)
+    }
+  }
 
   const mark = () => {
     const doc = frame.current?.contentDocument
     if (!doc) return
+    drawMarks(doc)
     doc.querySelectorAll(".bw-sel").forEach((el) => el.classList.remove("bw-sel"))
     const id = latest.current.selectedId
     const box = id ? boxOf(doc.querySelector(`[data-bw="${CSS.escape(id)}"]`)) : null
@@ -113,7 +135,7 @@ export function SitePreview({ html, title, width = "100%", selectedId, onBlock, 
   }, [html])
 
   useEffect(() => {
-    latest.current = { onBlock, onLink, selectedId, editing }
+    latest.current = { onBlock, onLink, selectedId, editing, marks }
     mark()
     if (scrolledTo.current === selectedId) return
     scrolledTo.current = selectedId
