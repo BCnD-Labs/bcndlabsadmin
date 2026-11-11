@@ -172,7 +172,7 @@ test("a .zip can carry picture bytes next to text files, with the right checksum
 /* ------------------------------------------------- the site workspace */
 import { canHold, canNest, duplicateBlock, findBlock, indentBlock, moveBlock, movePage, nudgeBlock, outdentBlock, pageTree, projectDrop } from "../shared/sitebuilder-tree.ts"
 import { EditHistory, changeKey } from "../shared/edit-history.ts"
-import { footerPages, menuTree } from "../shared/sitebuilder.ts"
+import { footerPages, menuTree, renderSectionPreview } from "../shared/sitebuilder.ts"
 
 const page = (id: string, order: number, more: Partial<SitePage> = {}): SitePage => ({ id, siteId: "s1", title: id.toUpperCase(), slug: id === "home" ? "" : id, description: "", inMenu: true, order, sections: [], createdAt: ts, updatedAt: ts, ...more })
 
@@ -400,4 +400,12 @@ test("analytics belong to a site only when mapped: the picked source, or one rep
   assert.equal(siteAnalyticsConnection({ domain: "bcndlabs.dev", analyticsConnectionId: "gone" }, list), undefined, "a removed pick doesn't fall back to a guess")
   assert.equal(siteAnalyticsConnection({ domain: "unknown.dev" }, list), undefined)
   assert.equal(siteAnalyticsConnection({ domain: "" }, list), undefined)
+})
+
+test("a section preview is that one section in the site's look, with no menu or footer", () => {
+  const { site } = portal()
+  const html = renderSectionPreview(site, section("hero"))
+  assert.ok(html.includes("--accent:") && html.includes(".section {"), "the site's styles are inside it, not linked")
+  assert.ok(!html.includes('<header class="site-header"') && !html.includes('<footer class="site-footer"') && !html.includes('href="/theme.css"'))
+  assert.ok(html.includes("<main>"))
 })

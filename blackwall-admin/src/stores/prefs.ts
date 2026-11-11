@@ -67,6 +67,8 @@ interface PrefsState {
   roundness: Roundness
   /** Mac desktop: the left rail shows names next to its icons. */
   railLabels: boolean
+  /** Site editor: show the page as the detailed tree of layers instead of pictures of its sections. */
+  layersTree: boolean
   /** The Nextcloud folder the asset library saves processed pictures to. */
   assetsFolder: string
   /** Mac desktop: apps hidden from the rail (by app id). */
@@ -124,6 +126,7 @@ const DEFAULT_PREFS = (): Persisted => ({
   customAccent: "",
   roundness: "default",
   railLabels: false,
+  layersTree: false,
   assetsFolder: "/Blackwall/assets",
   railHidden: [],
   restoreWindows: true,
@@ -195,6 +198,7 @@ export const usePrefs = create<PrefsState>()(
           customAccent: cleanHex(p.customAccent),
           roundness: cleanRoundness(p.roundness),
           railLabels: p.railLabels === true,
+          layersTree: p.layersTree === true,
           assetsFolder: typeof p.assetsFolder === "string" && /^\/[^\0]{0,200}$/.test(p.assetsFolder) && !p.assetsFolder.includes("..") ? p.assetsFolder.replace(/\/+$/, "") || "/Blackwall/assets" : "/Blackwall/assets",
           railHidden: strList(p.railHidden).slice(0, 20),
           restoreWindows: p.restoreWindows !== false,

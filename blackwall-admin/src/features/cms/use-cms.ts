@@ -1,4 +1,6 @@
 import { toast } from "sonner"
+import { create } from "zustand"
+import { liveConfirmed, type LiveReport } from "@shared/site-live"
 import { cloneBlocks, siteFromSite, siteFromTemplate } from "@shared/sitebuilder"
 import type { Site, SitePage } from "@/lib/types"
 import { api } from "@/services/connector"
@@ -87,11 +89,48 @@ async function flushWorkspace() {
   throw new Error("Your latest edits haven't reached the server yet. Try again in a moment.")
 }
 
+export type LiveCheck =
+  | { state: "publishing" }
+  | { state: "checking"; removed: string[] }
+  | { state: "done"; removed: string[]; report: LiveReport }
+  | { state: "failed"; removed: string[]; message: string }
+
+/** Each site's latest publish and whether the live site has been confirmed to show it. */
+export const usePublishRuns = create<{ runs: Record<string, LiveCheck> }>()(() => ({ runs: {} }))
+const setRun = (id: string, run: LiveCheck) => usePublishRuns.setState((s) => ({ runs: { ...s.runs, [id]: run } }))
+
+/** A host usually takes a minute or two to deploy, so an unconfirmed result is looked at again for a few minutes. */
+const LIVE_TRIES = 12
+const LIVE_WAIT_MS = 15_000
+const askLive = (siteId: string, removed: string[]) => api<LiveReport>(`sites/${siteId}/live`, { method: "POST", body: JSON.stringify({ removed }) })
+
+export async function confirmLive(site: Site, removed: string[], tries = LIVE_TRIES) {
+  setRun(site.id, { state: "checking", removed })
+  for (let i = 0; i < tries; i++) {
+    if (i) await new Promise((r) => setTimeout(r, LIVE_WAIT_MS))
+    const run = usePublishRuns.getState().runs[site.id]
+    if (run?.state !== "checking" || run.removed !== removed) return
+    try {
+      const report = await askLive(site.id, removed)
+      if (liveConfirmed(report) || !report.origin || i === tries - 1) return setRun(site.id, { state: "done", removed, report })
+    } catch (e) {
+      return setRun(site.id, { state: "failed", removed, message: (e as Error).message })
+    }
+  }
+}
+
 export async function publishSite(site: Site) {
-  await flushWorkspace()
-  const r = await api<{ sha: string; files: number; removed: number; repo: string; branch: string; url?: string }>(`sites/${site.id}/publish`, { method: "POST" })
-  // Recorded a second after the edits so they no longer count as unpublished.
-  useWorkspace.getState().update("sites", site.id, { publishedAt: new Date(Date.now() + 1000).toISOString(), publishedSha: r.sha })
-  toast.success(`Published ${r.files} files to ${r.repo}`, { description: r.removed ? `${r.removed} old files removed` : undefined, action: r.url ? { label: "Open site", onClick: () => window.open(r.url, "_blank", "noreferrer") } : undefined })
-  return r
+  setRun(site.id, { state: "publishing" })
+  try {
+    await flushWorkspace()
+    const r = await api<{ sha: string; files: number; removed: number; removedPaths: string[]; repo: string; branch: string; url?: string }>(`sites/${site.id}/publish`, { method: "POST" })
+    // Recorded a second after the edits so they no longer count as unpublished.
+    useWorkspace.getState().update("sites", site.id, { publishedAt: new Date(Date.now() + 1000).toISOString(), publishedSha: r.sha })
+    toast.success(`Published ${r.files} files to ${r.repo}`, { description: r.removed ? `${r.removed} old files removed` : undefined })
+    void confirmLive(site, r.removedPaths)
+    return r
+  } catch (e) {
+    setRun(site.id, { state: "failed", removed: [], message: (e as Error).message })
+    throw e
+  }
 }

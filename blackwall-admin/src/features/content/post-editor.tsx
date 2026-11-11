@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { EmptyState } from "@/components/common/empty-state"
 import { PageHeader } from "@/components/common/page-header"
+import { LiveStatus } from "@/features/cms/publish-bar"
 import { SitePreview } from "@/features/cms/site-preview"
 import { RecordTasks } from "@/features/cms/page-links"
 import { SharePostButton } from "@/features/social/share-post"
@@ -603,6 +604,7 @@ function SitePostPanel({ draft }: { draft: Draft }) {
         {draft.publishedAt && <Button variant="quiet" disabled={busy} onClick={() => void go(false)}><Undo2 /> {repo ? "Unpublish" : "Take off the site"}</Button>}
         {!repo && <Button variant="outline" asChild><Link to={siteFilesHref}>Get files</Link></Button>}
       </div>
+      <LiveStatus site={site} />
       <p className="text-[11px] text-faint">{repo ? "Publishing rebuilds and commits the whole site, so the course portal and post lists update too." : "Adding a post puts it in the site's files, its blog list and its course pages. Then get the files and copy them over."}</p>
     </Panel>
   )
