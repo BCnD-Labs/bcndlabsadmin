@@ -20,14 +20,14 @@ export function WorkspacePage({ page, onOpenSettings, action, center, compact = 
  * A tool panel: a darker title bar (icon tile, name, count, optional controls and collapse) over its body.
  * `collapsible` adds a chevron that hides the body; `flush` removes the body's side padding for table rows.
  */
-export function WorkspaceSection({ title, icon, tint = c.accent, count, right, collapsible, defaultCollapsed, flush, compact = false, children }: { title: string; icon: IconName; tint?: string; count?: string; right?: ReactNode; collapsible?: boolean; defaultCollapsed?: boolean; flush?: boolean; compact?: boolean; children: ReactNode }) {
+export function WorkspaceSection({ title, icon, tint = c.accent, count, right, collapsible, defaultCollapsed, collapsed, onCollapsedChange, flush, compact = false, children }: { title: string; icon: IconName; tint?: string; count?: string; right?: ReactNode; collapsible?: boolean; defaultCollapsed?: boolean; collapsed?: boolean; onCollapsedChange?: (collapsed: boolean) => void; flush?: boolean; compact?: boolean; children: ReactNode }) {
   const [closed, setClosed] = useState(!!defaultCollapsed)
-  const hidden = !!collapsible && closed
+  const hidden = !!collapsible && (collapsed ?? closed)
   return <View style={[s.section, compact && s.sectionCompact, compact && { borderLeftColor: tint }]}>
     <View style={[s.sectionHead, compact && s.sectionHeadCompact, hidden && s.sectionHeadClosed]}>
       <View style={[s.sectionName, compact && s.sectionNameCompact]}><View style={[s.icon, compact && s.iconCompact, { backgroundColor: `${tint}26`, borderColor: `${tint}61` }]}><Icon name={icon} size={compact ? 13 : 14} tint={tint} /></View><Text style={[s.sectionTitle, compact && s.sectionTitleCompact]} accessibilityRole="header" numberOfLines={1}>{title}</Text>{count ? <Text style={[s.count, compact && { color: tint }]}>{count}</Text> : null}</View>
       {right}
-      {collapsible ? <Pressable onPress={() => setClosed(v => !v)} style={[s.collapse, compact && s.collapseCompact]} accessibilityRole="button" accessibilityLabel={`${hidden ? "Expand" : "Collapse"} ${title}`} accessibilityState={{ expanded: !hidden }}><Icon name={hidden ? "chevron-down" : "chevron-up"} size={16} tint={c.muted} /></Pressable> : null}
+      {collapsible ? <Pressable onPress={() => onCollapsedChange ? onCollapsedChange(!hidden) : setClosed(v => !v)} hitSlop={6} style={[s.collapse, compact && s.collapseCompact]} accessibilityRole="button" accessibilityLabel={`${hidden ? "Expand" : "Collapse"} ${title}`} accessibilityState={{ expanded: !hidden }}><Icon name={hidden ? "chevron-down" : "chevron-up"} size={16} tint={c.muted} /></Pressable> : null}
     </View>
     {hidden ? null : <View style={flush ? s.bodyFlush : s.sectionBody}>{children}</View>}
   </View>
@@ -39,6 +39,6 @@ const s = StyleSheet.create({
   sectionHead: { flexDirection: "row", alignItems: "center", minHeight: 34, gap: 8, paddingLeft: 7, paddingRight: 4, backgroundColor: kit.titlebar, borderBottomWidth: 1, borderBottomColor: c.line }, sectionHeadCompact: { minHeight: 27, paddingLeft: 0, paddingRight: 3, gap: 3 }, sectionHeadClosed: { borderBottomWidth: 0 },
   sectionName: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 7 }, sectionNameCompact: { gap: 5 }, icon: { width: 22, height: 22, borderRadius: 6, borderWidth: 1, alignItems: "center", justifyContent: "center" }, iconCompact: { width: 25, height: 26, borderRadius: 0, borderWidth: 0 },
   sectionTitle: { flexShrink: 1, color: c.text, fontFamily: mono, fontSize: 11, fontWeight: "700", letterSpacing: 0.9, textTransform: "uppercase" }, sectionTitleCompact: { fontSize: 10 }, count: { color: c.muted, fontFamily: mono, fontSize: 10.5 },
-  collapse: { width: 30, height: 30, alignItems: "center", justifyContent: "center" }, collapseCompact: { width: 27, height: 27 }, sectionBody: { paddingHorizontal: 8, paddingVertical: 2 }, bodyFlush: { paddingVertical: 0 },
+  collapse: { width: 36, height: 32, alignItems: "center", justifyContent: "center" }, collapseCompact: { width: 40, height: 30 }, sectionBody: { paddingHorizontal: 8, paddingVertical: 2 }, bodyFlush: { paddingVertical: 0 },
 })
 
