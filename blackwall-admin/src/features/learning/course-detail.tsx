@@ -2,7 +2,7 @@ import { DocLinksList } from "@/components/common/doc-links"
 import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
 import { CalendarRange, ChevronDown, Clock, ExternalLink, GitBranch, GraduationCap, Mail, MapPin, Pencil, Plus, StickyNote as NoteIcon, Tag, UserRound } from "lucide-react"
 import { useState, type ReactNode } from "react"
-import { Link, useParams } from "react-router-dom"
+import { Link, useParams, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
@@ -14,13 +14,11 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Textarea } from "@/components/ui/textarea"
 import { EmptyState } from "@/components/common/empty-state"
-import { ListGroupLabel } from "@/components/common/list"
+import { PropChip } from "@/components/common/prop-chip"
 import { PageHeader } from "@/components/common/page-header"
 import { Panel } from "@/components/common/panel"
 import { SegmentedTabs } from "@/components/common/segmented-tabs"
 import { StickyNote } from "@/features/notes/sticky-note"
-import { daysUntil } from "@/lib/dates"
-import { parseQuickAdd } from "@/lib/quick-add"
 import { learningHref, notesHref } from "@/lib/routes"
 import type { Course, LearningItemType, Task } from "@/lib/types"
 import { useUi } from "@/stores/ui"
@@ -28,13 +26,12 @@ import { useWorkspace } from "@/stores/workspace"
 import { Input } from "@/components/ui/input"
 import { daysLabel, meetingKindLabel } from "@shared/learning"
 import { formatTime } from "@/lib/dates"
-import { CourseworkRow, KindIcon } from "./coursework"
+import { KindIcon } from "./coursework"
+import { WorkView } from "./work-view"
 import { TopicsPanel } from "./topics-panel"
 import { TopicChips } from "@/components/forms/topics-field"
-import { ProgressBar, ProgressRing, dateRange, kindSubtitle } from "./learning-page"
-import { COURSE_STATUS_LABEL, compareCoursework, courseStatus, kindInfo, kindOf, kindProgress, learningType } from "./learning-utils"
-
-type View = "open" | "done" | "all"
+import { ProgressBar, ProgressRing, dateRange } from "./learning-page"
+import { kindInfo, kindOf, kindProgress, learningType } from "./learning-utils"
 
 function AddItem({ course }: { course: Course }) {
   const openForm = useUi((s) => s.openForm)
@@ -62,114 +59,6 @@ function AddItem({ course }: { course: Course }) {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  )
-}
-
-/** Open items grouped by when; done items newest first. */
-const ITEMS_TITLE: Record<string, string> = { course: "Coursework", certification: "Study plan", selfpaced: "Sections", skill: "Milestones", reading: "Chapters" }
-
-function Coursework({ course, items }: { course: Course; items: Task[] }) {
-  const create = useWorkspace((s) => s.create)
-  const info = kindInfo(kindOf(course))
-  const first = info.types[0]
-  const firstLabel = first.label.toLowerCase()
-  const article = /^[aeiou]/.test(firstLabel) ? "an" : "a"
-  const [view, setView] = useState<View>("open")
-  const [by, setBy] = useState<"date" | "module">(course.topics?.length ? "module" : "date")
-  const [quick, setQuick] = useState("")
-  const open = items.filter((t) => !t.done).sort(compareCoursework)
-  const done = items.filter((t) => t.done).sort((a, b) => (b.completedAt ?? "").localeCompare(a.completedAt ?? ""))
-
-  const modules = course.topics ?? []
-  const pool = view === "done" ? done : view === "all" ? [...open, ...done] : open
-  const byModule = by === "module" && modules.length > 0
-  const placed = new Set<string>()
-  const moduleGroups = [
-    ...modules.map((m) => {
-      const mine = pool.filter((t) => t.topicIds?.includes(m.id) && !placed.has(t.id))
-      mine.forEach((t) => placed.add(t.id))
-      const all = items.filter((t) => t.topicIds?.includes(m.id))
-      return { label: m.title, note: all.length ? `${all.filter((t) => t.done).length} of ${all.length} done` : "no work yet", items: mine, keepEmpty: true }
-    }),
-    { label: "No module", note: undefined, items: pool.filter((t) => !placed.has(t.id)), keepEmpty: false },
-  ]
-  const groups: { label: string; tone?: "warn"; note?: string; items: Task[]; keepEmpty?: boolean }[] = byModule
-    ? moduleGroups
-    : view === "done"
-      ? [{ label: "Done", items: done }]
-      : [
-          { label: "Overdue", tone: "warn" as const, items: open.filter((t) => t.due && daysUntil(t.due) < 0) },
-          { label: "Next 7 days", items: open.filter((t) => t.due && daysUntil(t.due) >= 0 && daysUntil(t.due) <= 7) },
-          { label: "Later", items: open.filter((t) => t.due && daysUntil(t.due) > 7) },
-          { label: "No date", items: open.filter((t) => !t.due) },
-          ...(view === "all" ? [{ label: "Done", items: done }] : []),
-        ]
-  const shown = groups.filter((g) => g.items.length || (byModule && g.keepEmpty && view !== "done"))
-
-  const add = () => {
-    const { title, due } = parseQuickAdd(quick)
-    if (!title) return
-    create("tasks", { title, due, courseId: course.id, learningType: first.value, starred: false, done: false })
-    setQuick("")
-    toast.success(due ? `${first.label} added for ${due}` : `${first.label} added`)
-  }
-
-  return (
-    <Panel category="learning" title={ITEMS_TITLE[info.value]} tool={course.code ? course.code.toLowerCase().replace(/\s+/g, "") : "course"} command="coursework" meta={`${open.length} open · ${done.length} done`}>
-      <div className="flex flex-wrap items-center gap-2 border-b border-line px-3.5 py-2.5">
-        <SegmentedTabs
-          label={`Show ${ITEMS_TITLE[info.value].toLowerCase()}`}
-          value={view}
-          onChange={setView}
-          tabClassName="px-3"
-          tabs={[
-            { value: "open", label: "To do", count: open.length },
-            { value: "done", label: "Done", count: done.length },
-            { value: "all", label: "All" },
-          ]}
-        />
-        {modules.length > 0 && (
-          <SegmentedTabs label="Group work" value={by} onChange={setBy} tabClassName="px-3" tabs={[{ value: "module", label: "By module" }, { value: "date", label: "By date" }]} />
-        )}
-      </div>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          add()
-        }}
-        className="flex items-center gap-2 border-b border-line px-3.5 py-2"
-      >
-        <Plus className="size-3.5 shrink-0 text-faint" aria-hidden />
-        <label htmlFor="course-quick-add" className="sr-only">Add {article} {firstLabel}</label>
-        <input
-          id="course-quick-add"
-          value={quick}
-          onChange={(e) => setQuick(e.target.value)}
-          placeholder={`Add ${article} ${firstLabel} · end with “fri” to set a date`}
-          className="h-8 min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-faint"
-        />
-        {quick.trim() && <Button type="submit" size="sm">Add</Button>}
-      </form>
-      {shown.length ? (
-        shown.map((g) => (
-          <section key={g.label} aria-label={g.label}>
-            <ListGroupLabel tone={"tone" in g ? g.tone : undefined}>
-              {g.label} <span className="text-faint">· {g.note ?? g.items.length}</span>
-            </ListGroupLabel>
-            <ul>
-              {g.items.map((t) => (
-                <CourseworkRow key={t.id} task={t} course={course} hideModule={byModule} />
-              ))}
-              {!g.items.length && <li className="px-3.5 pb-2 text-xs text-faint">Nothing here yet. Use Add work on the Modules panel.</li>}
-            </ul>
-          </section>
-        ))
-      ) : (
-        <EmptyState icon={learningType(first.value, info.value).icon} title={view === "done" ? "Nothing finished yet" : "Nothing to do"}>
-          {view === "done" ? "Check items off and they land here." : `Add ${first.plural.toLowerCase()} above${info.types.length > 1 ? `, or ${info.types.slice(1).map((t) => t.plural.toLowerCase()).join(", ")} from the Add menu` : ""}.`}
-        </EmptyState>
-      )}
-    </Panel>
   )
 }
 
@@ -206,40 +95,12 @@ function PagesRead({ course }: { course: Course }) {
   )
 }
 
-function CourseInfo({ course, items }: { course: Course; items: Task[] }) {
+function CourseInfo({ course }: { course: Course }) {
   const info = kindInfo(kindOf(course))
-  const p = kindProgress(course, items)
   const range = dateRange(course)
-  const cert = info.value === "certification"
   return (
-    <Panel category="learning" title={`${info.label} overview`} tool="course" command="info" meta={course.credits != null && info.value === "course" ? `${course.credits} credits` : undefined} bodyClassName="px-3.5 py-3">
-      <div data-category={`kind-${info.value}`} className="mb-3 grid gap-1.5 border-b border-line-soft pb-3.5">
-        {cert ? (
-          <div className="flex items-center gap-3.5">
-            <ProgressRing pct={p.pct} label="Exam domains" size={64} />
-            <div className="grid gap-0.5 text-xs text-muted-foreground">
-              <span>{p.total ? <><span className="font-semibold text-ink tabular-nums">{p.done} of {p.total}</span> exam domains</> : "No exam domains yet"}</span>
-              <span>{p.best != null ? <>Best practice test <span className="font-semibold text-ink tabular-nums">{p.best}%</span></> : "No practice test scores yet"}</span>
-              {course.endDate && <span>{daysUntil(course.endDate) >= 0 ? <><span className="font-semibold text-ink tabular-nums">{daysUntil(course.endDate)}</span> days to the exam</> : "Exam date passed"}</span>}
-            </div>
-          </div>
-        ) : p.measured ? (
-          <>
-            <div className="flex items-baseline justify-between">
-              <span className="font-heading text-3xl lg:text-2xl leading-none font-bold text-ink tabular-nums">{p.pct}%</span>
-              <span className="text-xs text-muted-foreground">
-                {p.summary}
-                {p.overdue > 0 && <span className="ml-2 font-semibold text-amber">{p.overdue} overdue</span>}
-              </span>
-            </div>
-            <ProgressBar pct={p.pct} label={`${info.label} progress`} />
-            {info.value === "course" && <p className="text-[11px] text-faint">Assignments, exams and milestones count; events don't.</p>}
-          </>
-        ) : (
-          <p className="text-xs text-muted-foreground">{info.value === "skill" ? "Add milestones to see progress." : p.summary}</p>
-        )}
-        {info.value === "reading" && <PagesRead key={course.pagesRead ?? -1} course={course} />}
-      </div>
+    <Panel category="learning" title="Details" tool="course" command="info" meta={course.credits != null && info.value === "course" ? `${course.credits} credits` : undefined} bodyClassName="px-3.5 py-3">
+      {info.value === "reading" && <div className="mb-3 border-b border-line-soft pb-3"><PagesRead key={course.pagesRead ?? -1} course={course} /></div>}
       <dl>
         {course.instructor && (
           <InfoRow icon={UserRound} label={info.person?.[0] ?? "Instructor"}>
@@ -387,11 +248,48 @@ function CourseNotes({ course }: { course: Course }) {
   )
 }
 
+type Section = "overview" | "work" | "notes"
+
+/** The title, kind, code and term as labelled chips, then one progress line (ring, count, bar) for whatever the kind measures. */
+function Identity({ course, items }: { course: Course; items: Task[] }) {
+  const info = kindInfo(kindOf(course))
+  const p = kindProgress(course, items)
+  return (
+    <div data-category={`kind-${info.value}`} className="mb-3 grid gap-2.5">
+      <div className="flex items-stretch gap-2.5">
+        <span className="w-1 shrink-0 rounded-[2px] bg-[var(--bw-category)]" aria-hidden />
+        <div className="grid min-w-0 gap-1.5">
+          <h2 className="truncate font-heading text-[17px] leading-tight font-bold text-ink">{course.title}</h2>
+          <div className="flex flex-wrap gap-1">
+            <PropChip kind="course" value={info.label.toUpperCase()} />
+            {course.code && <PropChip kind="neutral" label="Code" value={course.code} />}
+            {course.term && <PropChip kind="neutral" label="Term" value={course.term} />}
+            {course.instructor && info.person && <PropChip kind="neutral" label={info.person[0]} value={course.instructor} />}
+            {p.best != null && <PropChip kind="status" label="Best practice test" value={`${p.best}%`} />}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-3 rounded-[8px] border border-line-soft bg-panel px-3 py-2">
+        {p.measured ? <ProgressRing pct={p.pct} label={`${course.title} progress`} size={44} /> : <span className="grid size-11 shrink-0 place-items-center rounded-full border border-line-soft text-faint" aria-hidden>–</span>}
+        <div className="grid min-w-0 flex-1 gap-1.5">
+          <span className="text-[13px] text-ink-2">{p.summary}{p.overdue > 0 && <span className="ml-2 font-semibold text-amber">{p.overdue} overdue</span>}</span>
+          {p.measured && <ProgressBar pct={p.pct} label={`${info.label} progress`} />}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function CourseDetail() {
   const { id = "" } = useParams()
   const course = useWorkspace((s) => s.courses.find((c) => c.id === id))
   const tasks = useWorkspace((s) => s.tasks)
   const openForm = useUi((s) => s.openForm)
+  const noteCount = useWorkspace((s) => s.notes.filter((n) => n.courseId === id).length)
+  const [params, setParams] = useSearchParams()
+  const asked = params.get("tab")
+  const section: Section = asked === "overview" || asked === "work" || asked === "notes" ? asked : course?.kind === "reading" ? "overview" : "work"
+  const choose = (next: Section) => setParams((p) => { const n = new URLSearchParams(p); n.set("tab", next); return n }, { replace: true })
 
   if (!course) {
     return (
@@ -415,22 +313,14 @@ export function CourseDetail() {
   }
 
   const items = tasks.filter((t) => t.courseId === course.id)
-  const status = courseStatus(course)
   const kind = kindOf(course)
-  const sub = kind === "course" ? [course.instructor, course.term || dateRange(course)].filter(Boolean).join(" · ") : kindSubtitle(course)
 
   return (
     <>
       <PageHeader
-        back={{ to: learningHref, label: "Learning" }}
+        back={{ to: `${learningHref}?view=library`, label: "Library" }}
         title={course.title}
-        badge={
-          <>
-            <KindIcon kind={kind} small />
-            <span className="hidden text-xs text-muted-foreground xl:inline">{COURSE_STATUS_LABEL[status]}</span>
-          </>
-        }
-        subtitle={sub || undefined}
+        badge={<KindIcon kind={kind} small />}
         actions={
           <>
             <Button variant="ghost" onClick={() => openForm({ kind: "course", id: course.id })}>
@@ -440,15 +330,17 @@ export function CourseDetail() {
           </>
         }
       />
-      <WorkspaceGrid>
-        <GridItem span={2}>
-          <Coursework course={course} items={items} />
-        </GridItem>
-        <GridItem><CourseInfo course={course} items={items} /></GridItem>
-        <GridItem><TopicsPanel course={course} /></GridItem>
-        <GridItem span={3}><CourseNotes course={course} /></GridItem>
-        {kind === "course" && <GridItem><CourseReference key={course.id} course={course} /></GridItem>}
-      </WorkspaceGrid>
+      <Identity course={course} items={items} />
+      <div className="mb-3">
+        <SegmentedTabs<Section> label="Learning item sections" value={section} onChange={choose} className="max-w-full overflow-x-auto" tabs={[{ value: "overview", label: "Overview" }, { value: "work", label: "Work", count: items.filter((t) => !t.done).length }, { value: "notes", label: "Notes", count: noteCount }]} />
+      </div>
+      {section === "work" ? <WorkView key={course.id} course={course} items={items} /> : section === "notes" ? <CourseNotes course={course} /> : (
+        <WorkspaceGrid>
+          <GridItem span={2}><CourseInfo course={course} /></GridItem>
+          <GridItem><TopicsPanel course={course} /></GridItem>
+          {kind === "course" && <GridItem span={2}><CourseReference key={course.id} course={course} /></GridItem>}
+        </WorkspaceGrid>
+      )}
     </>
   )
 }
