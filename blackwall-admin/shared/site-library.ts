@@ -85,6 +85,7 @@ export const LIBRARY: LibraryItem[] = [
   piece("counter", "Notes and progress", "Counter", "A number that counts up when you scroll to it.", () => mk("counter")),
   piece("modal", "Advanced", "Popup on a button", "A button that opens a dialog with any blocks inside.", () => mk("modal", {}, [mk("heading", { level: "3", text: "A short title" }), mk("text")])),
   piece("filterGrid", "Cards and layout", "Cards with filter buttons", "Cards you can filter by category.", () => mk("filterGrid", {}, [mk("card", { tag: "Code" }, [mk("heading", { level: "3", text: "A project" }), mk("text")]), mk("card", { tag: "Writing" }, [mk("heading", { level: "3", text: "A post" }), mk("text")]), mk("card", { tag: "Code" }, [mk("heading", { level: "3", text: "Another project" }), mk("text")])])),
+  plain("embed", "Pictures and media", "Embed", "YouTube, Vimeo, CodePen, Calendly, Spotify or Loom.", "embed"),
   plain("html", "Advanced", "Custom HTML", "Your own markup, published as written.", "html"),
 ]
 

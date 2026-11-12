@@ -237,6 +237,8 @@ export interface Site {
   dark: SitePalette
   darkMode: boolean
   customCss: string
+  /** Your JavaScript for the whole site, written into /custom.js next to the CSS. */
+  customJs?: string
   footerText: string
   /** Old address → new address, e.g. /about → /projects. */
   redirects: { from: string; to: string }[]

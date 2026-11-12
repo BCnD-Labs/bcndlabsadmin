@@ -13,6 +13,7 @@ import { findAsset, imagePathsInPost } from "./assets.ts"
 import type { Asset, Draft, Site, SiteBlock, SiteForm, SitePage } from "../src/lib/types.ts"
 import { ANIMATIONS, BOOTSTRAP, previewAssets, BOOTSTRAP_BRIDGE, COMPONENT_CSS, REDUCED_MOTION_CSS, THEME_SCRIPT, fontName, flatFile, googleFontsHref, isBootstrap, relativize } from "./site-bootstrap.ts"
 import { SITE_RUNTIME } from "./site-runtime.ts"
+import { embedOf, EMBED_PROVIDERS } from "./site-embed.ts"
 
 /* ------------------------------------------------------------------ colours */
 
@@ -165,6 +166,12 @@ export const cleanAnchor = (v: unknown) => {
 }
 /** Extra CSS class names you give a block: plain names only, a few of them. */
 export const cleanClasses = (v: unknown) => str(v).split(/\s+/).filter((c) => /^[A-Za-z_][\w-]{0,40}$/.test(c)).slice(0, 8).join(" ")
+/** User-written JavaScript: the string is kept verbatim except we refuse any close-script sequence and clamp its length, so it can't break out of a <script> tag or run out of hand. */
+export const cleanScript = (v: unknown) => {
+  const raw = String(v ?? "")
+  if (!raw.trim()) return ""
+  return raw.replace(/<\/(script)/gi, "<\\/$1").slice(0, 16384)
+}
 /** The CSS declarations you write for one block: no braces (so it can't escape its rule), no tags, no imports. */
 export const cleanDeclarations = (v: unknown) => str(v).replace(/[<>{}\\]/g, "").replace(/@import[^;]*;?/gi, "").trim().slice(0, 2000)
 /** The class a block gets when it has its own CSS, so you can also use it from Look → Your CSS. */
@@ -564,6 +571,21 @@ export const BLOCKS: Record<string, BlockDef> = {
     },
     close: () => ["  </div>", "</div>"],
   },
+  embed: {
+    name: "Embed", def: { url: "" },
+    edit: [{ k: "url", l: "URL from " + EMBED_PROVIDERS.join(", "), note: "Paste the normal share link; the right embed is picked for you." }],
+    html: (b, ctx) => {
+      const url = String(b.url ?? "").trim()
+      const res = embedOf(url)
+      if (!res) {
+        return ctx.preview
+          ? [`<div class="embed-empty"><strong>Paste a share link.</strong><p>${EMBED_PROVIDERS.join(", ")} work; the others are not set up yet.</p></div>`]
+          : url ? [`<p><a href="${esc(url)}">${esc(url)}</a></p>`] : []
+      }
+      const style = res.aspect === "auto" && res.fixedHeight ? `style="height: ${res.fixedHeight}px"` : `style="aspect-ratio: ${res.aspect}"`
+      return [`<div class="embed embed--${res.provider.toLowerCase()}" ${style}>`, `  <iframe src="${esc(res.src)}" title="${esc(res.title)}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`, '</div>']
+    },
+  },
   nav: {
     name: "Page links", def: {},
     html: (_b, ctx) => {
@@ -701,7 +723,7 @@ function designClass(b: SiteBlock) {
 
 /** The classes a block gets: its Style choices, the class names you gave it, and its own-CSS class. */
 function allClasses(b: SiteBlock) {
-  return [designClass(b), cleanClasses(b.classes), cleanDeclarations(b.css) ? blockClass(b) : ""].filter(Boolean).join(" ")
+  return [designClass(b), cleanClasses(b.classes), cleanDeclarations(b.css) || cleanScript(b.js) ? blockClass(b) : ""].filter(Boolean).join(" ")
 }
 
 function emitBlock(b: SiteBlock, def: BlockDef, indent: string, ctx: BuildCtx, out: string[]) {
@@ -845,6 +867,7 @@ function documentHtml(site: Site, pages: SitePage[], doc: Doc, opts: { preview: 
     '    <main id="main">', ...body, "    </main>",
     ...(opts.bare ? [] : boot ? ['    <footer class="border-top mt-5">', ...bootFooter(ctx).map((l) => `      ${l}`), "    </footer>"] : ['    <footer class="site-footer">', ...foot, "    </footer>"]),
     opts.preview || opts.bare ? "" : '    <script src="/pagesmith.js" defer></script>',
+    opts.preview || opts.bare ? "" : (buildCustomJs(site, pages) ? '    <script src="/custom.js" defer></script>' : ""),
     boot && !opts.preview ? `    <script src="${BOOTSTRAP.js.href}" integrity="${BOOTSTRAP.js.integrity}" crossorigin="anonymous"></script>` : "",
     "  </body>", "</html>", "",
   ].filter((l) => l !== "").join("\n")
@@ -1035,6 +1058,27 @@ export function ownBlockCss(pages: SitePage[], header: SiteBlock[] = []) {
   return out.length ? `/* Your CSS for single blocks */\n${out.join("\n")}\n` : ""
 }
 
+/** Per-block JavaScript the owner typed into the Advanced tab: wrapped so each snippet runs for every matching
+ *  element, and sanitised so it can't close the surrounding <script> tag. */
+export function ownBlockJs(pages: SitePage[], header: SiteBlock[] = []) {
+  const out: string[] = []
+  const walk = (list: SiteBlock[]) => list.forEach((b) => { const j = cleanScript(b.js); if (j) out.push(`document.querySelectorAll(${JSON.stringify("." + blockClass(b))}).forEach(function (el) {\n${j}\n});`); if (b.kids) walk(b.kids) })
+  walk(header)
+  pages.forEach((p) => walk(p.sections))
+  return out.join("\n")
+}
+
+/** A site's one custom.js file: the site-wide JavaScript plus the per-block snippets, each wrapped in an IIFE so one
+ *  broken snippet doesn't stop the others. Empty when there is nothing to write. */
+export function buildCustomJs(site: Site, pages: SitePage[]) {
+  const parts: string[] = []
+  const siteJs = cleanScript(site.customJs)
+  if (siteJs) parts.push(`/* Your JavaScript for the whole site */\ntry { (function () {\n${siteJs}\n})(); } catch (e) { console.error("[your JS]", e); }`)
+  const perBlock = ownBlockJs(pages)
+  if (perBlock) parts.push(`/* Your JavaScript for single blocks */\ntry { (function () {\n${perBlock}\n})(); } catch (e) { console.error("[your block JS]", e); }`)
+  return parts.length ? parts.join("\n\n") + "\n" : ""
+}
+
 /** Drop-down menus, no script needed: open on hover and on keyboard focus; on phones they are simply listed. */
 const MENU_CSS = `.site-nav .has-sub { position: relative; }
 .site-nav .has-sub > a::after { content: " \\25BE"; font-size: .8em; }
@@ -1111,6 +1155,8 @@ export function buildSite(site: Site, pages: SitePage[], posts: Draft[], forms: 
     if (from && !files[`${from}/index.html`]) files[`${from}/index.html`] = redirectHtml(r.to)
   }
   files["pagesmith.js"] = SITE_RUNTIME
+  const customJs = buildCustomJs(site, own)
+  if (customJs) files["custom.js"] = customJs
   files[".nojekyll"] = ""
   return files
 }

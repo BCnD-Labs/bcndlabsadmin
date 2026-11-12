@@ -170,4 +170,10 @@ export const COMPONENT_CSS = `.badge { display: inline-block; padding: .25em .65
 .filter-bar__btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
 .filter-grid__items { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
 .filter-grid__item[hidden] { display: none !important; }
+.embed { position: relative; margin: 0 0 20px; border-radius: var(--radius, 8px); overflow: hidden; background: var(--surface); }
+.embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.embed.embed--spotify { position: relative; }
+.embed.embed--spotify iframe { position: static; height: 100%; }
+.embed-empty { padding: 1rem 1.25rem; border: 1px dashed var(--border); border-radius: var(--radius, 8px); color: var(--muted); }
+.embed-empty strong { display: block; color: var(--text); margin-bottom: .25rem; }
 `

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
 import { Panel } from "@/components/common/panel"
 import { SegmentedTabs } from "@/components/common/segmented-tabs"
 import { OptionSelect } from "@/components/forms/fields"
@@ -17,8 +18,8 @@ import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
 import { HeaderItems } from "./inspector"
 
-type Tab = "site" | "publishing" | "forms" | "more"
-const TABS: { value: Tab; label: string }[] = [{ value: "site", label: "Site" }, { value: "publishing", label: "Publishing" }, { value: "forms", label: "Forms" }, { value: "more", label: "More" }]
+type Tab = "site" | "publishing" | "forms" | "code" | "more"
+const TABS: { value: Tab; label: string }[] = [{ value: "site", label: "Site" }, { value: "publishing", label: "Publishing" }, { value: "forms", label: "Forms" }, { value: "code", label: "Code" }, { value: "more", label: "More" }]
 
 function Row({ label, htmlFor, hint, children }: { label: string; htmlFor?: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -28,6 +29,16 @@ function Row({ label, htmlFor, hint, children }: { label: string; htmlFor?: stri
     </div>
   )
 }
+
+const SITE_JS_PLACEHOLDER = [
+  "// Example: smooth-scroll any in-page link",
+  "document.querySelectorAll('a[href^=\"#\"]').forEach(function (a) {",
+  "  a.addEventListener('click', function (e) {",
+  "    var t = document.querySelector(a.getAttribute('href'));",
+  "    if (t) { e.preventDefault(); t.scrollIntoView({ behavior: 'smooth' }); }",
+  "  });",
+  "});",
+].join("\n")
 
 export function SettingsPanel({ site, header }: { site: Site; header: { items: SiteBlock[]; onAdd: (type: string) => void; onSelect: (id: string) => void } }) {
   const { update, remove } = useWorkspace.getState()
@@ -93,6 +104,15 @@ export function SettingsPanel({ site, header }: { site: Site; header: { items: S
             <Row label="Form receiver" htmlFor="ss-forms" hint="Your form receiver Worker's address (worker/forms). Forms, comments and sign-ups post here."><Input id="ss-forms" className="h-8 font-mono text-xs" value={site.formEndpoint ?? ""} onChange={(e) => set({ formEndpoint: e.target.value.trim() || undefined })} placeholder="https://forms.example.workers.dev" /></Row>
             <Row label="Turnstile site key" htmlFor="ss-turnstile" hint="From Cloudflare Turnstile; shows the bot check on forms."><Input id="ss-turnstile" className="h-8 font-mono text-xs" value={site.turnstileKey ?? ""} onChange={(e) => set({ turnstileKey: e.target.value.trim() || undefined })} /></Row>
             <Row label="Comments on posts" htmlFor="ss-comments" hint="Visitors can comment under posts. Comments show after you approve them and publish."><Switch id="ss-comments" checked={!!site.comments} onCheckedChange={(comments) => set({ comments })} /></Row>
+          </Panel>
+        </>
+      )}
+      {tab === "code" && (
+        <>
+          <p className="px-1 text-xs leading-snug text-muted-foreground" data-testid="code-lead">For JavaScript that runs on every page of the site. Written to /custom.js, loaded with defer. For one block only, use its <b className="font-semibold text-ink-2">Advanced</b> tab instead.</p>
+          <Panel category="website" title="Your JavaScript for the whole site" meta="runs on every page" bodyClassName="px-3.5 py-3">
+            <Textarea rows={8} value={site.customJs ?? ""} onChange={(e) => set({ customJs: e.target.value })} className="font-mono text-xs" placeholder={SITE_JS_PLACEHOLDER} spellCheck={false} aria-label="Site-wide JavaScript" data-testid="site-js" />
+            <p className="mt-1.5 text-[11px] text-faint">Wrapped in a try/catch at build so one mistake doesn't block the rest. Close-script sequences are blocked.</p>
           </Panel>
         </>
       )}

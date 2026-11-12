@@ -171,6 +171,11 @@ function AdvancedFields({ block, onPatch }: { block: SiteBlock; onPatch: (p: Rec
         <span className="text-[11px] text-faint">Properties only, no braces. It applies to this block and nothing else, and shows in the preview as you type. The block's own class is <code className="font-mono">.{blockClass(block)}</code>, if you'd rather write the rule in Look → Your CSS.</span>
         {ignored && <span className="text-[11px] text-amber">Some characters ({"{ } < > \\"} and @import) are left out when the site is built.</span>}
       </div>
+      <div className="grid gap-1">
+        <Label htmlFor={`${block.id}-js`} className={fieldLabel}>Your JavaScript for this block</Label>
+        <Textarea id={`${block.id}-js`} rows={6} className="font-mono text-xs" value={text("js")} onChange={(e) => set("js")(e.target.value)} placeholder={"// 'el' is this block's element\nel.addEventListener('click', function () {\n  el.classList.toggle('flipped');\n});"} spellCheck={false} />
+        <span className="text-[11px] text-faint">Runs once per element matching <code className="font-mono">.{blockClass(block)}</code>, inside its own try/catch. The snippet lands in /custom.js on build.</span>
+      </div>
     </div>
   )
 }
