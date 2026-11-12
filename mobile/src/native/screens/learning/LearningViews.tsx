@@ -11,7 +11,7 @@ import { Icon } from "../../ui.tsx"
 import { shape } from "../../../shape.ts"
 import { todayKey } from "../../data/sync-view.ts"
 import { WorkspaceSection } from "../../WorkspacePage.tsx"
-import { Ring } from "../../kit/charts.tsx"
+import { MiniBar, Ring } from "../../kit/charts.tsx"
 import { PropChip } from "../../kit/PropChip.tsx"
 import { dateParts } from "../../kit/stats.ts"
 import { chipTone, kit, type ChipKind } from "../../kit/tokens.ts"
@@ -43,11 +43,11 @@ export function Progress({ course, tasks }: { course: Course; tasks: Task[] }) {
 export function Library({ courses, tasks, notes, total, onOpen, onAdd }: { courses: Course[]; tasks: Task[]; notes: Note[]; total: number; onOpen: (course: Course) => void; onAdd: () => void }) {
   const [selected, setSelected] = useState<string | null>(null)
   return <>
-    <WorkspaceSection title="Library" icon="school-outline" tint={kit.hue.learning} count={`${courses.length} ${courses.length === 1 ? "item" : "items"}`} flush>
+    <WorkspaceSection compact title="Library" icon="school-outline" tint={kit.hue.learning} count={`${courses.length} ${courses.length === 1 ? "item" : "items"}`} flush>
       {courses.map(x => <View key={x.id} style={[selectedItem.item, selected === x.id && selectedItem.itemOn]}><CourseRow course={x} selected={selected === x.id} tasks={tasks.filter(t => t.courseId === x.id)} onPress={() => setSelected(id => id === x.id ? null : x.id)} />{selected === x.id ? <CoursePeek course={x} tasks={tasks} noteCount={notes.filter(n => n.courseId === x.id).length} onOpen={() => onOpen(x)} /> : null}</View>)}
       {!courses.length ? <View style={s.empty}><Text style={s.emptyTitle}>{total ? "No matches" : "Your learning library is empty"}</Text><Text style={s.meta}>{total ? "Try a different search or kind." : "Add a course, certification, skill, book, or self-paced track."}</Text>{!total ? <SmallButton label="+ Add learning" onPress={onAdd} /> : null}</View> : null}
     </WorkspaceSection>
-    {courses.length ? <Text style={s.foot}>Rings show finished tasks. Certifications, self-paced tracks and books count milestones or pages. Items with nothing to count have no ring.</Text> : null}
+    {courses.length ? <Text style={s.foot}>Progress reflects finished work, milestones, or pages, according to the learning item.</Text> : null}
   </>
 }
 function CourseRow({ course, selected, tasks, onPress }: { course: Course; selected: boolean; tasks: Task[]; onPress: () => void }) {
@@ -55,16 +55,15 @@ function CourseRow({ course, selected, tasks, onPress }: { course: Course; selec
   const tint = kindInfo(course).tint
   const today = todayKey()
   const next = tasks.filter(t => !t.done && t.kind !== "event" && t.learningType !== "event" && t.due).sort((a, b) => a.due!.localeCompare(b.due!))[0]
-  return <Pressable onPress={onPress} style={({ pressed }) => [s.courseRow, pressed && s.pressed]} accessibilityRole="button" accessibilityState={{ expanded: selected }} accessibilityLabel={`Preview ${course.title}. ${p.label}`}>
-    {p.measured ? <Ring value={p.value} size={36} tint={tint} label={`${course.title}, ${Math.round(p.value * 100)} percent`} /> : <View style={s.noRing} accessible={false}><Text style={s.noRingText}>–</Text></View>}
+  return <Pressable onPress={onPress} style={({ pressed }) => [s.courseRow, { borderLeftColor: tint }, selected && s.courseRowOn, pressed && s.pressed]} accessibilityRole="button" accessibilityState={{ expanded: selected }} accessibilityLabel={`Preview ${course.title}. ${p.label}`}>
     <View style={s.flex}>
-      <Text style={s.rowTitle} numberOfLines={2}>{course.title}</Text>
+      <Text style={s.libraryTitle} numberOfLines={1}>{course.title}</Text>
       <View style={s.chipRow}>
-        <PropChip kind="course" value={kindInfo(course).label.toUpperCase()} />
+        <View style={[s.kindLabel, { backgroundColor: `${tint}24` }]}><Text style={[s.kindText, { color: tint }]}>{kindInfo(course).label.toUpperCase()}</Text></View>
         {course.code ? <PropChip kind="neutral" label="Code" value={course.code} /> : null}
         {next ? <PropChip kind={next.due! < today ? "overdue" : "date"} label="Next" value={shortDay(next.due!)} /> : null}
       </View>
-      <Text style={s.meta} numberOfLines={1}>{p.label}</Text>
+      <View style={s.libraryProgress}><Text style={s.libraryProgressLabel} numberOfLines={1}>{p.label}</Text>{p.measured ? <><View style={s.libraryProgressBar}><MiniBar value={p.value} tint={tint} /></View><Text style={[s.libraryPercent, { color: tint }]}>{Math.round(p.value * 100)}%</Text></> : null}</View>
     </View>
     <Icon name={selected ? "chevron-up" : "chevron-down"} size={16} tint={c.muted} />
   </Pressable>
@@ -202,7 +201,9 @@ const s = StyleSheet.create({
   reflectionRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingLeft: 36, paddingRight: 10, paddingBottom: 6 },
   flex: { flex: 1, minWidth: 0 }, pressed: { opacity: 0.72 }, sectionHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 32 }, headActions: { flexDirection: "row", gap: 6 }, leadIcon: { width: 32, alignItems: "center" }, sectionTitle: { color: c.text, fontSize: 14, fontWeight: "700" }, meta: { color: c.muted, fontSize: 12, lineHeight: 17 },
   progress: { flexDirection: "row", alignItems: "center", gap: 12, padding: 10, borderRadius: shape.card, backgroundColor: c.panel, borderWidth: 1, borderColor: c.line }, progressText: { color: c.text2, fontSize: 12 }, track: { width: "100%", height: 3, borderRadius: 2, backgroundColor: c.raised, overflow: "hidden", marginTop: 3 }, bar: { height: 3, borderRadius: 2 },
-  courseRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8, paddingHorizontal: 8 }, kindMark: { width: 5, height: 30, borderRadius: 3 },
+  courseRow: { flexDirection: "row", alignItems: "center", gap: 7, minHeight: 58, borderLeftWidth: 3, paddingVertical: 5, paddingHorizontal: 8 }, courseRowOn: { backgroundColor: c.selected }, kindMark: { width: 5, height: 30, borderRadius: 3 },
+  libraryTitle: { color: c.text, fontSize: 13, fontWeight: "700" }, kindLabel: { alignSelf: "center", paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4 }, kindText: { fontSize: 9, fontWeight: "700" },
+  libraryProgress: { flexDirection: "row", alignItems: "center", gap: 6 }, libraryProgressLabel: { flex: 1, minWidth: 0, color: c.muted, fontSize: 10.5 }, libraryProgressBar: { width: 52 }, libraryPercent: { width: 31, textAlign: "right", fontFamily: mono, fontSize: 10, fontWeight: "700" },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginVertical: 3 }, noRing: { width: 36, height: 36, borderRadius: 18, borderWidth: 3, borderColor: "#232426", alignItems: "center", justifyContent: "center" }, noRingText: { color: c.muted, fontSize: 12 },
   openPill: { alignSelf: "flex-start", minHeight: 30, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, borderRadius: 15, backgroundColor: c.action, borderWidth: 1, borderColor: c.selectedBorder }, openPillText: { color: "#fff", fontSize: 11.5, fontWeight: "600" },
   foot: { color: c.muted, fontSize: 11, lineHeight: 16, paddingHorizontal: 2 }, rowTitle: { color: c.text, fontSize: 14, lineHeight: 19, fontWeight: "600" }, next: { color: c.text2, fontSize: 11, lineHeight: 16 },
