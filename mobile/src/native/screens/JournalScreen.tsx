@@ -80,7 +80,7 @@ export function JournalScreen({ onOpenSettings }: { onOpenSettings: () => void }
 
   return <KeyboardFrame style={s.fill}>
     <View style={s.header}><Text style={s.breadcrumb}>Blackwall <Text style={s.muted}>/ Journal</Text></Text><SyncStatus onOpenSettings={onOpenSettings} /></View>
-    <View style={s.tabs}><Tabs label="Journal views" tint={reflections ? kit.hue.learning : kit.hue.journal} items={[...PERIODS.map(p => ({ key: p as Period | "reflections", label: p[0].toUpperCase() + p.slice(1) })), { key: "reflections" as const, label: "Reflections" }]} value={reflections ? "reflections" : period} onChange={key => { if (key === "reflections") setReflections(true); else { setPeriod(key); setReflections(false); setError(null) } }} /></View>
+    <View style={s.tabs}><Tabs scrollable label="Journal views" tint={reflections ? kit.hue.learning : kit.hue.journal} items={[...PERIODS.map(p => ({ key: p as Period | "reflections", label: p[0].toUpperCase() + p.slice(1) })), { key: "reflections" as const, label: "Reflections" }]} value={reflections ? "reflections" : period} onChange={key => { if (key === "reflections") setReflections(true); else { setPeriod(key); setReflections(false); setError(null) } }} /></View>
     <KeyboardScrollView style={s.fill} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={c.accent} colors={[c.accent]} />}>
       {!data ? <Text style={s.hint}>{status === "signed-out" ? "Sign in from Settings to use Journal." : message ?? "Loading Journal…"}</Text> : <>
         {message && status !== "ok" ? <Text style={s.hint}>{message}</Text> : null}
@@ -90,7 +90,7 @@ export function JournalScreen({ onOpenSettings }: { onOpenSettings: () => void }
             <CheckInButton title={formWording(period).title} blurb={`A short look back at the ${period.slice(0, -2)}`} icon="create-outline" summary={savedFor() ? checkInSummary(readCheckIn(savedFor()!.text)) : undefined} saved={!!savedFor()} draft={!!drafts[reviewId(period, anchor)]} disabled={!access.ok} onPress={() => open()} />
           </View>
         </WorkspaceSection>}
-        {period === "daily" ? <LogView data={data} today={today} day={day} onDay={setDay} logs={logs} blocked={access.reason} onEditTask={setTaskId} hideNav tint={kit.hue.journal} intro="Type anything, any time of day. Entries are saved under the day shown above." /> : <>
+        {period === "daily" ? <LogView data={data} today={today} day={day} onDay={setDay} logs={logs} blocked={access.reason} onEditTask={setTaskId} hideNav tint={kit.hue.journal} /> : <>
           <WorkspaceSection title={`Written this ${period.slice(0, -2)}`} icon="book-outline" tint={kit.hue.journal} count={String(entries.length)} flush>
             {entries.length ? entries.slice().reverse().slice(0, 20).map(entry => { const parts = dateParts(entry.id); return <View key={entry.id} style={s.entry}><View style={s.dateBlock} accessible accessibilityLabel={`${parts.month} ${parts.day}`}><Text style={s.dateMonth}>{parts.month}</Text><Text style={s.dateDay}>{parts.day}</Text></View><Text style={[s.preview, s.flex]} numberOfLines={3}>{[entry.text, ...(entry.entries ?? []).filter(item => !item.courseId && !item.taskId).map(item => item.text)].filter(Boolean).join("\n") || "Section entries"}</Text></View> }) : <Text style={s.hintPad}>Nothing written in this {period.slice(0, -2)} yet.</Text>}
           </WorkspaceSection>
