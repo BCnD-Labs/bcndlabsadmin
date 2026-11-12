@@ -210,7 +210,12 @@ html[data-runtime="mac-native"] .mac-tool-row { display: flex; align-items: cent
 html[data-runtime="mac-native"] .mac-tool-count { color: var(--bw-muted); font-size: 11px; }
 html[data-runtime="mac-native"] .mac-tool-empty { padding: 8px 6px; color: var(--bw-muted); font-size: 11px; }
 html[data-runtime="mac-native"] .mac-task-list { margin: 2px 0 0; padding: 0; list-style: none; }
-html[data-runtime="mac-native"] .mac-task { display: flex; align-items: center; gap: 7px; min-height: 28px; padding: 2px 4px; border-radius: 3px; font-size: 12px; }
+html[data-runtime="mac-native"] .mac-task { display: flex; align-items: flex-start; gap: 7px; min-height: 28px; padding: 2px 4px; border-radius: 3px; font-size: 12px; }
+html[data-runtime="mac-native"] .mac-task-main { display: grid; flex: 1; min-width: 0; gap: 3px; padding-top: 1px; }
+html[data-runtime="mac-native"] .mac-task-chips { display: flex; flex-wrap: wrap; gap: 3px; }
+html[data-runtime="mac-native"] .mac-task-done-toggle { display: flex; align-items: center; gap: 4px; margin: 4px; color: var(--bw-muted); font-size: 11px; }
+html[data-runtime="mac-native"] .mac-task-done-toggle:hover { color: var(--bw-text); }
+html[data-runtime="mac-native"] .mac-task-done-toggle svg { width: 12px; height: 12px; }
 html[data-runtime="mac-native"] .mac-task:hover { background: var(--bw-raised); }
 html[data-runtime="mac-native"] .mac-task button:not([role="checkbox"]) { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
 html[data-runtime="mac-native"] .mac-task[data-done="true"] button:not([role="checkbox"]) { color: var(--bw-muted); text-decoration: line-through; }
