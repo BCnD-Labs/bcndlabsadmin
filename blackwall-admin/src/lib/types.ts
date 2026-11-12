@@ -294,6 +294,8 @@ export interface Asset {
   /** What the picture shows, for people who can't see it. Used as the default for every place it is used. */
   alt: string
   tags?: string[]
+  /** A named group in the library ("Garden", "Logos"). Only organises the library; no file moves in Nextcloud. */
+  collection?: string
   /** Where it came from: "nextcloud:/Photos/a.jpg" or "device:a.jpg". */
   source?: string
   /** The size of the picture before it was processed, for "was 3.2 MB". */

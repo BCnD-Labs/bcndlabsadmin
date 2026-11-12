@@ -60,7 +60,7 @@ export function validWorkspace(value: unknown): value is Collections {
         socialPosts: { stage: ["idea", "draft", "ready"] },
       }
       if (Object.entries(enums[key] ?? {}).some(([field, choices]) => !choices.includes(row[field]))) return false
-      const optionalStrings = ["details", "due", "time", "courseId", "learningType", "completedAt", "projectId", "connectionId", "productionUrl", "previewUrl", "notes", "cover", "coverAlt", "remoteSlug", "startDate", "endDate", "logo", "materialIcon", "customLogo", "siteId", "course", "publishedAt", "formEndpoint", "turnstileKey", "publishedSha", "link", "media", "scheduledAt", "syllabus", "policies", "repoUrl", "workType"]
+      const optionalStrings = ["collection", "details", "due", "time", "courseId", "learningType", "completedAt", "projectId", "connectionId", "productionUrl", "previewUrl", "notes", "cover", "coverAlt", "remoteSlug", "startDate", "endDate", "logo", "materialIcon", "customLogo", "siteId", "course", "publishedAt", "formEndpoint", "turnstileKey", "publishedSha", "link", "media", "scheduledAt", "syllabus", "policies", "repoUrl", "workType"]
       if (optionalStrings.some((field) => row[field] != null && typeof row[field] !== "string")) return false
       if (row.links != null && (!Array.isArray(row.links) || row.links.length > 50 || !row.links.every((l: unknown) => !!l && typeof l === "object" && typeof (l as { label?: unknown }).label === "string" && typeof (l as { url?: unknown }).url === "string"))) return false
       if (row.tags != null && (!Array.isArray(row.tags) || !row.tags.every((tag: unknown) => typeof tag === "string"))) return false

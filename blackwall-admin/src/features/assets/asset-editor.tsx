@@ -68,7 +68,7 @@ function CropBox({ canvas, crop, aspect, onChange }: { canvas: HTMLCanvasElement
   }
   const up = () => { drag.current = null }
   return (
-    <div ref={frame} className="flex justify-center rounded-[8px] bg-[repeating-conic-gradient(#0003_0%_25%,transparent_0%_50%)] bg-[length:16px_16px] p-3">
+    <div ref={frame} className="flex justify-center overflow-hidden rounded-[8px] bg-[repeating-conic-gradient(#0003_0%_25%,transparent_0%_50%)] bg-[length:16px_16px] p-3">
       <div className="relative touch-none select-none" style={{ width: box.w, height: box.h }}>
         <canvas ref={shown} style={{ width: box.w, height: box.h }} className="block" aria-label="Picture being edited" />
         <div className="absolute cursor-move overflow-visible outline outline-1 outline-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.55)]" data-testid="crop-box" onPointerDown={down("move")} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
