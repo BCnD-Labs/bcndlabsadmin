@@ -2,6 +2,7 @@ import { useRef, type ComponentRef } from "react"
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native"
 import { plannerColor as c } from "../../../planner-theme.ts"
 import { Icon } from "../../../ui.tsx"
+import { kit } from "../../../kit/tokens.ts"
 import type { CalendarView } from "./grid.ts"
 const VIEWS = [{ key: "month", label: "Month" }, { key: "week", label: "7-day" }, { key: "day", label: "Day" }] as const
 export function CalendarHeader({ title, view, onView, onStep, onToday, onSettings, compact = false }: {
@@ -23,9 +24,9 @@ export function CalendarHeader({ title, view, onView, onStep, onToday, onSetting
   </View>
 }
 const styles = StyleSheet.create({
-  wrap: { padding: 6, gap: 2, backgroundColor: c.panel }, row: { flexDirection: "row", alignItems: "center", gap: 4 },
+  wrap: { padding: 6, gap: 2, backgroundColor: kit.titlebar }, row: { flexDirection: "row", alignItems: "center", gap: 4 },
   title: { flex: 1, color: c.text, fontSize: 14, fontWeight: "600", textAlign: "center" }, icon: { width: 34, height: 34, alignItems: "center", justifyContent: "center", borderRadius: 17 },
-  today: { paddingHorizontal: 10, minHeight: 32, justifyContent: "center", borderRadius: 16, backgroundColor: c.selected }, todayText: { color: c.accent, fontSize: 12 },
-  track: { flex: 1, flexDirection: "row", borderRadius: 18, padding: 2, backgroundColor: c.ground }, tab: { flex: 1, minHeight: 30, alignItems: "center", justifyContent: "center", borderRadius: 16 },
-  on: { backgroundColor: c.selected }, label: { color: c.muted, fontSize: 12, fontWeight: "500" },
+  today: { paddingHorizontal: 10, minHeight: 32, justifyContent: "center", borderRadius: 6, backgroundColor: c.selected }, todayText: { color: c.accent, fontSize: 12, fontWeight: "700" },
+  track: { flex: 1, flexDirection: "row", borderRadius: 6, padding: 2, backgroundColor: c.ground }, tab: { flex: 1, minHeight: 30, alignItems: "center", justifyContent: "center", borderRadius: 5 },
+  on: { backgroundColor: c.selected, borderBottomWidth: 2, borderBottomColor: c.accent }, label: { color: c.muted, fontSize: 12, fontWeight: "500" },
 })
