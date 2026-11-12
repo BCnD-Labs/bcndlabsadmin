@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { PlannerCalendar } from "@/features/productivity/planner-calendar"
+import { CheckInChips } from "@/features/journal/check-in-chips"
 import { PlannerNotes } from "@/features/productivity/planner-notes"
 import { parseKey, toDateKey, todayKey } from "@/lib/dates"
 import { newId } from "@/lib/ids"
@@ -90,7 +91,8 @@ export function TasksTool() {
   )
 }
 
-export function LogTool() {
+/** The daily log: Morning, Afternoon and Evening check-ins on top, then the day's entries by section. `hideNav` when the page already has a day navigator. */
+export function LogTool({ hideNav = false }: { hideNav?: boolean } = {}) {
   const date = useDock((s) => s.date)
   const entry = useWorkspace((s) => s.journal.find((j) => j.id === date))
   const saveSections = useWorkspace((s) => s.saveJournalSections)
@@ -137,12 +139,14 @@ export function LogTool() {
   }
   return (
     <div className="mac-log-tool">
-      <DayNav label={format(parseKey(date), "EEE, MMM d")} />
+      {!hideNav && <DayNav label={format(parseKey(date), "EEE, MMM d")} />}
+      <CheckInChips day={date} />
       <div className="mac-log-groups">
         {sections.map((section) => {
           const key = `${date}/${section.id ?? "main"}`
           const open = expanded[key] ?? !section.id
-          const items = (entry?.entries ?? []).filter((item) => item.sectionId === section.id && !item.courseId && !item.taskId)
+          // Check-ins and reviews (ids starting "journal-") have their own buttons and tab; they are not log entries.
+          const items = (entry?.entries ?? []).filter((item) => item.sectionId === section.id && !item.id.startsWith("journal-") && !item.courseId && !item.taskId)
           const count = items.length + Number(!!section.text.trim())
           const composeKey = `${key}/new`
           const row = (id: string, text: string, item?: JournalLogItem) => {
