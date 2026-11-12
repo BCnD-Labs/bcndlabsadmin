@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
 import { fileNameOf, nextcloudLink, nextcloudPathOf } from "../src/features/documents/nextcloud-link.ts"
+import { afterClose, withDoc } from "../src/features/documents/docs-tabs.ts"
 import { cellText, columnName, documentKind, isLegacyOffice, safeHref } from "../src/features/documents/document-kind.ts"
 
 test("only the modern Word, Excel and PowerPoint formats open in the viewer", () => {
@@ -48,4 +49,14 @@ test("Nextcloud file links round-trip and can't climb out of the Nextcloud root"
   assert.equal(nextcloudPathOf("nextcloud:"), null)
   assert.equal(nextcloudPathOf("https://cloud.example/f/12"), null)
   assert.equal(fileNameOf("/Class/Week 3/deck.pptx"), "deck.pptx")
+})
+
+test("opening a document twice keeps one tab; closing the showing tab shows its neighbour", () => {
+  const a = { path: "/a.pptx", name: "a.pptx" }, b = { path: "/Class/b.docx", name: "b.docx" }, c = { path: "/c.xlsx", name: "c.xlsx" }
+  assert.deepEqual(withDoc([a], "/Class/b.docx"), [a, b])
+  assert.deepEqual(withDoc([a, b], "/a.pptx"), [a, b])
+  assert.deepEqual(afterClose([a, b, c], "/Class/b.docx", "/Class/b.docx"), { docs: [a, c], active: "/c.xlsx" })
+  assert.deepEqual(afterClose([a, b, c], "/c.xlsx", "/c.xlsx"), { docs: [a, b], active: "/Class/b.docx" })
+  assert.deepEqual(afterClose([a, b], "/a.pptx", "/Class/b.docx"), { docs: [a], active: "/a.pptx" })
+  assert.deepEqual(afterClose([a], "/a.pptx", "/a.pptx"), { docs: [], active: null })
 })

@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 import type { Category } from "@/components/common/category-icon"
 import { usePrefs } from "@/stores/prefs"
-import { CMS, DEVELOPMENT, assetsHref, cmsPagesHref, sitesHref, formsHref, siteSettingsHref, JOURNAL, MIKOSHI, PRODUCTIVITY, journalHref, launcherHref, mikoshiStatusHref, mikoshiStorageHref, insightsHref, learningHref, mediaHref, plannerHref, postsHref, projectsHref, siteAnalyticsHref, SOCIAL, socialHref } from "@/lib/routes"
+import { CMS, DEVELOPMENT, assetsHref, cmsPagesHref, sitesHref, formsHref, siteSettingsHref, JOURNAL, MIKOSHI, PRODUCTIVITY, journalHref, launcherHref, mikoshiStatusHref, filesHref, docsHref, insightsHref, learningHref, mediaHref, plannerHref, postsHref, projectsHref, siteAnalyticsHref, SOCIAL, socialHref } from "@/lib/routes"
 
 export interface NavChild {
   label: string
@@ -59,6 +59,8 @@ export const NAV: NavDestination[] = [
     ],
   },
   { id: "assets", label: "Assets", category: "website", to: assetsHref, match: assetsHref },
+  { id: "files", label: "Files", category: "files", to: filesHref, match: filesHref },
+  { id: "docs", label: "Docs", category: "docs", to: docsHref, match: docsHref },
   { id: "social", label: "Social", category: "social", to: socialHref, match: SOCIAL },
   {
     id: "mikoshi",
@@ -69,7 +71,6 @@ export const NAV: NavDestination[] = [
     children: [
       { label: "Launcher", to: launcherHref },
       { label: "Status", to: mikoshiStatusHref },
-      { label: "Storage", to: mikoshiStorageHref },
     ],
   },
 ]

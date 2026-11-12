@@ -467,7 +467,7 @@ export function DesktopSettings() {
 
 const RAIL_APPS = [
   { id: "home", label: "Home" }, { id: "browser", label: "Browser" }, { id: "learning", label: "Learning" }, { id: "journal", label: "Journal" }, { id: "notes", label: "Notes" }, { id: "projects", label: "Projects" },
-  { id: "insights", label: "Insights" }, { id: "development", label: "GitHub activity" }, { id: "website", label: "Websites" }, { id: "assets", label: "Assets" }, { id: "social", label: "Social" }, { id: "mikoshi", label: "Mikoshi" },
+  { id: "insights", label: "Insights" }, { id: "development", label: "GitHub activity" }, { id: "website", label: "Websites" }, { id: "assets", label: "Assets" }, { id: "files", label: "Files" }, { id: "docs", label: "Docs" }, { id: "social", label: "Social" }, { id: "mikoshi", label: "Mikoshi" },
 ]
 
 /** How the Learning planner spreads work. The Android app uses its own copy of these choices. */

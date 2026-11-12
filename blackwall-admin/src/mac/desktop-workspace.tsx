@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useRoutes } from "react-router-dom"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import { createStore, useStore, type StoreApi } from "zustand"
-import { BarChart3, BookOpen, Images, Minimize2, Minus, PanelLeftClose, PanelLeftOpen, ChevronDown, CalendarDays, Code2, FileText, Folder, Globe, GraduationCap, Home, LayoutDashboard, Maximize2, Pin, Search, Server, Settings2, Share2, X } from "lucide-react"
+import { BarChart3, BookOpen, Images, Minimize2, Minus, PanelLeftClose, PanelLeftOpen, ChevronDown, CalendarDays, Code2, FileText, Folder, FolderOpen, Globe, GraduationCap, Home, LayoutDashboard, Maximize2, Pin, Search, Server, Settings2, Share2, X } from "lucide-react"
 import { blackwallPages } from "@/app-routes"
 import { useNav } from "@/components/layout/nav-config"
 import { QuickCreate } from "@/components/layout/quick-create"
@@ -33,6 +33,8 @@ const APP = {
   development: { title: "GitHub activity", route: "/development", icon: Code2, tone: "github" },
   website: { title: "Websites", route: "/cms", icon: Globe, tone: "website" },
   assets: { title: "Assets", route: "/assets", icon: Images, tone: "website" },
+  files: { title: "Files", route: "/files", icon: FolderOpen, tone: "neutral" },
+  docs: { title: "Docs", route: "/docs", icon: FileText, tone: "neutral" },
   social: { title: "Social", route: "/social", icon: Share2, tone: "neutral" },
   mikoshi: { title: "Mikoshi", route: "/mikoshi", icon: Server, tone: "neutral" },
   /** Not a page: its window holds the browser (browser-window.tsx), so the route is never navigated to. */
@@ -48,7 +50,7 @@ type Gesture = { id: Id; pointer: number; startX: number; startY: number; lastX:
 const EDGES: Edge[] = ["n", "s", "e", "w", "ne", "nw", "se", "sw"]
 const APP_IDS = Object.keys(APP) as AppId[]
 const IDS: Id[] = ["notes", ...APP_IDS]
-const RAIL_IDS: Id[] = ["home", "browser", "learning", "journal", "notes", "projects", "insights", "development", "website", "assets", "social", "mikoshi"]
+const RAIL_IDS: Id[] = ["home", "browser", "learning", "journal", "notes", "projects", "insights", "development", "website", "assets", "files", "docs", "social", "mikoshi"]
 const KEY = "blackwall-mac-desktop-windows-v2"
 /** Width of the left rail with names shown; the icon-only rail is 43px. */
 const RAIL_WIDE = 172, RAIL_NARROW = 43
@@ -64,6 +66,8 @@ function appForPath(path: string): AppId {
   if (path.startsWith("/productivity") || path.startsWith("/work") || path.startsWith("/notes") || path.startsWith("/knowledge")) return "planner_app"
   if (path.startsWith("/development")) return "development"
   if (path.startsWith("/assets")) return "assets"
+  if (path.startsWith("/files")) return "files"
+  if (path.startsWith("/docs")) return "docs"
   if (path.startsWith("/cms") || path.startsWith("/content")) return "website"
   if (path.startsWith("/social")) return "social"
   if (path.startsWith("/mikoshi")) return "mikoshi"

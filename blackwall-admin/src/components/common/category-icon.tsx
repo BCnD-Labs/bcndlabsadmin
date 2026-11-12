@@ -1,4 +1,4 @@
-import { BarChart3, Bell, Server, CalendarDays, Cloud, FileText, FolderKanban, GitBranch, Globe, GraduationCap, LayoutDashboard, ListChecks, Megaphone, NotebookPen, Plug, StickyNote, type LucideIcon } from "lucide-react"
+import { BarChart3, Bell, Server, CalendarDays, Cloud, FileText, FolderKanban, FolderOpen, FileType2, GitBranch, Globe, GraduationCap, LayoutDashboard, ListChecks, Megaphone, NotebookPen, Plug, StickyNote, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export const CATEGORIES = {
@@ -13,6 +13,8 @@ export const CATEGORIES = {
   journal: NotebookPen,
   notifications: Bell,
   mikoshi: Server,
+  files: FolderOpen,
+  docs: FileType2,
   notes: StickyNote,
   service: Plug,
   azure: Cloud,

@@ -13,7 +13,7 @@ import { SignIn } from "@/components/layout/sign-in"
 import { SyncStatus, WorkspaceStatus } from "@/components/layout/workspace-status"
 import { activeChild, isActive, useNav } from "@/components/layout/nav-config"
 import { AssetFlowHost } from "@/features/assets/asset-flow"
-import { LinkedDocumentHost } from "@/features/documents/linked-document"
+import { DocsOpenHost } from "@/features/documents/docs-open-host"
 import { FormHost } from "@/components/forms/form-host"
 import { SettingsModal } from "@/features/settings/settings-modal"
 import { useNow } from "@/hooks/use-now"
@@ -157,7 +157,7 @@ export function MacShell() {
           <span className="mac-status-item">{format(now, "EEE, MMM d · h:mm a")}</span>
         </footer>
       </div>}
-      {workspaceReady && <><FormHost /><LinkedDocumentHost /><AssetFlowHost /><SettingsModal /><CommandSearch /></>}
+      {workspaceReady && <><FormHost /><DocsOpenHost /><AssetFlowHost /><SettingsModal /><CommandSearch /></>}
       <Toaster position="bottom-right" />
     </TooltipProvider>
   )

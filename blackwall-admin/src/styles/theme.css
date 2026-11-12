@@ -382,7 +382,7 @@ html[data-font="mono"] {
 [data-category="azure"] { --bw-category: #5b8cff; }
 [data-category="notifications"] { --bw-category: #f5c542; }
 /* Mikoshi: the homelab's own phosphor green. */
-[data-category="mikoshi"] { --bw-category: #28b845; }
+[data-category="mikoshi"], [data-category="files"] { --bw-category: #28b845; }
 /* Social: indigo, between Productivity blue and Learning violet but clearly its own. */
 [data-category="social"] { --bw-category: #7b74ff; }
 /* Dark: Google Material brand hues, brighter and cleaner against the near-black ground. */
