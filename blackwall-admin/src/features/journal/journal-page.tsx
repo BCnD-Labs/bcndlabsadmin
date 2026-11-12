@@ -1,5 +1,5 @@
 import { format } from "date-fns"
-import { CheckCircle2, ChevronLeft, ChevronRight, ChevronRight as Go, Moon, NotebookPen, Plus, Sun, SunMedium } from "lucide-react"
+import { CheckCircle2, ChevronLeft, ChevronRight, ChevronRight as Go, NotebookPen, Plus, Sun } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -22,13 +22,13 @@ import { useDock } from "@/mac/dock/dock-store"
 import { useWorkspace } from "@/stores/workspace"
 import { addDaysToKey } from "@shared/date-keys"
 import { validDateKey } from "@shared/planner"
-import { SLOTS, checkInSummary, formWording, nextPeriod, periodStart, readCheckIn, readSlotCheckIn, reviewId, slotForHour, slotSummary, type Period, type Slot } from "@shared/journal-review"
+import { checkInSummary, formWording, nextPeriod, periodStart, readCheckIn, reviewId, type Period, type Slot } from "@shared/journal-review"
 import { isForToday } from "@shared/task-rules"
 import { CheckInDialog } from "./check-in-dialog"
+import { recentDayItems, recentDays } from "./recent-entries"
 
 type View = Period | "reflections"
 const VIEWS: { value: View; label: string }[] = [{ value: "daily", label: "Daily" }, { value: "weekly", label: "Weekly" }, { value: "monthly", label: "Monthly" }, { value: "yearly", label: "Yearly" }, { value: "reflections", label: "Reflections" }]
-const SLOT_ICON = { morning: Sun, afternoon: SunMedium, evening: Moon } as const
 const IS_MAC = typeof document !== "undefined" && document.documentElement.dataset.runtime === "mac-native"
 
 function periodLabel(period: Period, anchor: string) {
@@ -62,6 +62,33 @@ function DayWork({ day }: { day: string }) {
     <ul className="grid gap-0.5" aria-label="Work on this day">{rows.slice(0, 8).map((t) => (
       <li key={t.id} className="flex min-h-8 items-center gap-2 text-[13px]"><Checkbox checked={t.done} aria-label={t.done ? `Reopen ${t.title}` : `Complete ${t.title}`} onCheckedChange={() => toggle(t.id)} /><span className={cn("min-w-0 flex-1 truncate text-ink-2", t.done && "text-faint line-through")}>{t.title}</span><span className="shrink-0 text-[11px] text-muted-foreground">{t.due === day ? "due" : "done"}</span></li>
     ))}{rows.length > 8 && <li className="text-[11px] text-faint">…and {rows.length - 8} more in the Planner</li>}</ul>
+  )
+}
+
+/** The latest days with something saved. Pick a day to see what is in it; Open day goes there. */
+function RecentEntries({ today, onOpenDay }: { today: string; onOpenDay: (day: string) => void }) {
+  const journal = useWorkspace((s) => s.journal)
+  const [open, setOpen] = useState<string | null>(null)
+  const days = recentDays(journal)
+  const title = (day: string) => `${format(parseKey(day), "EEE, MMM d")}${day === today ? " · today" : ""}`
+  return (
+    <Panel category="journal" title="Recent entries" tool="journal" command="recent" count={days.length || undefined} bodyClassName={days.length ? undefined : "px-3.5 py-3"}>
+      {days.length ? <ul>{days.map(({ day, preview }) => {
+        const on = open === day
+        return (
+          <li key={day} className={cn("border-b border-line-soft border-l-[3px] last:border-b-0", on ? "border-l-[var(--bw-category)] bg-selected" : "border-l-transparent hover:bg-raised")}>
+            <button type="button" aria-expanded={on} onClick={() => setOpen(on ? null : day)} className="grid w-full gap-0.5 px-3 py-2 text-left">
+              <span className="text-[12px] font-semibold text-ink">{title(day)}</span>
+              <span className="truncate text-xs text-muted-foreground">{preview}</span>
+            </button>
+            {on && <div className="grid gap-2 px-3 pb-2.5">
+              {recentDayItems(journal, day).map((item) => <div key={item.id} className="grid gap-0.5"><span className="bw-label text-[10px]">{item.label}</span><p className="line-clamp-4 text-xs leading-snug whitespace-pre-line text-ink-2">{item.text.trim() ? item.text.trim() : item.summary}</p></div>)}
+              <Button size="xs" className="w-fit rounded-full" onClick={() => onOpenDay(day)}>Open day</Button>
+            </div>}
+          </li>
+        )
+      })}</ul> : <p className="text-sm text-muted-foreground">No entries yet. Your dated entries appear here.</p>}
+    </Panel>
   )
 }
 
@@ -119,7 +146,6 @@ export function JournalPage() {
   const end = nextPeriod(period, anchor, 1)
   const entry = journal.find((j) => j.id === anchor)
   const savedFor = (slot?: Slot) => entry?.entries?.find((i) => i.id === reviewId(period, anchor, slot))
-  const nowSlot = day === today ? slotForHour(new Date().getHours()) : undefined
   const todayTitles = tasks.filter((t) => t.kind !== "event" && !t.done && isForToday(t, today)).sort(compareTasks).slice(0, 6).map((t) => t.title.trim().replace(/\s+/g, " ")).filter(Boolean)
   const written = journal.filter((j) => j.id >= anchor && j.id < end && (j.text.trim() || j.sections?.length || j.entries?.some((i) => !i.courseId && !i.taskId))).sort((a, b) => b.id.localeCompare(a.id)).slice(0, 20)
   const step = (dir: 1 | -1) => setDay(period === "daily" ? addDaysToKey(day, dir)! : nextPeriod(period, anchor, dir))
@@ -133,27 +159,26 @@ export function JournalPage() {
       <div className="mb-3"><SegmentedTabs<View> label="Journal view" value={view} onChange={choose} className="max-w-full overflow-x-auto" tabs={VIEWS} /></div>
       {view === "reflections" ? <Reflections /> : (
         <WorkspaceGrid>
-          <GridItem span={view === "daily" ? 1 : 2}>
-            <Panel category="journal" title={view === "daily" ? "Check-ins" : formWording(period).title} tool="journal" command="check-in" meta={view === "daily" ? `${SLOTS.filter((x) => savedFor(x.key)).length} of 3 done` : undefined} bodyClassName="grid gap-2 p-3">
-              {view === "daily" ? <>
-                <p className="text-xs text-muted-foreground">Three quick check-ins a day, mostly taps. A card turns green once it is saved.</p>
-                {SLOTS.map((x) => { const s = savedFor(x.key); return <CheckInCard key={x.key} title={x.label} blurb={x.blurb} icon={SLOT_ICON[x.key]} saved={!!s} summary={s ? slotSummary(x.key, readSlotCheckIn(x.key, s.text)) : undefined} now={nowSlot === x.key} onClick={() => setDialog({ slot: x.key })} /> })}
-                {savedFor() && <CheckInCard title="Earlier check-in" blurb="Saved before the three daily check-ins" icon={NotebookPen} saved summary={checkInSummary(readCheckIn(savedFor()!.text))} onClick={() => setDialog({})} />}
-              </> : <CheckInCard title={formWording(period).title} blurb={`A short look back at the ${period.slice(0, -2)}`} icon={NotebookPen} saved={!!savedFor()} summary={savedFor() ? checkInSummary(readCheckIn(savedFor()!.text)) : undefined} onClick={() => setDialog({})} />}
+          {view !== "daily" && <GridItem span={2}>
+            <Panel category="journal" title={formWording(period).title} tool="journal" command="check-in" bodyClassName="grid gap-2 p-3">
+              <CheckInCard title={formWording(period).title} blurb={`A short look back at the ${period.slice(0, -2)}`} icon={NotebookPen} saved={!!savedFor()} summary={savedFor() ? checkInSummary(readCheckIn(savedFor()!.text)) : undefined} onClick={() => setDialog({})} />
             </Panel>
-          </GridItem>
+          </GridItem>}
           {view === "daily" ? (
             <>
-            <GridItem>
-              <Panel category="journal" title="This day" tool="journal" command="day" bodyClassName="grid gap-2 p-3">
-                <DayWork day={day} />
-                <Button variant="outline" size="sm" asChild><Link to={logHref(day)}>See this day in the Planner</Link></Button>
+            <GridItem span={2}>
+              <Panel category="journal" title="Log" tool="journal" command="log" bodyClassName="p-0">
+                {IS_MAC ? <LogTool hideNav /> : <p className="px-3.5 py-3 text-sm text-muted-foreground">The daily log opens in the Planner: <Link className="underline" to={logHref(day)}>open this day</Link>.</p>}
               </Panel>
             </GridItem>
-            <GridItem span="full">
-              <Panel category="journal" title="Daily log" tool="journal" command="log" bodyClassName="p-0">
-                {IS_MAC ? <LogTool /> : <p className="px-3.5 py-3 text-sm text-muted-foreground">The daily log opens in the Planner: <Link className="underline" to={logHref(day)}>open this day</Link>.</p>}
-              </Panel>
+            <GridItem>
+              <div className="grid gap-3">
+                <Panel category="journal" title="This day" tool="journal" command="day" bodyClassName="grid gap-2 p-3">
+                  <DayWork day={day} />
+                  <Button variant="outline" size="sm" asChild><Link to={logHref(day)}>See this day in the Planner</Link></Button>
+                </Panel>
+                <RecentEntries today={today} onOpenDay={setDay} />
+              </div>
             </GridItem>
             </>
           ) : (
