@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { PlannerCalendar } from "@/features/productivity/planner-calendar"
 import { PlannerNotes } from "@/features/productivity/planner-notes"
-import { parseKey, toDateKey, todayKey } from "@/lib/dates"
+import { PropChip } from "@/components/common/prop-chip"
+import { courseLabel } from "@/features/learning/learning-utils"
+import { formatTime, parseKey, toDateKey, todayKey } from "@/lib/dates"
 import { newId } from "@/lib/ids"
 import type { JournalLogItem } from "@/lib/types"
 import { useUi } from "@/stores/ui"
@@ -54,38 +56,51 @@ export function CalendarTool() {
   )
 }
 
+/** The chosen day's work: open items with their time and course, overdue items on today, and a collapsed list of what is done. */
 export function TasksTool() {
   const date = useDock((s) => s.date)
   const tasks = useWorkspace((s) => s.tasks)
+  const courses = useWorkspace((s) => s.courses)
   const toggleTask = useWorkspace((s) => s.toggleTask)
   const openForm = useUi((s) => s.openForm)
   const navigate = useNavigate()
+  const [showDone, setShowDone] = useState(false)
   const today = todayKey()
-  const day = tasks.filter((t) => t.due === date || t.focusDate === date)
-  const overdue = date === today ? tasks.filter((t) => !t.done && t.due && t.due < today && t.focusDate !== date) : []
-  const rows = [...overdue.map((t) => ({ t, late: true })), ...day.map((t) => ({ t, late: false }))]
-  const open = (id: string) => navigate(`/productivity?date=${date}&task=${id}`)
+  const onDay = tasks.filter((t) => t.due === date || t.focusDate === date || t.scheduledDate === date)
+  const overdue = date === today ? tasks.filter((t) => !t.done && t.due && t.due < today && !onDay.includes(t)) : []
+  const open = [...overdue.map((t) => ({ t, late: true })), ...onDay.filter((t) => !t.done).map((t) => ({ t, late: false }))]
+  const done = onDay.filter((t) => t.done)
+  const go = (id: string) => navigate(`/productivity?date=${date}&task=${id}`)
+  const row = ({ t, late }: { t: (typeof tasks)[number]; late: boolean }) => {
+    const course = courses.find((c) => c.id === t.courseId)
+    const time = t.scheduledTime ?? t.time
+    return (
+      <li key={t.id} className="mac-task" data-done={t.done} data-late={late}>
+        <Checkbox checked={t.done} aria-label={t.done ? `Reopen ${t.title}` : `Complete ${t.title}`} onCheckedChange={() => toggleTask(t.id)} />
+        <div className="mac-task-main">
+          <button type="button" onClick={() => go(t.id)}>{t.title}</button>
+          {(late || time || course) && <span className="mac-task-chips">
+            {late && t.due && <PropChip kind="overdue" label="Due" value={format(parseKey(t.due), "MMM d")} />}
+            {time && <PropChip kind="date" label="Time" value={formatTime(time)} />}
+            {course && <PropChip kind="course" label="Course" value={courseLabel(course)} />}
+          </span>}
+        </div>
+      </li>
+    )
+  }
   return (
     <div>
       <div className="mac-tool-row">
         <strong>{isToday(parseKey(date)) ? "Today" : format(parseKey(date), "EEE, MMM d")}</strong>
-        <span className="mac-tool-count">{rows.filter((r) => !r.t.done).length} open</span>
+        <span className="mac-tool-count">{open.length ? `${open.length} open` : "none"}</span>
         <span className="mac-tool-spacer" />
         <Button variant="outline" size="xs" onClick={() => openForm({ kind: "task", defaults: { due: date } })}><Plus /> Task</Button>
       </div>
-      {rows.length ? (
-        <ul className="mac-task-list">
-          {rows.map(({ t, late }) => (
-            <li key={t.id} className="mac-task" data-done={t.done} data-late={late}>
-              <Checkbox checked={t.done} aria-label={t.done ? `Reopen ${t.title}` : `Complete ${t.title}`} onCheckedChange={() => toggleTask(t.id)} />
-              <button type="button" onClick={() => open(t.id)}>{t.title}</button>
-              {late && <span className="mac-task-tag">overdue</span>}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="mac-tool-empty">Nothing due or focused on this day.</p>
-      )}
+      {open.length ? <ul className="mac-task-list">{open.map(row)}</ul> : <p className="mac-tool-empty">Nothing is scheduled or due on this day.</p>}
+      {done.length > 0 && <>
+        <button type="button" className="mac-task-done-toggle" aria-expanded={showDone} onClick={() => setShowDone((v) => !v)}>{done.length} completed {showDone ? <ChevronUp /> : <ChevronDown />}</button>
+        {showDone && <ul className="mac-task-list">{done.map((t) => row({ t, late: false }))}</ul>}
+      </>}
     </div>
   )
 }
