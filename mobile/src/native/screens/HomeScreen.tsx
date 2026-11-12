@@ -1,5 +1,5 @@
-import { useState } from "react"
-import { Pressable, StyleSheet, Text, View } from "react-native"
+import { Fragment, useState } from "react"
+import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native"
 import { compareTasks, isForToday, toggleStar, toggleTask } from "../../lib/shared.ts"
 import { mono } from "../../theme.ts"
 import { plannerColor as c } from "../planner-theme.ts"
@@ -23,6 +23,8 @@ import { learningProgress } from "./learning/learning-view.ts"
 import { completedOn } from "./planner/log/log-rules.ts"
 import { SLOTS, hasAnswers, readSlotCheckIn, reviewId } from "./journal-review.ts"
 import type { ScreenKey } from "../nav/destinations.ts"
+import { HOME_LABELS, moveHomePanel, toggleItem, type HomePanel } from "./home-prefs.ts"
+import { useHomePrefs } from "./useHomePrefs.ts"
 
 /** The property kind a row chip is drawn as. */
 const chipKind: Record<RowChip["kind"], ChipKind> = { date: "date", overdue: "overdue", course: "course", focus: "neutral", star: "date", plain: "neutral" }
@@ -32,11 +34,11 @@ interface TagCell { kind: ChipKind; text: string }
 /** A compact live overview; every count and row comes from the current workspace. */
 export function HomeScreen({ onOpenSettings, onNavigate }: { onOpenSettings: () => void; onNavigate?: (screen: ScreenKey) => void }) {
   const { data, status, message, refreshing, refresh, mutate } = useWorkspace()
+  const { width } = useWindowDimensions()
   const [editor, setEditor] = useState<Editor | null>(null)
   const [noteEditor, setNoteEditor] = useState<NoteEditor | null>(null)
-  const [showToday, setShowToday] = useState(false)
-  const [showLearning, setShowLearning] = useState(false)
-  const [closedLearning, setClosedLearning] = useState<Record<string, boolean>>({})
+  const [prefs, updatePrefs] = useHomePrefs()
+  const [arranging, setArranging] = useState(false)
   const [notice, setNotice] = useState<string>()
   const [sel, setSel] = useState<string | null>(null)
   const today = todayKey()
@@ -44,7 +46,6 @@ export function HomeScreen({ onOpenSettings, onNavigate }: { onOpenSettings: () 
   const tasks = data?.tasks.filter(t => t.kind !== "event") ?? []
   const due = tasks.filter(t => isForToday(t, today)).sort(compareTasks)
   const learning = tasks.filter(t => !t.done && t.courseId && !isForToday(t, today)).sort(compareTasks)
-  const visibleLearning = showLearning ? learning : learning.slice(0, 5)
   const events = (data?.tasks ?? []).filter(t => t.kind === "event" && t.scheduledDate && t.scheduledDate >= today).sort((a, b) => (a.scheduledDate ?? "").localeCompare(b.scheduledDate ?? "")).slice(0, 4)
   const pinned = (data?.notes ?? []).filter(n => n.pinned).slice(0, 3)
   const overdue = tasks.filter(t => !t.done && t.due && t.due < today).length
@@ -64,7 +65,8 @@ export function HomeScreen({ onOpenSettings, onNavigate }: { onOpenSettings: () 
   }
   const dueCell = (t: { due?: string }, focused: boolean): DueCell => t.due && t.due < today ? { text: shortDay(t.due), tone: "overdue" } : t.due === today ? { text: "Today", tone: "today" } : t.due ? { text: shortDay(t.due), tone: "plain" } : { text: focused ? "Focus" : "Star", tone: "today" }
   const openRow = (show: () => void) => { setSel(null); show() }
-  return <WorkspacePage page="Home" compact center={<Text style={s.headerDate}>{formatDay(today)}</Text>} onOpenSettings={onOpenSettings} onRefresh={() => void refresh()} refreshing={refreshing}>
+  const collapseProps = (panel: HomePanel) => ({ collapsed: prefs.collapsed.includes(panel), onCollapsedChange: () => updatePrefs({ collapsed: toggleItem(prefs.collapsed, panel) }) })
+  return <WorkspacePage page="Home" compact center={<Text style={s.headerDate}>{width < 360 ? shortDay(today) : formatDay(today)}</Text>} action={<Pressable onPress={() => setArranging(true)} style={s.arrangeTrigger} accessibilityRole="button" accessibilityLabel="Arrange Home sections"><Icon name="options-outline" size={17} tint={c.text2} /></Pressable>} onOpenSettings={onOpenSettings} onRefresh={() => void refresh()} refreshing={refreshing}>
     {!data ? <View style={s.empty}><Text style={s.title}>{status === "signed-out" ? "Sign in to use Blackwall" : "Loading your workspace"}</Text><Text style={s.meta}>{status === "signed-out" ? "Your records will appear here after sign-in." : message ?? "Pull down to try again."}</Text>{status === "signed-out" ? <MiniAction label="Sign in" onPress={onOpenSettings} /> : null}</View> : null}
     {notice || (data && status !== "ok" && message) ? <Text style={s.error}>{notice ?? message}</Text> : null}
     {data ? <>
@@ -74,45 +76,63 @@ export function HomeScreen({ onOpenSettings, onNavigate }: { onOpenSettings: () 
         <StatCell compact label="Overdue" value={overdue} tint={overdue ? chipTone.overdue.ink : c.text} />
         <StatCell compact label="Streak" value={`${run.length}d`} tint={run.length ? chipTone.status.ink : c.text} />
       </StatStrip>
-      <WorkspaceSection compact title="Today" icon="checkmark-circle-outline" tint={kit.hue.productivity} count={`${due.length} open`} collapsible flush>
-        {(showToday ? due : due.slice(0, 5)).map(t => { const row = plannerRow(t, data.courses, today); return <Line key={t.id} title={t.title} due={dueCell(t, row.focused)} tag={row.course ? { kind: "course", text: row.course } : undefined} chips={taskChips(row)} detail={row.details} selected={sel === t.id} onSelect={() => setSel(t.id)} onOpen={() => openRow(() => setEditor({ mode: "edit", id: t.id }))} onComplete={() => void complete(t.id)} onStar={() => void star(t.id)} starred={t.starred} /> })}
+      {prefs.order.map(panel => <Fragment key={panel}>
+      {panel === "today" ? <WorkspaceSection compact title="Today" icon="checkmark-circle-outline" tint={kit.hue.productivity} count={`${due.length} open`} collapsible flush {...collapseProps("today")}>
+        {(prefs.expandedToday ? due : due.slice(0, 5)).map(t => { const row = plannerRow(t, data.courses, today); return <Line key={t.id} title={t.title} due={dueCell(t, row.focused)} tag={row.course ? { kind: "course", text: row.course } : undefined} chips={taskChips(row)} detail={row.details} selected={sel === t.id} onSelect={() => setSel(t.id)} onOpen={() => openRow(() => setEditor({ mode: "edit", id: t.id }))} onComplete={() => void complete(t.id)} onStar={() => void star(t.id)} starred={t.starred} /> })}
         {!due.length ? <Text style={s.emptyText}>Nothing due or starred today.</Text> : null}
-        {due.length > 5 ? <MiniAction label={showToday ? "Show less" : `Show ${due.length - 5} more`} onPress={() => setShowToday(v => !v)} /> : null}
-      </WorkspaceSection>
-      <WorkspaceSection compact title="Learning next" icon="school-outline" tint={kit.hue.learning} count={`${learning.length} open`} collapsible flush>
-        {learningGroups(visibleLearning, data.courses).map(group => {
+        {due.length > 5 ? <MiniAction label={prefs.expandedToday ? "Show less" : `Show ${due.length - 5} more`} onPress={() => updatePrefs({ expandedToday: !prefs.expandedToday })} /> : null}
+      </WorkspaceSection> : null}
+      {panel === "learning" ? <WorkspaceSection compact title="Learning next" icon="school-outline" tint={kit.hue.learning} count={`${learning.length} open`} collapsible flush {...collapseProps("learning")}>
+        {learningGroups(learning, data.courses).map(group => {
           const course = data.courses.find(x => x.id === group.id)
           const progress = course ? learningProgress(course, data.tasks.filter(t => t.courseId === course.id)) : undefined
+          const closed = prefs.closedGroups.includes(group.id)
+          const expanded = prefs.expandedGroups.includes(group.id)
           return <View key={group.id} style={s.learningGroup}>
-            <Pressable onPress={() => setClosedLearning(value => ({ ...value, [group.id]: !value[group.id] }))} style={s.groupHead} accessibilityRole="button" accessibilityState={{ expanded: !closedLearning[group.id] }} accessibilityLabel={`${group.title}, ${group.tasks.length} items${progress?.measured ? `, ${percent(progress.value)} percent done` : ""}`}>
-              <Icon name={closedLearning[group.id] ? "chevron-forward" : "chevron-down"} size={13} tint={kit.hue.learning} />
+            <Pressable onPress={() => updatePrefs({ closedGroups: toggleItem(prefs.closedGroups, group.id) })} style={s.groupHead} accessibilityRole="button" accessibilityState={{ expanded: !closed }} accessibilityLabel={`${group.title}, ${group.tasks.length} items${progress?.measured ? `, ${percent(progress.value)} percent done` : ""}`}>
+              <Icon name={closed ? "chevron-forward" : "chevron-down"} size={13} tint={kit.hue.learning} />
               <Text style={s.groupTitle} numberOfLines={1}>{group.title}</Text>
               {progress?.measured ? <><MiniBar value={progress.value} width={38} /><Text style={s.groupPct}>{percent(progress.value)}%</Text></> : null}
               <Text style={s.groupCount}>{group.tasks.length}</Text>
             </Pressable>
-            {!closedLearning[group.id] ? <View style={s.courseBody}>{group.tasks.map(t => { const row = plannerRow(t, data.courses, today); return <Line key={t.id} nested title={t.title} due={t.due ? dueCell(t, false) : undefined} tag={t.learningType ? { kind: "tag", text: typeLabel(t.learningType, course?.kind) } : undefined} chips={taskChips(row)} detail={row.details} selected={sel === t.id} onSelect={() => setSel(t.id)} onOpen={() => openRow(() => setEditor({ mode: "edit", id: t.id }))} onComplete={() => void complete(t.id)} onStar={() => void star(t.id)} starred={t.starred} /> })}</View> : null}
+            {!closed ? <View style={s.courseBody}>{(expanded ? group.tasks : group.tasks.slice(0, 3)).map(t => { const row = plannerRow(t, data.courses, today); return <Line key={t.id} nested title={t.title} due={t.due ? dueCell(t, false) : undefined} tag={t.learningType ? { kind: "tag", text: typeLabel(t.learningType, course?.kind) } : undefined} chips={taskChips(row)} detail={row.details} selected={sel === t.id} onSelect={() => setSel(t.id)} onOpen={() => openRow(() => setEditor({ mode: "edit", id: t.id }))} onComplete={() => void complete(t.id)} onStar={() => void star(t.id)} starred={t.starred} /> })}{group.tasks.length > 3 ? <MiniAction label={expanded ? "Show less" : `Show ${group.tasks.length - 3} more`} onPress={() => updatePrefs({ expandedGroups: toggleItem(prefs.expandedGroups, group.id) })} /> : null}</View> : null}
           </View>
         })}
         {!learning.length ? <Text style={s.emptyText}>No upcoming learning work.</Text> : null}
-        {learning.length > 5 ? <MiniAction label={showLearning ? "Show less" : `Show ${learning.length - 5} more`} onPress={() => setShowLearning(v => !v)} /> : null}
-      </WorkspaceSection>
-      {recentDone.length ? <WorkspaceSection compact title="Recently done" icon="checkmark-circle-outline" tint={kit.good} count={`${week.reduce((n, x) => n + x, 0)} in 7d`} collapsible flush>
+      </WorkspaceSection> : null}
+      {panel === "recent" && recentDone.length ? <WorkspaceSection compact title="Recently done" icon="checkmark-circle-outline" tint={kit.good} count={`${week.reduce((n, x) => n + x, 0)} in 7d`} collapsible flush {...collapseProps("recent")}>
         {recentDone.map(({ task, day }) => <Pressable key={task.id} onPress={() => setEditor({ mode: "edit", id: task.id })} style={s.recentRow} accessibilityRole="button" accessibilityLabel={`Open completed task ${task.title}`}><Icon name="checkmark-circle" size={17} tint={kit.good} /><Text style={s.recentTitle} numberOfLines={1}>{task.title}</Text><Text style={s.recentDate}>{shortDay(day)}</Text></Pressable>)}
       </WorkspaceSection> : null}
-      <WorkspaceSection compact title="Journal" icon="book-outline" tint={kit.hue.journal} count="Check-ins" flush right={<Pressable onPress={() => onNavigate?.("journal")} disabled={!onNavigate} style={s.sectionLink} accessibilityRole="button" accessibilityLabel="Open Journal"><Icon name="arrow-forward" size={15} tint={kit.hue.journal} /></Pressable>}>
+      {panel === "journal" ? <WorkspaceSection compact title="Journal" icon="book-outline" tint={kit.hue.journal} count="Check-ins" flush right={<Pressable onPress={() => onNavigate?.("journal")} disabled={!onNavigate} style={s.sectionLink} accessibilityRole="button" accessibilityLabel="Open Journal"><Icon name="arrow-forward" size={15} tint={kit.hue.journal} /></Pressable>}>
         <View style={s.journalRow}>{SLOTS.map(slot => { const saved = todayJournal?.entries?.find(item => item.id === reviewId("daily", today, slot.key)); const done = !!saved && hasAnswers(readSlotCheckIn(slot.key, saved.text)); return <Pressable key={slot.key} onPress={() => onNavigate?.("journal")} disabled={!onNavigate} style={[s.journalChip, done && s.journalChipDone]} accessibilityRole="button" accessibilityLabel={`${slot.label} check-in ${done ? "complete" : "not complete"}. Open Journal`}><Text style={[s.journalChipText, done && s.journalChipDoneText]}>{done ? "✓ " : ""}{slot.label}</Text></Pressable> })}<Pressable onPress={() => onNavigate?.("journal")} disabled={!onNavigate} style={s.journalAdd} accessibilityRole="button" accessibilityLabel="Open Journal to add a log"><Icon name="add" size={19} tint={kit.hue.journal} /></Pressable></View>
-      </WorkspaceSection>
-      {projects.length ? <WorkspaceSection compact title="Projects" icon="folder-outline" tint={kit.hue.projects} count={`${activeProjects} active`} flush right={<Pressable onPress={() => onNavigate?.("dev")} disabled={!onNavigate} style={s.sectionLink} accessibilityRole="button" accessibilityLabel="Open Projects"><Icon name="arrow-forward" size={15} tint={kit.hue.projects} /></Pressable>}>
+      </WorkspaceSection> : null}
+      {panel === "projects" && projects.length ? <WorkspaceSection compact title="Projects" icon="folder-outline" tint={kit.hue.projects} count={`${activeProjects} active`} flush right={<Pressable onPress={() => onNavigate?.("dev")} disabled={!onNavigate} style={s.sectionLink} accessibilityRole="button" accessibilityLabel="Open Projects"><Icon name="arrow-forward" size={15} tint={kit.hue.projects} /></Pressable>}>
         {projects.map(project => <Pressable key={project.id} onPress={() => onNavigate?.("dev")} disabled={!onNavigate} style={s.projectRow} accessibilityRole="button" accessibilityLabel={`Open Projects to view ${project.name}`}><View style={s.projectMark} /><Text style={s.projectTitle} numberOfLines={1}>{project.name}</Text><PropChip kind={statusKind(project.status)} value={project.status.toUpperCase()} /></Pressable>)}
       </WorkspaceSection> : null}
-      <WorkspaceSection compact title="Upcoming events" icon="calendar-outline" tint={c.amber} count={events.length ? `${events.length} next` : undefined} collapsible flush>
+      {panel === "events" ? <WorkspaceSection compact title="Upcoming events" icon="calendar-outline" tint={c.amber} count={events.length ? `${events.length} next` : undefined} collapsible flush {...collapseProps("events")}>
         {events.map(t => <Line key={t.id} date={t.scheduledDate} title={t.title} tag={t.scheduledTime ? { kind: "date", text: t.scheduledTime } : undefined} chips={eventChips(t.scheduledDate, t.scheduledTime)} detail={t.details?.trim().split("\n")[0]} selected={sel === t.id} onSelect={() => setSel(t.id)} onOpen={() => openRow(() => setEditor({ mode: "edit", id: t.id }))} />)}
         {!events.length ? <Text style={s.emptyText}>No upcoming events.</Text> : null}
-      </WorkspaceSection>
-      {pinned.length ? <WorkspaceSection compact title="Pinned notes" icon="document-text-outline" tint={c.blue} count={`${pinned.length} pinned`} collapsible flush>{pinned.map(n => <Line key={n.id} icon="document-text-outline" title={n.text.trim().split("\n")[0] || "Untitled note"} subtitle={n.text.trim().split("\n").slice(1).join(" ").slice(0, 80)} selected={sel === n.id} onSelect={() => setSel(n.id)} onOpen={() => openRow(() => setNoteEditor({ mode: "edit", id: n.id }))} />)}</WorkspaceSection> : null}
+      </WorkspaceSection> : null}
+      {panel === "pinned" && pinned.length ? <WorkspaceSection compact title="Pinned notes" icon="document-text-outline" tint={c.blue} count={`${pinned.length} pinned`} collapsible flush {...collapseProps("pinned")}>{pinned.map(n => <Line key={n.id} icon="document-text-outline" title={n.text.trim().split("\n")[0] || "Untitled note"} subtitle={n.text.trim().split("\n").slice(1).join(" ").slice(0, 80)} selected={sel === n.id} onSelect={() => setSel(n.id)} onOpen={() => openRow(() => setNoteEditor({ mode: "edit", id: n.id }))} />)}</WorkspaceSection> : null}
+      </Fragment>)}
     </> : null}
     {data && editor ? <TaskSheet key={editor.mode === "edit" ? editor.id : "new"} editor={editor} data={data} today={today} onClose={() => setEditor(null)} /> : null}
     {data && noteEditor ? <NoteSheet key={noteEditor.mode === "edit" ? noteEditor.id : "new"} editor={noteEditor} data={data} onClose={() => setNoteEditor(null)} compact /> : null}
+    <Modal visible={arranging} transparent animationType="fade" onRequestClose={() => setArranging(false)}>
+      <View style={s.arrangeBackdrop}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => setArranging(false)} accessibilityRole="button" accessibilityLabel="Close Home arrangement" />
+        <View style={s.arrangeSheet} accessibilityViewIsModal>
+          <View style={s.arrangeHead}><Text style={s.arrangeTitle}>Arrange Home</Text><Pressable onPress={() => setArranging(false)} style={s.arrangeButton} accessibilityRole="button" accessibilityLabel="Close"><Icon name="close" size={17} tint={c.text2} /></Pressable></View>
+          <Text style={s.arrangeHint}>Move sections up or down. Saved on this phone.</Text>
+          <ScrollView>
+            {prefs.order.map((panel, index) => <View key={panel} style={s.arrangeRow}>
+              <Text style={s.arrangeLabel}>{HOME_LABELS[panel]}</Text>
+              {([-1, 1] as const).map(direction => <Pressable key={direction} onPress={() => updatePrefs({ order: moveHomePanel(prefs.order, panel, direction) })} disabled={direction === -1 ? index === 0 : index === prefs.order.length - 1} style={[s.arrangeButton, (direction === -1 ? index === 0 : index === prefs.order.length - 1) && s.arrangeDisabled]} accessibilityRole="button" accessibilityLabel={`Move ${HOME_LABELS[panel]} ${direction === -1 ? "up" : "down"}`}><Icon name={direction === -1 ? "chevron-up" : "chevron-down"} size={17} tint={c.text2} /></Pressable>)}
+            </View>)}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
   </WorkspacePage>
 }
 
@@ -143,6 +163,16 @@ function Line({ title, subtitle, icon, date, due, tag, chips = [], detail, selec
 }
 const s = StyleSheet.create({
   headerDate: { color: kit.hue.journal, fontFamily: mono, fontSize: 10, fontWeight: "700" },
+  arrangeTrigger: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
+  arrangeBackdrop: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.45)", padding: 20 },
+  arrangeSheet: { width: "100%", maxWidth: 330, maxHeight: "80%", backgroundColor: c.panel, borderRadius: 10, borderWidth: 1, borderColor: c.border, overflow: "hidden" },
+  arrangeHead: { minHeight: 39, flexDirection: "row", alignItems: "center", paddingLeft: 12, paddingRight: 4, borderBottomWidth: 1, borderBottomColor: c.line },
+  arrangeTitle: { flex: 1, color: c.text, fontSize: 14, fontWeight: "700" },
+  arrangeHint: { color: c.muted, fontSize: 11, paddingHorizontal: 12, paddingVertical: 8 },
+  arrangeRow: { minHeight: 38, flexDirection: "row", alignItems: "center", paddingLeft: 12, paddingRight: 4, borderTopWidth: 1, borderTopColor: c.line },
+  arrangeLabel: { flex: 1, color: c.text2, fontSize: 12 },
+  arrangeButton: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
+  arrangeDisabled: { opacity: 0.25 },
   learningGroup: { marginTop: 5, backgroundColor: kit.courseGroup.surface },
   groupHead: { minHeight: 29, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 7, backgroundColor: kit.courseGroup.header, borderBottomWidth: 1, borderColor: kit.courseGroup.line },
   groupTitle: { flex: 1, minWidth: 0, color: c.text, fontSize: 12, fontWeight: "700" },
