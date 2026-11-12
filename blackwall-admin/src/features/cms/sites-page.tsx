@@ -1,4 +1,4 @@
-import { Eye, ExternalLink, FileDown, LayoutTemplate, Monitor, Pencil, Plus, Smartphone, Tablet } from "lucide-react"
+import { Eye, ExternalLink, LayoutTemplate, Monitor, Pencil, Plus, Rocket, Smartphone, Tablet } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { imagePathsIn, imagePathsInPost } from "@shared/assets"
@@ -77,7 +77,7 @@ function SiteCard({ site, onView }: { site: Site; onView: () => void }) {
       <div className="mt-auto flex flex-wrap gap-1.5 px-3.5 py-3">
         <Button size="sm" onClick={edit}><Pencil /> Edit</Button>
         <Button size="sm" variant="outline" onClick={onView}><Eye /> View</Button>
-        <Button size="sm" variant="quiet" asChild><Link to={siteFilesHref} onClick={() => selectSite(site.id)}><FileDown /> Get files</Link></Button>
+        <Button size="sm" variant="quiet" asChild><Link to={siteFilesHref} onClick={() => selectSite(site.id)}><Rocket /> Publish</Link></Button>
         {site.domain && <Button size="sm" variant="quiet" asChild><a href={`https://${site.domain}`} target="_blank" rel="noreferrer" aria-label={`Open ${site.domain}`}><ExternalLink /></a></Button>}
       </div>
     </li>

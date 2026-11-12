@@ -76,3 +76,14 @@ For exact control of one block, select it and open **Advanced**:
 - **Your CSS for this block:** CSS properties (`background: #fff7e6; border-radius: 20px;`) that apply to this block alone and show in the preview as you type. The block also has its own class (`.x-…`, shown in the tab) if you'd rather write the rule yourself.
 
 Braces, tags and `@import` are left out when the site is built, so a block's CSS can't escape its own rule or close the page's style tag.
+
+## Clearer toolbar and panels
+
+The editor's side panels each say what they change, so nothing is a guess:
+
+- **Toolbar groups.** Components ("adds to this page"); Look, Site settings and Forms ("whole site"); Accessibility ("check"). Publish stands apart at the end, with a count of what changed since the files last left Blackwall. It opens the Publish panel; nothing publishes from the toolbar in one click.
+- **Scope chip and one-line purpose** in every panel header; Page settings carries a "This page" chip.
+- **Look** has four tabs: Colors (theme, light and dark, fine-tune), Text (type, Google Fonts), Shape (corners, width), Code (your CSS). The light/dark button moved from under fonts to Light and dark.
+- **Site settings** has four tabs: Site (name, domain, built with, header and footer including header items, analytics), Publishing (repository, folder, redirects), Forms (receiver, bot check, comments), More (template, delete).
+- **Publish** (was "Get files") leads with status and the two ways out (publish to the repository, or download plain HTML/CSS/JS), then the checks, then every file.
+- Header items moved from Page settings to Site settings > Site, because they belong to every page.

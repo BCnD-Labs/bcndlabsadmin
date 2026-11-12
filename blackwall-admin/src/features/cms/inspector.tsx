@@ -100,9 +100,9 @@ function StyleFields({ block, onPatch, inRow }: { block: SiteBlock; onPatch: (p:
 }
 
 /** Extra pieces in the header beside the menu, on every page. Click one in the preview to edit or change it. */
-function HeaderItems({ items, onAdd, onSelect }: { items: SiteBlock[]; onAdd: (type: string) => void; onSelect: (id: string) => void }) {
+export function HeaderItems({ items, onAdd, onSelect }: { items: SiteBlock[]; onAdd: (type: string) => void; onSelect: (id: string) => void }) {
   return (
-    <div className="grid gap-1.5 border-t border-line-soft pt-3" data-testid="header-items">
+    <div className="grid gap-1.5" data-testid="header-items">
       <h3 className={fieldLabel}>Header items</h3>
       <p className="text-[11px] text-faint">Extra pieces beside the menu on every page: a button, a badge, a dropdown. Click one in the preview to edit it or change it to something else.</p>
       {items.map((b) => (
@@ -176,7 +176,7 @@ function AdvancedFields({ block, onPatch }: { block: SiteBlock; onPatch: (p: Rec
 }
 
 /** With nothing selected: this page's title, address, description and where it shows in the menus. */
-function PageFields({ site, page, pages, header }: { site: Site; page: SitePage; pages: SitePage[]; header: { items: SiteBlock[]; onAdd: (type: string) => void; onSelect: (id: string) => void } }) {
+function PageFields({ site, page, pages }: { site: Site; page: SitePage; pages: SitePage[] }) {
   const { update, remove } = useWorkspace.getState()
   const navigate = useNavigate()
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -209,7 +209,8 @@ function PageFields({ site, page, pages, header }: { site: Site; page: SitePage;
   const parents = pageTree(pages).map((r) => r.page).filter((p) => p.id !== page.id)
   return (
     <div className="grid gap-3 p-3" data-testid="page-settings">
-      <div className="flex items-center gap-2"><h2 className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">Page settings</h2><StateChip state={pageState(page, site)} /></div>
+      <div className="flex items-center gap-2"><h2 className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">Page settings</h2><span className="rounded-full bg-ink-2/8 px-2 py-0.5 text-[10px] font-bold tracking-[0.03em] text-ink-2 uppercase" data-testid="page-scope">This page</span><StateChip state={pageState(page, site)} /></div>
+      <p className="-mt-1.5 text-xs leading-snug text-muted-foreground">Click anything in the preview to edit it. Colors, header and footer are in <b className="font-semibold text-ink-2">Look</b> and <b className="font-semibold text-ink-2">Site settings</b> above.</p>
       <div className="grid gap-1"><Label htmlFor="pg-title" className={fieldLabel}>Title</Label><Input id="pg-title" className="h-8" value={page.title} onChange={(e) => set({ title: e.target.value })} /></div>
       <div className="grid gap-1">
         <Label htmlFor="pg-slug" className={fieldLabel}>Address</Label>
@@ -226,7 +227,6 @@ function PageFields({ site, page, pages, header }: { site: Site; page: SitePage;
           <OptionSelect id="pg-parent" value={page.parentId ?? "none"} onChange={(v) => placePage(pages, page.id, v === "none" ? null : v, null)} options={[{ value: "none", label: "Nothing (top level)" }, ...parents.map((p) => ({ value: p.id, label: p.title || "Untitled" }))]} className="w-full" />
         </div>
       )}
-      <HeaderItems items={header.items} onAdd={header.onAdd} onSelect={header.onSelect} />
       <div className="grid gap-1.5 border-t border-line-soft pt-3"><h3 className={fieldLabel}>Linked tasks</h3><RecordTasks kind="page" id={page.id} name={page.title} /></div>
       <div className="flex flex-wrap gap-2 border-t border-line-soft pt-3">
         <Button size="xs" variant="outline" onClick={() => { const c = duplicatePage(page); toast.success(`Duplicated as ${c.title}`); navigate(sitePageHref(c.id)) }}><Copy /> Duplicate page</Button>
@@ -244,17 +244,16 @@ function PageFields({ site, page, pages, header }: { site: Site; page: SitePage;
 }
 
 /** The right pane when no panel is open: the selected block's Content, Style and Links, or the page's settings. */
-export function Inspector({ site, page, pages, block, blockTitle, trail, targets, changeOpen, onChangeOpen, onConvert, header, siblings, onSwap, inRow, onEvenOut, onPatch, onDuplicate, onRemove }: {
+export function Inspector({ site, page, pages, block, blockTitle, trail, targets, changeOpen, onChangeOpen, onConvert, siblings, onSwap, inRow, onEvenOut, onPatch, onDuplicate, onRemove }: {
   site: Site; page: SitePage | undefined; pages: SitePage[]; block: SiteBlock | undefined; blockTitle: string; trail: string
   targets: ConvertTarget[]; changeOpen: boolean; onChangeOpen: (open: boolean) => void; onConvert: (type: string) => void
-  header: { items: SiteBlock[]; onAdd: (type: string) => void; onSelect: (id: string) => void }
   siblings: { id: string; label: string }[]; onSwap: (id: string) => void; inRow: boolean; onEvenOut?: () => void
   onPatch: (patch: Record<string, unknown>) => void; onDuplicate: () => void; onRemove: () => void
 }) {
   // The tab stays put as you click from block to block, so styling several in a row stays on Style.
   const [tab, setTab] = useState("content")
   if (!page) return <p className="p-4 text-xs text-muted-foreground">Add a page to start.</p>
-  if (!block) return <div className="h-full overflow-y-auto"><PageFields key={page.id} site={site} page={page} pages={pages} header={header} /></div>
+  if (!block) return <div className="h-full overflow-y-auto"><PageFields key={page.id} site={site} page={page} pages={pages} /></div>
   const def = BLOCKS[block.type]
   const fields = (def?.edit ?? []).filter((f) => !(block.type === "section" && f.k === "tone"))
   return (

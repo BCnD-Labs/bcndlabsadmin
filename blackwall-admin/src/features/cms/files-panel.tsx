@@ -35,14 +35,14 @@ function groupIssues(issues: SiteIssue[], pages: { id: string; title: string }[]
 
 function where(i: SiteIssue): { to?: string; panel?: WorkspacePanel; label: string } | null {
   if (i.pageId) return { to: sitePageHref(i.pageId), label: "Open page" }
-  if (i.area === "settings") return { panel: "settings", label: "Settings" }
+  if (i.area === "settings") return { panel: "settings", label: "Site settings" }
   if (i.area === "look") return { panel: "look", label: "Look" }
-  if (i.area === "forms") return { panel: "forms", label: "Forms" }
+  if (i.area === "forms") return { panel: "settings", label: "Site settings" }
   if (i.area === "posts") return { panel: "posts", label: "Posts" }
   return null
 }
 
-/** Get files: the problems worth fixing first, then every file the site is made of, to download or copy. */
+/** Publish: where the site stands, how to put it online or take the files, the problems worth fixing first, then every file it is made of. */
 export function FilesPanel({ site, onPanel }: { site: Site; onPanel: (panel: WorkspacePanel) => void }) {
   const pages = useWorkspace((s) => s.pages)
   const drafts = useWorkspace((s) => s.drafts)
@@ -74,6 +74,33 @@ export function FilesPanel({ site, onPanel }: { site: Site; onPanel: (panel: Wor
     <div className="grid content-start gap-[var(--bw-grid-gap)]">
           <PublishBar site={site} />
           <LiveStatus site={site} />
+          <Panel category="website" title="Put it online or take the files" bodyClassName="grid content-start gap-3 px-3.5 py-3 text-[13px]">
+            <div className="grid gap-1.5">
+              <Button onClick={async () => {
+                try {
+                  const all: Record<string, string | Uint8Array> = { ...files }
+                  for (const a of pictures) all[pictureFile(a)] = new Uint8Array(await (await fetchFile(assetCloudPath(a))).arrayBuffer())
+                  saveFile(`${zipName}.zip`, makeZip(all), "application/zip"); markExported()
+                  toast.success(`Downloaded ${paths.length} files`, { description: "Unzip them into your site's folder." })
+                } catch (e) { toast.error(`Couldn't get your pictures from Nextcloud: ${(e as Error).message}`) }
+              }}><Download /> Download all {paths.length} files (.zip)</Button>
+              <p className="text-xs text-muted-foreground">Plain HTML, CSS and JavaScript: open the folder in VS Code, or unzip it into your site's folder or repository, replacing what's there, then upload or push it the way you do now.{site.root ? <> Blackwall's Settings say this site lives in <code className="font-mono">{site.root}/</code>.</> : null}</p>
+            </div>
+            {repo && (
+              <div className="grid gap-1.5 border-t border-line-soft pt-3">
+                <Button variant="outline" disabled={busy || fix.some((i) => i.area === "settings")} onClick={() => { publishSite(site).catch((e: Error) => toast.error(e.message)) }}><Rocket /> {busy ? "Publishing…" : "Publish to your repository"}</Button>
+                <p className="text-xs text-muted-foreground">One click: Blackwall writes these same files, pictures included, to your GitHub repository in a single commit, then checks your live site shows them.</p>
+              </div>
+            )}
+            {pictures.length > 0 && (
+              <div className="border-t border-line-soft pt-3">
+                <p className="font-semibold text-ink">{pictures.length} {pictures.length === 1 ? "picture" : "pictures"} from your library</p>
+                <p className="mb-1.5 text-xs text-muted-foreground">They're in the .zip, in the <span className="font-mono">images/</span> folder. Copying files one by one? Download these from the list below.</p>
+                <ul className="grid gap-0.5 font-mono text-xs text-ink-2">{pictures.map((a) => <li key={a.id} className="flex justify-between gap-3"><span className="min-w-0 truncate">{pictureFile(a)}</span><span className="shrink-0 text-faint">{humanBytes(a.bytes)}</span></li>)}</ul>
+              </div>
+            )}
+            {post && <p className="border-t border-line-soft pt-3 text-xs text-muted-foreground">Drafts stay out of the files until you publish them: <Link className="underline" to={draftHref(post.id)}>{post.title || "Untitled"}</Link>.</p>}
+          </Panel>
           <Panel category="website" title="Before you go live" meta={fix.length ? `${fix.length} to fix` : "all clear"} bodyClassName="p-0">
             {issues.length ? (
               <ul className="divide-y divide-line-soft">
@@ -90,33 +117,6 @@ export function FilesPanel({ site, onPanel }: { site: Site; onPanel: (panel: Wor
               </ul>
             ) : <p className="px-3.5 py-4 text-[13px] text-muted-foreground"><Check className="mr-1.5 inline size-3.5 text-green" />Nothing to fix. Every page has content, every link goes somewhere and the forms can send.</p>}
             {fix.length > 0 && <p className="border-t border-line-soft px-3.5 py-2 text-[11px] text-faint">You can still get the files with things left to fix; they're just what visitors would notice.</p>}
-          </Panel>
-          <Panel category="website" title="Put it online" bodyClassName="grid content-start gap-3 px-3.5 py-3 text-[13px]">
-            <div className="grid gap-1.5">
-              <Button onClick={async () => {
-                try {
-                  const all: Record<string, string | Uint8Array> = { ...files }
-                  for (const a of pictures) all[pictureFile(a)] = new Uint8Array(await (await fetchFile(assetCloudPath(a))).arrayBuffer())
-                  saveFile(`${zipName}.zip`, makeZip(all), "application/zip"); markExported()
-                  toast.success(`Downloaded ${paths.length} files`, { description: "Unzip them into your site's folder." })
-                } catch (e) { toast.error(`Couldn't get your pictures from Nextcloud: ${(e as Error).message}`) }
-              }}><Download /> Download all {paths.length} files (.zip)</Button>
-              <p className="text-xs text-muted-foreground">Unzip into your site's folder (or repository), replacing what's there, then upload or push it the way you do now.{site.root ? <> Blackwall's Settings say this site lives in <code className="font-mono">{site.root}/</code>.</> : null}</p>
-            </div>
-            {repo && (
-              <div className="grid gap-1.5 border-t border-line-soft pt-3">
-                <Button variant="outline" disabled={busy || fix.some((i) => i.area === "settings")} onClick={() => { publishSite(site).catch((e: Error) => toast.error(e.message)) }}><Rocket /> {busy ? "Publishing…" : "Publish to your repository"}</Button>
-                <p className="text-xs text-muted-foreground">One click: Blackwall writes these same files, pictures included, to your GitHub repository in a single commit, then checks your live site shows them.</p>
-              </div>
-            )}
-            {pictures.length > 0 && (
-              <div className="border-t border-line-soft pt-3">
-                <p className="font-semibold text-ink">{pictures.length} {pictures.length === 1 ? "picture" : "pictures"} from your library</p>
-                <p className="mb-1.5 text-xs text-muted-foreground">They're in the .zip, in the <span className="font-mono">images/</span> folder. Copying files one by one? Download these from the list below.</p>
-                <ul className="grid gap-0.5 font-mono text-xs text-ink-2">{pictures.map((a) => <li key={a.id} className="flex justify-between gap-3"><span className="min-w-0 truncate">{pictureFile(a)}</span><span className="shrink-0 text-faint">{humanBytes(a.bytes)}</span></li>)}</ul>
-              </div>
-            )}
-            {post && <p className="border-t border-line-soft pt-3 text-xs text-muted-foreground">Drafts stay out of the files until you publish them: <Link className="underline" to={draftHref(post.id)}>{post.title || "Untitled"}</Link>.</p>}
           </Panel>
           <Panel category="website" title="Every file" meta={`${paths.length} files`} bodyClassName="p-0">
             <div className="grid @3xl/main:grid-cols-[16rem_minmax(0,1fr)]">
