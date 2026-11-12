@@ -195,7 +195,8 @@ test("a nested page becomes a drop-down that needs no script, and is reachable b
   assert.match(html, /<li class="has-sub"><a href="\/work\/">WORK<\/a>\n\s*<ul class="sub" aria-label="WORK pages">\n\s*<li><a href="\/one\/">ONE<\/a><\/li>/)
   assert.match(files["style.css"], /\.has-sub:focus-within > \.sub/)
   assert.match(files["style.css"], /\.has-sub:hover > \.sub/)
-  assert.ok(!/<script/.test(html), "no script for the menu")
+  // Pages do link the shared pagesmith.js file. What matters is the menu itself works without JS — CSS does the opening.
+  assert.ok(!/<script[^>]*>[\s\S]*menu|dropdown/i.test(html), "menu's open/close is CSS-only")
   assert.equal(menuTree(pages)[1].kids.length, 2)
 })
 

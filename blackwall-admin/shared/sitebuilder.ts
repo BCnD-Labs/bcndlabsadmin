@@ -11,7 +11,8 @@ import { STARTERS } from "./site-starters.ts"
 import type { InboxItem } from "./site-inbox.ts"
 import { findAsset, imagePathsInPost } from "./assets.ts"
 import type { Asset, Draft, Site, SiteBlock, SiteForm, SitePage } from "../src/lib/types.ts"
-import { ANIMATIONS, BOOTSTRAP, previewAssets, BOOTSTRAP_BRIDGE, COMPONENT_CSS, REDUCED_MOTION_CSS, THEME_SCRIPT, THEME_TOGGLE_SCRIPT, fontName, flatFile, googleFontsHref, isBootstrap, relativize } from "./site-bootstrap.ts"
+import { ANIMATIONS, BOOTSTRAP, previewAssets, BOOTSTRAP_BRIDGE, COMPONENT_CSS, REDUCED_MOTION_CSS, THEME_SCRIPT, fontName, flatFile, googleFontsHref, isBootstrap, relativize } from "./site-bootstrap.ts"
+import { SITE_RUNTIME } from "./site-runtime.ts"
 
 /* ------------------------------------------------------------------ colours */
 
@@ -221,7 +222,12 @@ export const BLOCKS: Record<string, BlockDef> = {
     },
     close: () => ["</div>"],
   },
-  card: { name: "Card", container: true, def: {}, open: (_b, ctx) => (ctx.boot ? ['<article class="card h-100">', '  <div class="card-body">'] : ['<article class="card">']), close: (_b, ctx) => (ctx.boot ? ["  </div>", "</article>"] : ["</article>"]) },
+  card: {
+    name: "Card", container: true, def: {},
+    edit: [{ k: "tag", l: "Filter tag", note: "Only matters inside a Cards-with-filter-buttons block. Separate several with commas." }],
+    open: (_b, ctx) => (ctx.boot ? ['<article class="card h-100">', '  <div class="card-body">'] : ['<article class="card">']),
+    close: (_b, ctx) => (ctx.boot ? ["  </div>", "</article>"] : ["</article>"]),
+  },
   heading: {
     name: "Heading", def: { level: "2", text: "" },
     edit: [{ k: "text", l: "Heading" }, { k: "level", l: "Size", kind: "select", options: [{ value: "1", label: "Page title" }, { value: "2", label: "Section" }, { value: "3", label: "Small" }] }],
@@ -468,7 +474,7 @@ export const BLOCKS: Record<string, BlockDef> = {
   code: {
     name: "Code", def: { label: "", code: "" },
     edit: [{ k: "label", l: "Title (optional)" }, { k: "code", l: "Code", kind: "big", note: "Shown exactly as typed, in a box that scrolls sideways." }],
-    html: (b) => ['<figure class="codeblock">', ...(str(b.label).trim() ? [`  <figcaption>${esc(b.label)}</figcaption>`] : []), `  <pre tabindex="0"><code>${esc(str(b.code).trim() ? b.code : "// your code here")}</code></pre>`, "</figure>"],
+    html: (b) => ['<figure class="codeblock">', ...(str(b.label).trim() ? [`  <figcaption>${esc(b.label)}</figcaption>`] : []), '  <button type="button" class="codeblock__copy" data-ps-copy><span data-ps-copy-label>Copy</span></button>', `  <pre tabindex="0"><code>${esc(str(b.code).trim() ? b.code : "// your code here")}</code></pre>`, "</figure>"],
   },
   steps: {
     name: "Numbered steps", def: { items: "First step|What to do.\nSecond step|What to do next.\nThird step|And then." },
@@ -488,6 +494,75 @@ export const BLOCKS: Record<string, BlockDef> = {
   sitename: {
     name: "Site name", def: {},
     html: (_b, ctx) => (ctx.where === "footer" ? [`<p class="site-copy">${esc(ctx.site.footerText || `© ${new Date().getFullYear()} ${ctx.site.name}`)}</p>`] : [`<a class="site-title" href="/">${esc(ctx.site.name)}</a>`]),
+  },
+  carousel: {
+    name: "Slideshow", container: true, def: { autoplay: 4, caption: "" },
+    edit: [
+      { k: "autoplay", l: "Change every (seconds; 0 = never)", kind: "number", note: "Visitors who ask for less motion see no auto-change." },
+      { k: "caption", l: "Description for screen readers" },
+    ],
+    open: (b) => {
+      const auto = Math.max(0, Number(b.autoplay) || 0) * 1000
+      const label = txt(b.caption, "Slideshow")
+      return [`<section class="carousel" data-ps-carousel data-autoplay="${auto}" aria-roledescription="carousel" aria-label="${label}">`, `  <button type="button" class="carousel__prev" aria-label="Previous slide">&lsaquo;</button>`, `  <button type="button" class="carousel__next" aria-label="Next slide">&rsaquo;</button>`, '  <ul class="carousel__slides">']
+    },
+    close: (b) => {
+      const kids = b.kids ?? []
+      const dots = kids.map((_k, i) => `    <button type="button" class="carousel__dot" aria-label="Slide ${i + 1}"></button>`)
+      return ["  </ul>", ...(kids.length > 1 ? ['  <div class="carousel__dots">', ...dots, "  </div>"] : []), "</section>"]
+    },
+  },
+  gallery: {
+    name: "Picture gallery", container: true, def: {},
+    open: () => ['<div class="gallery" data-ps-gallery>'],
+    close: () => ["</div>"],
+  },
+  counter: {
+    name: "Counter", def: { number: "100", prefix: "", suffix: "", label: "Happy visitors", duration: 1500 },
+    edit: [
+      { k: "number", l: "Number to count up to", kind: "number" },
+      { k: "prefix", l: "Before the number", note: "Like $ or ~" },
+      { k: "suffix", l: "After the number", note: "Like % or +" },
+      { k: "label", l: "What it's a number of" },
+      { k: "duration", l: "How long to take (ms)", kind: "number" },
+    ],
+    html: (b) => {
+      const n = Math.max(0, Math.round(Number(b.number) || 0))
+      const dur = Math.max(0, Math.round(Number(b.duration) || 1500))
+      const pre = esc(String(b.prefix ?? "")), suf = esc(String(b.suffix ?? ""))
+      return [`<div class="counter" data-ps-counter data-target="${n}" data-duration="${dur}">`, `  <span class="counter__value" aria-live="polite">${pre}0${suf}</span>`, `  <span class="counter__label">${txt(b.label, "A label")}</span>`, "</div>"]
+    },
+  },
+  modal: {
+    name: "Button opens a popup", container: true, def: { label: "Learn more", style: "solid", title: "" },
+    edit: [
+      { k: "label", l: "Button label" },
+      { k: "title", l: "Popup title (optional)" },
+      { k: "style", l: "Button style", kind: "select", options: [{ value: "solid", label: "Solid" }, { value: "outline", label: "Outline" }] },
+    ],
+    open: (b, ctx) => {
+      const id = `modal-${String(b.id).replace(/[^\w-]/g, "")}`
+      const outline = b.style === "outline"
+      const btn = ctx.boot ? `btn ${outline ? "btn-outline-primary" : "btn-primary"}` : `btn${outline ? " btn--outline" : ""}`
+      const title = str(b.title).trim()
+      return [`<button type="button" class="${btn}" data-ps-modal-open="${id}">${txt(b.label, "Learn more")}</button>`, `<dialog class="ps-modal" id="${id}"${title ? ` aria-labelledby="${id}-t"` : ""}>`, `  <button type="button" class="ps-modal__close" aria-label="Close" data-ps-modal-close>&times;</button>`, ...(title ? [`  <h2 class="ps-modal__title" id="${id}-t">${esc(title)}</h2>`] : []), '  <div class="ps-modal__body">']
+    },
+    close: () => ["  </div>", "</dialog>"],
+  },
+  filterGrid: {
+    name: "Cards with filter buttons", container: true, def: { intro: "Show all" },
+    edit: [{ k: "intro", l: "Label on the 'all' button" }],
+    open: (b) => {
+      const kids = (b.kids ?? []) as SiteBlock[]
+      const tagsOf = (k: SiteBlock): string[] => String((k as { tag?: unknown }).tag ?? "").split(",").map((t) => t.trim()).filter(Boolean)
+      const seen = new Set<string>()
+      for (const k of kids) for (const t of tagsOf(k)) seen.add(t)
+      const all = [...seen]
+      const label = txt(b.intro, "Show all")
+      const btns = [`    <button type="button" class="filter-bar__btn" data-filter="*">${esc(label)}</button>`, ...all.map((t) => `    <button type="button" class="filter-bar__btn" data-filter="${esc(t)}">${esc(t)}</button>`)]
+      return ['<div class="filter-grid" data-ps-filter>', '  <div class="filter-bar" role="toolbar" aria-label="Filter">', ...btns, "  </div>", '  <div class="filter-grid__items">']
+    },
+    close: () => ["  </div>", "</div>"],
   },
   nav: {
     name: "Page links", def: {},
@@ -646,6 +721,26 @@ function emitBlock(b: SiteBlock, def: BlockDef, indent: string, ctx: BuildCtx, o
       // Plain mode: each block carries its width as a class, so it keeps it wherever it is moved to.
       const spans = freeSpans(b.kids ?? [])
       emit((b.kids ?? []).map((k, i) => ({ ...k, design: { ...k.design, span: spans[i] } })), inner, ctx, out)
+    } else if (b.type === "carousel") {
+      // The first slide is visible so the editor preview (which doesn't run pagesmith.js) shows something; the runtime overwrites this on load.
+      ;(b.kids ?? []).forEach((kid, i) => {
+        out.push(`${inner}<li class="carousel__slide" aria-hidden="${i === 0 ? "false" : "true"}">`)
+        emit([kid], inner + "  ", ctx, out)
+        out.push(`${inner}</li>`)
+      })
+    } else if (b.type === "gallery") {
+      ;(b.kids ?? []).forEach((kid) => {
+        out.push(`${inner}<button type="button" class="gallery__btn" data-ps-lightbox aria-label="Open picture full size">`)
+        emit([kid], inner + "  ", ctx, out)
+        out.push(`${inner}</button>`)
+      })
+    } else if (b.type === "filterGrid") {
+      ;(b.kids ?? []).forEach((kid) => {
+        const tag = String((kid as { tag?: unknown }).tag ?? "").trim()
+        out.push(`${inner}<div class="filter-grid__item"${tag ? ` data-tag="${esc(tag)}"` : ' data-tag=""'}>`)
+        emit([kid], inner + "  ", ctx, out)
+        out.push(`${inner}</div>`)
+      })
     } else emit(b.kids ?? [], inner, ctx, out)
     def.close!(b, ctx).forEach((l) => out.push(indent + l))
   } else if (cls || anchor) {
@@ -655,25 +750,6 @@ function emitBlock(b: SiteBlock, def: BlockDef, indent: string, ctx: BuildCtx, o
   } else def.html!(b, ctx).forEach((l) => out.push(indent + l))
 }
 
-const FORM_SCRIPT = `<script>
-document.querySelectorAll("form[data-blackwall-form]").forEach(function (f) {
-  f.addEventListener("submit", function (e) {
-    if (f.action.endsWith("#")) return;
-    e.preventDefault();
-    var btn = f.querySelector("button[type=submit]"); if (btn) btn.disabled = true;
-    fetch(f.action, { method: "POST", body: new FormData(f) }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; }); })
-      .then(function (r) {
-        if (!r.ok) throw new Error(r.j.error || "Couldn't send");
-        f.querySelectorAll(".field, [type=submit], .cf-turnstile, .form__lead").forEach(function (el) { el.hidden = true; });
-        var v = f.querySelector(r.j.verify && f.querySelector("[name=_kind]").value !== "newsletter" ? ".form__verify" : ".form__done"); if (v) v.hidden = false;
-      })
-      .catch(function (err) {
-        var m = f.querySelector(".form__error"); if (!m) { m = document.createElement("p"); m.className = "form__error"; m.setAttribute("role", "alert"); f.appendChild(m); }
-        m.textContent = err.message; if (btn) btn.disabled = false; if (window.turnstile) window.turnstile.reset();
-      });
-  });
-});
-</script>`
 
 /** Editor-only marks in a preview: the block under the pointer and the block being edited. */
 const PREVIEW_CSS = `.bw-hover { outline: 1px dashed #4c8dff; outline-offset: 3px; cursor: pointer; } .bw-sel { outline: 2px solid #4c8dff; outline-offset: 3px; }
@@ -768,8 +844,7 @@ function documentHtml(site: Site, pages: SitePage[], doc: Doc, opts: { preview: 
     ...(opts.bare ? [] : boot ? ["    <header>", ...bootHeader(ctx, toggle, extras).map((l) => `      ${l}`), "    </header>"] : ['    <header class="site-header">', ...head, "    </header>"]),
     '    <main id="main">', ...body, "    </main>",
     ...(opts.bare ? [] : boot ? ['    <footer class="border-top mt-5">', ...bootFooter(ctx).map((l) => `      ${l}`), "    </footer>"] : ['    <footer class="site-footer">', ...foot, "    </footer>"]),
-    hasForm ? FORM_SCRIPT : "",
-    toggle && !opts.preview && !opts.bare ? THEME_TOGGLE_SCRIPT : "",
+    opts.preview || opts.bare ? "" : '    <script src="/pagesmith.js" defer></script>',
     boot && !opts.preview ? `    <script src="${BOOTSTRAP.js.href}" integrity="${BOOTSTRAP.js.integrity}" crossorigin="anonymous"></script>` : "",
     "  </body>", "</html>", "",
   ].filter((l) => l !== "").join("\n")
@@ -1035,6 +1110,7 @@ export function buildSite(site: Site, pages: SitePage[], posts: Draft[], forms: 
     const from = cleanPath(r.from).slice(1)
     if (from && !files[`${from}/index.html`]) files[`${from}/index.html`] = redirectHtml(r.to)
   }
+  files["pagesmith.js"] = SITE_RUNTIME
   files[".nojekyll"] = ""
   return files
 }
