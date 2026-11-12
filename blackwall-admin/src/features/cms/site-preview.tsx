@@ -1,10 +1,15 @@
 import { useEffect, useRef, useState } from "react"
+import bootstrapCssUrl from "bootstrap/dist/css/bootstrap.min.css?url"
+import { previewAssets } from "@shared/site-bootstrap"
 import { cn } from "@/lib/utils"
 
 /** A small badge drawn on a block in the page, e.g. the accessibility check's findings. */
 export interface CanvasMark { id: string; glyph: string; color: string; text: string }
 
-export type BlockAction = "up" | "down" | "duplicate" | "remove" | "parent"
+// Previews of Bootstrap sites use the copy of Bootstrap bundled with the app, so they work offline and need no outside host.
+previewAssets.bootstrapCssUrl = new URL(bootstrapCssUrl, document.baseURI).href
+
+export type BlockAction = "up" | "down" | "duplicate" | "remove" | "parent" | "change"
 
 /** What the site editor adds to the preview: inline text editing, the "+" between sections and its keyboard shortcuts. */
 export interface CanvasEditing {
@@ -18,6 +23,8 @@ export interface CanvasEditing {
   /** The toolbar on the selected block. */
   act: (id: string, action: BlockAction) => void
   canGoUp: (id: string) => boolean
+  /** Whether the block can be changed to another kind (shows the ⇄ button). */
+  canChange: (id: string) => boolean
   key: (e: KeyboardEvent) => void
   activate: () => void
 }
@@ -101,6 +108,7 @@ export function SitePreview({ html, title, width = "100%", selectedId, onBlock, 
     bar.append(name)
     const tools: [BlockAction, string, string][] = [["up", "↑", "Move up"], ["down", "↓", "Move down"], ["duplicate", "⧉", "Duplicate"], ["remove", "✕", "Remove"]]
     if (edit.canGoUp(id)) tools.unshift(["parent", "⤴", "Select what it's inside"])
+    if (edit.canChange(id)) tools.unshift(["change", "⇄", "Change to another component…"])
     for (const [act, glyph, title] of tools) {
       const b = doc.createElement("button")
       b.type = "button"

@@ -239,6 +239,8 @@ export interface Site {
   /** Google Fonts family names for headings and body text (added as a link in every page). */
   fontHeading?: string
   fontBody?: string
+  /** Extra blocks drawn in the header beside the menu (a button, a badge, a dropdown…). Optional; none means the header is just the name and menu. */
+  headerBlocks?: SiteBlock[]
   /** A light/dark button in the menu (remembers the visitor's choice; needs the dark palette). */
   themeToggle?: boolean
   /** A site kept as a starting point: "New site" lists it under "My templates" and copies its look and pages. */

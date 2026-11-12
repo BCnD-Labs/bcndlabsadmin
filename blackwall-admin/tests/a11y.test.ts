@@ -113,3 +113,11 @@ test("the Tutorial guide template, once its placeholder headings are written, pa
   assert.equal(r.counts.error, 0, JSON.stringify(r.items.filter((i) => i.kind === "error")))
   assert.equal(r.counts.contrast, 0)
 })
+
+test("the newer components are checked too: a dropdown needs a label and options, a tooltip needs words", () => {
+  const { site, pages } = make()
+  const r = auditSite(site, only(pages, [mk("section", {}, [mk("heading", { level: "1", text: "H" }), mk("dropdown", { label: "", items: "" }), mk("tooltip", { text: "word", tip: "" }), mk("calendar", { month: "2026-11" })])]))
+  assert.ok(rules(r, "error").includes("empty-link"))
+  assert.ok(rules(r, "alert").includes("empty-menu") && rules(r, "alert").includes("empty-tooltip"))
+  assert.ok(r.items.some((i) => i.kind === "feature" && i.rule === "table-header"))
+})

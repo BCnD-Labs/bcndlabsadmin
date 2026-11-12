@@ -11,6 +11,9 @@ export const BOOTSTRAP = {
   js: { href: "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js", integrity: "sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" },
 } as const
 
+/** Set by the editor (never the server): where the editor's preview loads its own copy of Bootstrap's CSS from, so a preview needs no network. */
+export const previewAssets = { bootstrapCssUrl: "" }
+
 export const isBootstrap = (site: Pick<Site, "framework">) => site.framework === "bootstrap"
 
 /** Families worth offering; any Google Fonts family name works. */
@@ -117,3 +120,24 @@ export const ANIMATIONS: Record<string, { name: string; css: string }> = {
   pulsate: { name: "Pulse", css: "@keyframes pulsate-fwd { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }\n.bs-an-pulsate { animation: pulsate-fwd .5s ease-in-out infinite both; }" },
 }
 export const REDUCED_MOTION_CSS = "@media (prefers-reduced-motion: reduce) { [class*=\"bs-an-\"] { animation: none !important; } }"
+
+/** The look of the components Bootstrap doesn't have, or that are built without scripts: the same in both modes. */
+export const COMPONENT_CSS = `.badge { display: inline-block; padding: .25em .65em; border-radius: 999px; font-size: .8em; font-weight: 700; line-height: 1.4; }
+.badge--primary, .text-bg-primary { background: var(--accent) !important; color: var(--accent-text) !important; }
+.badge--secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+.badge--success { background: #1e7e34; color: #fff; } .badge--warning { background: #ffc107; color: #111; } .badge--danger { background: #b02a37; color: #fff; }
+.callout { padding: 12px 16px; border: 1px solid var(--border); border-left: 4px solid var(--tone, var(--accent)); border-radius: var(--radius, 8px); background: var(--surface); color: var(--text); margin: 0 0 20px; }
+.callout--secondary { --tone: var(--muted); } .callout--success { --tone: #1e7e34; } .callout--warning { --tone: #e0a800; } .callout--danger { --tone: #b02a37; }
+.dd { position: relative; display: inline-block; } .dd > summary { list-style: none; cursor: pointer; } .dd > summary::-webkit-details-marker { display: none; } .dd > summary::after { content: " \\25BE"; }
+.dd__menu { position: absolute; z-index: 20; margin: 4px 0 0; padding: 6px 0; min-width: 180px; list-style: none; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius, 8px); }
+.dd__menu a { display: block; padding: 6px 14px; text-decoration: none; white-space: nowrap; }
+.tip { position: relative; border-bottom: 1px dotted currentColor; cursor: help; }
+.tip__text { position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%); z-index: 30; width: max-content; max-width: 260px; padding: 6px 10px; border-radius: 6px; background: var(--text); color: var(--bg); font-size: 14px; font-weight: 400; line-height: 1.4; opacity: 0; pointer-events: none; transition: opacity .12s; }
+.tip:hover .tip__text, .tip:focus .tip__text, .tip:focus-within .tip__text { opacity: 1; }
+.acc { border: 1px solid var(--border); border-radius: var(--radius, 8px); margin: 0 0 8px; background: var(--surface); }
+.acc > summary { padding: 12px 16px; cursor: pointer; font-weight: 600; } .acc__body { padding: 0 16px 6px; }
+.calendar { table-layout: fixed; text-align: center; } .calendar caption { text-align: left; font-weight: 700; padding-bottom: 8px; color: var(--text); }
+.calendar td { height: 64px; vertical-align: top; padding: 4px; } .calendar__empty { background: transparent; }
+.calendar__day { display: block; font-weight: 600; } .calendar__ev { display: block; margin-top: 2px; padding: 1px 4px; border-radius: 4px; background: var(--accent); color: var(--accent-text); font-size: 12px; line-height: 1.3; }
+.site-extras { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+`

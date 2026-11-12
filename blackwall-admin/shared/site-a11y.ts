@@ -7,7 +7,7 @@
  * site; `unchecked` says what was left out so a clean report is never read as more than it is.
  */
 import type { Asset, Draft, Site, SiteBlock, SitePage } from "../src/lib/types.ts"
-import { contrast, onAccent } from "./sitebuilder.ts"
+import { contrast, onAccent, pairLines } from "./sitebuilder.ts"
 import { findAsset } from "./assets.ts"
 
 export type A11yKind = "error" | "contrast" | "alert" | "feature" | "structure"
@@ -125,6 +125,13 @@ export function auditSite(site: Site, pages: SitePage[], assets: Asset[] = [], p
         if (!has(b.title)) add({ kind: "error", rule: "media-title", text: `${name}: a video or audio player has no title, so a screen reader can't say what it is.`, ...id })
         else add({ kind: "feature", rule: "media-title", text: `${name}: “${String(b.title).trim()}” has a title for screen readers.`, ...id })
         add({ kind: "alert", rule: "captions", text: /\.(mp3|ogg|wav|m4a)(\?.*)?$/i.test(url) ? `${name}: audio needs the words written out nearby, for people who can't hear it.` : `${name}: make sure the video has captions turned on in YouTube. This check can't see them.`, ...id })
+      } else if (b.type === "dropdown") {
+        if (!has(b.label)) add({ kind: "error", rule: "empty-link", text: `${name}: a dropdown button has no label, so a screen reader can only say “button”.`, ...id })
+        if (!pairLines(b.items).length) add({ kind: "alert", rule: "empty-menu", text: `${name}: a dropdown has no options.`, ...id })
+      } else if (b.type === "tooltip") {
+        if (!has(b.tip)) add({ kind: "alert", rule: "empty-tooltip", text: `${name}: a tooltip has no text to show.`, ...id })
+      } else if (b.type === "calendar") {
+        add({ kind: "feature", rule: "table-header", text: `${name}: the calendar has a caption and day-of-week headings.`, ...id })
       } else if (b.type === "table") {
         add({ kind: "feature", rule: "table-header", text: `${name}: a table's first row is marked as its header.`, ...id })
       } else if (b.type === "form" && has(b.formId)) {
