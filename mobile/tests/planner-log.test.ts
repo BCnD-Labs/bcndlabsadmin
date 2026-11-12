@@ -1,7 +1,8 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
 import { saveJournal, saveJournalSections, saveJournalItem, validWorkspace, type Collections } from "../src/lib/shared.ts"
-import { LOG_PROMPTS, SAVE_LABEL, appendPrompt, completedOn, dayTitle, dueOn, entryText, previewLine, reconcileDrafts, recentEntries, saveState, shiftDay, shownText, timestampKey, weekStrip } from "../src/native/screens/planner/log/log-rules.ts"
+import { LOG_PROMPTS, SAVE_LABEL, appendPrompt, completedOn, dayTitle, dueOn, entryText, previewLine, reconcileDrafts, recentDayItems, recentEntries, saveState, shiftDay, shownText, timestampKey, weekStrip } from "../src/native/screens/planner/log/log-rules.ts"
+import { reviewId, writeSlotCheckIn } from "../src/native/screens/journal-review.ts"
 import { ADDRESS, fakeServer, memoryStore, task, ts, ws } from "./workspace-fake.ts"
 import { createWorkspaceClient } from "../src/lib/workspace-client.ts"
 
@@ -97,6 +98,20 @@ test("recent entries: newest first, markdown markers stripped, blank entries ski
   assert.deepEqual(recentEntries(journal, {}).map((e) => [e.day, e.preview]), [["2026-11-04", "today"], ["2026-11-03", "learned"], ["2026-10-01", "oldest"]])
   assert.deepEqual(recentEntries(journal, { "2026-11-05": "typed" }, 2).map((e) => e.day), ["2026-11-05", "2026-11-04"])
   assert.deepEqual(recentEntries(journal, { "2026-11-04": "" }).map((e) => e.day), ["2026-11-03", "2026-10-01"], "a cleared box is no entry")
+})
+
+test("a recent date exposes each saved check-in, log, and older section separately", () => {
+  const journal = [entry(today, "Old day text", { sections: [{ id: "evening", title: "Evening", text: "Walked home" }], entries: [
+    { id: reviewId("daily", today, "morning"), text: writeSlotCheckIn("morning", { mood: "4" }), createdAt: ts, updatedAt: ts },
+    { id: "log-1", text: "First thought", createdAt: ts, updatedAt: ts },
+    { id: "log-2", text: "Second thought", createdAt: ts, updatedAt: ts },
+    { id: "learning-1", text: "Learning", courseId: "c", createdAt: ts, updatedAt: ts },
+  ] })]
+  const pieces = recentDayItems(journal, {}, today)
+  assert.deepEqual(pieces.map(piece => piece.label), ["Day log", "Evening", "Morning check-in", "Log entry", "Log entry"])
+  assert.equal(pieces[2].summary, "Mood 4/5")
+  assert.equal(pieces[4].text, "Second thought")
+  assert.equal(recentDayItems(journal, { [today]: "Unsaved edit" }, today)[0].label, "Unsaved day draft")
 })
 
 test("saving a day's log goes through the shared rule: upsert, blank deletes, other fields and days stay", () => {

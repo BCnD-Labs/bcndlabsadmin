@@ -5,6 +5,7 @@
  * completed on the day. Drafts are what the person has typed but the workspace does not hold yet.
  */
 import { compareTasks, type Collections } from "../../../../lib/shared.ts"
+import { SLOTS, checkInSummary, readCheckIn, readSlotCheckIn, reviewId, slotSummary } from "../../journal-review.ts"
 import { WEEKDAY_SHORT, addDays, formatDay, weekDays } from "../dates.ts"
 
 type Task = Collections["tasks"][number]
@@ -100,11 +101,28 @@ export function weekStrip(day: string, today: string, journal: Journal, drafts: 
 }
 
 export interface RecentEntry { day: string; preview: string }
+export interface RecentDayItem { id: string; label: string; summary: string; text: string }
 
 /** The first line that has words, without markdown markers. */
 export function previewLine(text: string): string {
   const line = text.split("\n").map((l) => l.replace(/^\s*(#+\s*|[-*]\s+)/, "").trim()).find(Boolean)
   return (line ?? "").slice(0, 90)
+}
+
+/** Saved pieces behind a recent date; older day text and named sections remain selectable. */
+export function recentDayItems(journal: Journal, drafts: Drafts, day: string): RecentDayItem[] {
+  const entry = journal.find(value => value.id === day)
+  const items: RecentDayItem[] = []
+  const main = shownText(drafts, journal, day)
+  if (main.trim()) items.push({ id: "main", label: day in drafts ? "Unsaved day draft" : "Day log", summary: previewLine(main), text: main })
+  for (const section of entry?.sections ?? []) items.push({ id: `section/${section.id}`, label: section.title, summary: previewLine(section.text) || "No text saved yet", text: section.text })
+  for (const item of entry?.entries ?? []) {
+    if (item.courseId || item.taskId) continue
+    const slot = SLOTS.find(value => item.id === reviewId("daily", day, value.key))
+    const earlier = item.id === reviewId("daily", day)
+    items.push({ id: `entry/${item.id}`, label: slot ? `${slot.label} check-in` : earlier ? "Earlier check-in" : item.id.startsWith("journal-") ? previewLine(item.text) : "Log entry", summary: slot ? slotSummary(slot.key, readSlotCheckIn(slot.key, item.text)) : earlier ? checkInSummary(readCheckIn(item.text)) : previewLine(item.text), text: item.text })
+  }
+  return items
 }
 
 /** The latest days that have an entry, newest first (typed-but-unsaved text counts). */
