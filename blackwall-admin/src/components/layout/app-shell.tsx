@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom"
 import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { AssetFlowHost } from "@/features/assets/asset-flow"
+import { ReflectionHost } from "@/features/journal/reflection-host"
 import { FormHost } from "@/components/forms/form-host"
 import { CommandSearch } from "@/components/layout/command-search"
 import { useConnections, useSession } from "@/services/connector"
@@ -124,7 +125,7 @@ export function AppShell() {
         </main>
       </div>
       {mobileView && <MobileTabBar />}
-      {workspaceReady && <><FormHost /><AssetFlowHost /><SettingsModal /><CommandSearch /></>}
+      {workspaceReady && <><FormHost /><ReflectionHost /><AssetFlowHost /><SettingsModal /><CommandSearch /></>}
       <Toaster position="bottom-right" />
     </TooltipProvider>
   )
