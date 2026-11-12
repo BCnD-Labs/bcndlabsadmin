@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import { createStore, useStore, type StoreApi } from "zustand"
 import { BarChart3, BookOpen, Images, Minimize2, Minus, PanelLeftClose, PanelLeftOpen, ChevronDown, CalendarDays, Code2, FileText, Folder, Globe, GraduationCap, Home, LayoutDashboard, Maximize2, Pin, Search, Server, Settings2, Share2, X } from "lucide-react"
 import { blackwallPages } from "@/app-routes"
+import { useNav } from "@/components/layout/nav-config"
 import { QuickCreate } from "@/components/layout/quick-create"
 import { Notifications } from "@/components/layout/notifications"
 import { SyncStatus, WorkspaceStatus } from "@/components/layout/workspace-status"
@@ -18,6 +19,7 @@ import { BrowserApp, BrowserTitle, useBrowser } from "./browser-window"
 import { PlannerSidebar } from "./planner-sidebar"
 import { todayKey } from "@/lib/dates"
 import { useWorkspace } from "@/stores/workspace"
+import { windowSections } from "./window-sections"
 import { moveAroundLocked, overlaps, placeOutsideLocked, resizeAroundLocked, type WindowRect } from "./window-geometry"
 import "./desktop-workspace.css"
 
@@ -100,15 +102,23 @@ function WindowTitle({ store, fallback }: { store: StoreApi<PageHead>; fallback:
   return <>{title ?? fallback}</>
 }
 
-function AppToolbar({ store }: { store: StoreApi<PageHead> }) {
-  const head = useStore(store)
-  return <div className="mac-dw-app-toolbar">{head.back && <Link to={head.back.to}>← {head.back.label}</Link>}{head.subtitle && <span>{head.subtitle}</span>}{head.actions && <div className="mac-dw-actions">{head.actions}</div>}</div>
+/** The sub-pages the classic sidebar lists under this window's section, as tabs (Mikoshi: Launcher, Status, Storage). */
+function WindowSections({ id, path }: { id: AppId; path: string }) {
+  const nav = useNav(true)
+  const sections = windowSections(nav, appForPath, id, path)
+  if (!sections) return null
+  return <nav className="mac-dw-sections" aria-label={`${sections.label} sections`}>{sections.children.map((child) => <Link key={child.to} to={child.to} aria-current={sections.current === child ? "page" : undefined}>{child.label}</Link>)}</nav>
 }
 
-const AppPage = memo(function AppPage({ path, store }: { path: string; store: StoreApi<PageHead> }) {
+function AppToolbar({ store, id, path }: { store: StoreApi<PageHead>; id: AppId; path: string }) {
+  const head = useStore(store)
+  return <div className="mac-dw-app-toolbar"><WindowSections id={id} path={path} />{head.back && <Link to={head.back.to}>← {head.back.label}</Link>}{head.subtitle && <span>{head.subtitle}</span>}{head.actions && <div className="mac-dw-actions">{head.actions}</div>}</div>
+}
+
+const AppPage = memo(function AppPage({ id, path, store }: { id: AppId; path: string; store: StoreApi<PageHead> }) {
   const page = useRoutes(blackwallPages, path)
   return <PageHeadStoreContext.Provider value={store}>
-    <AppToolbar store={store} />
+    <AppToolbar store={store} id={id} path={path} />
     <main className="mac-dw-app-main" tabIndex={-1}>{page}</main>
   </PageHeadStoreContext.Provider>
 })
@@ -273,7 +283,7 @@ export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
       {APP_IDS.map(id => {
         const Icon = APP[id].icon
         if (id === "browser") return frame(id, <BrowserTitle />, <Icon size={16} />, <BrowserApp onFocus={() => focus("browser")} />)
-        return frame(id, <WindowTitle store={appStores[id]} fallback={APP[id].title} />, <Icon size={16} />, <AppPage path={windows[id].path ?? APP[id].route} store={appStores[id]} />)
+        return frame(id, <WindowTitle store={appStores[id]} fallback={APP[id].title} />, <Icon size={16} />, <AppPage id={id} path={windows[id].path ?? APP[id].route} store={appStores[id]} />)
       })}
     </>}
     {ready && plannerOpen && <PlannerSidebar overdue={overdue} onClose={() => setPlannerOpen(false)} onExpand={() => { setPlannerOpen(false); launch("planner_app") }} />}

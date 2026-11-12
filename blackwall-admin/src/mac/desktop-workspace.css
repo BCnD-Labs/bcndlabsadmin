@@ -86,6 +86,10 @@ html[data-runtime="mac-native"] .mac-dw-edge.edge-nw { top: 0; left: 0; cursor: 
 html[data-runtime="mac-native"] .mac-dw-edge.edge-se { bottom: 0; right: 0; cursor: nwse-resize; }
 html[data-runtime="mac-native"] .mac-dw-edge.edge-sw { bottom: 0; left: 0; cursor: nesw-resize; }
 html[data-runtime="mac-native"] .mac-dw-app-toolbar { display: flex; align-items: center; gap: 9px; min-height: 32px; padding: 3px 10px; border-bottom: 1px solid var(--bw-line); background: var(--bw-panel); color: var(--bw-muted); font-size: 11px; }
+html[data-runtime="mac-native"] .mac-dw-sections { display: flex; align-items: center; gap: 2px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+html[data-runtime="mac-native"] .mac-dw-sections > a { flex: none; padding: 3px 9px; border-radius: 5px; color: var(--bw-muted); font-size: 11px; font-weight: 600; white-space: nowrap; }
+html[data-runtime="mac-native"] .mac-dw-sections > a:hover { background: var(--bw-raised); color: var(--bw-text); }
+html[data-runtime="mac-native"] .mac-dw-sections > a[aria-current="page"] { background: color-mix(in srgb, var(--dw-hue, var(--bw-blue)) 16%, var(--bw-panel)); box-shadow: inset 0 -2px 0 var(--dw-hue, var(--bw-blue)); color: var(--bw-text); }
 html[data-runtime="mac-native"] .mac-dw-app-toolbar:empty { display: none; }
 html[data-runtime="mac-native"] .mac-dw-app-toolbar > a { color: var(--bw-blue); }
 html[data-runtime="mac-native"] .mac-dw-actions { display: flex; align-items: center; gap: 5px; margin-left: auto; }
