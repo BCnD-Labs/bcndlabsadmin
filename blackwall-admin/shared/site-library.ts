@@ -13,13 +13,16 @@ export interface LibraryItem {
   about: string
   /** A whole section: it goes between sections rather than into one. */
   section?: boolean
+  /** "s": a small thing (a badge, a button) that gets a short tile; the rest get a full one. */
+  size?: "s"
   make: () => SiteBlock
 }
 
 export const LIBRARY_GROUPS = ["Ready-made sections", "Text", "Buttons and links", "Pictures and media", "Cards and layout", "Notes and progress", "Data and forms", "Advanced"] as const
 
 const card = (...kids: SiteBlock[]) => mk("card", {}, kids)
-const plain = (id: string, group: string, name: string, about: string, type: string, props: Record<string, unknown> = {}): LibraryItem => ({ id, group, name, about, make: () => mk(type, props) })
+const SMALL_TYPES = new Set(["heading", "text", "list", "divider", "spacer", "button", "buttons", "link", "dropdown", "badge", "breadcrumb", "tags", "alert", "tooltip", "meter", "progress", "pager"])
+const plain = (id: string, group: string, name: string, about: string, type: string, props: Record<string, unknown> = {}): LibraryItem => ({ id, group, name, about, ...(SMALL_TYPES.has(type) ? { size: "s" as const } : {}), make: () => mk(type, props) })
 const piece = (id: string, group: string, name: string, about: string, make: () => SiteBlock): LibraryItem => ({ id, group, name, about, make })
 
 export const LIBRARY: LibraryItem[] = [
@@ -32,6 +35,11 @@ export const LIBRARY: LibraryItem[] = [
   plain("list", "Text", "List", "A bulleted list.", "list"),
   plain("stats", "Text", "Numbers", "Big figures with labels.", "stats"),
   plain("divider", "Text", "Divider", "A line between things.", "divider"),
+  plain("spacer", "Text", "Space", "Empty room between things.", "spacer"),
+  plain("code", "Text", "Code", "Code in a box that scrolls sideways.", "code"),
+  plain("steps", "Text", "Numbered steps", "Steps with numbers beside them.", "steps"),
+  plain("tags", "Text", "Tag list", "A row of small tags.", "tags"),
+  plain("iconbox", "Text", "Icon and text", "A symbol beside a short title and line.", "iconbox"),
 
   plain("button", "Buttons and links", "Button", "A button that goes somewhere.", "button"),
   plain("buttons", "Buttons and links", "Button group", "Two or three buttons side by side.", "buttons"),
@@ -44,6 +52,10 @@ export const LIBRARY: LibraryItem[] = [
   plain("video", "Pictures and media", "Video or audio", "A YouTube video or an audio file.", "video"),
   piece("photoGrid", "Pictures and media", "Photo row", "Three pictures side by side.", () => mk("row", { cols: "3" }, [mk("image", { shape: "square" }), mk("image", { shape: "square" }), mk("image", { shape: "square" })])),
 
+  piece("team", "Cards and layout", "Person", "A picture, a name, a role and a line about them.", () => card(mk("image", { shape: "square" }), mk("heading", { level: "3", text: "Name" }), { ...mk("text", { text: "Role" }), design: { color: "muted" as const } }, mk("text"))),
+  piece("caption", "Cards and layout", "Picture with caption", "A picture with a line beneath it.", () => card(mk("image"), { ...mk("text", { text: "A line about the picture." }), design: { size: "s", color: "muted" } })),
+  piece("features", "Cards and layout", "Three features", "Three symbols with a title and line each.", () => mk("row", { cols: "3" }, [0, 1, 2].map(() => mk("iconbox")))),
+  piece("contact-card", "Cards and layout", "Contact details", "A card with a few ways to get in touch.", () => card(mk("heading", { level: "3", text: "Get in touch" }), mk("list", { items: "Email: you@example.com\nPhone: 555 0100" }), mk("buttons", { items: "Write to me|/contact/" }))),
   plain("card", "Cards and layout", "Card", "A box for a heading and text.", "card"),
   piece("pictureCard", "Cards and layout", "Picture card", "A picture on top, then a heading, text and a button.", () => card(mk("image"), mk("heading", { level: "3" }), mk("text"), mk("button", { text: "Read more", style: "outline" }))),
   piece("featureBox", "Cards and layout", "Feature box", "A short heading and a line about it.", () => card(mk("heading", { level: "3" }), mk("text"))),

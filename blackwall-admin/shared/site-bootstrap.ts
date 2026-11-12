@@ -144,5 +144,15 @@ export const COMPONENT_CSS = `.badge { display: inline-block; padding: .25em .65
 .breadcrumb { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; margin: 0 0 16px; font-size: .95em; } .breadcrumb-item + .breadcrumb-item::before { content: "/"; padding-right: 6px; color: var(--muted); } .breadcrumb-item.active { color: var(--muted); }
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 20px; margin: 0 0 20px; } .stat { display: flex; flex-direction: column-reverse; gap: 2px; text-align: center; }
 .stat dd { margin: 0; font-size: 2.2em; font-weight: 700; line-height: 1.1; color: var(--accent); } .stat dt { color: var(--muted); font-size: .95em; font-weight: 400; }
+.spacer--s { height: 16px; } .spacer--m { height: 32px; } .spacer--l { height: 64px; } .spacer--xl { height: 112px; }
+.codeblock { margin: 0 0 20px; } .codeblock figcaption { font-size: .85em; color: var(--muted); margin-bottom: 4px; }
+.codeblock pre { margin: 0; padding: 14px; overflow: auto; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius, 8px); font: .9em/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.steps { list-style: none; counter-reset: step; margin: 0 0 20px; padding: 0; display: grid; gap: 14px; }
+.steps li { counter-increment: step; display: grid; grid-template-columns: 2.2em 1fr; gap: 12px; align-items: start; }
+.steps li::before { content: counter(step); display: grid; place-items: center; width: 2.2em; height: 2.2em; border-radius: 50%; background: var(--accent); color: var(--accent-text); font-weight: 700; }
+.steps b, .steps span { grid-column: 2; display: block; } .steps span { color: var(--muted); }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0 0 20px; padding: 0; }
+.iconbox { display: flex; gap: 14px; align-items: flex-start; margin: 0 0 20px; } .iconbox p { margin: 0; } .iconbox__title { display: block; }
+.iconbox__icon { flex: none; display: grid; place-items: center; width: 2.6em; height: 2.6em; border-radius: var(--radius, 8px); background: var(--surface); border: 1px solid var(--border); font-size: 1.3em; }
 .site-extras { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 `

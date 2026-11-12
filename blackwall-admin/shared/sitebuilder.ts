@@ -157,6 +157,18 @@ export function freeSpans(kids: readonly SiteBlock[]): number[] {
 /** The twelfths each block of a row takes, whether the row uses a ready-made split or its blocks' own widths. */
 export const rowSpans = (row: SiteBlock): number[] => (isFreeRow(row) ? freeSpans(row.kids ?? []) : (ROW_LAYOUTS[String(row.cols)] ?? ROW_LAYOUTS["3"]).spans)
 
+/** An element id for links like /page/#anchor: lower case letters, digits, - and _, starting with a letter. */
+export const cleanAnchor = (v: unknown) => {
+  const s = str(v).trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60)
+  return !s ? "" : /^[a-z]/.test(s) ? s : `s-${s}`
+}
+/** Extra CSS class names you give a block: plain names only, a few of them. */
+export const cleanClasses = (v: unknown) => str(v).split(/\s+/).filter((c) => /^[A-Za-z_][\w-]{0,40}$/.test(c)).slice(0, 8).join(" ")
+/** The CSS declarations you write for one block: no braces (so it can't escape its rule), no tags, no imports. */
+export const cleanDeclarations = (v: unknown) => str(v).replace(/[<>{}\\]/g, "").replace(/@import[^;]*;?/gi, "").trim().slice(0, 2000)
+/** The class a block gets when it has its own CSS, so you can also use it from Look → Your CSS. */
+export const blockClass = (b: Pick<SiteBlock, "id">) => `x-${String(b.id).replace(/[^\w-]/g, "")}`
+
 /** The colours a badge or an alert can take. */
 export const TONES = [{ value: "primary", label: "Accent" }, { value: "secondary", label: "Quiet" }, { value: "success", label: "Green" }, { value: "warning", label: "Yellow" }, { value: "danger", label: "Red" }]
 const tone = (b: SiteBlock) => (TONES.some((t) => t.value === b.tone) ? String(b.tone) : "primary")
@@ -448,6 +460,31 @@ export const BLOCKS: Record<string, BlockDef> = {
     edit: [{ k: "items", l: "Numbers", kind: "big", note: "One per line: the big number, then | and what it counts." }],
     html: (b) => ['<dl class="stats">', ...pairLines(b.items).map(([n, l]) => `  <div class="stat"><dt>${esc(l)}</dt><dd>${esc(n)}</dd></div>`), "</dl>"],
   },
+  spacer: {
+    name: "Space", def: { size: "m" },
+    edit: [{ k: "size", l: "How much", kind: "select", options: [{ value: "s", label: "Small" }, { value: "m", label: "Medium" }, { value: "l", label: "Large" }, { value: "xl", label: "Extra large" }] }],
+    html: (b) => [`<div class="spacer spacer--${["s", "m", "l", "xl"].includes(str(b.size)) ? str(b.size) : "m"}" aria-hidden="true"></div>`],
+  },
+  code: {
+    name: "Code", def: { label: "", code: "" },
+    edit: [{ k: "label", l: "Title (optional)" }, { k: "code", l: "Code", kind: "big", note: "Shown exactly as typed, in a box that scrolls sideways." }],
+    html: (b) => ['<figure class="codeblock">', ...(str(b.label).trim() ? [`  <figcaption>${esc(b.label)}</figcaption>`] : []), `  <pre tabindex="0"><code>${esc(str(b.code).trim() ? b.code : "// your code here")}</code></pre>`, "</figure>"],
+  },
+  steps: {
+    name: "Numbered steps", def: { items: "First step|What to do.\nSecond step|What to do next.\nThird step|And then." },
+    edit: [{ k: "items", l: "Steps", kind: "big", note: "One per line: the step, then | and a line about it." }],
+    html: (b) => ['<ol class="steps">', ...(pairLines(b.items).length ? pairLines(b.items) : [["Step", ""]]).map(([t, d]) => `  <li><b>${esc(t)}</b>${d ? `<span>${esc(d)}</span>` : ""}</li>`), "</ol>"],
+  },
+  tags: {
+    name: "Tag list", def: { items: "garden, notes, tea" },
+    edit: [{ k: "items", l: "Tags", note: "Separated by commas." }],
+    html: (b, ctx) => ['<ul class="tags">', ...str(b.items).split(",").map((t) => t.trim()).filter(Boolean).slice(0, 30).map((t) => `  <li><span class="badge ${ctx.boot ? "text-bg-secondary" : "badge--secondary"}">${esc(t)}</span></li>`), "</ul>"],
+  },
+  iconbox: {
+    name: "Icon and text", def: { icon: "★", title: "", text: "" },
+    edit: [{ k: "icon", l: "Symbol", note: "One character or emoji" }, { k: "title", l: "Title" }, { k: "text", l: "Text", kind: "big" }],
+    html: (b) => ['<div class="iconbox">', `  <span class="iconbox__icon" aria-hidden="true">${esc(str(b.icon).trim().slice(0, 4) || "★")}</span>`, `  <div><strong class="iconbox__title">${txt(b.title, "A short title")}</strong><p>${txt(b.text, "A line or two about it.")}</p></div>`, "</div>"],
+  },
   sitename: {
     name: "Site name", def: {},
     html: (_b, ctx) => (ctx.where === "footer" ? [`<p class="site-copy">${esc(ctx.site.footerText || `© ${new Date().getFullYear()} ${ctx.site.name}`)}</p>`] : [`<a class="site-title" href="/">${esc(ctx.site.name)}</a>`]),
@@ -491,7 +528,7 @@ function formClose(ctx: BuildCtx, done: string, button?: string) {
 }
 
 /** Blocks you can add inside a section (containers and content), in menu order. */
-export const ADDABLE = ["heading", "text", "richtext", "button", "link", "list", "image", "video", "progress", "meter", "pager", "badge", "alert", "dropdown", "buttons", "tooltip", "accordion", "calendar", "quote", "stats", "breadcrumb", "table", "divider", "html", "postsByWeek", "postList", "form", "newsletter", "row", "card"]
+export const ADDABLE = ["heading", "text", "richtext", "button", "link", "list", "image", "video", "progress", "meter", "pager", "badge", "alert", "dropdown", "buttons", "tooltip", "accordion", "calendar", "quote", "stats", "steps", "tags", "iconbox", "code", "spacer", "breadcrumb", "table", "divider", "html", "postsByWeek", "postList", "form", "newsletter", "row", "card"]
 
 export const menuPages = (pages: SitePage[]) => [...pages].filter((p) => p.inMenu).sort((a, b) => a.order - b.order)
 
@@ -587,10 +624,15 @@ function designClass(b: SiteBlock) {
   return (Object.keys(DESIGN_VALUES) as (keyof typeof DESIGN_VALUES)[]).flatMap((k) => ((DESIGN_VALUES[k] as readonly string[]).includes(String(b.design?.[k])) ? [`${DESIGN_PREFIX[k]}${b.design?.[k]}`] : [])).join(" ")
 }
 
+/** The classes a block gets: its Style choices, the class names you gave it, and its own-CSS class. */
+function allClasses(b: SiteBlock) {
+  return [designClass(b), cleanClasses(b.classes), cleanDeclarations(b.css) ? blockClass(b) : ""].filter(Boolean).join(" ")
+}
+
 function emitBlock(b: SiteBlock, def: BlockDef, indent: string, ctx: BuildCtx, out: string[]) {
-  const cls = designClass(b)
+  const cls = allClasses(b), anchor = cleanAnchor(b.anchor)
   if (def.container) {
-    def.open!(b, ctx).forEach((l, i) => out.push(indent + (i === 0 && cls ? l.replace('class="', `class="${cls} `) : l)))
+    def.open!(b, ctx).forEach((l, i) => out.push(indent + (i === 0 && (cls || anchor) ? l.replace('class="', `class="${cls ? `${cls} ` : ""}`).replace(/^(\s*<[a-z0-9]+)/, anchor ? `$1 id="${anchor}"` : "$1") : l)))
     const inner = indent + "  ".repeat(def.inset ?? 1)
     if (b.type === "row" && ctx.boot) {
       // Bootstrap's grid wants each child in its own column: full width on phones, then the row's split.
@@ -606,8 +648,8 @@ function emitBlock(b: SiteBlock, def: BlockDef, indent: string, ctx: BuildCtx, o
       emit((b.kids ?? []).map((k, i) => ({ ...k, design: { ...k.design, span: spans[i] } })), inner, ctx, out)
     } else emit(b.kids ?? [], inner, ctx, out)
     def.close!(b, ctx).forEach((l) => out.push(indent + l))
-  } else if (cls) {
-    out.push(`${indent}<div class="bs ${cls}">`)
+  } else if (cls || anchor) {
+    out.push(`${indent}<div${anchor ? ` id="${anchor}"` : ""} class="bs${cls ? ` ${cls}` : ""}">`)
     def.html!(b, ctx).forEach((l) => out.push(`${indent}  ${l}`))
     out.push(`${indent}</div>`)
   } else def.html!(b, ctx).forEach((l) => out.push(indent + l))
@@ -708,7 +750,7 @@ function documentHtml(site: Site, pages: SitePage[], doc: Doc, opts: { preview: 
   const hasForm = doc.body.some((l) => l.includes("data-blackwall-form"))
   const css = boot
     ? (opts.preview ? `    <style>\n${buildBootstrapCss(site, pages)}\n${PREVIEW_CSS}\n    </style>` : '    <link rel="stylesheet" href="/css/style.css">')
-    : opts.preview ? `    <style>\n${buildTheme(site)}\n${buildCss(pages)}\n${PREVIEW_CSS}\n    </style>` : '    <link rel="stylesheet" href="/theme.css">\n    <link rel="stylesheet" href="/style.css">'
+    : opts.preview ? `    <style>\n${buildTheme(site)}\n${buildCss(pages, site)}\n${PREVIEW_CSS}\n    </style>` : '    <link rel="stylesheet" href="/theme.css">\n    <link rel="stylesheet" href="/style.css">'
   const body = boot ? doc.body.map(bootForms) : doc.body
   return [
     "<!doctype html>", '<html lang="en">', "  <head>", '    <meta charset="UTF-8">', '    <meta name="viewport" content="width=device-width, initial-scale=1.0">',
@@ -818,10 +860,10 @@ export function buildTheme(site: Site, extra = "") {
 
 /** css/style.css of a Bootstrap-mode site: the palette and fonts as variables, Bootstrap bridged to them, the layout touches Bootstrap lacks, then your own CSS. */
 export function buildBootstrapCss(site: Site, pages: SitePage[] = []) {
-  return buildTheme(site, [BOOTSTRAP_BRIDGE, COMPONENT_CSS, pages.some((p) => usesDesign(p.sections)) ? DESIGN_CSS : "", animationCss(pages)].join(""))
+  return buildTheme(site, [BOOTSTRAP_BRIDGE, COMPONENT_CSS, pages.some((p) => usesDesign(p.sections)) ? DESIGN_CSS : "", animationCss(pages), ownBlockCss(pages, site.headerBlocks)].join(""))
 }
 
-export function buildCss(pages: SitePage[] = []) {
+export function buildCss(pages: SitePage[] = [], site?: Pick<Site, "headerBlocks">) {
   return `/* Layout (generated by Blackwall) */
 * { box-sizing: border-box; }
 body { margin: 0; font-family: var(--font, ${FONT}); font-size: 16px; line-height: 1.6; background: var(--bg); color: var(--text); }
@@ -891,7 +933,7 @@ th { background: var(--surface); }
 audio { width: 100%; }
 .theme-toggle { cursor: pointer; font-size: 14px; padding: 6px 12px; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
-${pages.some((p) => p.parentId) ? MENU_CSS : ""}${pages.some((p) => usesDesign(p.sections)) ? DESIGN_CSS : ""}${PLAIN_ROW_CSS}${COMPONENT_CSS}${animationCss(pages)}`
+${pages.some((p) => p.parentId) ? MENU_CSS : ""}${pages.some((p) => usesDesign(p.sections)) ? DESIGN_CSS : ""}${PLAIN_ROW_CSS}${COMPONENT_CSS}${animationCss(pages)}${ownBlockCss(pages, site?.headerBlocks)}`
 }
 
 /** The keyframes of the entrance animations a site uses, and the rule that turns them off for visitors who ask for less motion. */
@@ -908,6 +950,15 @@ const PLAIN_ROW_CSS = `@media (min-width: 700px) { .row--left { grid-template-co
 `
 
 const usesDesign = (list: SiteBlock[]): boolean => list.some((b) => (b.design && designClass(b)) || (b.kids && usesDesign(b.kids)))
+
+/** The rules for blocks that have their own CSS (the Advanced tab), one per block, in page order. Pass the site's header blocks too. */
+export function ownBlockCss(pages: SitePage[], header: SiteBlock[] = []) {
+  const out: string[] = []
+  const walk = (list: SiteBlock[]) => list.forEach((b) => { const d = cleanDeclarations(b.css); if (d) out.push(`.${blockClass(b)} { ${d} }`); if (b.kids) walk(b.kids) })
+  walk(header)
+  pages.forEach((p) => walk(p.sections))
+  return out.length ? `/* Your CSS for single blocks */\n${out.join("\n")}\n` : ""
+}
 
 /** Drop-down menus, no script needed: open on hover and on keyboard focus; on phones they are simply listed. */
 const MENU_CSS = `.site-nav .has-sub { position: relative; }
@@ -970,7 +1021,7 @@ export function buildSite(site: Site, pages: SitePage[], posts: Draft[], forms: 
   if (flat) files["css/style.css"] = buildBootstrapCss(site, own)
   else {
     files["theme.css"] = buildTheme(site)
-    files["style.css"] = buildCss(own)
+    files["style.css"] = buildCss(own, site)
   }
   const base = site.domain ? `https://${site.domain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}` : ""
   const urls = [...own.map(pageHref), ...live.map(postHref)]

@@ -353,7 +353,7 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
   }
 
   const panelBody = panel && (
-    panel === "components" ? <ComponentsPanel site={site} hint={block && !treeOf(block.id)?.header ? `next to ${blockName(block, false).toLowerCase()}` : "end of the page"} onInsert={insertItem} />
+    panel === "components" ? <ComponentsPanel site={site} hint={block && !treeOf(block.id)?.header ? `inside or beside the selected ${blockName(block, false).toLowerCase()}` : "at the end of the page"} onInsert={insertItem} />
       : panel === "look" ? <LookPanel site={site} />
       : panel === "access" ? <A11yPanel site={site} pageId={page?.id} marks={marksOn} onMarks={setMarksOn} onShow={showFinding} />
       : panel === "forms" ? <FormsPanel site={site} />

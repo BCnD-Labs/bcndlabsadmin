@@ -31,6 +31,9 @@ function slotsOf(b: SiteBlock): Slots {
     case "image": s.src = String(b.src ?? "").trim(); s.alt = String(b.alt ?? "").trim(); s.title = s.alt; break
     case "quote": s.body = String(b.text ?? "").trim(); s.title = String(b.who ?? "").trim(); break
     case "buttons": s.items = String(b.items ?? ""); s.title = pairLines(b.items)[0]?.[0] ?? ""; s.href = pairLines(b.items)[0]?.[1] ?? ""; break
+    case "steps": s.items = String(b.items ?? ""); s.title = pairLines(b.items)[0]?.[0] ?? ""; s.body = pairLines(b.items).map(([t, d]) => (d ? `${t}: ${d}` : t)).join("\n"); break
+    case "tags": s.body = String(b.items ?? "").split(",").map((t) => t.trim()).filter(Boolean).join("\n"); s.title = first(s.body); break
+    case "code": s.body = String(b.code ?? "").trim(); s.title = String(b.label ?? "").trim(); break
     case "heading": case "button": case "link": case "badge": s.title = String(b.text ?? "").trim(); s.href = String(b.href ?? "").trim(); break
     case "text": s.body = String(b.text ?? "").trim(); s.title = first(b.text); break
     case "richtext": s.body = String(b.md ?? "").trim(); s.title = first(b.md).replace(/^#+\s*/, ""); break
@@ -66,6 +69,10 @@ function build(to: string, s: Slots, old: SiteBlock): { props: Record<string, un
     case "tooltip": return { props: { text: label(s), tip: s.body && s.body !== label(s) ? s.body : "" } }
     case "dropdown": return { props: { label: label(s) || "Menu", items: s.items || `${label(s) || "First option"}|${href(s) || "/"}\nSecond option|/`, style } }
     case "accordion": return { props: { items: s.items || `${s.title || "Heading"}|${s.body}` } }
+    case "list": return { props: { items: s.body || s.title } }
+    case "steps": return { props: { items: s.items || (s.body || s.title).split("\n").map((l) => l.trim()).filter(Boolean).map((l) => `${l}|`).join("\n") } }
+    case "tags": return { props: { items: (s.body || s.title).split("\n").map((l) => l.trim()).filter(Boolean).join(", ") } }
+    case "code": return { props: { code: s.body || s.title, label: "" } }
     case "meter": return { props: { label: label(s), value: 50 } }
     case "progress": return { props: { current: 1, total: 5 } }
     case "calendar": return { props: { month: thisMonth(), events: s.body.split("\n").filter((l) => /^\d{4}-\d{2}-\d{2}\|/.test(l)).join("\n") } }
@@ -91,11 +98,14 @@ const TARGETS: Record<string, string[]> = {
   image: ["card"],
   quote: ["text", "heading", "alert", "card", "badge"],
   heading: ["text", "card", "quote", "badge", "button", "link", "alert", "tooltip"],
-  text: ["alert", "quote", "tooltip", "heading", "richtext", "badge", "card", "accordion"],
+  text: ["alert", "quote", "tooltip", "heading", "richtext", "code", "badge", "card", "accordion"],
   richtext: ["alert", "quote", "text", "card", "accordion"],
   alert: ["text", "quote", "badge", "tooltip", "card", "accordion"],
-  list: ["accordion", "richtext", "card", "dropdown"],
-  accordion: ["card", "list", "richtext", "alert", "dropdown"],
+  list: ["steps", "tags", "accordion", "richtext", "card", "dropdown"],
+  steps: ["list", "accordion", "card"],
+  tags: ["list", "text"],
+  code: ["text", "richtext"],
+  accordion: ["card", "list", "steps", "richtext", "alert", "dropdown"],
   meter: ["progress", "badge", "alert", "card"],
   progress: ["meter"],
 }
@@ -107,7 +117,7 @@ const ABOUT: Record<string, string> = {
   button: "A button that goes somewhere.", link: "A plain text link.", badge: "A small coloured label.", dropdown: "A button that opens a list of links.",
   tooltip: "Words that explain themselves on hover.", calendar: "A month with dates marked.", alert: "A coloured note.", accordion: "Questions that open on click.",
   meter: "A bar showing how far along something is.", progress: "A “Step 2 of 5” bar.", card: "A box with a heading and text.", heading: "A title.", text: "A paragraph.",
-  richtext: "Formatted text.", list: "A bulleted list.", image: "A picture from your library.", quote: "A pulled quote with who said it.", buttons: "Two or three buttons side by side.",
+  richtext: "Formatted text.", list: "A bulleted list.", image: "A picture from your library.", quote: "A pulled quote with who said it.", steps: "Steps with numbers beside them.", tags: "A row of small tags.", code: "Code in a box.", buttons: "Two or three buttons side by side.",
 }
 
 export interface ConvertTarget { type: string; name: string; about: string }

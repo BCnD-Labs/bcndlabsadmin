@@ -56,3 +56,23 @@ Select any block and open **Style**: text size, text colour (accent or quiet), a
 - **Row options:** more ready-made splits (two, three or four equal; wide left; narrow left) plus the **space between** columns and how they **line up** (same height, top or middle).
 - **Section and block options:** content width (medium, narrow, wide, full) that reaches inside a section's content, a minimum **height** (small to full screen), and **Show on** (everywhere, desktop only or phone only).
 - Rows stack on phones in order. Rows from before this change draw exactly as they did.
+
+## A calmer Components panel
+
+- **Groups fold.** Each group (Ready-made sections, Text, Buttons and links, …) is a slim header with a count; click it to open or close, or use **Collapse all / Expand all**. Only Cards and layout starts open. Searching opens every group that matches.
+- **Small things get small tiles.** Buttons, badges, links, dropdowns, alerts, tooltips, dividers and the like show on short strips, three to a row; sections and cards keep the larger preview.
+- **Tiles or a plain list.** The two buttons beside the search switch between thumbnails and a one-line-per-item list (the list draws no previews, so it's the quickest). The panel remembers your choice and which groups are open, per browser.
+
+## More components
+
+Space (empty room, four sizes), Code (a box that scrolls sideways), Numbered steps, Tag list, and Icon and text, plus ready-made pieces: Person, Picture with caption, Three features, and Contact details. Lists can become numbered steps or tags (and back), text can become code, and an accordion now becomes a filled list instead of an empty one.
+
+## Advanced (per block)
+
+For exact control of one block, select it and open **Advanced**:
+
+- **Anchor (id):** a link such as `/page/#pricing` jumps straight to the block. Two blocks on a page can't share one; the accessibility check says so.
+- **Extra CSS classes:** your own class names, to style from Look → Your CSS.
+- **Your CSS for this block:** CSS properties (`background: #fff7e6; border-radius: 20px;`) that apply to this block alone and show in the preview as you type. The block also has its own class (`.x-…`, shown in the tab) if you'd rather write the rule yourself.
+
+Braces, tags and `@import` are left out when the site is built, so a block's CSS can't escape its own rule or close the page's style tag.
