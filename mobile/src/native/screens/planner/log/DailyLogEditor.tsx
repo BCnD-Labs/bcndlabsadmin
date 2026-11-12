@@ -11,6 +11,7 @@ import { Icon } from "../../../ui.tsx"
 import { formatDay } from "../dates.ts"
 import { appendPrompt, LOG_PROMPTS, shownText } from "./log-rules.ts"
 import type { EntryDraft, LogDrafts } from "./useLogDrafts.ts"
+import { DailyCheckIns } from "./DailyCheckIns.tsx"
 
 type Item = NonNullable<Collections["journal"][number]["entries"]>[number]
 type Compose = { kind: "entry"; day: string; id: string; text: string; sectionId?: string; legacy?: boolean; initialAsNote: boolean; asNote: boolean; noteId: string; createdAt: string; initialText: string }
@@ -115,7 +116,7 @@ export function DailyLogEditor({ data, day, logs, blocked, heading = "Log", embe
   }
 
   return <View style={styles.root}>
-    <View style={styles.header}>{embedded ? <Text style={styles.heading}>Entries for this day</Text> : <><Icon name="create-outline" tint={c.text2} size={17} /><Text style={styles.heading} accessibilityRole="header">{heading}</Text></>}
+    <View style={styles.header}>{embedded ? <DailyCheckIns data={data} day={day} blocked={blocked} /> : <><Icon name="create-outline" tint={c.text2} size={17} /><Text style={styles.heading} accessibilityRole="header">{heading}</Text></>}
       <Pressable disabled={!!blocked || saving} onPress={() => { setError(null); setQuick(true) }} style={styles.icon} accessibilityRole="button" accessibilityLabel="Reflection quick inserts"><Icon name="add" tint={tint} size={19} /></Pressable>
     </View>
     {error && !editor && !quick ? <Text style={styles.error} accessibilityLiveRegion="polite">{error}</Text> : null}
