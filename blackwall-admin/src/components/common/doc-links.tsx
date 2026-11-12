@@ -1,15 +1,19 @@
-import { ExternalLink, Link2, Plus, X } from "lucide-react"
+import { ExternalLink, FileText, Link2, Plus, X } from "lucide-react"
+import { useState } from "react"
 import type { DocLink } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { openNextcloudLink } from "@/features/documents/linked-document"
+import { NextcloudPicker } from "@/features/documents/nextcloud-picker"
+import { nextcloudLink, nextcloudPathOf } from "@/features/documents/nextcloud-link"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 /**
  * Document links: a label + URL that opens in whatever app owns the file. Blackwall never
  * renders or edits them. Web links plus common app schemes (SiYuan, Obsidian, VS Code, OneNote,
- * Office, Notion, AFFiNE) are allowed; script/data URLs never are.
+ * Office, Notion, AFFiNE) are allowed, plus `nextcloud:/path/file` for a file in your Nextcloud, which opens in the built-in viewer; script/data URLs never are.
  */
-const SAFE = /^(https?:\/\/|siyuan:|obsidian:|vscode:|onenote:|ms-(word|excel|powerpoint):|notion:|affine:|mailto:)/i
+const SAFE = /^(https?:\/\/|siyuan:|obsidian:|vscode:|onenote:|ms-(word|excel|powerpoint):|notion:|affine:|mailto:|nextcloud:)/i
 export const isSafeLink = (url: string) => SAFE.test(url.trim())
 export const cleanLinks = (links: DocLink[]) => links.map((l) => ({ label: l.label.trim(), url: l.url.trim() })).filter((l) => l.url && isSafeLink(l.url)).map((l) => ({ ...l, label: l.label || hostOf(l.url) }))
 
@@ -24,6 +28,7 @@ function hostOf(url: string) {
 
 /** Form editor: rows of label + URL. */
 export function DocLinksField({ value, onChange }: { value: DocLink[]; onChange: (links: DocLink[]) => void }) {
+  const [picking, setPicking] = useState(false)
   return (
     <div className="grid gap-2">
       {value.map((l, i) => {
@@ -39,7 +44,11 @@ export function DocLinksField({ value, onChange }: { value: DocLink[]; onChange:
           </div>
         )
       })}
-      <Button type="button" variant="outline" size="sm" className="justify-self-start" onClick={() => onChange([...value, { label: "", url: "" }])}><Plus /> Add link</Button>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={() => onChange([...value, { label: "", url: "" }])}><Plus /> Add link</Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => setPicking(true)}><FileText /> Link a Nextcloud file</Button>
+      </div>
+      {picking && <NextcloudPicker onClose={() => setPicking(false)} onPick={(path, name) => { const url = nextcloudLink(path); if (url) onChange([...value.filter((l) => l.url.trim()), { label: name, url }]); setPicking(false) }} />}
     </div>
   )
 }
@@ -59,11 +68,17 @@ export function DocLinksMenu({ links, className }: { links?: DocLink[]; classNam
       <DropdownMenuContent align="end" className="w-64" onClick={(e) => e.stopPropagation()}>
         <DropdownMenuLabel className="bw-label">Linked documents</DropdownMenuLabel>
         {links.map((l, i) => (
+          nextcloudPathOf(l.url) ? (
+            <DropdownMenuItem key={i} onSelect={() => openNextcloudLink(l)} className="flex items-center gap-2">
+              <FileText className="size-3.5 shrink-0" aria-hidden /><span className="min-w-0 truncate">{l.label}</span>
+            </DropdownMenuItem>
+          ) : (
           <DropdownMenuItem key={i} asChild>
             <a href={l.url} target="_blank" rel="noreferrer noopener" className="flex items-center gap-2">
               <ExternalLink className="size-3.5 shrink-0" aria-hidden /><span className="min-w-0 truncate">{l.label}</span>
             </a>
           </DropdownMenuItem>
+          )
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
@@ -77,9 +92,15 @@ export function DocLinksList({ links }: { links?: DocLink[] }) {
     <ul className="flex flex-wrap gap-1.5">
       {links.map((l, i) => (
         <li key={i}>
+          {nextcloudPathOf(l.url) ? (
+            <button type="button" onClick={() => openNextcloudLink(l)} className="inline-flex h-[var(--bw-control-sm)] max-w-64 items-center gap-1.5 rounded-full bg-raised px-3 text-xs text-ink-2 hover:text-ink">
+              <FileText className="size-3.5 shrink-0" aria-hidden /><span className="truncate">{l.label}</span>
+            </button>
+          ) : (
           <a href={l.url} target="_blank" rel="noreferrer noopener" className="inline-flex h-[var(--bw-control-sm)] max-w-64 items-center gap-1.5 rounded-full bg-raised px-3 text-xs text-ink-2 hover:text-ink">
             <ExternalLink className="size-3.5 shrink-0" aria-hidden /><span className="truncate">{l.label}</span>
           </a>
+          )}
         </li>
       ))}
     </ul>

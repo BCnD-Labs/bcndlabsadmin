@@ -7,7 +7,7 @@ import type { Collections } from "../../../lib/shared.ts"
 
 export type DocLink = NonNullable<Collections["tasks"][number]["links"]>[number]
 export const MAX_DOC_LINKS = 50
-const SAFE = /^(https?:\/\/|siyuan:|obsidian:|vscode:|onenote:|ms-(word|excel|powerpoint):|notion:|affine:|mailto:)/i
+const SAFE = /^(https?:\/\/|siyuan:|obsidian:|vscode:|onenote:|ms-(word|excel|powerpoint):|notion:|affine:|mailto:|nextcloud:)/i
 
 export const isSafeLink = (url: string): boolean => SAFE.test(url.trim())
 

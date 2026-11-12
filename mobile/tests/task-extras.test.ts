@@ -84,7 +84,7 @@ test("learning types follow the course kind as on the web", () => {
 })
 
 test("linked documents: web and app links pass, script and data links never; unsafe ones block instead of vanishing", () => {
-  for (const ok of ["https://example.com", " HTTP://x.dev", "siyuan://blocks/1", "obsidian://open?vault=a", "vscode://file/x", "mailto:a@b.co", "ms-word:ofe|u|https://x"]) assert.equal(isSafeLink(ok), true, ok)
+  for (const ok of ["https://example.com", " HTTP://x.dev", "siyuan://blocks/1", "obsidian://open?vault=a", "vscode://file/x", "mailto:a@b.co", "ms-word:ofe|u|https://x", "nextcloud:/Class/deck.pptx"]) assert.equal(isSafeLink(ok), true, ok)
   for (const bad of ["javascript:alert(1)", "data:text/html,hi", "file:///etc/passwd", "ftp://x", "example.com"]) assert.equal(isSafeLink(bad), false, bad)
   assert.deepEqual(cleanLinks([{ label: " Spec ", url: " https://a.dev/x " }, { label: "x", url: "  " }, { label: "", url: "https://b.dev/y" }]), [{ label: "Spec", url: "https://a.dev/x" }, { label: "b.dev", url: "https://b.dev/y" }])
   assert.match(linkProblem([{ label: "", url: "javascript:1" }]) ?? "", /web link/)
