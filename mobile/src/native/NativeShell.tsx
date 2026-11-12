@@ -33,8 +33,8 @@ export function NativeShell({ address, onOpenSettings }: NativeHomeProps) {
       <QuickAddProvider>
       <View style={styles.root}>
         <View style={styles.page} accessibilityElementsHidden={moreOpen} importantForAccessibility={moreOpen ? "no-hide-descendants" : "auto"}>
-          {KEEP_ALIVE.includes(current) ? null : <Current onOpenSettings={onOpenSettings} />}
-          {kept.map((k) => { const Kept = SCREENS[k]; return <View key={k} style={k === current ? styles.page : styles.hidden}><Kept onOpenSettings={onOpenSettings} focused={k === current} /></View> })}
+          {KEEP_ALIVE.includes(current) ? null : <Current onOpenSettings={onOpenSettings} onNavigate={setCurrent} />}
+          {kept.map((k) => { const Kept = SCREENS[k]; return <View key={k} style={k === current ? styles.page : styles.hidden}><Kept onOpenSettings={onOpenSettings} onNavigate={setCurrent} focused={k === current} /></View> })}
           <SnackHost />
         </View>
         <PillNav current={current} moreOpen={moreOpen} onMoreOpen={setMoreOpen} onSelect={setCurrent} onOpenSettings={onOpenSettings} />

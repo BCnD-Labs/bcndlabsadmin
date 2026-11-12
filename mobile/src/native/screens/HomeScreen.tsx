@@ -1,4 +1,3 @@
-import { shape } from "../../shape.ts"
 import { useState } from "react"
 import { Pressable, StyleSheet, Text, View } from "react-native"
 import { compareTasks, isForToday, toggleStar, toggleTask } from "../../lib/shared.ts"
@@ -6,10 +5,10 @@ import { mono } from "../../theme.ts"
 import { plannerColor as c } from "../planner-theme.ts"
 import { useWorkspace } from "../data/WorkspaceProvider.tsx"
 import { todayKey } from "../data/sync-view.ts"
-import { BlockStreak, MiniBar, Sparkline, StatCell, StatStrip } from "../kit/charts.tsx"
+import { MiniBar, StatCell, StatStrip } from "../kit/charts.tsx"
 import { PropChip } from "../kit/PropChip.tsx"
 import { dateParts, doneCounts, lastDays, percent, streak } from "../kit/stats.ts"
-import { chipTone, kit, type ChipKind } from "../kit/tokens.ts"
+import { chipTone, kit, statusKind, type ChipKind } from "../kit/tokens.ts"
 import { WorkspacePage, WorkspaceSection } from "../WorkspacePage.tsx"
 import { Icon } from "../ui.tsx"
 import { TaskSheet, type Editor } from "./planner/TaskSheet.tsx"
@@ -20,7 +19,10 @@ import { eventChips, taskChips, type RowChip } from "./row-chips.ts"
 import { NoteSheet, type NoteEditor } from "./planner/notes/NoteSheet.tsx"
 import { TaskCheck } from "./planner/TaskCheck.tsx"
 import { learningGroups } from "./home-groups.ts"
-import { kindInfo, learningProgress } from "./learning/learning-view.ts"
+import { learningProgress } from "./learning/learning-view.ts"
+import { completedOn } from "./planner/log/log-rules.ts"
+import { SLOTS, hasAnswers, readSlotCheckIn, reviewId } from "./journal-review.ts"
+import type { ScreenKey } from "../nav/destinations.ts"
 
 /** The property kind a row chip is drawn as. */
 const chipKind: Record<RowChip["kind"], ChipKind> = { date: "date", overdue: "overdue", course: "course", focus: "neutral", star: "date", plain: "neutral" }
@@ -28,7 +30,7 @@ interface DueCell { text: string; tone: "today" | "overdue" | "plain" }
 interface TagCell { kind: ChipKind; text: string }
 
 /** A compact live overview; every count and row comes from the current workspace. */
-export function HomeScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
+export function HomeScreen({ onOpenSettings, onNavigate }: { onOpenSettings: () => void; onNavigate?: (screen: ScreenKey) => void }) {
   const { data, status, message, refreshing, refresh, mutate } = useWorkspace()
   const [editor, setEditor] = useState<Editor | null>(null)
   const [noteEditor, setNoteEditor] = useState<NoteEditor | null>(null)
@@ -45,10 +47,13 @@ export function HomeScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
   const visibleLearning = showLearning ? learning : learning.slice(0, 5)
   const events = (data?.tasks ?? []).filter(t => t.kind === "event" && t.scheduledDate && t.scheduledDate >= today).sort((a, b) => (a.scheduledDate ?? "").localeCompare(b.scheduledDate ?? "")).slice(0, 4)
   const pinned = (data?.notes ?? []).filter(n => n.pinned).slice(0, 3)
-  const open = tasks.filter(t => !t.done)
-  const overdue = open.filter(t => t.due && t.due < today).length
+  const overdue = tasks.filter(t => !t.done && t.due && t.due < today).length
   const week = doneCounts(tasks, lastDays(today, 7))
   const run = streak(tasks, today)
+  const recentDone = lastDays(today, 7).flatMap(day => completedOn(tasks, day).filter(t => t.kind !== "event").map(task => ({ task, day }))).reverse().slice(0, 2)
+  const todayJournal = data?.journal.find(entry => entry.id === today)
+  const projects = (data?.projects ?? []).filter(project => project.status !== "done").sort((a, b) => Number(b.status === "active") - Number(a.status === "active")).slice(0, 2)
+  const activeProjects = data?.projects.filter(project => project.status === "active").length ?? 0
   async function complete(id: string) {
     if (blocked) return setNotice("Resolve the sync conflict before editing.")
     if (!await mutate(["tasks"], d => toggleTask(d, id))) setNotice(message ?? "Could not save this task.")
@@ -59,47 +64,52 @@ export function HomeScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
   }
   const dueCell = (t: { due?: string }, focused: boolean): DueCell => t.due && t.due < today ? { text: shortDay(t.due), tone: "overdue" } : t.due === today ? { text: "Today", tone: "today" } : t.due ? { text: shortDay(t.due), tone: "plain" } : { text: focused ? "Focus" : "Star", tone: "today" }
   const openRow = (show: () => void) => { setSel(null); show() }
-  return <WorkspacePage page="Home" onOpenSettings={onOpenSettings} onRefresh={() => void refresh()} refreshing={refreshing}>
+  return <WorkspacePage page="Home" compact center={<Text style={s.headerDate}>{formatDay(today)}</Text>} onOpenSettings={onOpenSettings} onRefresh={() => void refresh()} refreshing={refreshing}>
     {!data ? <View style={s.empty}><Text style={s.title}>{status === "signed-out" ? "Sign in to use Blackwall" : "Loading your workspace"}</Text><Text style={s.meta}>{status === "signed-out" ? "Your records will appear here after sign-in." : message ?? "Pull down to try again."}</Text>{status === "signed-out" ? <MiniAction label="Sign in" onPress={onOpenSettings} /> : null}</View> : null}
     {notice || (data && status !== "ok" && message) ? <Text style={s.error}>{notice ?? message}</Text> : null}
     {data ? <>
-      <Text style={s.day}>{formatDay(today)} · {open.length} open · {data.courses.length} learning · {data.projects.length} projects</Text>
-      <StatStrip>
-        <StatCell label="Done 7d" value={week.reduce((n, x) => n + x, 0)} tint={kit.good}><Sparkline values={week} tint={kit.good} /></StatCell>
-        <StatCell label="Today" value={due.length} tint={chipTone.date.ink}><View style={s.cellGap} /></StatCell>
-        <StatCell label="Overdue" value={overdue} tint={overdue ? chipTone.overdue.ink : c.text}><View style={s.cellGap} /></StatCell>
-        <StatCell label="Streak" value={`${run.length}d`} tint={run.length ? chipTone.status.ink : c.text}><BlockStreak days={run.last7} /></StatCell>
+      <StatStrip compact>
+        <StatCell compact label="Done 7d" value={week.reduce((n, x) => n + x, 0)} tint={kit.good} />
+        <StatCell compact label="Today" value={due.length} tint={chipTone.date.ink} />
+        <StatCell compact label="Overdue" value={overdue} tint={overdue ? chipTone.overdue.ink : c.text} />
+        <StatCell compact label="Streak" value={`${run.length}d`} tint={run.length ? chipTone.status.ink : c.text} />
       </StatStrip>
-      <WorkspaceSection title="Today" icon="checkmark-circle-outline" count={`${due.length} open`} collapsible flush>
-        <ColumnHead />
+      <WorkspaceSection compact title="Today" icon="checkmark-circle-outline" tint={kit.hue.productivity} count={`${due.length} open`} collapsible flush>
         {(showToday ? due : due.slice(0, 5)).map(t => { const row = plannerRow(t, data.courses, today); return <Line key={t.id} title={t.title} due={dueCell(t, row.focused)} tag={row.course ? { kind: "course", text: row.course } : undefined} chips={taskChips(row)} detail={row.details} selected={sel === t.id} onSelect={() => setSel(t.id)} onOpen={() => openRow(() => setEditor({ mode: "edit", id: t.id }))} onComplete={() => void complete(t.id)} onStar={() => void star(t.id)} starred={t.starred} /> })}
         {!due.length ? <Text style={s.emptyText}>Nothing due or starred today.</Text> : null}
         {due.length > 5 ? <MiniAction label={showToday ? "Show less" : `Show ${due.length - 5} more`} onPress={() => setShowToday(v => !v)} /> : null}
       </WorkspaceSection>
-      <WorkspaceSection title="Learning next" icon="school-outline" tint={kit.hue.learning} count={`${learning.length} open`} collapsible flush>
-        {learning.length ? <ColumnHead /> : null}
+      <WorkspaceSection compact title="Learning next" icon="school-outline" tint={kit.hue.learning} count={`${learning.length} open`} collapsible flush>
         {learningGroups(visibleLearning, data.courses).map(group => {
           const course = data.courses.find(x => x.id === group.id)
           const progress = course ? learningProgress(course, data.tasks.filter(t => t.courseId === course.id)) : undefined
           return <View key={group.id} style={s.learningGroup}>
             <Pressable onPress={() => setClosedLearning(value => ({ ...value, [group.id]: !value[group.id] }))} style={s.groupHead} accessibilityRole="button" accessibilityState={{ expanded: !closedLearning[group.id] }} accessibilityLabel={`${group.title}, ${group.tasks.length} items${progress?.measured ? `, ${percent(progress.value)} percent done` : ""}`}>
-              <Icon name={closedLearning[group.id] ? "chevron-forward" : "chevron-down"} size={16} tint={c.muted} />
+              <Icon name={closedLearning[group.id] ? "chevron-forward" : "chevron-down"} size={13} tint={kit.hue.learning} />
               <Text style={s.groupTitle} numberOfLines={1}>{group.title}</Text>
-              {course ? <PropChip kind="course" value={kindInfo(course).label.toUpperCase()} /> : null}
-              {progress?.measured ? <><MiniBar value={progress.value} width={40} /><Text style={s.groupPct}>{percent(progress.value)}%</Text></> : null}
+              {progress?.measured ? <><MiniBar value={progress.value} width={38} /><Text style={s.groupPct}>{percent(progress.value)}%</Text></> : null}
               <Text style={s.groupCount}>{group.tasks.length}</Text>
             </Pressable>
-            {!closedLearning[group.id] ? group.tasks.map(t => { const row = plannerRow(t, data.courses, today); return <Line key={t.id} title={t.title} due={t.due ? dueCell(t, false) : undefined} tag={t.learningType ? { kind: "tag", text: typeLabel(t.learningType, course?.kind) } : undefined} chips={taskChips(row)} detail={row.details} selected={sel === t.id} onSelect={() => setSel(t.id)} onOpen={() => openRow(() => setEditor({ mode: "edit", id: t.id }))} onComplete={() => void complete(t.id)} onStar={() => void star(t.id)} starred={t.starred} /> }) : null}
+            {!closedLearning[group.id] ? <View style={s.courseBody}>{group.tasks.map(t => { const row = plannerRow(t, data.courses, today); return <Line key={t.id} nested title={t.title} due={t.due ? dueCell(t, false) : undefined} tag={t.learningType ? { kind: "tag", text: typeLabel(t.learningType, course?.kind) } : undefined} chips={taskChips(row)} detail={row.details} selected={sel === t.id} onSelect={() => setSel(t.id)} onOpen={() => openRow(() => setEditor({ mode: "edit", id: t.id }))} onComplete={() => void complete(t.id)} onStar={() => void star(t.id)} starred={t.starred} /> })}</View> : null}
           </View>
         })}
         {!learning.length ? <Text style={s.emptyText}>No upcoming learning work.</Text> : null}
         {learning.length > 5 ? <MiniAction label={showLearning ? "Show less" : `Show ${learning.length - 5} more`} onPress={() => setShowLearning(v => !v)} /> : null}
       </WorkspaceSection>
-      <WorkspaceSection title="Upcoming events" icon="calendar-outline" tint={c.amber} count={events.length ? `${events.length} next` : undefined} collapsible flush>
+      {recentDone.length ? <WorkspaceSection compact title="Recently done" icon="checkmark-circle-outline" tint={kit.good} count={`${week.reduce((n, x) => n + x, 0)} in 7d`} collapsible flush>
+        {recentDone.map(({ task, day }) => <Pressable key={task.id} onPress={() => setEditor({ mode: "edit", id: task.id })} style={s.recentRow} accessibilityRole="button" accessibilityLabel={`Open completed task ${task.title}`}><Icon name="checkmark-circle" size={17} tint={kit.good} /><Text style={s.recentTitle} numberOfLines={1}>{task.title}</Text><Text style={s.recentDate}>{shortDay(day)}</Text></Pressable>)}
+      </WorkspaceSection> : null}
+      <WorkspaceSection compact title="Journal" icon="book-outline" tint={kit.hue.journal} count="Check-ins" flush right={<Pressable onPress={() => onNavigate?.("journal")} disabled={!onNavigate} style={s.sectionLink} accessibilityRole="button" accessibilityLabel="Open Journal"><Icon name="arrow-forward" size={15} tint={kit.hue.journal} /></Pressable>}>
+        <View style={s.journalRow}>{SLOTS.map(slot => { const saved = todayJournal?.entries?.find(item => item.id === reviewId("daily", today, slot.key)); const done = !!saved && hasAnswers(readSlotCheckIn(slot.key, saved.text)); return <Pressable key={slot.key} onPress={() => onNavigate?.("journal")} disabled={!onNavigate} style={[s.journalChip, done && s.journalChipDone]} accessibilityRole="button" accessibilityLabel={`${slot.label} check-in ${done ? "complete" : "not complete"}. Open Journal`}><Text style={[s.journalChipText, done && s.journalChipDoneText]}>{done ? "✓ " : ""}{slot.label}</Text></Pressable> })}<Pressable onPress={() => onNavigate?.("journal")} disabled={!onNavigate} style={s.journalAdd} accessibilityRole="button" accessibilityLabel="Open Journal to add a log"><Icon name="add" size={19} tint={kit.hue.journal} /></Pressable></View>
+      </WorkspaceSection>
+      {projects.length ? <WorkspaceSection compact title="Projects" icon="folder-outline" tint={kit.hue.projects} count={`${activeProjects} active`} flush right={<Pressable onPress={() => onNavigate?.("dev")} disabled={!onNavigate} style={s.sectionLink} accessibilityRole="button" accessibilityLabel="Open Projects"><Icon name="arrow-forward" size={15} tint={kit.hue.projects} /></Pressable>}>
+        {projects.map(project => <Pressable key={project.id} onPress={() => onNavigate?.("dev")} disabled={!onNavigate} style={s.projectRow} accessibilityRole="button" accessibilityLabel={`Open Projects to view ${project.name}`}><View style={s.projectMark} /><Text style={s.projectTitle} numberOfLines={1}>{project.name}</Text><PropChip kind={statusKind(project.status)} value={project.status.toUpperCase()} /></Pressable>)}
+      </WorkspaceSection> : null}
+      <WorkspaceSection compact title="Upcoming events" icon="calendar-outline" tint={c.amber} count={events.length ? `${events.length} next` : undefined} collapsible flush>
         {events.map(t => <Line key={t.id} date={t.scheduledDate} title={t.title} tag={t.scheduledTime ? { kind: "date", text: t.scheduledTime } : undefined} chips={eventChips(t.scheduledDate, t.scheduledTime)} detail={t.details?.trim().split("\n")[0]} selected={sel === t.id} onSelect={() => setSel(t.id)} onOpen={() => openRow(() => setEditor({ mode: "edit", id: t.id }))} />)}
         {!events.length ? <Text style={s.emptyText}>No upcoming events.</Text> : null}
       </WorkspaceSection>
-      {pinned.length ? <WorkspaceSection title="Pinned notes" icon="document-text-outline" tint={c.blue} count={`${pinned.length} pinned`} collapsible flush>{pinned.map(n => <Line key={n.id} icon="document-text-outline" title={n.text.trim().split("\n")[0] || "Untitled note"} subtitle={n.text.trim().split("\n").slice(1).join(" ").slice(0, 80)} selected={sel === n.id} onSelect={() => setSel(n.id)} onOpen={() => openRow(() => setNoteEditor({ mode: "edit", id: n.id }))} />)}</WorkspaceSection> : null}
+      {pinned.length ? <WorkspaceSection compact title="Pinned notes" icon="document-text-outline" tint={c.blue} count={`${pinned.length} pinned`} collapsible flush>{pinned.map(n => <Line key={n.id} icon="document-text-outline" title={n.text.trim().split("\n")[0] || "Untitled note"} subtitle={n.text.trim().split("\n").slice(1).join(" ").slice(0, 80)} selected={sel === n.id} onSelect={() => setSel(n.id)} onOpen={() => openRow(() => setNoteEditor({ mode: "edit", id: n.id }))} />)}</WorkspaceSection> : null}
     </> : null}
     {data && editor ? <TaskSheet key={editor.mode === "edit" ? editor.id : "new"} editor={editor} data={data} today={today} onClose={() => setEditor(null)} /> : null}
     {data && noteEditor ? <NoteSheet key={noteEditor.mode === "edit" ? noteEditor.id : "new"} editor={noteEditor} data={data} onClose={() => setNoteEditor(null)} compact /> : null}
@@ -107,21 +117,20 @@ export function HomeScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
 }
 
 function MiniAction({ label, onPress }: { label: string; onPress: () => void }) { return <Pressable onPress={onPress} style={s.miniAction} accessibilityRole="button"><Text style={s.actionText}>{label}</Text></Pressable> }
-function ColumnHead() { return <View style={s.colHead} accessible={false} importantForAccessibility="no-hide-descendants"><View style={s.colCheck} /><Text style={[s.colText, s.colTitle]}>TITLE</Text><Text style={[s.colText, s.colDue]}>DUE</Text><Text style={[s.colText, s.colTag]}>TAG</Text></View> }
 /**
  * One selectable row: a Title / Due / Tag table row. The first tap selects it (highlighted bar, labelled property chips, a note
  * preview and Open / Done / Star pills open under it); a second tap on the selected row, or "Open", opens its editor.
  */
-function Line({ title, subtitle, icon, date, due, tag, chips = [], detail, selected, starred, onSelect, onOpen, onComplete, onStar }: { title: string; subtitle?: string; icon?: "calendar-outline" | "document-text-outline"; date?: string; due?: DueCell; tag?: TagCell; chips?: RowChip[]; detail?: string; selected: boolean; starred?: boolean; onSelect: () => void; onOpen: () => void; onComplete?: () => void; onStar?: () => void }) {
+function Line({ title, subtitle, icon, date, due, tag, chips = [], detail, selected, starred, nested = false, onSelect, onOpen, onComplete, onStar }: { title: string; subtitle?: string; icon?: "calendar-outline" | "document-text-outline"; date?: string; due?: DueCell; tag?: TagCell; chips?: RowChip[]; detail?: string; selected: boolean; starred?: boolean; nested?: boolean; onSelect: () => void; onOpen: () => void; onComplete?: () => void; onStar?: () => void }) {
   const parts = date ? dateParts(date) : undefined
-  return <View style={[s.item, selected && s.itemOn]}>
+  return <View style={[s.item, selected && s.itemOn, nested && s.itemNested]}>
     <View style={s.row}>
       {onComplete ? <TaskCheck checked={false} compact onPress={onComplete} label={`Complete ${title}`} /> : parts ? <View style={s.dateBlock} accessible accessibilityLabel={`${parts.month} ${parts.day}`}><Text style={s.dateMonth}>{parts.month}</Text><Text style={s.dateDay}>{parts.day}</Text></View> : <View style={s.simpleIcon}><Icon name={icon ?? "document-text-outline"} size={17} tint={c.accent} /></View>}
       <Pressable onPress={onSelect} style={s.rowBody} accessibilityRole="button" accessibilityState={{ selected }} accessibilityLabel={selected ? `Selected ${title}. Use Open to edit` : `Preview ${title}`}><Text style={s.rowTitle} numberOfLines={2}>{title}</Text>{subtitle ? <Text style={s.meta} numberOfLines={1}>{subtitle}</Text> : null}</Pressable>
       {due ? <Text style={[s.dueText, due.tone === "today" && s.dueToday, due.tone === "overdue" && s.dueOver]} numberOfLines={1}>{due.text}</Text> : null}
       {tag ? <View style={s.tagCol}><PropChip kind={tag.kind} value={tag.text} /></View> : null}
     </View>
-    {selected ? <View style={s.strip}>
+    {selected ? <View style={[s.strip, nested && s.stripNested]}>
       {chips.length ? <View style={s.chips}>{chips.map(chip => <PropChip key={chip.key} kind={chipKind[chip.kind]} label={chip.tag} value={chip.value ?? chip.label} />)}</View> : null}
       {detail ? <Text style={s.detail} numberOfLines={2} ellipsizeMode="tail">{detail.length > 120 ? `${detail.slice(0, 120).trimEnd()}…` : detail}</Text> : null}
       <View style={s.stripActions}>
@@ -133,15 +142,54 @@ function Line({ title, subtitle, icon, date, due, tag, chips = [], detail, selec
   </View>
 }
 const s = StyleSheet.create({
-  add: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: c.panel, borderWidth: 1, borderColor: c.line }, day: { color: c.muted, fontSize: 12 }, cellGap: { height: 14 },
-  colHead: { height: 20, flexDirection: "row", alignItems: "center", backgroundColor: "#2a2b2d", borderBottomWidth: 1, borderColor: c.line }, colCheck: { width: 37 }, colText: { color: kit.mutedInk, fontFamily: mono, fontSize: 8.5, fontWeight: "700", letterSpacing: 1 }, colTitle: { flex: 1 }, colDue: { width: 58 }, colTag: { width: 84 },
-  learningGroup: {}, groupHead: { minHeight: 38, flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: 8, backgroundColor: "#2b2c2e", borderBottomWidth: 1, borderColor: c.line }, groupTitle: { flex: 1, minWidth: 0, color: c.text, fontSize: 12.5, fontWeight: "700" }, groupPct: { width: 30, textAlign: "right", color: c.text2, fontFamily: mono, fontSize: 10, fontWeight: "700" }, groupCount: { minWidth: 20, height: 18, borderRadius: 9, paddingHorizontal: 5, textAlign: "center", backgroundColor: c.raised, color: c.text2, fontFamily: mono, fontSize: 10, fontWeight: "700", lineHeight: 18, overflow: "hidden" },
-  item: { borderBottomWidth: 1, borderColor: c.line, borderLeftWidth: 3, borderLeftColor: "transparent" }, itemOn: { backgroundColor: c.selected, borderLeftColor: c.accent }, row: { minHeight: 42, flexDirection: "row", alignItems: "center", gap: 5 },
-  strip: { gap: 7, paddingLeft: 36, paddingRight: 8, paddingBottom: 10 }, chips: { flexDirection: "row", flexWrap: "wrap", gap: 4 }, detail: { color: c.text2, fontSize: 12, lineHeight: 17 }, stripActions: { flexDirection: "row", gap: 6 },
-  pill: { minHeight: 30, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 11, borderRadius: 15, backgroundColor: c.panel, borderWidth: 1, borderColor: c.border }, pillText: { color: c.accent, fontSize: 11.5, fontWeight: "600" }, pillPrimary: { backgroundColor: c.action, borderColor: c.selectedBorder }, pillPrimaryText: { color: "#fff", fontSize: 11.5, fontWeight: "600" },
-  rowBody: { flex: 1, minWidth: 0, paddingVertical: 5 }, rowTitle: { color: c.text, fontSize: 14, fontWeight: "600", lineHeight: 19 }, simpleIcon: { width: 32, alignItems: "center" },
-  dateBlock: { width: 34, height: 34, marginLeft: 3, borderRadius: 6, backgroundColor: chipTone.date.fill, alignItems: "center", justifyContent: "center" }, dateMonth: { color: chipTone.date.ink, fontFamily: mono, fontSize: 8, fontWeight: "700", letterSpacing: 0.8 }, dateDay: { color: chipTone.date.ink, fontSize: 14, fontWeight: "700", lineHeight: 16 },
-  dueText: { width: 56, color: c.muted, fontFamily: mono, fontSize: 10.5 }, dueToday: { color: chipTone.date.ink }, dueOver: { color: chipTone.overdue.ink }, tagCol: { width: 80, paddingRight: 6 },
-  meta: { color: c.muted, fontSize: 11, lineHeight: 16 }, emptyText: { color: c.muted, fontSize: 12, paddingVertical: 8, paddingHorizontal: 10 }, empty: { gap: 8, paddingVertical: 16 }, title: { color: c.text, fontSize: 15, fontWeight: "700" }, error: { color: "#ffa8a8", fontSize: 12 }, miniAction: { minHeight: 32, alignSelf: "flex-start", justifyContent: "center", paddingHorizontal: 10 }, actionText: { color: c.accent, fontSize: 12, fontWeight: "600" },
+  headerDate: { color: kit.hue.journal, fontFamily: mono, fontSize: 10, fontWeight: "700" },
+  learningGroup: { marginTop: 5, backgroundColor: kit.courseGroup.surface },
+  groupHead: { minHeight: 29, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 7, backgroundColor: kit.courseGroup.header, borderBottomWidth: 1, borderColor: kit.courseGroup.line },
+  groupTitle: { flex: 1, minWidth: 0, color: c.text, fontSize: 12, fontWeight: "700" },
+  groupPct: { width: 30, textAlign: "right", color: kit.hue.learning, fontFamily: mono, fontSize: 10, fontWeight: "700" },
+  groupCount: { minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 4, textAlign: "center", backgroundColor: c.raised, color: c.text2, fontFamily: mono, fontSize: 10, fontWeight: "700", lineHeight: 18, overflow: "hidden" },
+  courseBody: { marginLeft: 14, borderLeftWidth: 2, borderLeftColor: kit.courseGroup.rail },
+  item: { borderBottomWidth: 1, borderColor: c.line, borderLeftWidth: 3, borderLeftColor: "transparent" },
+  itemOn: { backgroundColor: c.selected, borderLeftColor: c.accent },
+  itemNested: { borderLeftWidth: 0 },
+  row: { minHeight: 34, flexDirection: "row", alignItems: "center", gap: 4 },
+  rowBody: { flex: 1, minWidth: 0, paddingVertical: 3 },
+  rowTitle: { color: c.text, fontSize: 12.5, fontWeight: "600", lineHeight: 17 },
+  simpleIcon: { width: 32, alignItems: "center" },
+  strip: { gap: 5, paddingLeft: 31, paddingRight: 7, paddingBottom: 6 },
+  stripNested: { paddingLeft: 27 },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: 4 },
+  detail: { color: c.text2, fontSize: 11, lineHeight: 15 },
+  stripActions: { flexDirection: "row", gap: 5 },
+  pill: { minHeight: 32, flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 9, borderRadius: 8, backgroundColor: c.panel, borderWidth: 1, borderColor: c.border },
+  pillText: { color: c.accent, fontSize: 10.5, fontWeight: "600" },
+  pillPrimary: { backgroundColor: c.action, borderColor: c.selectedBorder },
+  pillPrimaryText: { color: "#fff", fontSize: 10.5, fontWeight: "600" },
+  dateBlock: { width: 30, height: 30, marginLeft: 2, borderRadius: 5, backgroundColor: chipTone.date.fill, alignItems: "center", justifyContent: "center" },
+  dateMonth: { color: chipTone.date.ink, fontFamily: mono, fontSize: 8, fontWeight: "700" },
+  dateDay: { color: chipTone.date.ink, fontSize: 13, fontWeight: "700", lineHeight: 15 },
+  dueText: { width: 53, color: c.muted, fontFamily: mono, fontSize: 10 },
+  dueToday: { color: chipTone.date.ink },
+  dueOver: { color: chipTone.overdue.ink },
+  tagCol: { width: 76, paddingRight: 5 },
+  meta: { color: c.muted, fontSize: 10, lineHeight: 14 },
+  recentRow: { minHeight: 33, flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: 8, borderBottomWidth: 1, borderColor: c.line },
+  recentTitle: { flex: 1, minWidth: 0, color: c.text2, fontSize: 12, textDecorationLine: "line-through" },
+  recentDate: { color: c.muted, fontFamily: mono, fontSize: 9 },
+  sectionLink: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
+  journalRow: { minHeight: 38, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 7 },
+  journalChip: { minHeight: 32, paddingHorizontal: 7, alignItems: "center", justifyContent: "center", borderRadius: 6, backgroundColor: c.raised, borderWidth: 1, borderColor: c.line },
+  journalChipDone: { backgroundColor: chipTone.status.fill, borderColor: kit.goodBorder },
+  journalChipText: { color: c.text2, fontSize: 10, fontWeight: "700" },
+  journalChipDoneText: { color: chipTone.status.ink },
+  journalAdd: { marginLeft: "auto", width: 32, height: 32, alignItems: "center", justifyContent: "center" },
+  projectRow: { minHeight: 34, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 8, borderBottomWidth: 1, borderColor: c.line },
+  projectMark: { width: 7, height: 7, borderRadius: 2, backgroundColor: kit.hue.projects },
+  projectTitle: { flex: 1, minWidth: 0, color: c.text, fontSize: 12.5, fontWeight: "600" },
+  emptyText: { color: c.muted, fontSize: 11, paddingVertical: 8, paddingHorizontal: 9 },
+  empty: { gap: 8, paddingVertical: 16 },
+  title: { color: c.text, fontSize: 15, fontWeight: "700" },
+  error: { color: "#ffa8a8", fontSize: 12 },
+  miniAction: { minHeight: 32, alignSelf: "flex-start", justifyContent: "center", paddingHorizontal: 9 },
+  actionText: { color: c.accent, fontSize: 11, fontWeight: "600" },
 })
-void shape

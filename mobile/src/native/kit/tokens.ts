@@ -9,9 +9,11 @@ export const kit = {
   /** Category hues for native panels and selected content. */
   hue: { productivity: c.accent, journal: "#ffb74d", learning: "#b39ddb", projects: "#f2649f", website: "#ff8a4d", github: "#1fc8e0", neutral: "#b4b8c0" },
   good: "#66bb6a",
+  goodBorder: "#416c4a",
   open: "#2196f3",
   bad: "#ef5350",
   mutedInk: "#aab0ba",
+  courseGroup: { surface: "#2d2e32", header: "#3b3546", line: "#554b64", rail: "#736188" },
 } as const
 
 /** Property kinds: amber = date, red = overdue, violet = learning, blue = tag, pink = project, green = status. */
