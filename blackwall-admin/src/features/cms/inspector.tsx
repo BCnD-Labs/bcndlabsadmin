@@ -20,6 +20,7 @@ import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
 import { slugify } from "./cms-forms"
 import { StateChip, pageState } from "./publish-bar"
+import { RecordTasks } from "./page-links"
 import { placePage } from "./pages-pane"
 import { duplicatePage } from "./use-cms"
 
@@ -126,6 +127,7 @@ function PageFields({ site, page, pages }: { site: Site; page: SitePage; pages: 
           <OptionSelect id="pg-parent" value={page.parentId ?? "none"} onChange={(v) => placePage(pages, page.id, v === "none" ? null : v, null)} options={[{ value: "none", label: "Nothing (top level)" }, ...parents.map((p) => ({ value: p.id, label: p.title || "Untitled" }))]} className="w-full" />
         </div>
       )}
+      <div className="grid gap-1.5 border-t border-line-soft pt-3"><h3 className={fieldLabel}>Linked tasks</h3><RecordTasks kind="page" id={page.id} name={page.title} /></div>
       <div className="flex flex-wrap gap-2 border-t border-line-soft pt-3">
         <Button size="xs" variant="outline" onClick={() => { const c = duplicatePage(page); toast.success(`Duplicated as ${c.title}`); navigate(sitePageHref(c.id)) }}><Copy /> Duplicate page</Button>
         {!isHome && !confirmDelete && <Button size="xs" variant="outline" className="text-red-text" onClick={() => setConfirmDelete(true)}><Trash2 /> Delete page…</Button>}
@@ -176,7 +178,7 @@ export function Inspector({ site, page, pages, block, blockTitle, trail, onPatch
         ) : <p className="text-xs text-muted-foreground">Nothing to fill in here. Pick a block inside it, or use Style.</p>}
       </TabsContent>
       <TabsContent value="style" className="min-h-0 flex-1 overflow-y-auto p-3"><StyleFields block={block} onPatch={onPatch} /></TabsContent>
-      <TabsContent value="links" className="min-h-0 flex-1 overflow-y-auto p-3"><p className="text-xs text-muted-foreground">Linking comes next.</p></TabsContent>
+      <TabsContent value="links" className="min-h-0 flex-1 overflow-y-auto p-3"><RecordTasks kind="page" id={page.id} name={page.title} /></TabsContent>
     </Tabs>
   )
 }

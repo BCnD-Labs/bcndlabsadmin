@@ -1,6 +1,8 @@
 import { useState } from "react"
 import { format } from "date-fns"
-import { BookOpen, CalendarDays, ChevronRight, FileText, Link2, Pencil, Plus, Star, X } from "lucide-react"
+import { BookOpen, CalendarDays, ChevronRight, FileText, Globe, Link2, PenLine, Pencil, Plus, Star, X } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { draftHref, sitePageHref } from "@/lib/routes"
 import { toast } from "sonner"
 import { Panel } from "@/components/common/panel"
 import { DocLinksMenu } from "@/components/common/doc-links"
@@ -151,26 +153,33 @@ function LinkedRecords({ task, date, onDate, onSelect }: { task: Task; date: str
   const notes = useWorkspace((s) => s.notes)
   const tasks = useWorkspace((s) => s.tasks)
   const journal = useWorkspace((s) => s.journal)
+  const pages = useWorkspace((s) => s.pages)
+  const drafts = useWorkspace((s) => s.drafts)
+  const sites = useWorkspace((s) => s.sites)
   const update = useWorkspace((s) => s.update)
+  const navigate = useNavigate()
+  const siteName = (id?: string) => sites.find((x) => x.id === id)?.name ?? "Site"
   const [kind, setKind] = useState<RecordLink["kind"]>("note")
   const [target, setTarget] = useState("")
   const [open, setOpen] = useState(false)
   const links = task.recordLinks ?? []
-  const choices = kind === "note" ? notes.map((note) => ({ id: note.id, title: note.text.split("\n")[0] || "Untitled note" })) : kind === "task" ? tasks.filter((value) => value.id !== task.id).map((value) => ({ id: value.id, title: value.title })) : [...new Set([date, ...journal.map((entry) => entry.id)])].sort().reverse().map((key) => ({ id: key, title: format(parseKey(key), "EEE, MMM d, yyyy") }))
+  const choices = kind === "page" ? pages.map((p) => ({ id: p.id, title: `${siteName(p.siteId)} › ${p.title || "Untitled"}` })) : kind === "post" ? drafts.filter((d) => d.siteId && d.kind === "post").map((d) => ({ id: d.id, title: `${siteName(d.siteId)} › ${d.title || "Untitled"}` })) : kind === "note" ? notes.map((note) => ({ id: note.id, title: note.text.split("\n")[0] || "Untitled note" })) : kind === "task" ? tasks.filter((value) => value.id !== task.id).map((value) => ({ id: value.id, title: value.title })) : [...new Set([date, ...journal.map((entry) => entry.id)])].sort().reverse().map((key) => ({ id: key, title: format(parseKey(key), "EEE, MMM d, yyyy") }))
   const add = () => {
     if (!target || links.some((link) => link.id === target && link.kind === kind) || links.length >= 50) return
     update("tasks", task.id, { recordLinks: [...links, { kind, id: target }] })
     setTarget(""); setOpen(false)
   }
   const openRecord = (link: RecordLink) => {
+    if (link.kind === "page") return navigate(sitePageHref(link.id))
+    if (link.kind === "post") return navigate(draftHref(link.id))
     if (link.kind === "note") useUi.getState().openForm({ kind: "note", id: link.id })
     else if (link.kind === "log") { onDate(link.id); requestAnimationFrame(() => document.getElementById("planner-log")?.focus()) }
     else { const value = tasks.find((value) => value.id === link.id); if (value) onSelect(value) }
   }
   return <section className="mx-4 mb-4 border-t border-line-soft pt-3" aria-label="Linked records">
-    <div className="mb-2 flex items-center justify-between gap-2"><h3 className="text-sm font-semibold">Linked records</h3><Button variant="quiet" size="xs" aria-expanded={open} onClick={() => setOpen(!open)}><Plus /> Link existing</Button></div>
+    <div className="mb-2 flex items-center justify-between gap-2"><h3 className="text-sm font-semibold">Linked records</h3><span className="flex gap-1"><Button variant="quiet" size="xs" onClick={() => useUi.getState().openForm({ kind: "pageFromTask", id: task.id })}><Globe /> Create page</Button><Button variant="quiet" size="xs" aria-expanded={open} onClick={() => setOpen(!open)}><Plus /> Link existing</Button></span></div>
     {open && <div className="mb-3 space-y-2 rounded-md border border-line p-2">
-      <label className="planner-field">Record type<select aria-label="Record type" value={kind} onChange={(e) => { setKind(e.target.value as RecordLink["kind"]); setTarget("") }}><option value="note">Note</option><option value="task">Task / calendar item</option><option value="log">Daily log</option></select></label>
+      <label className="planner-field">Record type<select aria-label="Record type" value={kind} onChange={(e) => { setKind(e.target.value as RecordLink["kind"]); setTarget("") }}><option value="note">Note</option><option value="task">Task / calendar item</option><option value="log">Daily log</option><option value="page">Website page</option><option value="post">Website post</option></select></label>
       <label className="planner-field">Choose record<select aria-label="Choose record" value={target} onChange={(e) => setTarget(e.target.value)}><option value="">Choose…</option>{choices.filter((value) => !links.some((link) => link.kind === kind && link.id === value.id)).map((value) => <option key={value.id} value={value.id}>{value.title}</option>)}</select></label>
       <Button variant="outline" size="sm" disabled={!target || links.length >= 50} onClick={add}><Link2 /> Link record</Button>
     </div>}
@@ -178,9 +187,11 @@ function LinkedRecords({ task, date, onDate, onSelect }: { task: Task; date: str
     <ul className="space-y-1">{links.map((link) => {
       const note = link.kind === "note" ? notes.find((value) => value.id === link.id) : undefined
       const linkedTask = link.kind === "task" ? tasks.find((value) => value.id === link.id) : undefined
-      const missing = link.kind === "note" ? !note : link.kind === "task" ? !linkedTask : false
-      const title = link.kind === "note" ? `Note: ${note?.text.split("\n")[0] || "Deleted note"}` : link.kind === "task" ? `Task: ${linkedTask?.title || "Deleted task"}` : `Log: ${format(parseKey(link.id), "MMM d, yyyy")}`
-      const Icon = link.kind === "note" ? FileText : link.kind === "task" ? CalendarDays : BookOpen
+      const page = link.kind === "page" ? pages.find((value) => value.id === link.id) : undefined
+      const post = link.kind === "post" ? drafts.find((value) => value.id === link.id) : undefined
+      const missing = link.kind === "page" ? !page : link.kind === "post" ? !post : link.kind === "note" ? !note : link.kind === "task" ? !linkedTask : false
+      const title = link.kind === "page" ? `Page: ${page ? page.title || "Untitled" : "Deleted page"}` : link.kind === "post" ? `Post: ${post ? post.title || "Untitled" : "Deleted post"}` : link.kind === "note" ? `Note: ${note?.text.split("\n")[0] || "Deleted note"}` : link.kind === "task" ? `Task: ${linkedTask?.title || "Deleted task"}` : `Log: ${format(parseKey(link.id), "MMM d, yyyy")}`
+      const Icon = link.kind === "page" ? Globe : link.kind === "post" ? PenLine : link.kind === "note" ? FileText : link.kind === "task" ? CalendarDays : BookOpen
       return <li key={`${link.kind}:${link.id}`} className="flex items-center gap-1 rounded-md border border-line-soft"><button disabled={missing} type="button" className="flex min-w-0 flex-1 items-center gap-2 p-2 text-left text-xs hover:bg-raised disabled:opacity-60" onClick={() => openRecord(link)}><Icon className="size-3.5 shrink-0" /><span className="min-w-0 flex-1 break-words">{title}</span><ChevronRight className="size-3 shrink-0" /></button><Button variant="quiet" size="icon-sm" aria-label={`Unlink ${title}`} onClick={() => update("tasks", task.id, { recordLinks: links.filter((value) => value !== link) })}><X /></Button></li>
     })}</ul>
   </section>

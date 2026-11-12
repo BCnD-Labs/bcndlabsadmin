@@ -2,7 +2,9 @@ import { Plus, Trash2 } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
-import { PAGE_KINDS, TEMPLATES, importHtml, mk, nameFirstHeading, rid, section } from "@shared/sitebuilder"
+import { PAGE_KINDS, TEMPLATES, importHtml, mk, nameFirstHeading, rid, section, slugify } from "@shared/sitebuilder"
+import { pageFromTask } from "@shared/site-links"
+import { withLink } from "@shared/links"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,7 +18,7 @@ import { cn } from "@/lib/utils"
 import { useWorkspace } from "@/stores/workspace"
 import { createSite, createSiteFromSite, useCurrentSite } from "./use-cms"
 
-export const slugify = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+export { slugify }
 
 /** New site: a name, a domain and a starting point (one of Pagesmith's templates, or a site you kept as a template). */
 export function NewSiteForm({ onDone }: { onDone: () => void }) {
@@ -128,6 +130,38 @@ export function NewPageForm({ onDone }: { onDone: () => void }) {
         </Field>
       </div>
       <div className="flex items-center gap-2"><Switch id="page-menu" checked={inMenu} onCheckedChange={setInMenu} /><Label htmlFor="page-menu" className="text-xs font-normal">Show in the site menu</Label></div>
+    </FormFrame>
+  )
+}
+
+/** Create page from this task: pick the site and kind; the title, course and week come from the task, and the two stay linked. */
+export function PageFromTaskForm({ taskId, onDone }: { taskId: string; onDone: () => void }) {
+  const task = useWorkspace((s) => s.tasks.find((t) => t.id === taskId))
+  const course = useWorkspace((s) => s.courses.find((c) => c.id === task?.courseId))
+  const sites = useWorkspace((s) => s.sites)
+  const pages = useWorkspace((s) => s.pages)
+  const current = useCurrentSite()
+  const navigate = useNavigate()
+  const [siteId, setSiteId] = useState(current?.id ?? "")
+  const [kind, setKind] = useState(task?.courseId ? "assignment" : "blank")
+  if (!task) return null
+  return (
+    <FormFrame title="Create page from this task" submitLabel="Create page" canSubmit={!!siteId}
+      onSubmit={() => {
+        const { create, update } = useWorkspace.getState()
+        const made = create("pages", { ...pageFromTask(task, course, kind, pages.filter((p) => p.siteId === siteId)), siteId })
+        update("tasks", task.id, { recordLinks: withLink(task.recordLinks, { kind: "page", id: made.id }, true) })
+        toast.success("Page created and linked to the task")
+        onDone()
+        navigate(sitePageHref(made.id))
+      }}>
+      {sites.length ? (
+        <>
+          <p className="text-[13px] text-ink-2">“{task.title}”{course ? ` · ${course.code}` : ""}</p>
+          <Field label="Site" htmlFor="pft-site"><OptionSelect id="pft-site" value={siteId} onChange={setSiteId} options={sites.map((s) => ({ value: s.id, label: s.name }))} className="w-full" /></Field>
+          <Field label="Kind of page" htmlFor="pft-kind" hint="It stays out of the site's menu until you add it."><OptionSelect id="pft-kind" value={kind} onChange={setKind} options={Object.entries(PAGE_KINDS).map(([value, k]) => ({ value, label: k.name }))} className="w-full" /></Field>
+        </>
+      ) : <p className="text-[13px] text-muted-foreground">Make a website first, then a page can start from this task.</p>}
     </FormFrame>
   )
 }

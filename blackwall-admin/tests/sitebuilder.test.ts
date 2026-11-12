@@ -342,6 +342,66 @@ test("what counts as one bit of typing", () => {
   assert.equal(changeKey(snap(p), { site, pages: [] }), "", "removing a page is its own step")
 })
 
+/* ------------------------------------------- links to the rest of Blackwall */
+import { courseWeek, freeSlug, pageFromTask, postAddress, siteAnalyticsConnection, socialDraftFromPost, tasksLinkingTo } from "../shared/site-links.ts"
+import { withLink } from "../shared/links.ts"
+import type { Asset, Course, Task } from "../src/lib/types.ts"
+
+const task = (id: string, more: Partial<Task> = {}): Task => ({ id, title: id, starred: false, done: false, createdAt: ts, updatedAt: ts, ...more })
+const course = { id: "c1", code: "ADD 103", startDate: "2026-09-01" } as Course
+
+test("a task can link to a page or post, seen from both sides, and older tasks still load", () => {
+  const { site, pages } = portal()
+  const linked = task("a", { recordLinks: withLink(undefined, { kind: "page", id: "p1" }, true) })
+  const posted = task("b", { recordLinks: [{ kind: "post", id: "forms" }] })
+  const data = { ...emptyWorkspace(), sites: [site], pages, tasks: [linked, posted, task("c")] }
+  assert.deepEqual(tasksLinkingTo(data, "page", "p1").map((t) => t.id), ["a"])
+  assert.deepEqual(tasksLinkingTo(data, "post", "forms").map((t) => t.id), ["b"])
+  assert.ok(validWorkspace(data))
+  assert.ok(!validWorkspace({ ...data, tasks: [task("x", { recordLinks: [{ kind: "site" as "page", id: "1" }] })] }), "other kinds are still refused")
+  assert.ok(validWorkspace({ ...data, sites: [{ ...site, analyticsConnectionId: "conn1" }] }))
+  assert.ok(!validWorkspace({ ...data, sites: [{ ...site, analyticsConnectionId: 4 as unknown as string }] }))
+})
+
+test("a page made from a task takes its title, course and week, stays out of the menu, and leaves the task alone", () => {
+  const before = task("Essay 2", { due: "2026-09-16", courseId: "c1" })
+  const snapshot = structuredClone(before)
+  const page = pageFromTask(before, course, "assignment", [{ slug: "essay-2", order: 4 } as SitePage])
+  assert.equal(page.title, "Essay 2")
+  assert.equal(page.slug, "essay-2-2")
+  assert.equal(page.order, 5)
+  assert.equal(page.inMenu, false)
+  const [heading, line] = page.sections[0].kids!
+  assert.equal(heading.text, "Essay 2")
+  assert.equal(line.text, "ADD 103 · Week 3 · Due 2026-09-16")
+  assert.deepEqual(before, snapshot, "the task isn't changed, and certainly not completed")
+  const portalPage = pageFromTask(before, course, "portal", [])
+  assert.equal(portalPage.sections[0].kids![1].course, "ADD 103", "a course portal page filters to the task's course")
+  assert.equal(courseWeek(course, "2026-09-01"), 1)
+  assert.equal(courseWeek({ startDate: undefined }, "2026-09-01"), undefined)
+  assert.equal(courseWeek(course, "2026-08-01"), undefined)
+  assert.equal(freeSlug("A / B", []), "a-b")
+})
+
+test("Share to Social builds a draft from the post: title, summary, cover, address and the picked accounts", () => {
+  const { site } = portal()
+  const post: Draft = { id: "d", title: "T", slug: "t", kind: "post", status: "ready", excerpt: "Summary", body: "x", siteId: "s1", cover: "/images/a.webp", createdAt: ts, updatedAt: ts }
+  const asset = { file: "a.webp", folder: "/Blackwall/assets/" } as Asset
+  assert.deepEqual(socialDraftFromPost(post, site, [asset], ["x1"]), { title: "T", body: "Summary", link: "https://bcndlabs.dev/posts/t/", media: "/Blackwall/assets/a.webp", stage: "draft", accountIds: ["x1"], posted: [] })
+  assert.equal(postAddress(post, { domain: "" }), undefined, "no domain, no invented address")
+  assert.equal(socialDraftFromPost(post, site, [], []).media, "/images/a.webp")
+})
+
+test("analytics belong to a site only when mapped: the picked source, or one reporting on its own domain", () => {
+  const c = (id: string, provider: string, config: Record<string, string>) => ({ id, provider, config }) as never
+  const list = [c("a", "analytics", { siteId: "other.dev" }), c("b", "analytics", { siteId: "https://www.bcndlabs.dev/" }), c("g", "github", { siteId: "bcndlabs.dev" })]
+  assert.equal((siteAnalyticsConnection({ domain: "bcndlabs.dev" }, list) as { id: string }).id, "b", "domain match")
+  assert.equal((siteAnalyticsConnection({ domain: "bcndlabs.dev", analyticsConnectionId: "a" }, list) as { id: string }).id, "a", "a pick wins")
+  assert.equal(siteAnalyticsConnection({ domain: "bcndlabs.dev", analyticsConnectionId: "gone" }, list), undefined, "a removed pick doesn't fall back to a guess")
+  assert.equal(siteAnalyticsConnection({ domain: "unknown.dev" }, list), undefined)
+  assert.equal(siteAnalyticsConnection({ domain: "" }, list), undefined)
+})
+
 test("a section preview is that one section in the site's look, with no menu or footer", () => {
   const { site } = portal()
   const html = renderSectionPreview(site, section("hero"))

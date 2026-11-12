@@ -6,6 +6,8 @@ import { api, useConnections, useConnectionFor } from "./connector"
 import { sampleDevelopment } from "./github-demo"
 import type { AnalyticsReport, DevelopmentOverview, SourceStatus, TrafficRange } from "./types"
 import type { GitHubAccountsOverview } from "@shared/connections"
+import { siteAnalyticsConnection } from "@shared/site-links"
+import type { Site } from "@/lib/types"
 import { accountLook, type AccountLook } from "@/components/accounts/account-appearance"
 
 /**
@@ -97,6 +99,24 @@ export function useAnalytics(range: TrafficRange): Feed<AnalyticsReport> {
   if (conn?.status === "error") return { status: "error", error: conn.message, provider, refresh }
   if (samples) return { status: "sample", data: sampleAnalytics(range), refresh }
   return { status: "not-connected", refresh }
+}
+
+export type SiteTraffic =
+  | { state: "unmapped" }
+  | { state: "loading"; source: string }
+  | { state: "error"; source: string; message: string }
+  | { state: "live"; source: string; data: AnalyticsReport }
+
+/** One site's numbers from the analytics source mapped to it. Never sample data: with no source it says so. */
+export function useSiteAnalytics(site: Site, days = 30): SiteTraffic {
+  const list = useConnections((s) => s.list)
+  const conn = siteAnalyticsConnection(site, list)
+  const live = useLive<AnalyticsReport>(conn?.status === "ok" ? `analytics/report?days=${days}&connection=${encodeURIComponent(conn.id)}` : null, 300_000)
+  if (!conn) return { state: "unmapped" }
+  const source = conn.label
+  if (conn.status !== "ok") return { state: "error", source, message: conn.message || "This analytics source hasn't been tested yet." }
+  if (live.error) return { state: "error", source, message: live.error }
+  return live.data ? { state: "live", source, data: live.data } : { state: "loading", source }
 }
 
 /** One GitHub account as the multi-account panels see it: connection + look + its slice of data. */

@@ -264,6 +264,8 @@ export interface AnalyticsReport {
   traffic: TrafficPoint[]
   pages: PageStat[]
   referrers: ReferrerStat[]
+  /** Visitors by country (ISO code), when the source reports it. */
+  countries?: { country: string; visitors: number }[]
 }
 
 export interface PullRequestSummary {

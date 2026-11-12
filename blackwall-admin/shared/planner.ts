@@ -24,7 +24,7 @@ export function validPlannerFields(row: Record<string, unknown>): boolean {
   if (row.recordLinks != null && (!Array.isArray(row.recordLinks) || row.recordLinks.length > 50 || !row.recordLinks.every((link: unknown) => {
     if (!link || typeof link !== "object") return false
     const item = link as Record<string, unknown>
-    return ["note", "task", "log"].includes(String(item.kind)) && typeof item.id === "string" && item.id.length > 0 && (item.kind !== "log" || validDateKey(item.id))
+    return ["note", "task", "log", "page", "post"].includes(String(item.kind)) && typeof item.id === "string" && item.id.length > 0 && (item.kind !== "log" || validDateKey(item.id))
   }))) return false
   if (row.reflection != null) {
     if (typeof row.reflection !== "object" || Array.isArray(row.reflection)) return false
