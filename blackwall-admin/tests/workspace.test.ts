@@ -9,6 +9,7 @@ import { FileWorkspaceStore } from "../server/workspace.ts"
 import { FileConnectionStore } from "../server/store.ts"
 import { createApi } from "../server/app.ts"
 import { hashPassword, Sessions } from "../server/auth.ts"
+import { saveJournalItem } from "../shared/records.ts"
 
 const note = (id: string, text = id) => ({ id, text, pinned: false, color: "plain" as const, createdAt: "2026-11-01T00:00:00Z", updatedAt: "2026-11-01T00:00:00Z" })
 test("three-way merge preserves independent edits, additions, and deletions", () => {
@@ -47,6 +48,17 @@ test("learning reflection links are optional and older journal entries still loa
   assert.ok(validWorkspace({ ...emptyWorkspace(), journal: [{ ...base, entries: [item] }] }))
   assert.ok(validWorkspace({ ...emptyWorkspace(), journal: [{ ...base, entries: [{ ...item, courseId: "c", taskId: "t" }] }] }))
   assert.ok(!validWorkspace({ ...emptyWorkspace(), journal: [{ ...base, entries: [{ ...item, courseId: 1 }] }] }))
+})
+test("old logs load and an attached reflection survives a later text edit", () => {
+  const ts = "2026-11-01T00:00:00Z"
+  const item = { id: "log-1", text: "Walked", createdAt: ts, updatedAt: ts }
+  const old: ReturnType<typeof emptyWorkspace> = { ...emptyWorkspace(), journal: [{ id: "2026-11-01", text: "", createdAt: ts, updatedAt: ts, entries: [item] }] }
+  assert.ok(validWorkspace(old))
+  const reflected = saveJournalItem(old, "2026-11-01", { ...item, reflection: { text: "Felt better", items: {}, updatedAt: ts } }, false, { now: () => ts })
+  assert.ok(validWorkspace(reflected))
+  const edited = saveJournalItem(reflected, "2026-11-01", { ...item, text: "Walked farther" }, false, { now: () => ts })
+  assert.equal(edited.journal[0].entries?.[0].reflection?.text, "Felt better")
+  assert.ok(!validWorkspace({ ...edited, journal: [{ ...edited.journal[0], entries: [{ ...edited.journal[0].entries![0], reflection: { text: 1 } }] }] }))
 })
 test("authenticated API persists across restarts and rejects stale or malformed writes", async () => {
   const root = mkdtempSync(path.join(tmpdir(), "bw-workspace-test-"))

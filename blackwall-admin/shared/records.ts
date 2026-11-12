@@ -229,7 +229,7 @@ export function saveJournalItem<T extends JournalData & NoteData>(data: T, date:
   const noteId = previous?.noteId ?? input.noteId ?? `nte_log_${input.id.slice(0, 90)}`
   let next = data
   if (asNote) next = data.notes.some((note) => note.id === noteId) ? updateNote(data, noteId, { text: input.text }, opts) : createNote(data, { text: input.text, color: "plain", pinned: false }, { ...opts, makeId: () => noteId }).data
-  const item: JournalLogItem = { ...input, createdAt: previous?.createdAt ?? input.createdAt, updatedAt: t, noteId: asNote ? noteId : previous?.noteId ?? input.noteId, courseId: Object.hasOwn(input, "courseId") ? input.courseId : previous?.courseId, taskId: Object.hasOwn(input, "taskId") ? input.taskId : previous?.taskId }
+  const item: JournalLogItem = { ...input, createdAt: previous?.createdAt ?? input.createdAt, updatedAt: t, noteId: asNote ? noteId : previous?.noteId ?? input.noteId, courseId: Object.hasOwn(input, "courseId") ? input.courseId : previous?.courseId, taskId: Object.hasOwn(input, "taskId") ? input.taskId : previous?.taskId, reflection: Object.hasOwn(input, "reflection") ? input.reflection : previous?.reflection }
   const entries = previous ? existing!.entries!.map((entry) => entry.id === item.id ? item : entry) : [...(existing?.entries ?? []), item]
   if (!validJournalItems(entries, existing?.sections ?? [])) return data
   const row: JournalEntry = { id: date, text: "", createdAt: t, ...existing, entries, updatedAt: t }

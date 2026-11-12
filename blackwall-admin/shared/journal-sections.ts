@@ -1,4 +1,5 @@
 import type { JournalLogItem, JournalSection } from "../src/lib/types.ts"
+import { validReflection } from "./planner.ts"
 
 export const MAX_LOG_SECTIONS = 3
 export const MAX_SECTION_TITLE = 40
@@ -23,6 +24,6 @@ export function validJournalItems(value: unknown, sections: readonly JournalSect
   return value.every((item) => {
     if (!item || typeof item !== "object" || typeof item.id !== "string" || !item.id || item.id.length > 100 || ids.has(item.id)) return false
     ids.add(item.id)
-    return typeof item.text === "string" && item.text.length <= 1_000_000 && typeof item.createdAt === "string" && typeof item.updatedAt === "string" && validOptionalId(item.noteId) && validOptionalId(item.sectionId) && validOptionalId(item.courseId) && validOptionalId(item.taskId) && (item.sectionId === undefined || sections.some((section) => section.id === item.sectionId))
+    return typeof item.text === "string" && item.text.length <= 1_000_000 && typeof item.createdAt === "string" && typeof item.updatedAt === "string" && validOptionalId(item.noteId) && validOptionalId(item.sectionId) && validOptionalId(item.courseId) && validOptionalId(item.taskId) && (item.reflection == null || validReflection(item.reflection)) && (item.sectionId === undefined || sections.some((section) => section.id === item.sectionId))
   })
 }
