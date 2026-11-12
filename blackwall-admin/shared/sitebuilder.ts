@@ -390,6 +390,38 @@ export const BLOCKS: Record<string, BlockDef> = {
     edit: [{ k: "month", l: "Month", note: "Like 2026-11" }, { k: "events", l: "Marked dates", kind: "big", note: "One per line: the date, then | and what it is. Example: 2026-11-20|Report due" }],
     html: (b, ctx) => calendarHtml(b, ctx.boot),
   },
+  quote: {
+    name: "Quote", def: { text: "", who: "" },
+    edit: [{ k: "text", l: "Quote", kind: "big" }, { k: "who", l: "Who said it" }],
+    html: (b) => ['<figure class="quote">', `  <blockquote><p>${txt(b.text, "A line worth quoting.")}</p></blockquote>`, ...(str(b.who).trim() ? [`  <figcaption>— ${esc(b.who)}</figcaption>`] : []), "</figure>"],
+  },
+  buttons: {
+    name: "Button group", def: { items: "Main action|/\nSecond action|/", style: "solid" },
+    edit: [{ k: "items", l: "Buttons", kind: "big", note: "One per line: the words, then | and where it goes. The first one is the main button." }, { k: "style", l: "Style", kind: "select", options: [{ value: "solid", label: "First one solid" }, { value: "outline", label: "All outline" }] }],
+    html: (b, ctx) => {
+      const solid = (i: number) => i === 0 && b.style !== "outline"
+      const cls = (i: number) => (ctx.boot ? (solid(i) ? "btn btn-primary" : "btn btn-outline-primary") : solid(i) ? "btn" : "btn btn--outline")
+      return [`<div class="${ctx.boot ? "d-flex flex-wrap gap-2 mb-3" : "btn-row"}">`, ...pairLines(b.items).map(([t, h], i) => `  <a class="${cls(i)}" href="${esc(safeHref(h))}">${esc(t)}</a>`), "</div>"]
+    },
+  },
+  breadcrumb: {
+    name: "Breadcrumb", def: {},
+    html: (_b, ctx) => {
+      const cur = ctx.pages.find((p) => p.id === ctx.current)
+      if (!cur) return ctx.preview ? ['<p class="muted">The path to this page shows here.</p>'] : []
+      const trail: SitePage[] = []
+      for (let p: SitePage | undefined = cur; p && trail.length < 4; p = p.parentId ? ctx.pages.find((x) => x.id === p?.parentId) : undefined) trail.unshift(p)
+      const home = ctx.pages.find((p) => p.slug === "")
+      const crumbs = home && !trail.includes(home) ? [home, ...trail] : trail
+      if (crumbs.length < 2) return ctx.preview ? ['<p class="muted">The path to this page shows here once it sits under another page.</p>'] : []
+      return ['<nav aria-label="Breadcrumb">', '  <ol class="breadcrumb">', ...crumbs.map((p, i) => (i === crumbs.length - 1 ? `    <li class="breadcrumb-item active" aria-current="page">${esc(p.title)}</li>` : `    <li class="breadcrumb-item"><a href="${esc(pageHref(p))}">${esc(p.title)}</a></li>`)), "  </ol>", "</nav>"]
+    },
+  },
+  stats: {
+    name: "Numbers", def: { items: "100+|Things made\n24/7|Always on\n5 min|To get started" },
+    edit: [{ k: "items", l: "Numbers", kind: "big", note: "One per line: the big number, then | and what it counts." }],
+    html: (b) => ['<dl class="stats">', ...pairLines(b.items).map(([n, l]) => `  <div class="stat"><dt>${esc(l)}</dt><dd>${esc(n)}</dd></div>`), "</dl>"],
+  },
   sitename: {
     name: "Site name", def: {},
     html: (_b, ctx) => (ctx.where === "footer" ? [`<p class="site-copy">${esc(ctx.site.footerText || `© ${new Date().getFullYear()} ${ctx.site.name}`)}</p>`] : [`<a class="site-title" href="/">${esc(ctx.site.name)}</a>`]),
@@ -433,7 +465,7 @@ function formClose(ctx: BuildCtx, done: string, button?: string) {
 }
 
 /** Blocks you can add inside a section (containers and content), in menu order. */
-export const ADDABLE = ["heading", "text", "richtext", "button", "link", "list", "image", "video", "progress", "meter", "pager", "badge", "alert", "dropdown", "tooltip", "accordion", "calendar", "table", "divider", "html", "postsByWeek", "postList", "form", "newsletter", "row", "card"]
+export const ADDABLE = ["heading", "text", "richtext", "button", "link", "list", "image", "video", "progress", "meter", "pager", "badge", "alert", "dropdown", "buttons", "tooltip", "accordion", "calendar", "quote", "stats", "breadcrumb", "table", "divider", "html", "postsByWeek", "postList", "form", "newsletter", "row", "card"]
 
 export const menuPages = (pages: SitePage[]) => [...pages].filter((p) => p.inMenu).sort((a, b) => a.order - b.order)
 
@@ -520,8 +552,8 @@ function emit(list: SiteBlock[], indent: string, ctx: BuildCtx, out: string[]) {
   }
 }
 
-const DESIGN_VALUES = { align: ["center", "right"], top: ["none", "s", "m", "l"], bottom: ["none", "s", "m", "l"], bg: ["surface", "accent"], anim: Object.keys(ANIMATIONS) } as const
-const DESIGN_PREFIX = { align: "bs-a-", top: "bs-t-", bottom: "bs-b-", bg: "bs-bg-", anim: "bs-an-" } as const
+const DESIGN_VALUES = { align: ["center", "right"], top: ["none", "s", "m", "l"], bottom: ["none", "s", "m", "l"], bg: ["surface", "accent", "soft", "inverse"], size: ["s", "l", "xl"], color: ["accent", "muted"], caps: ["on"], width: ["medium", "narrow"], radius: ["none", "round", "pill"], shadow: ["s", "m"], border: ["on"], pad: ["s", "m", "l"], anim: Object.keys(ANIMATIONS) } as const
+const DESIGN_PREFIX = { align: "bs-a-", top: "bs-t-", bottom: "bs-b-", bg: "bs-bg-", size: "bs-sz-", color: "bs-co-", caps: "bs-caps-", width: "bs-w-", radius: "bs-r-", shadow: "bs-sh-", border: "bs-bd-", pad: "bs-p-", anim: "bs-an-" } as const
 
 /** The classes for a block's Style tab choices; only known values get through. Empty for a block with none. */
 function designClass(b: SiteBlock) {
@@ -862,6 +894,20 @@ div.bs[class*="bs-t-"] > :first-child { margin-top: 0; } div.bs[class*="bs-b-"] 
 .bs-bg-surface { background: var(--surface); } .bs-bg-accent { background: var(--accent); color: var(--accent-text); }
 div.bs.bs-bg-surface, div.bs.bs-bg-accent { padding: 16px; border-radius: var(--radius, 8px); }
 .bs-bg-accent a:not(.btn) { color: inherit; } .bs-bg-accent .btn { background: var(--accent-text); border-color: var(--accent-text); color: var(--accent); }
+.bs-bg-soft { background: color-mix(in srgb, var(--accent) 10%, var(--bg)); } .bs-bg-inverse { background: var(--text); color: var(--bg); }
+.bs-bg-inverse a:not(.btn) { color: inherit; } .bs-bg-inverse .btn { background: var(--bg); border-color: var(--bg); color: var(--text); }
+div.bs.bs-bg-soft, div.bs.bs-bg-inverse { padding: 16px; border-radius: var(--radius, 8px); }
+.bs-sz-s { font-size: .875em; } .bs-sz-l { font-size: 1.2em; } .bs-sz-xl { font-size: 1.5em; }
+.bs-sz-s :is(h1, h2, h3, h4) { zoom: .875; } .bs-sz-l :is(h1, h2, h3, h4) { zoom: 1.2; } .bs-sz-xl :is(h1, h2, h3, h4) { zoom: 1.5; }
+.bs-co-accent { color: var(--accent); } .bs-co-muted { color: var(--muted); }
+.bs-caps-on { text-transform: uppercase; letter-spacing: .08em; font-size: .85em; font-weight: 600; }
+.bs-w-medium { max-width: 860px; margin-left: auto; margin-right: auto; } .bs-w-narrow { max-width: 600px; margin-left: auto; margin-right: auto; }
+.bs-r-none { border-radius: 0 !important; } .bs-r-round { border-radius: 18px !important; } .bs-r-pill { border-radius: 999px !important; }
+.bs-r-none :is(img, .pic) { border-radius: 0; } .bs-r-round :is(img, .pic) { border-radius: 18px; } .bs-r-pill :is(img, .pic) { border-radius: 999px; }
+.bs-sh-s { box-shadow: 0 2px 8px rgba(0, 0, 0, .18); } .bs-sh-m { box-shadow: 0 10px 30px rgba(0, 0, 0, .28); }
+.bs-bd-on { border: 1px solid var(--border); }
+.bs-p-s { padding: 12px; } .bs-p-m { padding: 24px; } .bs-p-l { padding: 40px; }
+.section.bs-p-s, .section.bs-p-m, .section.bs-p-l { padding-left: 0; padding-right: 0; }
 `
 
 const redirectHtml = (to: string) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Moved</title><link rel="canonical" href="${esc(to)}"><meta http-equiv="refresh" content="0; url=${esc(to)}"></head><body><p>This page moved to <a href="${esc(to)}">${esc(to)}</a>.</p></body></html>\n`

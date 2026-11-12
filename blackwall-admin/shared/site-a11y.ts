@@ -125,6 +125,10 @@ export function auditSite(site: Site, pages: SitePage[], assets: Asset[] = [], p
         if (!has(b.title)) add({ kind: "error", rule: "media-title", text: `${name}: a video or audio player has no title, so a screen reader can't say what it is.`, ...id })
         else add({ kind: "feature", rule: "media-title", text: `${name}: “${String(b.title).trim()}” has a title for screen readers.`, ...id })
         add({ kind: "alert", rule: "captions", text: /\.(mp3|ogg|wav|m4a)(\?.*)?$/i.test(url) ? `${name}: audio needs the words written out nearby, for people who can't hear it.` : `${name}: make sure the video has captions turned on in YouTube. This check can't see them.`, ...id })
+      } else if (b.type === "buttons") {
+        const items = pairLines(b.items)
+        if (!items.length) add({ kind: "alert", rule: "empty-menu", text: `${name}: a button group has no buttons.`, ...id })
+        else if (items.some(([t]) => !t)) add({ kind: "error", rule: "empty-link", text: `${name}: a button in a group has no words on it.`, ...id })
       } else if (b.type === "dropdown") {
         if (!has(b.label)) add({ kind: "error", rule: "empty-link", text: `${name}: a dropdown button has no label, so a screen reader can only say “button”.`, ...id })
         if (!pairLines(b.items).length) add({ kind: "alert", rule: "empty-menu", text: `${name}: a dropdown has no options.`, ...id })

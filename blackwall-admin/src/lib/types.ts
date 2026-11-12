@@ -200,7 +200,16 @@ export interface BlockDesign {
   align?: "center" | "right"
   top?: "none" | "s" | "m" | "l"
   bottom?: "none" | "s" | "m" | "l"
-  bg?: "surface" | "accent"
+  bg?: "surface" | "accent" | "soft" | "inverse"
+  /** Text size, text colour, a small-caps label look, the block's width, corners, shadow, outline and inner padding. All optional. */
+  size?: "s" | "l" | "xl"
+  color?: "accent" | "muted"
+  caps?: "on"
+  width?: "medium" | "narrow"
+  radius?: "none" | "round" | "pill"
+  shadow?: "s" | "m"
+  border?: "on"
+  pad?: "s" | "m" | "l"
   /** An entrance animation (Animista-style keyframes), skipped for visitors who ask for less motion. */
   anim?: "fade-in" | "slide-in-bottom" | "slide-in-left" | "scale-in" | "bounce-in-top" | "pulsate"
 }
