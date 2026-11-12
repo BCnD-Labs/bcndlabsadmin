@@ -5,9 +5,10 @@ import type { Collections } from "../../../../lib/shared.ts"
 import { plannerColor as color } from "../../../planner-theme.ts"
 import { Icon, tone } from "../../../ui.tsx"
 import { WorkspaceSection } from "../../../WorkspacePage.tsx"
+import { selectedItem } from "../../../selected-item.ts"
 import { DailyLogEditor } from "./DailyLogEditor.tsx"
 import { LogLists } from "./LogLists.tsx"
-import { dayTitle, recentEntries, shiftDay, weekStrip } from "./log-rules.ts"
+import { dayTitle, recentDayItems, recentEntries, shiftDay, weekStrip } from "./log-rules.ts"
 import type { LogDrafts } from "./useLogDrafts.ts"
 
 /**
@@ -18,6 +19,8 @@ import type { LogDrafts } from "./useLogDrafts.ts"
 export function LogView({ data, today, logs, day, onDay: setDay, blocked, onEditTask, hideNav = false, intro, tint = color.accent }: { hideNav?: boolean; /** A line of explanation at the top of the Log panel. */ intro?: string; tint?: string; data: Collections; today: string; day: string; onDay: (day: string) => void; logs: LogDrafts; blocked?: string; onEditTask: (id: string) => void }) {
   const { drafts } = logs
   const recent = recentEntries(data.journal, drafts)
+  const [recentDay, setRecentDay] = useState<string | null>(null)
+  const [recentItem, setRecentItem] = useState<string | null>(null)
 
   return (
     <View style={styles.gap}>
@@ -55,14 +58,18 @@ export function LogView({ data, today, logs, day, onDay: setDay, blocked, onEdit
 
       <WorkspaceSection title="Recent entries" icon="time-outline" tint={tint} count={recent.length ? String(recent.length) : undefined} collapsible flush>
         {recent.length === 0 ? <Text style={[styles.intro, { color: tint }]}>No entries yet. Your dated entries appear here.</Text> : null}
-        {recent.map((e) => (
-          <Pressable key={e.day} onPress={() => setDay(e.day)} style={({ pressed }) => [styles.recent, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={`Open the log for ${e.day}`}>
+        {recent.map((e) => <View key={e.day} style={[selectedItem.item, recentDay === e.day && selectedItem.itemOn]}>
+          <Pressable onPress={() => { setRecentDay(current => current === e.day ? null : e.day); setRecentItem(null) }} style={({ pressed }) => [styles.recent, pressed && styles.pressed]} accessibilityRole="button" accessibilityState={{ expanded: recentDay === e.day }} accessibilityLabel={`Preview entries for ${e.day}`}>
             <Text style={styles.recentDay}>{dayTitle(e.day, today)}</Text>
             <Text style={styles.recentText} numberOfLines={1}>
               {e.preview}
             </Text>
           </Pressable>
-        ))}
+          {recentDay === e.day ? <View style={styles.recentDetails}>{recentDayItems(data.journal, drafts, e.day).map((item, index) => {
+            const active = recentItem ? recentItem === `${e.day}/${item.id}` : index === 0
+            return <View key={item.id}><Pressable onPress={() => setRecentItem(`${e.day}/${item.id}`)} style={[styles.recentChoice, active && { borderColor: tint, backgroundColor: color.selected }]} accessibilityRole="button" accessibilityState={{ selected: active }} accessibilityLabel={`View ${item.label}`}><Text style={styles.choiceLabel}>{item.label}</Text><Text style={styles.recentText} numberOfLines={1}>{item.summary}</Text></Pressable>{active ? <Text style={styles.choiceText}>{item.text || "No text saved in this section yet."}</Text> : null}</View>
+          })}</View> : null}
+        </View>)}
       </WorkspaceSection>
     </View>
   )
@@ -85,9 +92,10 @@ const styles = StyleSheet.create({
   onSelected: { color: color.text },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "transparent" },
   intro: { color: color.muted, fontSize: 12, lineHeight: 18, paddingVertical: 6 },
-  recent: { minHeight: 52, justifyContent: "center", gap: 2, paddingVertical: 6, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: color.line },
+  recent: { minHeight: 52, justifyContent: "center", gap: 2, paddingVertical: 6, paddingHorizontal: 10 },
   recentDay: { color: color.text, fontSize: 14, fontWeight: "600" },
   recentText: { color: color.muted, fontSize: 13 },
+  recentDetails: { paddingHorizontal: 10, paddingBottom: 10, gap: 4 }, recentChoice: { minHeight: 42, justifyContent: "center", gap: 2, paddingHorizontal: 9, paddingVertical: 5, borderWidth: 1, borderColor: color.line, borderRadius: 9 }, choiceLabel: { color: color.text, fontSize: 12, fontWeight: "600" }, choiceText: { color: color.text2, fontSize: 12, lineHeight: 18, paddingHorizontal: 9, paddingVertical: 7 },
   pressed: { backgroundColor: color.raised },
 })
 
