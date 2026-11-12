@@ -1,19 +1,14 @@
 import { format } from "date-fns"
-import { CheckCircle2, ChevronLeft, ChevronRight, ChevronRight as Go, NotebookPen, Plus, Sun } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { CheckCircle2, ChevronLeft, ChevronRight, ChevronRight as Go, NotebookPen, Sun } from "lucide-react"
+import { useEffect, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
-import { toast } from "sonner"
-import { OptionSelect } from "@/components/forms/fields"
-import { EmptyState } from "@/components/common/empty-state"
 import { PageHeader } from "@/components/common/page-header"
 import { Panel } from "@/components/common/panel"
 import { SegmentedTabs } from "@/components/common/segmented-tabs"
 import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Textarea } from "@/components/ui/textarea"
 import { compareTasks } from "@/features/work/task-utils"
-import { newId } from "@/lib/ids"
 import { logHref } from "@/lib/routes"
 import { parseKey, todayKey } from "@/lib/dates"
 import { cn } from "@/lib/utils"
@@ -26,6 +21,7 @@ import { checkInSummary, formWording, nextPeriod, periodStart, readCheckIn, revi
 import { isForToday } from "@shared/task-rules"
 import { CheckInDialog } from "./check-in-dialog"
 import { recentDayItems, recentDays } from "./recent-entries"
+import { ReflectionsView } from "./reflections-view"
 
 type View = Period | "reflections"
 const VIEWS: { value: View; label: string }[] = [{ value: "daily", label: "Daily" }, { value: "weekly", label: "Weekly" }, { value: "monthly", label: "Monthly" }, { value: "yearly", label: "Yearly" }, { value: "reflections", label: "Reflections" }]
@@ -92,41 +88,6 @@ function RecentEntries({ today, onOpenDay }: { today: string; onOpenDay: (day: s
   )
 }
 
-function Reflections() {
-  const journal = useWorkspace((s) => s.journal)
-  const courses = useWorkspace((s) => s.courses)
-  const tasks = useWorkspace((s) => s.tasks)
-  const saveItem = useWorkspace((s) => s.saveJournalItem)
-  const [courseId, setCourseId] = useState("")
-  const [text, setText] = useState("")
-  const rows = useMemo(() => journal.flatMap((j) => (j.entries ?? []).filter((i) => i.courseId).map((i) => ({ day: j.id, item: i }))).sort((a, b) => b.item.createdAt.localeCompare(a.item.createdAt)), [journal])
-  const add = () => {
-    if (!text.trim() || !courseId) return
-    const now = new Date().toISOString()
-    const id = newId("log")
-    saveItem(todayKey(), { id, text: text.trim(), courseId, createdAt: now, updatedAt: now })
-    if (useWorkspace.getState().journal.some((j) => j.entries?.some((i) => i.id === id))) { setText(""); toast.success("Reflection saved") } else toast.error("Couldn't save. Your text is still here.")
-  }
-  return (
-    <WorkspaceGrid>
-      <GridItem span={2}>
-        <Panel category="journal" title="Learning reflections" tool="journal" command="reflections" meta={rows.length || undefined} bodyClassName="grid gap-2.5 px-3.5 py-3">
-          <div className="grid gap-2 sm:grid-cols-[14rem_1fr_auto]">
-            <OptionSelect value={courseId} onChange={setCourseId} label="Course" options={[{ value: "", label: "Choose a course…" }, ...courses.map((c) => ({ value: c.id, label: c.code || c.title }))]} />
-            <Textarea rows={2} value={text} onChange={(e) => setText(e.target.value)} placeholder="What did you learn, or what is still unclear?" aria-label="Reflection" />
-            <Button disabled={!text.trim() || !courseId} onClick={add}><Plus /> Add</Button>
-          </div>
-          {rows.length ? <ul>{rows.map(({ day, item }) => {
-            const course = courses.find((c) => c.id === item.courseId)
-            const task = tasks.find((t) => t.id === item.taskId)
-            return <li key={item.id} className="border-t border-line-soft py-2"><p className="text-[11px] text-muted-foreground">{format(parseKey(day), "MMM d")} · {course ? <Link className="hover:underline" to={`/productivity/learning/${course.id}`}>{course.code || course.title}</Link> : "Course removed"}{task ? ` · ${task.title}` : ""}</p><p className="mt-0.5 whitespace-pre-wrap text-[13px] text-ink">{item.text}</p></li>
-          })}</ul> : <EmptyState icon={NotebookPen} title="No reflections yet">Pick a course and write a line or two. They also show on that course's page.</EmptyState>}
-        </Panel>
-      </GridItem>
-    </WorkspaceGrid>
-  )
-}
-
 /** Journal: three quick check-ins and the daily log, plus weekly, monthly and yearly reviews. The same records the Android app uses. */
 export function JournalPage() {
   const [params, setParams] = useSearchParams()
@@ -157,7 +118,7 @@ export function JournalPage() {
       <PageHeader title="Journal" subtitle={view === "reflections" ? undefined : periodLabel(period, anchor)}
         actions={view === "reflections" ? undefined : <><Button variant="outline" size="sm" disabled={anchor === periodStart(period, today)} onClick={() => setDay(today)}>Today</Button><Button variant="quiet" size="icon-sm" aria-label={`Previous ${period === "daily" ? "day" : period.slice(0, -2)}`} onClick={() => step(-1)}><ChevronLeft /></Button><Button variant="quiet" size="icon-sm" aria-label={`Next ${period === "daily" ? "day" : period.slice(0, -2)}`} onClick={() => step(1)}><ChevronRight /></Button></>} />
       <div className="mb-3"><SegmentedTabs<View> label="Journal view" value={view} onChange={choose} className="max-w-full overflow-x-auto" tabs={VIEWS} /></div>
-      {view === "reflections" ? <Reflections /> : (
+      {view === "reflections" ? <ReflectionsView /> : (
         <WorkspaceGrid>
           {view !== "daily" && <GridItem span={2}>
             <Panel category="journal" title={formWording(period).title} tool="journal" command="check-in" bodyClassName="grid gap-2 p-3">

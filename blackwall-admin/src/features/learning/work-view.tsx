@@ -16,6 +16,9 @@ import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
 import { statusLabel, statusOf } from "@shared/learning"
 import { stepProgress } from "@shared/steps"
+import { learningPreview } from "@shared/learning-reflection"
+import { useReflection } from "@/features/journal/reflection-host"
+import { learningReflections } from "@/features/journal/reflection-lists"
 import { ModuleChip } from "./module-chip"
 import { StatusPill, tracksStatus } from "./status-pill"
 import { compareCoursework, kindInfo, kindOf, learningType } from "./learning-utils"
@@ -31,6 +34,10 @@ function WorkRow({ task, course, byModule, open, onToggle }: { task: Task; cours
   const overdue = !task.done && !!task.due && daysUntil(task.due) < 0
   const modules = (course.topics ?? []).filter((m) => task.topicIds?.includes(m.id))
   const steps = task.subtasks?.length ? stepProgress(task) : undefined
+  const journal = useWorkspace((s) => s.journal)
+  const tasks = useWorkspace((s) => s.tasks)
+  const openReflection = useReflection((s) => s.open)
+  const reflections = open ? learningReflections(journal, tasks, { courseId: course.id, taskId: task.id }) : []
   const status = tracksStatus(task, course) ? statusOf(task) : "not_started"
   return (
     <li className={cn("border-b border-line-soft border-l-[3px] last:border-b-0", open ? "border-l-[var(--bw-category)] bg-selected" : "border-l-transparent hover:bg-raised")} data-testid="work-row">
@@ -59,6 +66,11 @@ function WorkRow({ task, course, byModule, open, onToggle }: { task: Task; cours
             <Button size="xs" className="rounded-full" onClick={() => openForm({ kind: "task", id: task.id })}><ExternalLink /> Open</Button>
             {tracksStatus(task, course) && <StatusPill task={task} />}
             <ModuleChip task={task} course={course} />
+          </div>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+            <span>{reflections.length} linked {reflections.length === 1 ? "reflection" : "reflections"}</span>
+            {reflections.map((entry) => <button key={entry.item.id} type="button" onClick={() => openReflection({ entry, courseId: course.id, taskId: task.id })} className="max-w-56 truncate rounded-full bg-raised px-2 py-0.5 text-[11px] text-ink-2 hover:text-ink">{learningPreview(entry.item.text)}</button>)}
+            <Button variant="outline" size="xs" className="ml-auto" onClick={() => openReflection({ courseId: course.id, taskId: task.id })}><Plus /> Reflect</Button>
           </div>
         </div>
       )}
