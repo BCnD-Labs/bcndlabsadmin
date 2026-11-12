@@ -5,7 +5,7 @@ import { usePanelRef, type Layout } from "react-resizable-panels"
 import { toast } from "sonner"
 import { imagePathsIn } from "@shared/assets"
 import { BLOCKS, mk, renderPage, section } from "@shared/sitebuilder"
-import { duplicateBlock, findBlock, indentBlock, mapTree, moveBlock, nudgeBlock, outdentBlock, pathTo } from "@shared/sitebuilder-tree"
+import { duplicateBlock, findBlock, indentBlock, mapTree, moveBlock, moveKeepingWidths, nudgeKeepingWidths, outdentBlock, pathTo, freezeAround as freezeAroundOf, siblingsIn, swapBlocks } from "@shared/sitebuilder-tree"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
@@ -183,6 +183,28 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
     const path = pathTo(t.list, id) ?? [], parent = path.length > 1 ? findBlock(t.list, path[path.length - 2]) : undefined
     return convertTargets(b, t.header ? "header" : "page").filter((x) => !(x.type === "card" && parent?.type === "card"))
   }
+  /** The row a block sits directly in, if it sits in one. */
+  const rowOf = (id: string) => {
+    const t = treeOf(id), here = t && siblingsIn(t.list, id), parent = here?.parentId && t ? findBlock(t.list, here.parentId) : undefined
+    return parent?.type === "row" ? parent : undefined
+  }
+  /** What the blocks beside this one are called, for "Swap with…". */
+  const siblingsOfBlock = (id: string) => {
+    const t = treeOf(id), here = t && siblingsIn(t.list, id)
+    if (!t || !here) return []
+    const peek = (b: SiteBlock) => String(b.text ?? b.md ?? b.label ?? (b.kids ?? []).find((k) => k.type === "heading")?.text ?? (b.kids ?? []).find((k) => k.text)?.text ?? "").replace(/\s+/g, " ").trim().slice(0, 28)
+    return here.sibs.filter((b) => b.id !== id).map((b) => ({ id: b.id, label: `${blockName(b, here.parentId === null && !t.header)}${peek(b) ? ` · ${peek(b)}` : ""}` }))
+  }
+  const swapWith = (id: string, otherId: string) => {
+    const t = treeOf(id)
+    if (!t) return
+    const next = swapBlocks(freezeAroundOf(t.list, id), id, otherId)
+    if (next !== t.list) t.set(next)
+  }
+  const evenOut = (rowId: string) => {
+    const t = treeOf(rowId)
+    if (t) t.set(mapTree(t.list, rowId, (r) => ({ ...r, kids: (r.kids ?? []).map((k) => { const { span: _span, ...rest } = k.design ?? {}; const next = { ...k }; if (Object.keys(rest).length) next.design = rest; else delete next.design; return next }) })))
+  }
   const convert = (id: string, to: string) => {
     const t = treeOf(id), b = t && findBlock(t.list, id)
     if (!t || !b) return
@@ -288,7 +310,7 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
       if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); return removeBlock(selectedId) }
       if (e.altKey && e.key.startsWith("Arrow")) {
         e.preventDefault()
-        const moves = { ArrowUp: () => nudgeBlock(page.sections, selectedId, -1), ArrowDown: () => nudgeBlock(page.sections, selectedId, 1), ArrowLeft: () => outdentBlock(page.sections, selectedId), ArrowRight: () => indentBlock(page.sections, selectedId) } as Record<string, () => SiteBlock[]>
+        const moves = { ArrowUp: () => nudgeKeepingWidths(page.sections, selectedId, -1), ArrowDown: () => nudgeKeepingWidths(page.sections, selectedId, 1), ArrowLeft: () => outdentBlock(page.sections, selectedId), ArrowRight: () => indentBlock(page.sections, selectedId) } as Record<string, () => SiteBlock[]>
         const next = moves[e.key]?.()
         if (next && next !== page.sections) setSections(next)
       }
@@ -320,10 +342,11 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
       if (action === "parent") { const path = pathTo(page.sections, id) ?? []; if (path.length > 1) select(path[path.length - 2]); return }
       const t = treeOf(id)
       if (!t) return
-      const next = nudgeBlock(t.list, id, action === "up" ? -1 : 1)
+      const next = nudgeKeepingWidths(t.list, id, action === "up" ? -1 : 1)
       if (next !== t.list) t.set(next)
     },
     canChange: (id) => targetsFor(id).length > 0,
+    axis: (id) => (rowOf(id) ? "x" : "y"),
     canGoUp: (id) => (page ? (pathTo(page.sections, id)?.length ?? 0) > 1 : false),
     key: (e) => onKey.current(e),
     activate: () => { activeHere.current = true },
@@ -347,6 +370,7 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
     <Inspector site={site} page={page} pages={pages} block={block} blockTitle={block ? blockName(block, !!page?.sections.some((s) => s.id === block.id)) : ""}
       targets={block ? targetsFor(block.id) : []} changeOpen={changeOpen} onChangeOpen={setChangeOpen} onConvert={(to) => block && convert(block.id, to)}
       header={{ items: headerBlocks, onAdd: addHeaderItem, onSelect: select }}
+      siblings={block ? siblingsOfBlock(block.id) : []} onSwap={(otherId) => block && swapWith(block.id, otherId)} inRow={!!block && !!rowOf(block.id)} onEvenOut={block?.type === "row" && (block.kids ?? []).some((k) => k.design?.span) ? () => evenOut(block.id) : undefined}
       trail={treeOf(block?.id ?? "")?.header ? "In the header" : page && block ? (pathTo(page.sections, block.id) ?? []).slice(0, -1).map((id, i) => { const b = findBlock(page.sections, id); return b ? blockName(b, i === 0) : "" }).join(" › ") : ""}
       onPatch={(p) => block && patchBlock(block.id, p)} onDuplicate={() => block && duplicate(block.id)} onRemove={() => block && removeBlock(block.id)} />
   )
@@ -359,7 +383,7 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
     <LayersPane sections={page.sections} selectedId={selectedId} collapsed={collapsed} onDragging={setDragging} onPictures={() => setPref({ layersTree: false })}
       onToggle={(id) => setCollapsed((c) => { const n = new Set(c); if (n.has(id)) n.delete(id); else n.add(id); return n })}
       onSelect={select} onRemove={removeBlock} onAdd={addBlock} onAddSection={() => setInsertAt(page.sections.length)}
-      onMove={(id, parentId, beforeId) => setSections(moveBlock(page.sections, id, parentId, beforeId))} />
+      onMove={(id, parentId, beforeId) => setSections(moveKeepingWidths(page.sections, id, parentId, beforeId))} />
   ) : <p className="p-3 text-xs text-muted-foreground">Add a page to see its layers.</p>
   const left = (
     <ResizablePanelGroup orientation="vertical" id="pagesmith-left">

@@ -1,4 +1,4 @@
-import { Copy, Plus, Replace, Trash2 } from "lucide-react"
+import { ArrowLeftRight, Copy, Plus, Replace, Trash2 } from "lucide-react"
 import { useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
@@ -52,7 +52,7 @@ const AUTO = "auto"
 const SPACE = [{ value: AUTO, label: "Auto" }, { value: "none", label: "None" }, { value: "s", label: "S" }, { value: "m", label: "M" }, { value: "l", label: "L" }]
 
 /** Style: one block's alignment, spacing and background. A block with nothing set renders exactly as it always did. */
-function StyleFields({ block, onPatch }: { block: SiteBlock; onPatch: (p: Record<string, unknown>) => void }) {
+function StyleFields({ block, onPatch, inRow }: { block: SiteBlock; onPatch: (p: Record<string, unknown>) => void; inRow: boolean }) {
   const d = block.design ?? {}
   const set = (patch: Partial<BlockDesign>) => {
     const next = Object.fromEntries(Object.entries({ ...d, ...patch }).filter(([, v]) => v !== undefined)) as BlockDesign
@@ -77,10 +77,13 @@ function StyleFields({ block, onPatch }: { block: SiteBlock; onPatch: (p: Record
       {row("Colour", d.color ?? AUTO, [{ value: AUTO, label: "Auto" }, { value: "accent", label: "Accent" }, { value: "muted", label: "Quiet" }], opt("color"))}
       {row("Look", d.caps ?? AUTO, [{ value: AUTO, label: "Normal" }, { value: "on", label: "Small caps label" }], opt("caps"))}
       <h3 className="mt-1 text-[11px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Layout</h3>
+      {inRow && row("Width in the row", String(d.span ?? AUTO), [{ value: AUTO, label: "Auto" }, { value: "3", label: "¼" }, { value: "4", label: "⅓" }, { value: "6", label: "½" }, { value: "8", label: "⅔" }, { value: "9", label: "¾" }, { value: "12", label: "Full" }], (v) => set({ span: v === AUTO ? undefined : Number(v) }))}
       {row("Alignment", d.align ?? AUTO, [{ value: AUTO, label: "Left" }, { value: "center", label: "Center" }, { value: "right", label: "Right" }], (v) => set({ align: v === AUTO ? undefined : (v as BlockDesign["align"]) }))}
       {row("Space above", d.top ?? AUTO, SPACE, (v) => set({ top: v === AUTO ? undefined : (v as BlockDesign["top"]) }))}
       {row("Space below", d.bottom ?? AUTO, SPACE, (v) => set({ bottom: v === AUTO ? undefined : (v as BlockDesign["bottom"]) }))}
-      {row("Width", d.width ?? AUTO, [{ value: AUTO, label: "Full" }, { value: "medium", label: "Medium" }, { value: "narrow", label: "Narrow" }], opt("width"))}
+      {row(block.type === "section" ? "Content width" : "Width", d.width ?? AUTO, [{ value: AUTO, label: "Auto" }, { value: "medium", label: "Medium" }, { value: "narrow", label: "Narrow" }, { value: "wide", label: "Wide" }, { value: "full", label: "Full" }], opt("width"))}
+      {row("Height", d.minh ?? AUTO, [{ value: AUTO, label: "Auto" }, { value: "s", label: "S" }, { value: "m", label: "M" }, { value: "l", label: "L" }, { value: "screen", label: "Screen" }], opt("minh"))}
+      {row("Show on", d.show ?? AUTO, [{ value: AUTO, label: "Everywhere" }, { value: "desktop", label: "Desktop only" }, { value: "phone", label: "Phone only" }], opt("show"))}
       {!isSection && row("Padding inside", d.pad ?? AUTO, [{ value: AUTO, label: "Auto" }, { value: "s", label: "S" }, { value: "m", label: "M" }, { value: "l", label: "L" }], opt("pad"))}
       <h3 className="mt-1 text-[11px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Box</h3>
       {row("Background", bg, [{ value: AUTO, label: "None" }, { value: "surface", label: "Shaded" }, { value: "soft", label: "Soft" }, { value: "accent", label: "Accent" }, { value: "inverse", label: "Dark" }], setBg)}
@@ -127,6 +130,19 @@ function ChangeMenu({ targets, open, onOpenChange, onConvert }: { targets: Conve
             <span className="grid"><b className="text-[13px] text-ink">{t.name}</b><span className="text-[11px] text-muted-foreground">{t.about}</span></span>
           </DropdownMenuItem>
         ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+/** "Swap with…": trade places with any block beside this one. A width set on a block in a row goes with it. */
+function SwapMenu({ siblings, onSwap }: { siblings: { id: string; label: string }[]; onSwap: (id: string) => void }) {
+  if (!siblings.length) return null
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild><Button variant="outline" size="xs" data-testid="swap-with" aria-label="Swap places with another block"><ArrowLeftRight /> Swap with…</Button></DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="max-h-[min(24rem,70vh)] w-64 overflow-y-auto">
+        {siblings.map((s) => <DropdownMenuItem key={s.id} onSelect={() => onSwap(s.id)} data-testid="swap-option"><span className="min-w-0 truncate text-[13px]">{s.label}</span></DropdownMenuItem>)}
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -201,10 +217,11 @@ function PageFields({ site, page, pages, header }: { site: Site; page: SitePage;
 }
 
 /** The right pane when no panel is open: the selected block's Content, Style and Links, or the page's settings. */
-export function Inspector({ site, page, pages, block, blockTitle, trail, targets, changeOpen, onChangeOpen, onConvert, header, onPatch, onDuplicate, onRemove }: {
+export function Inspector({ site, page, pages, block, blockTitle, trail, targets, changeOpen, onChangeOpen, onConvert, header, siblings, onSwap, inRow, onEvenOut, onPatch, onDuplicate, onRemove }: {
   site: Site; page: SitePage | undefined; pages: SitePage[]; block: SiteBlock | undefined; blockTitle: string; trail: string
   targets: ConvertTarget[]; changeOpen: boolean; onChangeOpen: (open: boolean) => void; onConvert: (type: string) => void
   header: { items: SiteBlock[]; onAdd: (type: string) => void; onSelect: (id: string) => void }
+  siblings: { id: string; label: string }[]; onSwap: (id: string) => void; inRow: boolean; onEvenOut?: () => void
   onPatch: (patch: Record<string, unknown>) => void; onDuplicate: () => void; onRemove: () => void
 }) {
   // The tab stays put as you click from block to block, so styling several in a row stays on Style.
@@ -218,6 +235,7 @@ export function Inspector({ site, page, pages, block, blockTitle, trail, targets
       <div className="grid shrink-0 gap-1.5 border-b border-line-soft p-2.5">
         <div className="flex items-center gap-1">
           <span className="min-w-0 flex-1"><b className="block truncate text-[13px] text-ink">{blockTitle}</b>{trail && <span className="block truncate text-[11px] text-faint">{trail}</span>}</span>
+          <SwapMenu siblings={siblings} onSwap={onSwap} />
           <ChangeMenu targets={targets} open={changeOpen} onOpenChange={onChangeOpen} onConvert={onConvert} />
           <Button variant="quiet" size="icon-xs" aria-label="Duplicate this block" title="Duplicate (⌘D)" onClick={onDuplicate}><Copy /></Button>
           <Button variant="quiet" size="icon-xs" aria-label="Remove this block" title="Remove (Delete)" onClick={onRemove}><Trash2 /></Button>
@@ -236,8 +254,9 @@ export function Inspector({ site, page, pages, block, blockTitle, trail, targets
             ))}
           </div>
         ) : <p className="text-xs text-muted-foreground">Nothing to fill in here. Pick a block inside it, or use Style.</p>}
+        {onEvenOut && <Button size="xs" variant="outline" className="mt-3" onClick={onEvenOut}>Even out the column widths</Button>}
       </TabsContent>
-      <TabsContent value="style" className="min-h-0 flex-1 overflow-y-auto p-3"><StyleFields block={block} onPatch={onPatch} /></TabsContent>
+      <TabsContent value="style" className="min-h-0 flex-1 overflow-y-auto p-3"><StyleFields block={block} onPatch={onPatch} inRow={inRow} /></TabsContent>
       <TabsContent value="links" className="min-h-0 flex-1 overflow-y-auto p-3"><RecordTasks kind="page" id={page.id} name={page.title} /></TabsContent>
     </Tabs>
   )

@@ -205,7 +205,13 @@ export interface BlockDesign {
   size?: "s" | "l" | "xl"
   color?: "accent" | "muted"
   caps?: "on"
-  width?: "medium" | "narrow"
+  width?: "medium" | "narrow" | "wide" | "full"
+  /** A block in a row: how many of the row's 12 columns it takes (3 is a quarter, 6 a half). It travels with the block when you move it. */
+  span?: number
+  /** Minimum height of a block or section. */
+  minh?: "s" | "m" | "l" | "screen"
+  /** Only on desktop-width screens, or only on phones. */
+  show?: "desktop" | "phone"
   radius?: "none" | "round" | "pill"
   shadow?: "s" | "m"
   border?: "on"

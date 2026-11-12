@@ -25,6 +25,8 @@ export interface CanvasEditing {
   canGoUp: (id: string) => boolean
   /** Whether the block can be changed to another kind (shows the ⇄ button). */
   canChange: (id: string) => boolean
+  /** Which way a block's siblings run: "x" for the blocks of a row (the move buttons say left and right), otherwise "y". */
+  axis: (id: string) => "x" | "y"
   key: (e: KeyboardEvent) => void
   activate: () => void
 }
@@ -106,7 +108,8 @@ export function SitePreview({ html, title, width = "100%", selectedId, onBlock, 
     const name = doc.createElement("span")
     name.textContent = edit.label(id) ?? ""
     bar.append(name)
-    const tools: [BlockAction, string, string][] = [["up", "↑", "Move up"], ["down", "↓", "Move down"], ["duplicate", "⧉", "Duplicate"], ["remove", "✕", "Remove"]]
+    const across = edit.axis(id) === "x"
+    const tools: [BlockAction, string, string][] = [["up", across ? "←" : "↑", across ? "Move left" : "Move up"], ["down", across ? "→" : "↓", across ? "Move right" : "Move down"], ["duplicate", "⧉", "Duplicate"], ["remove", "✕", "Remove"]]
     if (edit.canGoUp(id)) tools.unshift(["parent", "⤴", "Select what it's inside"])
     if (edit.canChange(id)) tools.unshift(["change", "⇄", "Change to another component…"])
     for (const [act, glyph, title] of tools) {

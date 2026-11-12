@@ -137,6 +137,26 @@ export function youtubeId(url: string) {
   return m?.[1]
 }
 
+/** The ready-made column splits of a row, in twelfths. A block can also carry its own width (design.span), which wins. */
+export const ROW_LAYOUTS: Record<string, { label: string; spans: number[] }> = {
+  "2": { label: "Two equal", spans: [6, 6] },
+  "3": { label: "Three equal", spans: [4, 4, 4] },
+  "4": { label: "Four equal", spans: [3, 3, 3, 3] },
+  side: { label: "Wide left, narrow right", spans: [8, 4] },
+  left: { label: "Narrow left, wide right", spans: [4, 8] },
+}
+/** A row whose blocks have their own widths. */
+export const isFreeRow = (row: Pick<SiteBlock, "kids">) => (row.kids ?? []).some((k) => Number(k.design?.span) > 0)
+/** Twelfths for each block of a row: a block's own width, or its share of what is left. */
+export function freeSpans(kids: readonly SiteBlock[]): number[] {
+  const own = kids.map((k) => Math.min(12, Math.max(0, Math.round(Number(k.design?.span) || 0))))
+  const open = own.filter((n) => !n).length, left = 12 - own.reduce((a, b) => a + b, 0)
+  const share = open && left >= open * 2 ? Math.floor(left / open) : 12
+  return own.map((n) => n || share)
+}
+/** The twelfths each block of a row takes, whether the row uses a ready-made split or its blocks' own widths. */
+export const rowSpans = (row: SiteBlock): number[] => (isFreeRow(row) ? freeSpans(row.kids ?? []) : (ROW_LAYOUTS[String(row.cols)] ?? ROW_LAYOUTS["3"]).spans)
+
 /** The colours a badge or an alert can take. */
 export const TONES = [{ value: "primary", label: "Accent" }, { value: "secondary", label: "Quiet" }, { value: "success", label: "Green" }, { value: "warning", label: "Yellow" }, { value: "danger", label: "Red" }]
 const tone = (b: SiteBlock) => (TONES.some((t) => t.value === b.tone) ? String(b.tone) : "primary")
@@ -176,10 +196,16 @@ export const BLOCKS: Record<string, BlockDef> = {
   },
   row: {
     name: "Row", container: true, def: { cols: "3" },
-    edit: [{ k: "cols", l: "Columns", kind: "select", options: [{ value: "2", label: "Two" }, { value: "3", label: "Three" }, { value: "side", label: "Main + side" }] }],
+    edit: [
+      { k: "cols", l: "Columns", kind: "select", options: Object.entries(ROW_LAYOUTS).map(([value, l]) => ({ value, label: l.label })), note: "Or set each block's width in its own Style tab; widths stay with the block when you move it." },
+      { k: "gap", l: "Space between", kind: "select", options: [{ value: "", label: "Normal" }, { value: "s", label: "Tight" }, { value: "l", label: "Roomy" }] },
+      { k: "valign", l: "Line up", kind: "select", options: [{ value: "", label: "Same height" }, { value: "top", label: "At the top" }, { value: "middle", label: "In the middle" }] },
+    ],
     open: (b, ctx) => {
-      const cols = ["2", "3", "side"].includes(String(b.cols)) ? String(b.cols) : "3"
-      return [ctx.boot ? `<div class="row g-4 row--${cols}">` : `<div class="row row--${cols}">`]
+      const cols = b.cols && String(b.cols) in ROW_LAYOUTS ? String(b.cols) : "3"
+      const free = isFreeRow(b), gap = str(b.gap), valign = str(b.valign)
+      if (ctx.boot) return [`<div class="row ${gap === "s" ? "g-2" : gap === "l" ? "g-5" : "g-4"}${valign === "top" ? " align-items-start" : valign === "middle" ? " align-items-center" : ""} row--${cols}${free ? " row--free" : ""}">`]
+      return [`<div class="row row--${cols}${free ? " row--free" : ""}${gap === "s" ? " row--gap-s" : gap === "l" ? " row--gap-l" : ""}${valign === "top" ? " row--top" : valign === "middle" ? " row--middle" : ""}">`]
     },
     close: () => ["</div>"],
   },
@@ -552,8 +578,8 @@ function emit(list: SiteBlock[], indent: string, ctx: BuildCtx, out: string[]) {
   }
 }
 
-const DESIGN_VALUES = { align: ["center", "right"], top: ["none", "s", "m", "l"], bottom: ["none", "s", "m", "l"], bg: ["surface", "accent", "soft", "inverse"], size: ["s", "l", "xl"], color: ["accent", "muted"], caps: ["on"], width: ["medium", "narrow"], radius: ["none", "round", "pill"], shadow: ["s", "m"], border: ["on"], pad: ["s", "m", "l"], anim: Object.keys(ANIMATIONS) } as const
-const DESIGN_PREFIX = { align: "bs-a-", top: "bs-t-", bottom: "bs-b-", bg: "bs-bg-", size: "bs-sz-", color: "bs-co-", caps: "bs-caps-", width: "bs-w-", radius: "bs-r-", shadow: "bs-sh-", border: "bs-bd-", pad: "bs-p-", anim: "bs-an-" } as const
+const DESIGN_VALUES = { align: ["center", "right"], top: ["none", "s", "m", "l"], bottom: ["none", "s", "m", "l"], bg: ["surface", "accent", "soft", "inverse"], size: ["s", "l", "xl"], color: ["accent", "muted"], caps: ["on"], width: ["medium", "narrow", "wide", "full"], span: ["2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"], minh: ["s", "m", "l", "screen"], show: ["desktop", "phone"], radius: ["none", "round", "pill"], shadow: ["s", "m"], border: ["on"], pad: ["s", "m", "l"], anim: Object.keys(ANIMATIONS) } as const
+const DESIGN_PREFIX = { align: "bs-a-", top: "bs-t-", bottom: "bs-b-", bg: "bs-bg-", size: "bs-sz-", color: "bs-co-", caps: "bs-caps-", width: "bs-w-", span: "bs-span-", minh: "bs-mh-", show: "bs-on-", radius: "bs-r-", shadow: "bs-sh-", border: "bs-bd-", pad: "bs-p-", anim: "bs-an-" } as const
 
 /** The classes for a block's Style tab choices; only known values get through. Empty for a block with none. */
 function designClass(b: SiteBlock) {
@@ -568,12 +594,16 @@ function emitBlock(b: SiteBlock, def: BlockDef, indent: string, ctx: BuildCtx, o
     const inner = indent + "  ".repeat(def.inset ?? 1)
     if (b.type === "row" && ctx.boot) {
       // Bootstrap's grid wants each child in its own column: full width on phones, then the row's split.
-      const cols = ["2", "3", "side"].includes(String(b.cols)) ? String(b.cols) : "3"
+      const spans = rowSpans(b)
       ;(b.kids ?? []).forEach((kid, i) => {
-        out.push(`${inner}<div class="col-12 col-md-${cols === "2" ? 6 : cols === "3" ? 4 : i === 0 ? 8 : 4}">`)
+        out.push(`${inner}<div class="col-12 col-md-${spans[i % spans.length]}">`)
         emit([kid], inner + "  ", ctx, out)
         out.push(`${inner}</div>`)
       })
+    } else if (b.type === "row" && isFreeRow(b)) {
+      // Plain mode: each block carries its width as a class, so it keeps it wherever it is moved to.
+      const spans = freeSpans(b.kids ?? [])
+      emit((b.kids ?? []).map((k, i) => ({ ...k, design: { ...k.design, span: spans[i] } })), inner, ctx, out)
     } else emit(b.kids ?? [], inner, ctx, out)
     def.close!(b, ctx).forEach((l) => out.push(indent + l))
   } else if (cls) {
@@ -861,7 +891,7 @@ th { background: var(--surface); }
 audio { width: 100%; }
 .theme-toggle { cursor: pointer; font-size: 14px; padding: 6px 12px; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
-${pages.some((p) => p.parentId) ? MENU_CSS : ""}${pages.some((p) => usesDesign(p.sections)) ? DESIGN_CSS : ""}${COMPONENT_CSS}${animationCss(pages)}`
+${pages.some((p) => p.parentId) ? MENU_CSS : ""}${pages.some((p) => usesDesign(p.sections)) ? DESIGN_CSS : ""}${PLAIN_ROW_CSS}${COMPONENT_CSS}${animationCss(pages)}`
 }
 
 /** The keyframes of the entrance animations a site uses, and the rule that turns them off for visitors who ask for less motion. */
@@ -871,6 +901,11 @@ export function animationCss(pages: SitePage[]) {
   pages.forEach((p) => scan(p.sections))
   return used.size ? `${[...used].map((k) => ANIMATIONS[k].css).join("\n")}\n${REDUCED_MOTION_CSS}\n` : ""
 }
+
+/** Pagesmith's own grid for rows: the extra splits, a block's own width in twelfths, spacing and alignment. (Bootstrap mode uses Bootstrap's grid instead.) */
+const PLAIN_ROW_CSS = `@media (min-width: 700px) { .row--left { grid-template-columns: 1fr 2fr; } .row--4 { grid-template-columns: repeat(4, 1fr); } .row--free { grid-template-columns: repeat(12, 1fr); }${[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => ` .row--free > .bs-span-${n}, .row--free > [data-bw] > .bs-span-${n} { grid-column: span ${n}; }`).join("")} }
+.row--gap-s { gap: 10px; } .row--gap-l { gap: 40px; } .row--top { align-items: start; } .row--middle { align-items: center; }
+`
 
 const usesDesign = (list: SiteBlock[]): boolean => list.some((b) => (b.design && designClass(b)) || (b.kids && usesDesign(b.kids)))
 
@@ -901,7 +936,12 @@ div.bs.bs-bg-soft, div.bs.bs-bg-inverse { padding: 16px; border-radius: var(--ra
 .bs-sz-s :is(h1, h2, h3, h4) { zoom: .875; } .bs-sz-l :is(h1, h2, h3, h4) { zoom: 1.2; } .bs-sz-xl :is(h1, h2, h3, h4) { zoom: 1.5; }
 .bs-co-accent { color: var(--accent); } .bs-co-muted { color: var(--muted); }
 .bs-caps-on { text-transform: uppercase; letter-spacing: .08em; font-size: .85em; font-weight: 600; }
-.bs-w-medium { max-width: 860px; margin-left: auto; margin-right: auto; } .bs-w-narrow { max-width: 600px; margin-left: auto; margin-right: auto; }
+.bs-w-medium { max-width: 860px; margin-left: auto; margin-right: auto; } .bs-w-narrow { max-width: 600px; margin-left: auto; margin-right: auto; } .bs-w-wide { max-width: 1320px; margin-left: auto; margin-right: auto; } .bs-w-full { max-width: none; }
+.section.bs-w-medium, .section.bs-w-narrow, .section.bs-w-wide, .section.bs-w-full { max-width: none; margin-left: 0; margin-right: 0; }
+.section.bs-w-medium > .container { max-width: 860px; } .section.bs-w-narrow > .container { max-width: 600px; } .section.bs-w-wide > .container { max-width: 1320px; } .section.bs-w-full > .container { max-width: none; }
+.bs-mh-s { min-height: 200px; } .bs-mh-m { min-height: 360px; } .bs-mh-l { min-height: 520px; } .bs-mh-screen { min-height: 100vh; }
+.section[class*="bs-mh-"] { display: flex; align-items: center; } .section[class*="bs-mh-"] > .container { width: 100%; }
+@media (max-width: 699px) { .bs-on-desktop { display: none !important; } } @media (min-width: 700px) { .bs-on-phone { display: none !important; } }
 .bs-r-none { border-radius: 0 !important; } .bs-r-round { border-radius: 18px !important; } .bs-r-pill { border-radius: 999px !important; }
 .bs-r-none :is(img, .pic) { border-radius: 0; } .bs-r-round :is(img, .pic) { border-radius: 18px; } .bs-r-pill :is(img, .pic) { border-radius: 999px; }
 .bs-sh-s { box-shadow: 0 2px 8px rgba(0, 0, 0, .18); } .bs-sh-m { box-shadow: 0 10px 30px rgba(0, 0, 0, .28); }
