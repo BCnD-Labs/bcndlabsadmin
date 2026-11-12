@@ -50,7 +50,7 @@ Pictures now come from one place, **Assets**, and Pagesmith can only use picture
 - **The site check** flags a picture that isn't from the library, and a published post that uses one that isn't.
 - **Get files:** the .zip contains the pictures a site uses, in `images/`.
 
-Not yet: publishing to GitHub doesn't carry the library's pictures (the .zip does), and the library isn't offered in the classic Posts flow or outside Pagesmith. AVIF isn't offered because the browser can't encode it.
+Publishing to GitHub carries the pictures a site uses (into `images/`) the same way the .zip does, and stops with a clear message if one can't be read from Nextcloud. Not yet: the library isn't offered in the classic Posts flow or outside Pagesmith. AVIF isn't offered because the browser can't encode it.
 
 ## Many sites
 
