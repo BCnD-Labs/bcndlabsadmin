@@ -89,6 +89,20 @@ export async function downloadFile(entry: StorageEntry) {
   setTimeout(() => URL.revokeObjectURL(url), 30_000)
 }
 
+/** Word, Excel, PowerPoint and PDF can be viewed read-only in the Mac app (macOS Quick Look); elsewhere they open in Nextcloud. */
+export const canQuickLook = (e: Pick<StorageEntry, "name">) => document.documentElement.dataset.runtime === "mac-native" && /\.(docx?|xlsx?|pptx?|odt|ods|odp|rtf|pdf)$/i.test(e.name)
+
+/** Downloads the file and hands it to the Mac app, which shows it in Quick Look. Nothing is changed in Nextcloud. */
+export async function quickLook(entry: StorageEntry) {
+  const blob = await fetchFile(entry.path)
+  const res = await fetch(`/__mac/shell/preview?name=${encodeURIComponent(entry.name)}`, { method: "POST", headers: { "X-Blackwall": "1" }, body: blob })
+  if (!res.ok) {
+    let message = `HTTP ${res.status}`
+    try { message = (await res.json()).error ?? message } catch { /* not JSON */ }
+    throw new ConnectorError(message, res.status)
+  }
+}
+
 export const parentOf = (path: string) => path.split("/").slice(0, -1).join("/") || "/"
 export const joinPath = (dir: string, name: string) => `${dir === "/" ? "" : dir}/${name}`
 

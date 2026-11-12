@@ -11,6 +11,7 @@ import {
   Folder,
   FolderInput,
   FolderPlus,
+  Eye,
   HardDrive,
   MoreHorizontal,
   Pencil,
@@ -34,7 +35,7 @@ import { GridItem, WorkspaceGrid } from "@/components/common/workspace-grid"
 import { timeFmt } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import { useUi } from "@/stores/ui"
-import { downloadFile, fetchFile, formatSize, isImage, isOffice, isTextFile, joinPath, parentOf, storage, uploadFile, type FolderListing, type StorageEntry, type StorageInfo } from "./storage-api"
+import { canQuickLook, downloadFile, fetchFile, quickLook, formatSize, isImage, isOffice, isTextFile, joinPath, parentOf, storage, uploadFile, type FolderListing, type StorageEntry, type StorageInfo } from "./storage-api"
 
 function EntryIcon({ entry, className }: { entry: StorageEntry; className?: string }) {
   const Icon = entry.type === "dir" ? Folder : isImage(entry) ? FileImage : /\.(xlsx?|ods|csv)$/i.test(entry.name) ? FileSpreadsheet : isOffice(entry) || /\.(md|txt|pdf)$/i.test(entry.name) ? FileText : isTextFile(entry) ? FileCode2 : File
@@ -288,6 +289,7 @@ export function MikoshiStoragePage() {
     if (e.type === "dir") return go(e.path)
     if (isTextFile(e) && e.size <= 2 * 1024 * 1024) return setEditing(e)
     if (isImage(e)) return setViewing(e)
+    if (canQuickLook(e)) return void quickLook(e).catch((err) => toast.error((err as Error).message))
     if (isOffice(e) && info?.url && e.fileId) return void window.open(`${info.url}/f/${e.fileId}`, "_blank", "noreferrer")
     void downloadFile(e).catch((err) => toast.error((err as Error).message))
   }
@@ -310,10 +312,11 @@ export function MikoshiStoragePage() {
 
   const actions = (e: StorageEntry) => (
     <>
-      <DropdownMenuItem onSelect={() => open(e)}>{e.type === "dir" ? <><Folder /> Open</> : isTextFile(e) ? <><Pencil /> Edit</> : isOffice(e) ? <><ArrowUpRight /> Open in Nextcloud</> : <><Download /> {isImage(e) ? "Preview" : "Download"}</>}</DropdownMenuItem>
+      <DropdownMenuItem onSelect={() => open(e)}>{e.type === "dir" ? <><Folder /> Open</> : isTextFile(e) ? <><Pencil /> Edit</> : canQuickLook(e) ? <><Eye /> View</> : isOffice(e) ? <><ArrowUpRight /> Open in Nextcloud</> : <><Download /> {isImage(e) ? "Preview" : "Download"}</>}</DropdownMenuItem>
       {e.type === "file" && (isTextFile(e) || isImage(e) || isOffice(e)) && <DropdownMenuItem onSelect={() => void downloadFile(e).catch((err) => toast.error((err as Error).message))}><Download /> Download</DropdownMenuItem>}
       <DropdownMenuItem onSelect={() => setAsk({ kind: "rename", entry: e })}><Pencil /> Rename</DropdownMenuItem>
       <DropdownMenuItem onSelect={() => setAsk({ kind: "move", entry: e })}><FolderInput /> Move…</DropdownMenuItem>
+      {nextcloudLink(e) && canQuickLook(e) && isOffice(e) && <DropdownMenuItem asChild><a href={nextcloudLink(e)} target="_blank" rel="noreferrer"><ArrowUpRight /> Open in Nextcloud</a></DropdownMenuItem>}
       {nextcloudLink(e) && !isOffice(e) && <DropdownMenuItem asChild><a href={nextcloudLink(e)} target="_blank" rel="noreferrer"><ArrowUpRight /> Open in Nextcloud</a></DropdownMenuItem>}
       <DropdownMenuSeparator />
       <DropdownMenuItem onSelect={() => setAsk({ kind: "delete", entry: e })} className="text-red-text"><Trash2 /> Delete</DropdownMenuItem>

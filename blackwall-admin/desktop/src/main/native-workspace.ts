@@ -4,6 +4,7 @@ import { net, type Session } from "electron"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import type { MacUpdater } from "./updater.ts"
 import type { SourceUpdater } from "./source-updater.ts"
+import { PREVIEW_MAX_BYTES, previewName } from "./quick-look.ts"
 
 export const NATIVE_HOME = "bw-native://app/"
 const NATIVE_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "native")
@@ -12,6 +13,8 @@ const NATIVE_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), ".."
 export interface WorkspaceShell {
   /** Opens a browser tab (the workspace has no browser chrome of its own). */
   openBrowser(): void
+  /** Shows a downloaded document in macOS Quick Look (read-only). */
+  previewFile(name: string, data: Uint8Array): void
 }
 
 export function registerNativeWorkspace(ses: Session, serverAddress: () => string | null, updater?: MacUpdater, sourceUpdater?: SourceUpdater, shell?: WorkspaceShell) {
@@ -22,6 +25,16 @@ export function registerNativeWorkspace(ses: Session, serverAddress: () => strin
     if (url.pathname === "/__mac/shell/browser") {
       if (!shell || request.method !== "POST" || request.headers.get("x-blackwall") !== "1") return new Response("Not found", { status: 404 })
       shell.openBrowser()
+      return Response.json({ ok: true })
+    }
+
+    if (url.pathname === "/__mac/shell/preview") {
+      if (!shell || request.method !== "POST" || request.headers.get("x-blackwall") !== "1") return new Response("Not found", { status: 404 })
+      const name = previewName(url.searchParams.get("name"))
+      if (!name) return Response.json({ error: "That kind of file can't be previewed here." }, { status: 415 })
+      const data = new Uint8Array(await request.arrayBuffer())
+      if (data.byteLength === 0 || data.byteLength > PREVIEW_MAX_BYTES) return Response.json({ error: "That file is empty or too large to preview." }, { status: 413 })
+      shell.previewFile(name, data)
       return Response.json({ ok: true })
     }
 

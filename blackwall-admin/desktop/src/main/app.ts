@@ -7,6 +7,7 @@ import { ConfigStore, type WindowState } from "./config.ts"
 import { buildMenu } from "./menu.ts"
 import { NATIVE_HOME, registerNativeWorkspace } from "./native-workspace.ts"
 import { MacUpdater } from "./updater.ts"
+import { sweepPreviews, writePreview } from "./quick-look.ts"
 import { SourceUpdater } from "./source-updater.ts"
 import { TabManager } from "./tabs.ts"
 import { addressToUrl, normalizeWebAddress, sameOrigin } from "./url.ts"
@@ -55,6 +56,7 @@ export function startShell(options: ShellOptions = {}): ShellController | null {
 
   const config = new ConfigStore(app.getPath("userData"))
   let win: BrowserWindow | null = null
+  const previewRoot = path.join(app.getPath("temp"), "blackwall-preview")
   let tabs: TabManager | null = null
   let tabSession: Session
   let overlay: Overlay = null
@@ -363,6 +365,7 @@ export function startShell(options: ShellOptions = {}): ShellController | null {
   }
 
   const ready = app.whenReady().then(() => {
+    sweepPreviews(previewRoot)
     protocol.handle("bw-shell", (request) => {
       const { host, pathname } = new URL(request.url)
       const file = path.normalize(path.join(CHROME_ROOT, decodeURIComponent(pathname)))
@@ -404,7 +407,13 @@ export function startShell(options: ShellOptions = {}): ShellController | null {
       },
       quit: () => app.quit(),
     })
-    registerNativeWorkspace(tabSession, () => config.get().webAddress, updater, sourceUpdater, { openBrowser: () => newTab() })
+    registerNativeWorkspace(tabSession, () => config.get().webAddress, updater, sourceUpdater, {
+      openBrowser: () => newTab(),
+      previewFile: (name, data) => {
+        if (process.platform !== "darwin" || !win) return
+        win.previewFile(writePreview(previewRoot, name, data), name)
+      },
+    })
 
     // No page may embed a <webview> except the bundled workspace, which tabs.ts vets and locks down.
     app.on("web-contents-created", (_e, contents) => {
