@@ -28,7 +28,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { EmptyState } from "@/components/common/empty-state"
-import { DocumentViewer } from "@/features/documents/document-viewer"
+import { useDocs } from "@/features/documents/docs-store"
 import { documentKind, isLegacyOffice } from "@/features/documents/document-kind"
 import { PageHeader } from "@/components/common/page-header"
 import { Panel } from "@/components/common/panel"
@@ -221,18 +221,13 @@ function ImagePreview({ entry, onClose }: { entry: StorageEntry; onClose: () => 
   )
 }
 
-/** Word, Excel and PowerPoint files from Nextcloud, shown read-only in the app. */
-function StorageDocument({ entry, nextcloudUrl, onClose }: { entry: StorageEntry; nextcloudUrl?: string; onClose: () => void }) {
-  const load = useCallback(() => fetchFile(entry.path), [entry.path])
-  return <DocumentViewer name={entry.name} load={load} onClose={onClose} nextcloudUrl={nextcloudUrl} onDownload={() => void downloadFile(entry).catch((err) => toast.error((err as Error).message))} />
-}
-
 const when = (iso: string) => {
   const d = new Date(iso)
   return d.getFullYear() === new Date().getFullYear() ? format(d, `MMM d, ${timeFmt()}`) : format(d, "MMM d, yyyy")
 }
 
-export function MikoshiStoragePage() {
+/** Files: your Nextcloud, as a file manager. Word, Excel and PowerPoint files open in Docs. */
+export function FilesPage() {
   const [params, setParams] = useSearchParams()
   const dir = params.get("path") || "/"
   const go = useCallback((p: string) => setParams(p === "/" ? {} : { path: p }), [setParams])
@@ -245,7 +240,6 @@ export function MikoshiStoragePage() {
   const [ask, setAsk] = useState<Ask>(null)
   const [editing, setEditing] = useState<StorageEntry | null>(null)
   const [viewing, setViewing] = useState<StorageEntry | null>(null)
-  const [reading, setReading] = useState<StorageEntry | null>(null)
   const [uploads, setUploads] = useState<{ name: string; progress: number }[]>([])
   const [dragOver, setDragOver] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -298,7 +292,7 @@ export function MikoshiStoragePage() {
     if (e.type === "dir") return go(e.path)
     if (isTextFile(e) && e.size <= 2 * 1024 * 1024) return setEditing(e)
     if (isImage(e)) return setViewing(e)
-    if (documentKind(e.name) || isLegacyOffice(e.name)) return setReading(e)
+    if (documentKind(e.name) || isLegacyOffice(e.name)) return useDocs.getState().open(e.path)
     if (isOffice(e) && info?.url && e.fileId) return void window.open(`${info.url}/f/${e.fileId}`, "_blank", "noreferrer")
     void downloadFile(e).catch((err) => toast.error((err as Error).message))
   }
@@ -321,7 +315,7 @@ export function MikoshiStoragePage() {
 
   const actions = (e: StorageEntry) => (
     <>
-      <DropdownMenuItem onSelect={() => open(e)}>{e.type === "dir" ? <><Folder /> Open</> : isTextFile(e) ? <><Pencil /> Edit</> : documentKind(e.name) ? <><Eye /> View</> : isOffice(e) ? <><ArrowUpRight /> Open in Nextcloud</> : <><Download /> {isImage(e) ? "Preview" : "Download"}</>}</DropdownMenuItem>
+      <DropdownMenuItem onSelect={() => open(e)}>{e.type === "dir" ? <><Folder /> Open</> : isTextFile(e) ? <><Pencil /> Edit</> : documentKind(e.name) ? <><Eye /> Open in Docs</> : isOffice(e) ? <><ArrowUpRight /> Open in Nextcloud</> : <><Download /> {isImage(e) ? "Preview" : "Download"}</>}</DropdownMenuItem>
       {e.type === "file" && (isTextFile(e) || isImage(e) || isOffice(e)) && <DropdownMenuItem onSelect={() => void downloadFile(e).catch((err) => toast.error((err as Error).message))}><Download /> Download</DropdownMenuItem>}
       <DropdownMenuItem onSelect={() => setAsk({ kind: "rename", entry: e })}><Pencil /> Rename</DropdownMenuItem>
       <DropdownMenuItem onSelect={() => setAsk({ kind: "move", entry: e })}><FolderInput /> Move…</DropdownMenuItem>
@@ -335,8 +329,8 @@ export function MikoshiStoragePage() {
   if (info && !info.connected) {
     return (
       <>
-        <PageHeader title="Mikoshi" />
-        <WorkspaceGrid><GridItem span={2}><Panel category="mikoshi" title="Storage">
+        <PageHeader title="Files" />
+        <WorkspaceGrid><GridItem span={2}><Panel category="files" title="Files">
           <EmptyState roomy icon={HardDrive} title={info.status === "error" ? "Nextcloud needs attention" : "Connect Nextcloud"} action={<Button onClick={() => useUi.getState().openSettings("connections", info.status ? undefined : "nextcloud")}>{info.status ? "Open connections" : "Connect Nextcloud"}</Button>}>
             {info.status === "error" ? info.message : "Use an app password from Nextcloud (Personal settings → Security). Your files stay in Nextcloud; Blackwall browses and edits them there."}
           </EmptyState>
@@ -370,7 +364,7 @@ export function MikoshiStoragePage() {
         </GridItem>
         <GridItem span={3}>
           <Panel
-            category="mikoshi"
+            category="files"
             title="Files"
             subtitle={<Crumbs path={dir} onGo={go} />}
             actions={
@@ -386,7 +380,7 @@ export function MikoshiStoragePage() {
           >
             <div
               className={cn("relative min-h-64", dragOver && "bg-[color-mix(in_srgb,var(--bw-category)_8%,transparent)] ring-2 ring-[var(--bw-category)] ring-inset")}
-              data-category="mikoshi"
+              data-category="files"
               onDragOver={(e: DragEvent) => { if (e.dataTransfer.types.includes("Files")) { e.preventDefault(); setDragOver(true) } }}
               onDragLeave={(e: DragEvent) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragOver(false) }}
               onDrop={(e: DragEvent) => { e.preventDefault(); setDragOver(false); void upload(e.dataTransfer.files) }}
@@ -457,7 +451,7 @@ export function MikoshiStoragePage() {
           </Panel>
         </GridItem>
         <GridItem className="[&>.bw-panel]:flex-none">
-          <Panel category="mikoshi" title={sel ? "Details" : "This folder"} bodyClassName="px-3.5 py-3">
+          <Panel category="files" title={sel ? "Details" : "This folder"} bodyClassName="px-3.5 py-3">
             {sel ? (
               <div className="grid gap-3">
                 <div className="flex items-center gap-2.5"><EntryIcon entry={sel} className="size-5" /><span className="min-w-0 break-all text-sm font-semibold text-ink">{sel.name}</span></div>
@@ -503,7 +497,6 @@ export function MikoshiStoragePage() {
       )}
       {editing && <TextEditor entry={editing} onClose={() => setEditing(null)} onSaved={() => void load()} />}
       {viewing && <ImagePreview entry={viewing} onClose={() => setViewing(null)} />}
-      {reading && <StorageDocument entry={reading} nextcloudUrl={info?.url && reading.fileId ? `${info.url}/f/${reading.fileId}` : undefined} onClose={() => setReading(null)} />}
     </>
   )
 }

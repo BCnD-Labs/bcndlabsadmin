@@ -4,6 +4,7 @@ import { getThumbnails, loadPresentation, renderSlideToElement, type LoadedPrese
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { lockLinks } from "./document-kind"
+import { fitText } from "./fit-text"
 
 /** A PowerPoint deck: thumbnails on the left, one slide at a time, arrow keys to move. Read-only. */
 export default function SlidesView({ blob, onError }: { blob: Blob; onError: (message: string) => void }) {
@@ -46,6 +47,7 @@ export default function SlidesView({ blob, onError }: { blob: Blob; onError: (me
     if (!deck || !slide || !width) return
     slide.replaceChildren()
     renderSlideToElement(deck, index, slide, { width, height })
+    fitText(slide)
     lockLinks(slide)
   }, [deck, index, width, height])
 
@@ -56,10 +58,12 @@ export default function SlidesView({ blob, onError }: { blob: Blob; onError: (me
       button.type = "button"
       button.dataset.slide = String(i)
       button.setAttribute("aria-label", `Slide ${i + 1}`)
-      button.className = "block w-full rounded-[4px] border border-line-soft bg-white p-0 overflow-hidden"
+      button.className = "block w-full shrink-0 overflow-hidden rounded-[4px] border border-line-soft bg-white p-0"
       button.append(svg)
       return button
     }))
+    // Text boxes can only be measured once they are on the page.
+    for (const svg of rail.current.querySelectorAll("svg")) fitText(svg as unknown as HTMLElement)
   }, [deck])
 
   useEffect(() => {
@@ -84,7 +88,7 @@ export default function SlidesView({ blob, onError }: { blob: Blob; onError: (me
   if (!deck) return <p className="p-4 text-sm text-muted-foreground">Reading the presentation…</p>
   return (
     <div className="flex h-full min-h-0 gap-3 outline-none" tabIndex={0} onKeyDown={onKey} data-testid="slides-view" aria-label="Slides">
-      <div ref={rail} onClick={(e) => { const b = (e.target as HTMLElement).closest<HTMLElement>("button[data-slide]"); if (b) go(Number(b.dataset.slide)) }} className="hidden w-36 shrink-0 gap-2 overflow-y-auto pr-1 sm:grid sm:content-start" />
+      <div ref={rail} onClick={(e) => { const b = (e.target as HTMLElement).closest<HTMLElement>("button[data-slide]"); if (b) go(Number(b.dataset.slide)) }} className="hidden w-36 shrink-0 flex-col gap-2 overflow-y-auto pr-1 sm:flex" />
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <div ref={stageRef} className="grid min-h-0 flex-1 place-items-center rounded-md bg-well p-2">
           <div ref={slideRef} style={{ width, height }} className={cn("relative overflow-hidden bg-white shadow-md", !width && "hidden")} role="img" aria-label={`Slide ${index + 1} of ${count}`} />

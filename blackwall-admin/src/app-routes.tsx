@@ -20,7 +20,8 @@ import { ProjectsPage } from "@/features/work/projects-page"
 import { PlannerPage } from "@/features/productivity/planner-page"
 import { LauncherPage } from "@/features/mikoshi/launcher-page"
 import { MikoshiStatusPage } from "@/features/mikoshi/upcoming-pages"
-import { MikoshiStoragePage } from "@/features/mikoshi/storage-page"
+import { FilesPage } from "@/features/mikoshi/storage-page"
+import { DocsPage } from "@/features/documents/docs-page"
 import { NotFound } from "@/components/layout/not-found"
 import { RouteError } from "@/components/layout/route-error"
 
@@ -84,7 +85,10 @@ export const blackwallPages: RouteObject[] = [
       { path: "social/:id", element: <SocialPostPage /> },
       { path: "mikoshi", element: <LauncherPage /> },
       { path: "mikoshi/status", element: <MikoshiStatusPage /> },
-      { path: "mikoshi/storage", element: <MikoshiStoragePage /> },
+      { path: "files", element: <FilesPage /> },
+      { path: "docs", element: <DocsPage /> },
+      // Files used to live under Mikoshi.
+      { path: "mikoshi/storage", element: <Navigate to="/files" replace /> },
       // Old addresses (bookmarks, links in notes).
       { path: "work/*", element: <Moved from="/work" to="/productivity" /> },
       { path: "work", element: <Navigate to="/productivity" replace /> },

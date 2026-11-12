@@ -10,7 +10,8 @@ export const socialHref = SOCIAL
 export const socialPostHref = (id: string) => `${SOCIAL}/${id}`
 export const launcherHref = MIKOSHI
 export const mikoshiStatusHref = `${MIKOSHI}/status`
-export const mikoshiStorageHref = `${MIKOSHI}/storage`
+export const filesHref = "/files"
+export const docsHref = "/docs"
 
 /** Productivity → Planner holds tasks, the calendar with the daily log, and notes on one page. */
 export const plannerHref = PRODUCTIVITY
