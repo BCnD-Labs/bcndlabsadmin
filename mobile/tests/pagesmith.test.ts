@@ -30,6 +30,13 @@ test("phone Pagesmith refuses edits to a block removed on another device", () =>
   assert.throws(() => editPageBlock(initial(), "pag_a", "gone", { text: "Lost" }, now))
 })
 
+test("shared Markdown blocks render inside the phone preview", () => {
+  const added = addPageBlock(initial(), "pag_a", null, "richtext", now)
+  const rich = added.pages[0]!.sections[0]!.kids![0]!
+  const edited = editPageBlock(added, "pag_a", rich.id, { md: "**Ready**" }, now)
+  assert.match(renderPage(edited.sites[0]!, edited.pages, edited.pages[0]!, { preview: true, edit: true }), /<strong>Ready<\/strong>/)
+})
+
 test("publish calls the existing site endpoint with the sign-in cookie", async () => {
   let called = "", init: RequestInit = {}
   const fetchImpl = (async (url: string, options: RequestInit) => { called = url; init = options; return Response.json({ sha: "abc", files: 4, removed: 1, repo: "owner/site" }) }) as typeof fetch
