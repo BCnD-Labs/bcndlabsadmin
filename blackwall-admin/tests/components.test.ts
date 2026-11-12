@@ -70,13 +70,13 @@ test("a block can be changed to another kind and keeps its words, link, id and s
 
 test("only sensible swaps are offered, and anything else changes nothing", () => {
   const button = mk("button", { text: "Go" })
-  assert.deepEqual(convertTargets(button).map((t) => t.type), ["link", "badge", "dropdown", "tooltip", "calendar", "alert"])
+  assert.deepEqual(convertTargets(button).map((t) => t.type), ["link", "badge", "dropdown", "buttons", "tooltip", "calendar", "alert"])
   assert.equal(convertBlock(button, "section"), button)
   assert.equal(convertBlock(button, "button"), button)
-  assert.deepEqual(convertTargets(mk("image")), [], "a picture has nothing to become")
+  assert.deepEqual(convertTargets(mk("video")), [], "a video has nothing to become")
   assert.ok(convertTargets(mk("card")).some((t) => t.type === "meter" && t.name === "Progress bar"))
   assert.ok(convertTargets(button, "header").every((t) => HEADER_KINDS.includes(t.type)) && !convertTargets(button, "header").some((t) => t.type === "alert"))
-  assert.deepEqual(convertTargets(mk("card"), "header").map((t) => t.type), ["tooltip", "badge", "button", "dropdown"], "in the header only small pieces fit")
+  assert.deepEqual(convertTargets(mk("card"), "header").map((t) => t.type), ["tooltip", "badge", "button", "buttons", "dropdown"], "in the header only small pieces fit")
 })
 
 test("every offered swap draws a valid page in both modes, from an empty block and a filled one", () => {

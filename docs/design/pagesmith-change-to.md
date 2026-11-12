@@ -32,3 +32,17 @@ With nothing selected, the inspector's **Header items** lists extra pieces drawn
 ## Preview and Bootstrap
 
 The editor preview of a Bootstrap site uses the Bootstrap CSS bundled with the app, so it needs no outside host and works offline. Published sites still load Bootstrap from the CDN.
+
+## Component library
+
+The **Components** button in the Website toolbar opens a library of everything you can add, grouped (ready-made sections, text, buttons and links, pictures and media, cards and layout, notes and progress, data and forms, advanced) and shown in your own site's look. Search it, then click one to add it. It goes **inside the selected block if it fits, after it if not, or at the end of the page**; the panel stays open so you can add several. Ready-made pieces include a Picture card, Feature box, Testimonial, Plan or price card, two and three column rows and a Main-and-side layout, next to the plain blocks.
+
+Newer blocks: Quote, Button group, Breadcrumb (it shows the page's path once the page sits under another) and Numbers.
+
+## Swaps added
+
+A **card can become a Picture** (and a picture a card, keeping its picture and description), a Quote, a Button group and the other pieces above; headings can become cards or quotes; text, rich text and alerts can become quotes. A button label is never used as a picture's description.
+
+## Style options
+
+Select any block and open **Style**: text size, text colour (accent or quiet), a small-caps label look, width (full, medium, narrow), padding inside, background (shaded, soft tint, accent, dark), corners (square, round, pill), shadow, a thin outline, plus the alignment, spacing and animation that were already there. An unstyled site carries none of the extra CSS.

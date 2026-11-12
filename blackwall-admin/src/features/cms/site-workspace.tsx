@@ -1,4 +1,4 @@
-import { Accessibility, ChevronLeft, Eye, FileDown, Inbox, Layers, LayoutTemplate, Monitor, Palette, PanelRight, Plus, Redo2, Rocket, Settings2, Smartphone, Tablet, Undo2, X } from "lucide-react"
+import { Accessibility, Blocks, ChevronLeft, Eye, FileDown, Inbox, Layers, LayoutTemplate, Monitor, Palette, PanelRight, Plus, Redo2, Rocket, Settings2, Smartphone, Tablet, Undo2, X } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom"
 import { usePanelRef, type Layout } from "react-resizable-panels"
@@ -28,6 +28,8 @@ import { FormsPanel } from "./forms-panel"
 import { Inspector } from "./inspector"
 import { LayersPane, blockName } from "./layers-pane"
 import { A11yPanel, KIND_INFO } from "./a11y-panel"
+import { ComponentsPanel } from "./components-panel"
+import { placeBlock, type LibraryItem } from "@shared/site-library"
 import { convertBlock, convertTargets } from "@shared/site-convert"
 import { LookPanel } from "./look-panel"
 import { auditSite, type A11yItem } from "@shared/site-a11y"
@@ -45,6 +47,7 @@ import { publishSite, selectSite, useCurrentSite, usePublishRuns } from "./use-c
 import { useSiteHistory } from "./use-site-history"
 
 const PANELS = {
+  components: { title: "Components", icon: Blocks },
   look: { title: "Look", icon: Palette },
   access: { title: "Accessibility", icon: Accessibility },
   forms: { title: "Forms", icon: Inbox },
@@ -53,7 +56,7 @@ const PANELS = {
   posts: { title: "Posts", icon: Layers },
 } as const
 export type WorkspacePanel = keyof typeof PANELS
-const TOOLBAR: WorkspacePanel[] = ["look", "access", "forms", "settings", "files"]
+const TOOLBAR: WorkspacePanel[] = ["components", "look", "access", "forms", "settings", "files"]
 
 const DEVICES = { desktop: { width: "100%", icon: Monitor }, tablet: { width: "820px", icon: Tablet }, phone: { width: "390px", icon: Smartphone } } as const
 const LAYOUT_KEY = "blackwall.pagesmith-layout"
@@ -187,6 +190,15 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
     setChangeOpen(false)
     toast(`${BLOCKS[b.type]?.name ?? "Block"} changed to ${BLOCKS[to]?.name ?? to}`, { action: { label: "Undo", onClick: doUndo } })
   }
+  /** From the component library: add the piece where the selection (or the end of the page) says. The panel stays open to add more. */
+  const insertItem = (item: LibraryItem) => {
+    if (!page) return
+    const nb = item.make()
+    const inPage = !!selected && !!findBlock(page.sections, selected)
+    setSections(placeBlock(page.sections, inPage ? selected : null, nb))
+    setSelected(nb.id)
+    toast.success(`${item.name} added`)
+  }
   const addHeaderItem = (type: string) => { const nb = mk(type); setHeader([...headerBlocks, nb]); setSelected(nb.id) }
 
   /** After undo or redo, show the page that changed if it isn't the one on screen. */
@@ -318,7 +330,8 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
   }
 
   const panelBody = panel && (
-    panel === "look" ? <LookPanel site={site} />
+    panel === "components" ? <ComponentsPanel site={site} hint={block && !treeOf(block.id)?.header ? `next to ${blockName(block, false).toLowerCase()}` : "end of the page"} onInsert={insertItem} />
+      : panel === "look" ? <LookPanel site={site} />
       : panel === "access" ? <A11yPanel site={site} pageId={page?.id} marks={marksOn} onMarks={setMarksOn} onShow={showFinding} />
       : panel === "forms" ? <FormsPanel site={site} />
         : panel === "settings" ? <SettingsPanel site={site} />

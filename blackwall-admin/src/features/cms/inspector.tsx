@@ -62,19 +62,32 @@ function StyleFields({ block, onPatch }: { block: SiteBlock; onPatch: (p: Record
   const bg = d.bg ?? (isSection && block.tone === "tinted" ? "surface" : AUTO)
   // A section already has a background field; shaded keeps using it so it reads the same in older pages.
   const setBg = (v: string) => {
-    const nextBg = v === "accent" || (v === "surface" && !isSection) ? (v as BlockDesign["bg"]) : undefined
+    const nextBg = ["accent", "soft", "inverse"].includes(v) || (v === "surface" && !isSection) ? (v as BlockDesign["bg"]) : undefined
     const rest = Object.fromEntries(Object.entries({ ...d, bg: nextBg }).filter(([, x]) => x !== undefined)) as BlockDesign
     onPatch({ design: Object.keys(rest).length ? rest : undefined, ...(isSection ? { tone: v === "surface" ? "tinted" : "page" } : {}) })
   }
   const row = (label: string, value: string, options: { value: string; label: string }[], onChange: (v: string) => void) => (
     <div className="grid gap-1"><span className={fieldLabel}>{label}</span><SegmentedTabs label={label} value={value} onChange={onChange} tabs={options} tabClassName="flex-1 px-1.5" /></div>
   )
+  const opt = <K extends keyof BlockDesign>(key: K) => (v: string) => set({ [key]: v === AUTO ? undefined : v } as Partial<BlockDesign>)
   return (
     <div className="grid gap-3">
+      <h3 className="text-[11px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Text</h3>
+      {row("Size", d.size ?? AUTO, [{ value: AUTO, label: "Auto" }, { value: "s", label: "S" }, { value: "l", label: "L" }, { value: "xl", label: "XL" }], opt("size"))}
+      {row("Colour", d.color ?? AUTO, [{ value: AUTO, label: "Auto" }, { value: "accent", label: "Accent" }, { value: "muted", label: "Quiet" }], opt("color"))}
+      {row("Look", d.caps ?? AUTO, [{ value: AUTO, label: "Normal" }, { value: "on", label: "Small caps label" }], opt("caps"))}
+      <h3 className="mt-1 text-[11px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Layout</h3>
       {row("Alignment", d.align ?? AUTO, [{ value: AUTO, label: "Left" }, { value: "center", label: "Center" }, { value: "right", label: "Right" }], (v) => set({ align: v === AUTO ? undefined : (v as BlockDesign["align"]) }))}
       {row("Space above", d.top ?? AUTO, SPACE, (v) => set({ top: v === AUTO ? undefined : (v as BlockDesign["top"]) }))}
       {row("Space below", d.bottom ?? AUTO, SPACE, (v) => set({ bottom: v === AUTO ? undefined : (v as BlockDesign["bottom"]) }))}
-      {row("Background", bg, [{ value: AUTO, label: "None" }, { value: "surface", label: "Shaded" }, { value: "accent", label: "Accent" }], setBg)}
+      {row("Width", d.width ?? AUTO, [{ value: AUTO, label: "Full" }, { value: "medium", label: "Medium" }, { value: "narrow", label: "Narrow" }], opt("width"))}
+      {!isSection && row("Padding inside", d.pad ?? AUTO, [{ value: AUTO, label: "Auto" }, { value: "s", label: "S" }, { value: "m", label: "M" }, { value: "l", label: "L" }], opt("pad"))}
+      <h3 className="mt-1 text-[11px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Box</h3>
+      {row("Background", bg, [{ value: AUTO, label: "None" }, { value: "surface", label: "Shaded" }, { value: "soft", label: "Soft" }, { value: "accent", label: "Accent" }, { value: "inverse", label: "Dark" }], setBg)}
+      {row("Corners", d.radius ?? AUTO, [{ value: AUTO, label: "Auto" }, { value: "none", label: "Square" }, { value: "round", label: "Round" }, { value: "pill", label: "Pill" }], opt("radius"))}
+      {row("Shadow", d.shadow ?? AUTO, [{ value: AUTO, label: "None" }, { value: "s", label: "Soft" }, { value: "m", label: "Strong" }], opt("shadow"))}
+      {row("Outline", d.border ?? AUTO, [{ value: AUTO, label: "None" }, { value: "on", label: "Thin line" }], opt("border"))}
+      <h3 className="mt-1 text-[11px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Motion</h3>
       <div className="grid gap-1"><span className={fieldLabel}>Animation</span>
         <OptionSelect id="style-anim" value={d.anim ?? AUTO} onChange={(v) => set({ anim: v === AUTO ? undefined : (v as BlockDesign["anim"]) })} options={[{ value: AUTO, label: "None" }, ...Object.entries(ANIMATIONS).map(([value, a]) => ({ value, label: a.name }))]} className="w-full" />
         <span className="text-[11px] text-faint">Plays when the page loads; skipped for visitors who ask for less motion.</span>

@@ -139,5 +139,10 @@ export const COMPONENT_CSS = `.badge { display: inline-block; padding: .25em .65
 .calendar { table-layout: fixed; text-align: center; } .calendar caption { text-align: left; font-weight: 700; padding-bottom: 8px; color: var(--text); }
 .calendar td { height: 64px; vertical-align: top; padding: 4px; } .calendar__empty { background: transparent; }
 .calendar__day { display: block; font-weight: 600; } .calendar__ev { display: block; margin-top: 2px; padding: 1px 4px; border-radius: 4px; background: var(--accent); color: var(--accent-text); font-size: 12px; line-height: 1.3; }
+.quote { margin: 0 0 20px; padding: 4px 0 4px 18px; border-left: 4px solid var(--accent); } .quote blockquote { margin: 0; font-size: 1.25em; font-style: italic; } .quote p { margin: 0 0 8px; } .quote figcaption { color: var(--muted); }
+.btn-row { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 20px; }
+.breadcrumb { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; margin: 0 0 16px; font-size: .95em; } .breadcrumb-item + .breadcrumb-item::before { content: "/"; padding-right: 6px; color: var(--muted); } .breadcrumb-item.active { color: var(--muted); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 20px; margin: 0 0 20px; } .stat { display: flex; flex-direction: column-reverse; gap: 2px; text-align: center; }
+.stat dd { margin: 0; font-size: 2.2em; font-weight: 700; line-height: 1.1; color: var(--accent); } .stat dt { color: var(--muted); font-size: .95em; font-weight: 400; }
 .site-extras { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 `
