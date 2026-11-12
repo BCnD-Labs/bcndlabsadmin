@@ -104,7 +104,7 @@ export interface Note {
 }
 
 export interface JournalSection { id: ID; title: string; text: string; noteId?: ID }
-export interface JournalLogItem { id: ID; text: string; createdAt: Timestamp; updatedAt: Timestamp; sectionId?: ID; noteId?: ID; courseId?: ID; taskId?: ID }
+export interface JournalLogItem { id: ID; text: string; createdAt: Timestamp; updatedAt: Timestamp; sectionId?: ID; noteId?: ID; courseId?: ID; taskId?: ID; reflection?: TaskReflection }
 
 /** One daily log entry per day; `id` is the date. */
 export interface JournalEntry {

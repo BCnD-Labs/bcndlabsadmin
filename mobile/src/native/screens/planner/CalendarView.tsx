@@ -34,8 +34,8 @@ import { noteTitle, orderNotes } from "./notes/note-rules.ts"
  * smallest and a largest height (nothing snaps; past either end it stretches a little and springs back). Swiping the
  * grid changes the period: up or down in the month view, left or right in the others.
  */
-export function CalendarView({ data, today, onEdit, onCreateDue, logs, blocked, selected, onSelect: setSelected }: {
-  data: Collections; today: string; selected: string; onSelect: (day: string) => void; onEdit: (id: string) => void; onCreateDue: (due: string | undefined) => void
+export function CalendarView({ data, today, onEdit, onReflect, onCreateDue, logs, blocked, selected, onSelect: setSelected }: {
+  data: Collections; today: string; selected: string; onSelect: (day: string) => void; onEdit: (id: string) => void; onReflect: (id: string) => void; onCreateDue: (due: string | undefined) => void
   logs: LogDrafts; blocked?: string
 }) {
   const { mutate } = useWorkspace()
@@ -82,7 +82,7 @@ export function CalendarView({ data, today, onEdit, onCreateDue, logs, blocked, 
   // Weekly class and office-hour times draw here as read-only events; they are never saved as tasks.
   const items = useMemo(() => [...data.tasks, ...meetingEvents(data.courses, addDaysToKey(selected, -45) ?? selected, addDaysToKey(selected, 45) ?? selected)], [data.tasks, data.courses, selected])
   const byDay = useMemo(() => tasksByDay(items, view === "month" ? weeks.flat() : columns), [items, view, weeks, columns])
-  const agenda = useMemo(() => agendaItems(items, selected, today, data.courses).filter(t => layout.showCompleted || !t.done), [items, data.courses, selected, today, layout.showCompleted])
+  const agenda = useMemo(() => agendaItems(items, selected, today, data.courses), [items, data.courses, selected, today])
   const meta = useMemo(() => dayMeta(data.tasks, data.journal, selected), [data.tasks, data.journal, selected])
   const toggle = useCallback((id: string) => { if (!blocked && !isMeetingId(id)) void mutate(["tasks"], d => toggleTask(d, id)) }, [mutate, blocked])
   const step = useCallback((d: -1 | 1) => { setSelected(stepBy(view, displayDate, d)) }, [view, displayDate])
@@ -102,7 +102,7 @@ export function CalendarView({ data, today, onEdit, onCreateDue, logs, blocked, 
     <KeyboardScrollView style={styles.fill} contentContainerStyle={styles.below} keyboardShouldPersistTaps="handled">
       {layout.order.filter(s => !layout.hidden.includes(s) && (s !== "notes" || linkedNotes.length > 0)).map(section => section === "agenda"
         ? <WorkspaceSection key={section} title={longDay(selected)} icon="calendar-outline" tint={c.accent} count={agenda.length ? `${agenda.length} ${agenda.length === 1 ? "item" : "items"}` : "none"} flush>
-          <DayAgenda day={selected} items={agenda} tasks={data.tasks} meta={meta} format={timeFormat} onEdit={id => { if (!isMeetingId(id)) onEdit(id) }} onToggle={toggle} showTimes={layout.showTimes} showCourses={layout.showCourses} />
+          <DayAgenda day={selected} items={agenda} tasks={data.tasks} meta={meta} format={timeFormat} onEdit={id => { if (!isMeetingId(id)) onEdit(id) }} onReflect={onReflect} onToggle={toggle} showTimes={layout.showTimes} showCourses={layout.showCourses} />
         </WorkspaceSection>
         : section === "log"
         ? <WorkspaceSection key={section} title="Log" icon="book-outline" tint={c.accent}><DailyLogEditor data={data} day={selected} logs={logs} blocked={blocked} heading="Log" embedded /></WorkspaceSection>

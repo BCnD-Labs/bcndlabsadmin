@@ -31,6 +31,7 @@ export function draftErrors(d: TaskDraft, start?: TaskDraft): DraftErrors {
   if (!event && d.due && !validDateKey(d.due)) errors.due = "Pick a valid date."
   if (!event && d.due && d.time.trim() && !normalizeTime(d.time)) errors.time = "Use 24-hour time, like 09:30."
   const extras = d.extras ? extraErrors(d.extras, start?.extras) : {}
+  if (start?.extras?.reflection && (start.extras.reflection.text.trim() || Object.keys(start.extras.reflection.items).length) && d.extras && !d.extras.reflection.text.trim() && !Object.keys(d.extras.reflection.items).length) extras.reflection = "Keep at least one thought in this reflection."
   if (event && !validDateKey(d.extras?.scheduledDate)) extras.schedule = "Pick a date for the event."
   return { ...errors, ...extras }
 }

@@ -11,6 +11,9 @@ import { Icon } from "../../../ui.tsx"
 import { formatDay } from "../dates.ts"
 import { appendPrompt, LOG_PROMPTS, shownText } from "./log-rules.ts"
 import type { EntryDraft, LogDrafts } from "./useLogDrafts.ts"
+import { ReflectionSection } from "../ReflectionSection.tsx"
+import { buildReflection, reflectionDraft, reflectionProblem, type ReflectionDraft } from "../reflection.ts"
+import { DailyCheckIns } from "./DailyCheckIns.tsx"
 
 type Item = NonNullable<Collections["journal"][number]["entries"]>[number]
 type Compose = { kind: "entry"; day: string; id: string; text: string; sectionId?: string; legacy?: boolean; initialAsNote: boolean; asNote: boolean; noteId: string; createdAt: string; initialText: string }
@@ -28,10 +31,14 @@ export function DailyLogEditor({ data, day, logs, blocked, heading = "Log", embe
   const [closed, setClosed] = useState<Record<string, true>>({})
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [reflecting, setReflecting] = useState<{ day: string; id: string } | null>(null)
+  const [reflection, setReflection] = useState<ReflectionDraft>(() => reflectionDraft())
+  const [reflectionError, setReflectionError] = useState<string | null>(null)
   const busy = useRef(false)
   const sections = logs.shownSections(day)
   const selected = sections.find((section) => section.id === active)
   const journal = data.journal.find((entry) => entry.id === day)
+  const reflectedItem = reflecting ? data.journal.find(entry => entry.id === reflecting.day)?.entries?.find(item => item.id === reflecting.id) : undefined
   const legacyText = selected ? selected.text : shownText(logs.drafts, data.journal, day)
   const items = (journal?.entries ?? []).filter((entry) => (entry.sectionId ?? null) === active && !entry.id.startsWith("journal-") && !entry.courseId && !entry.taskId)
   const draftKey = `${day}/${active ?? ""}`
@@ -103,10 +110,33 @@ export function DailyLogEditor({ data, day, logs, blocked, heading = "Log", embe
   const dirty = !!editor && (editor.text !== editor.initialText || (editor.kind === "entry" && editor.asNote !== editor.initialAsNote))
   const close = useEditorClose(dirty, saving, dismiss, () => save(false))
 
-  const row = (key: string, text: string, note: boolean, onPress: () => void) => <Pressable key={key} onPress={onPress} style={styles.row} accessibilityRole="button" accessibilityLabel={`Edit reflection: ${text}`}>
+  function openReflection(item: Item) {
+    setReflecting({ day, id: item.id })
+    setReflection(reflectionDraft(item.reflection))
+    setReflectionError(null)
+  }
+  async function saveReflection() {
+    if (!reflecting || !reflectedItem || saving) return
+    const problem = reflectionProblem(reflection)
+    if (problem || (!reflection.text.trim() && !Object.keys(reflection.items).length)) { setReflectionError(problem ?? "Add a thought first."); return }
+    setSaving(true); setReflectionError(null)
+    const target = reflecting, draft = reflection
+    try {
+      const ok = await mutate(["journal"], current => {
+        const item = current.journal.find(entry => entry.id === target.day)?.entries?.find(entry => entry.id === target.id)
+        if (!item) throw Error("Log entry removed")
+        return saveJournalItem(current, target.day, { ...item, reflection: buildReflection(draft, item.reflection, new Date().toISOString()) }, !!item.noteId)
+      })
+      if (!ok) { setReflectionError("Couldn't save. Your reflection is still here."); return }
+      setReflecting(null)
+    } catch { setReflectionError("Couldn't save. Your reflection is still here.") }
+    finally { setSaving(false) }
+  }
+
+  const row = (key: string, text: string, note: boolean, onPress: () => void, item?: Item) => <View key={key} style={styles.row}><Pressable onPress={onPress} style={styles.rowBody} accessibilityRole="button" accessibilityLabel={`Edit log entry: ${text}`}>
     <Icon name={note ? "document-text-outline" : "ellipse-outline"} size={13} tint={c.muted} />
     <Text style={styles.rowText} numberOfLines={2}>{text}</Text>
-  </Pressable>
+  </Pressable>{item ? <Pressable onPress={() => openReflection(item)} disabled={!!blocked} style={[styles.reflectChip, item.reflection && styles.reflectChipDone]} accessibilityRole="button" accessibilityLabel={`${item.reflection ? "Edit" : "Add"} reflection for ${text}`}><Icon name={item.reflection ? "chatbubble" : "chatbubble-outline"} size={13} tint={item.reflection ? c.accent : c.muted} /><Text style={[styles.reflectLabel, item.reflection && { color: c.accent }]}>{item.reflection ? "Reflected" : "Reflect"}</Text></Pressable> : null}</View>
 
   function toggleSection(id: string | null) {
     const key = `${day}/${id ?? ""}`
@@ -115,7 +145,7 @@ export function DailyLogEditor({ data, day, logs, blocked, heading = "Log", embe
   }
 
   return <View style={styles.root}>
-    <View style={styles.header}>{embedded ? <Text style={styles.heading}>Entries for this day</Text> : <><Icon name="create-outline" tint={c.text2} size={17} /><Text style={styles.heading} accessibilityRole="header">{heading}</Text></>}
+    <View style={styles.header}>{embedded ? <DailyCheckIns data={data} day={day} blocked={blocked} /> : <><Icon name="create-outline" tint={c.text2} size={17} /><Text style={styles.heading} accessibilityRole="header">{heading}</Text></>}
       <Pressable disabled={!!blocked || saving} onPress={() => { setError(null); setQuick(true) }} style={styles.icon} accessibilityRole="button" accessibilityLabel="Reflection quick inserts"><Icon name="add" tint={tint} size={19} /></Pressable>
     </View>
     {error && !editor && !quick ? <Text style={styles.error} accessibilityLiveRegion="polite">{error}</Text> : null}
@@ -137,7 +167,7 @@ export function DailyLogEditor({ data, day, logs, blocked, heading = "Log", embe
             <Pressable disabled={saving || !!blocked} onPress={() => void saveInline()} style={[styles.pill, styles.savePill]} accessibilityRole="button" accessibilityLabel="Save entry"><Text style={styles.saveText}>{saving ? "Saving…" : "Save entry"}</Text></Pressable>
           </View> : null}
           {section.text.trim() ? row("legacy", section.text, !!section.noteId, () => open(undefined, true)) : null}
-          {entries.map(item => row(item.id, item.text, !!item.noteId, () => open(item)))}
+          {entries.map(item => row(item.id, item.text, !!item.noteId, () => open(item), item))}
           {!count ? <Text style={styles.empty}>No entries for this {section.id ? "section" : "day"}.</Text> : null}
         </> : null}
       </View>
@@ -160,6 +190,14 @@ export function DailyLogEditor({ data, day, logs, blocked, heading = "Log", embe
         </View>}
       </KeyboardFrame>
     </Modal>
+    <Modal visible={!!reflecting} transparent animationType="fade" onRequestClose={() => { if (!saving) setReflecting(null) }}>
+      <KeyboardFrame style={styles.backdrop}><View style={styles.dialog} accessibilityViewIsModal>
+        <View style={styles.header}><Text style={[styles.modalTitle, styles.grow]}>{reflectedItem?.reflection ? "Edit reflection" : "Add reflection"}</Text><Pressable onPress={() => setReflecting(null)} disabled={saving} style={styles.icon} accessibilityRole="button" accessibilityLabel="Close reflection"><Icon name="close" size={17} tint={c.muted} /></Pressable></View>
+        <Text style={styles.modalSub} numberOfLines={2}>{reflectedItem?.text}</Text>
+        <KeyboardScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ gap: 9 }} keyboardShouldPersistTaps="handled"><ReflectionSection value={reflection} onChange={setReflection} error={reflectionError ?? undefined} /></KeyboardScrollView>
+        <Pressable onPress={() => void saveReflection()} disabled={saving || !!blocked} style={[styles.pill, styles.selected]} accessibilityRole="button"><Text style={styles.actionText}>{saving ? "Saving…" : "Save reflection"}</Text></Pressable>
+      </View></KeyboardFrame>
+    </Modal>
   </View>
 }
 
@@ -171,7 +209,7 @@ const styles = StyleSheet.create({
   icon: { width: 32, height: 32, alignItems: "center", justifyContent: "center", borderRadius: 14 }, pill: { minHeight: 32, justifyContent: "center", paddingHorizontal: 11, borderRadius: 15, backgroundColor: c.panel },
   group: { gap: 5 }, groupHeader: { flexDirection: "row", alignItems: "center", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.line }, groupButton: { flex: 1, minHeight: 40, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 4 }, groupTitle: { flex: 1, color: c.text, fontSize: 13, fontWeight: "700" }, groupCount: { color: c.muted, fontSize: 11 },
   selected: { backgroundColor: c.selected }, tabText: { color: c.text2, fontSize: 11 }, actionText: { color: c.accent, fontSize: 11, fontWeight: "600" },
-  row: { flexDirection: "row", gap: 8, alignItems: "center", minHeight: 35, paddingVertical: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.line }, rowText: { flex: 1, color: c.text2, fontSize: 12, lineHeight: 17 }, empty: { color: c.muted, fontSize: 11, paddingVertical: 9 },
+  row: { flexDirection: "row", gap: 8, alignItems: "center", minHeight: 35, paddingVertical: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.line }, rowBody: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8 }, rowText: { flex: 1, color: c.text2, fontSize: 12, lineHeight: 17 }, reflectChip: { minHeight: 30, flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, borderRadius: 10, borderWidth: 1, borderColor: c.line }, reflectChipDone: { borderColor: c.accent, backgroundColor: c.selected }, reflectLabel: { color: c.muted, fontSize: 10, fontWeight: "600" }, empty: { color: c.muted, fontSize: 11, paddingVertical: 9 },
   error: { color: "#ffa8a8", fontSize: 11 }, backdrop: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "rgba(0,0,0,0.45)" }, dialog: { alignSelf: "center", width: "100%", maxWidth: 350, maxHeight: "80%", padding: 12, borderRadius: shape.dialog, gap: 9, backgroundColor: c.raised },
   modalTitle: { color: c.text, fontSize: 14, fontWeight: "600" }, input: { minHeight: 36, paddingHorizontal: 10, paddingVertical: 8, color: c.text, backgroundColor: c.panel, borderRadius: 10, fontSize: 12 }, notes: { minHeight: 220, maxHeight: 360, lineHeight: 19, fontSize: 13, paddingTop: 10 }, entryDialog: { maxWidth: 520 }, titleBox: { flex: 1, gap: 1 }, grow: { flex: 1 }, modalSub: { color: c.muted, fontSize: 11 }, noteToggle: { flexDirection: "row", alignItems: "center", gap: 7, minHeight: 32 }, actions: { flexDirection: "row", justifyContent: "flex-end", gap: 7 },
 })

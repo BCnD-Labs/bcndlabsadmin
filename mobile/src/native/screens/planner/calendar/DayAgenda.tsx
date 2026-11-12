@@ -14,13 +14,14 @@ import type { AgendaItem } from "./schedule.ts"
  * One day's tasks as a list (under the Month and Week grids). Tap a row to open the task, tap its
  * box to complete or reopen it. Empty days say so.
  */
-export function DayAgenda({ day, items, tasks, meta, format, onEdit, onToggle, showTimes = true, showCourses = true }: {
+export function DayAgenda({ day, items, tasks, meta, format, onEdit, onReflect, onToggle, showTimes = true, showCourses = true }: {
   day: string
   items: AgendaItem[]
   tasks: Collections["tasks"]
   meta: { logged: boolean; completed: number }
   format: TimeFormat
   onEdit: (id: string) => void
+  onReflect: (id: string) => void
   showTimes?: boolean
   showCourses?: boolean
   onToggle: (id: string) => void
@@ -46,6 +47,7 @@ export function DayAgenda({ day, items, tasks, meta, format, onEdit, onToggle, s
               {showCourses && item.course ? <PropChip kind="course" label="Course" value={item.course} /> : null}
             </View>
           </Pressable>
+          {tasks.find(t => t.id === item.id) ? <Pressable onPress={() => onReflect(item.id)} style={[styles.reflectChip, tasks.find(t => t.id === item.id)?.reflection && styles.reflectDone]} accessibilityRole="button" accessibilityLabel={`${tasks.find(t => t.id === item.id)?.reflection ? "Edit" : "Add"} reflection for ${item.title}`}><Icon name={tasks.find(t => t.id === item.id)?.reflection ? "chatbubble" : "chatbubble-outline"} size={13} tint={tasks.find(t => t.id === item.id)?.reflection ? color.accent : color.muted} /><Text style={[styles.reflectText, tasks.find(t => t.id === item.id)?.reflection && { color: color.accent }]}>{tasks.find(t => t.id === item.id)?.reflection ? "Reflected" : "Reflect"}</Text></Pressable> : null}
           {!item.event && item.deadline && !item.done ? <Icon name="flag-outline" size={16} tint={item.overdue ? tone.amber : color.muted} /> : null}
         </View>
         {previewKey === `${day}/${item.id}` && tasks.find(t => t.id === item.id) ? <TaskPeek task={tasks.find(t => t.id === item.id)!} course={item.course} onOpen={() => onEdit(item.id)} /> : null}
@@ -63,6 +65,7 @@ const styles = StyleSheet.create({
   note: { color: color.muted, fontSize: 11, paddingHorizontal: 10, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: color.line }, empty: { color: color.muted, fontSize: 12, padding: 10 }, chips: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 3 },
   row: { flexDirection: "row", alignItems: "center", gap: 2, paddingVertical: 4, paddingRight: 8 },
   body: { flex: 1, justifyContent: "center", gap: 1, paddingVertical: 0 },
+  reflectChip: { minHeight: 30, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 3, paddingHorizontal: 5, borderRadius: 10, borderWidth: 1, borderColor: color.line }, reflectDone: { borderColor: color.accent, backgroundColor: color.selected }, reflectText: { color: color.muted, fontSize: 10, fontWeight: "600" },
   rowTitle: { color: color.text, fontSize: 14, lineHeight: 18, includeFontPadding: false, fontWeight: "500" },
   done: { color: color.muted, textDecorationLine: "line-through" },
   sub: { color: color.muted, fontSize: 11, lineHeight: 14, includeFontPadding: false },

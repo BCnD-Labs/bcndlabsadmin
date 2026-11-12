@@ -40,7 +40,6 @@ export function PlannerSettings({ onClose, prefs, onChange, calendar, onCalendar
             <Text style={styles.hint}>Agenda</Text>
             <Check label="Times" value={prefs.showTimes} onPress={() => onChange({ showTimes: !prefs.showTimes })} />
             <Check label="Course labels" value={prefs.showCourses} onPress={() => onChange({ showCourses: !prefs.showCourses })} />
-            <Check label="Completed tasks" value={prefs.showCompleted} onPress={() => onChange({ showCompleted: !prefs.showCompleted })} />
             <Text style={styles.hint}>Calendar</Text>
             <Check label="Week starts Monday" value={calendar.weekStartsOn === 1} onPress={() => onCalendar({ weekStartsOn: calendar.weekStartsOn === 1 ? 0 : 1 })} />
             <Check label="24-hour clock" value={calendar.timeFormat === "24h"} onPress={() => onCalendar({ timeFormat: calendar.timeFormat === "24h" ? "12h" : "24h" })} />
