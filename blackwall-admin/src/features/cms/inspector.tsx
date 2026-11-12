@@ -3,6 +3,7 @@ import { useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import { BLOCKS, footerPages, type BlockField } from "@shared/sitebuilder"
+import { ANIMATIONS } from "@shared/site-bootstrap"
 import { canNest, pageTree } from "@shared/sitebuilder-tree"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -72,6 +73,10 @@ function StyleFields({ block, onPatch }: { block: SiteBlock; onPatch: (p: Record
       {row("Space above", d.top ?? AUTO, SPACE, (v) => set({ top: v === AUTO ? undefined : (v as BlockDesign["top"]) }))}
       {row("Space below", d.bottom ?? AUTO, SPACE, (v) => set({ bottom: v === AUTO ? undefined : (v as BlockDesign["bottom"]) }))}
       {row("Background", bg, [{ value: AUTO, label: "None" }, { value: "surface", label: "Shaded" }, { value: "accent", label: "Accent" }], setBg)}
+      <div className="grid gap-1"><span className={fieldLabel}>Animation</span>
+        <OptionSelect id="style-anim" value={d.anim ?? AUTO} onChange={(v) => set({ anim: v === AUTO ? undefined : (v as BlockDesign["anim"]) })} options={[{ value: AUTO, label: "None" }, ...Object.entries(ANIMATIONS).map(([value, a]) => ({ value, label: a.name }))]} className="w-full" />
+        <span className="text-[11px] text-faint">Plays when the page loads; skipped for visitors who ask for less motion.</span>
+      </div>
     </div>
   )
 }

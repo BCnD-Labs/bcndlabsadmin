@@ -1,0 +1,119 @@
+/**
+ * Bootstrap mode: pages load Bootstrap 5 from its CDN first and your own css/style.css second,
+ * and the site is flat .html files with relative links, so it works from any folder (any host's subfolder,
+ * a GitHub Pages project address, or straight off a disk). Pagesmith's own sites are untouched by anything here.
+ */
+import type { Site } from "../src/lib/types.ts"
+import { relativePath } from "./site.ts"
+
+export const BOOTSTRAP = {
+  css: { href: "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css", integrity: "sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" },
+  js: { href: "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js", integrity: "sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" },
+} as const
+
+export const isBootstrap = (site: Pick<Site, "framework">) => site.framework === "bootstrap"
+
+/** Families worth offering; any Google Fonts family name works. */
+export const SUGGESTED_FONTS = ["Inter", "Poppins", "Roboto", "Open Sans", "Lato", "Montserrat", "Nunito", "Raleway", "Merriweather", "Playfair Display", "Lora", "Source Sans 3", "Work Sans", "DM Sans", "Fira Code", "Bebas Neue"]
+
+const FONT_NAME = /^[A-Za-z0-9][A-Za-z0-9 ]{0,40}$/
+/** A usable Google Fonts family name, or undefined (only letters, digits and spaces get into a stylesheet address). */
+export const fontName = (v: unknown) => (typeof v === "string" && FONT_NAME.test(v.trim()) ? v.trim() : undefined)
+
+/** The stylesheet link for the site's chosen fonts, or "" when it has none. */
+export function googleFontsHref(site: Pick<Site, "fontHeading" | "fontBody">) {
+  const names = [...new Set([fontName(site.fontHeading), fontName(site.fontBody)].filter((n): n is string => !!n))]
+  if (!names.length) return ""
+  return `https://fonts.googleapis.com/css2?${names.map((n) => `family=${n.replace(/ /g, "+")}:wght@400;600;700`).join("&")}&display=swap`
+}
+
+/** Where a site address lives as a file: "/" is index.html, "/about/" is about.html, "/posts/a/" is posts/a.html, other paths are files already. */
+export function flatFile(urlPath: string) {
+  const p = urlPath.replace(/^\/+/, "")
+  if (!p) return "index.html"
+  if (p.endsWith("/")) return `${p.slice(0, -1)}.html`
+  return /\.[a-z0-9]+$/i.test(p) ? p : `${p}.html`
+}
+
+/** Turns every site-root link in a page (href, src) into one relative to that page's file, so the page works wherever it is put. */
+export function relativize(html: string, fromFile: string) {
+  return html.replace(/\b(href|src)="(\/(?!\/)[^"]*)"/g, (_all, attr: string, url: string) => {
+    const [path, rest = ""] = url.split(/(?=[?#])/, 2)
+    return `${attr}="${relativePath(fromFile, flatFile(path))}${rest}"`
+  })
+}
+
+/** The look of a Bootstrap site: Bootstrap's own colors and fonts follow the site's palette, so Look still works. */
+export const BOOTSTRAP_BRIDGE = `/* Bootstrap follows the palette above */
+:root { --bs-body-bg: var(--bg); --bs-body-color: var(--text); --bs-secondary-color: var(--muted); --bs-tertiary-bg: var(--surface); --bs-border-color: var(--border); --bs-link-color: var(--accent); --bs-link-hover-color: var(--accent); --bs-body-font-family: var(--font); --bs-border-radius: var(--radius, 8px); }
+.btn-primary { --bs-btn-bg: var(--accent); --bs-btn-border-color: var(--accent); --bs-btn-color: var(--accent-text); --bs-btn-hover-bg: var(--accent); --bs-btn-hover-border-color: var(--accent); --bs-btn-hover-color: var(--accent-text); --bs-btn-active-bg: var(--accent); --bs-btn-active-border-color: var(--accent); --bs-btn-active-color: var(--accent-text); --bs-btn-focus-shadow-rgb: 128, 128, 128; }
+.btn-outline-primary { --bs-btn-color: var(--accent); --bs-btn-border-color: var(--accent); --bs-btn-hover-bg: var(--accent); --bs-btn-hover-border-color: var(--accent); --bs-btn-hover-color: var(--accent-text); --bs-btn-active-bg: var(--accent); --bs-btn-active-border-color: var(--accent); --bs-btn-active-color: var(--accent-text); }
+.progress { --bs-progress-bg: var(--surface); --bs-progress-bar-bg: var(--accent); --bs-progress-bar-color: var(--accent-text); --bs-progress-height: 1.5rem; }
+.navbar { --bs-navbar-color: var(--text); --bs-navbar-hover-color: var(--accent); --bs-navbar-active-color: var(--accent); --bs-navbar-brand-color: var(--text); --bs-navbar-brand-hover-color: var(--accent); --bs-navbar-toggler-border-color: var(--border); background: var(--bg); border-bottom: 1px solid var(--border); }
+.navbar-brand { white-space: normal; max-width: calc(100% - 5rem); }
+.navbar-nav .nav-link, [data-theme-toggle] { white-space: nowrap; }
+@media (min-width: 992px) { .navbar-nav { flex-wrap: wrap; } .navbar-brand { max-width: none; } }
+.step-progress { margin-bottom: 1.5rem; }
+.navbar .dropdown-menu { --bs-dropdown-bg: var(--bg); --bs-dropdown-link-color: var(--text); --bs-dropdown-link-hover-bg: var(--surface); --bs-dropdown-border-color: var(--border); }
+.card { --bs-card-bg: var(--surface); --bs-card-border-color: var(--border); }
+.table { --bs-table-bg: transparent; --bs-table-color: var(--text); --bs-table-border-color: var(--border); }
+.form-control, .form-select { background-color: var(--bg); color: var(--text); border-color: var(--border); }
+.skip-link { position: absolute; left: .5rem; top: -4rem; z-index: 2000; padding: .5rem 1rem; background: var(--accent); color: var(--accent-text); border-radius: var(--radius, 8px); }
+.skip-link:focus { top: .5rem; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.section { padding: 4rem 0; } .section--tinted { background: var(--surface); } .container.container--narrow { max-width: 760px; }
+.pic { width: 100%; height: 240px; object-fit: cover; border-radius: var(--radius, 8px); }
+.pic.ph--square { aspect-ratio: 1; height: auto; } .pic.ph--tall { aspect-ratio: 4 / 5; height: auto; }
+.ph { height: 240px; display: grid; place-items: center; background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius, 8px); color: var(--muted); font-size: 13px; }
+.ph--square { height: 260px; } .ph--tall { height: 320px; }
+.pic, .ph { margin-bottom: 1rem; } .row > .pic, .row > .ph { margin-bottom: 0; }
+.prose { max-width: 70ch; } .prose img { max-width: 100%; border-radius: var(--radius, 8px); margin: 16px 0; }
+.prose pre { background: var(--surface); padding: 14px; border-radius: var(--radius, 8px); overflow: auto; }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.post-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
+.post-card { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius, 10px); overflow: hidden; text-decoration: none; color: var(--text); background: var(--bg); }
+.post-card:hover { border-color: var(--accent); }
+.post-card img, .post-card__cover { width: 100%; height: 150px; object-fit: cover; background: var(--surface); }
+.post-card__body { display: grid; gap: 4px; padding: 12px 14px 16px; }
+.post-card__kicker { font-size: 12px; font-weight: 600; color: var(--accent); }
+.post-card__title { font-weight: 700; } .post-card__summary, .post-card__meta { font-size: 14px; color: var(--muted); }
+.week { margin: 0 0 40px; } .week__label { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.comments { border-top: 1px solid var(--border); } .comment { padding: 14px 0; border-bottom: 1px solid var(--border); } .comment p { margin: 0 0 6px; } .comment__meta { font-size: 14px; color: var(--muted); }
+.form__error { color: #c0392b; } .field { margin: 0 0 18px; } .form { max-width: 480px; }
+.step-pager { display: flex; justify-content: space-between; gap: 1rem; margin-top: 2rem; }
+.video-embed iframe { border: 0; }
+`
+
+/** Runs in the head so the saved choice (or the device's setting) is applied before the page paints. */
+export const THEME_SCRIPT = `<script>
+(function () {
+  var t; try { t = localStorage.getItem("theme"); } catch (e) {}
+  if (t !== "light" && t !== "dark") t = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  var d = document.documentElement; d.setAttribute("data-theme", t); d.setAttribute("data-bs-theme", t);
+})();
+</script>`
+
+/** The button's behaviour, at the end of the page. */
+export const THEME_TOGGLE_SCRIPT = `<script>
+document.querySelectorAll("[data-theme-toggle]").forEach(function (b) {
+  function show() { var t = document.documentElement.getAttribute("data-theme"); b.setAttribute("aria-pressed", t === "dark"); b.querySelector("[data-theme-label]").textContent = t === "dark" ? "Light mode" : "Dark mode"; }
+  show();
+  b.addEventListener("click", function () {
+    var t = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", t); document.documentElement.setAttribute("data-bs-theme", t);
+    try { localStorage.setItem("theme", t); } catch (e) {}
+    show();
+  });
+});
+</script>`
+
+/** Entrance animations (Animista-style keyframes). Only the ones a site uses are written into its CSS. */
+export const ANIMATIONS: Record<string, { name: string; css: string }> = {
+  "fade-in": { name: "Fade in", css: "@keyframes fade-in { 0% { opacity: 0; } 100% { opacity: 1; } }\n.bs-an-fade-in { animation: fade-in 1.2s cubic-bezier(.39,.575,.565,1) both; }" },
+  "slide-in-bottom": { name: "Slide up", css: "@keyframes slide-in-bottom { 0% { transform: translateY(1000px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }\n.bs-an-slide-in-bottom { animation: slide-in-bottom .6s cubic-bezier(.25,.46,.45,.94) both; }" },
+  "slide-in-left": { name: "Slide in", css: "@keyframes slide-in-left { 0% { transform: translateX(-1000px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }\n.bs-an-slide-in-left { animation: slide-in-left .6s cubic-bezier(.25,.46,.45,.94) both; }" },
+  "scale-in": { name: "Grow", css: "@keyframes scale-in { 0% { transform: scale(.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }\n.bs-an-scale-in { animation: scale-in .5s cubic-bezier(.25,.46,.45,.94) both; }" },
+  "bounce-in-top": { name: "Bounce", css: "@keyframes bounce-in-top { 0% { transform: translateY(-500px); animation-timing-function: ease-in; opacity: 0; } 38% { transform: translateY(0); animation-timing-function: ease-out; opacity: 1; } 55% { transform: translateY(-65px); animation-timing-function: ease-in; } 72% { transform: translateY(0); animation-timing-function: ease-out; } 81% { transform: translateY(-28px); animation-timing-function: ease-in; } 90% { transform: translateY(0); animation-timing-function: ease-out; } 95% { transform: translateY(-8px); animation-timing-function: ease-in; } 100% { transform: translateY(0); animation-timing-function: ease-out; } }\n.bs-an-bounce-in-top { animation: bounce-in-top 1.1s both; }" },
+  pulsate: { name: "Pulse", css: "@keyframes pulsate-fwd { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }\n.bs-an-pulsate { animation: pulsate-fwd .5s ease-in-out infinite both; }" },
+}
+export const REDUCED_MOTION_CSS = "@media (prefers-reduced-motion: reduce) { [class*=\"bs-an-\"] { animation: none !important; } }"

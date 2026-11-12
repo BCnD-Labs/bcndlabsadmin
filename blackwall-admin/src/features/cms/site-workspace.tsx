@@ -1,4 +1,4 @@
-import { ChevronLeft, Eye, FileDown, Inbox, Layers, LayoutTemplate, Monitor, Palette, PanelRight, Plus, Redo2, Rocket, Settings2, Smartphone, Tablet, Undo2, X } from "lucide-react"
+import { Accessibility, ChevronLeft, Eye, FileDown, Inbox, Layers, LayoutTemplate, Monitor, Palette, PanelRight, Plus, Redo2, Rocket, Settings2, Smartphone, Tablet, Undo2, X } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom"
 import { usePanelRef, type Layout } from "react-resizable-panels"
@@ -27,7 +27,9 @@ import { FilesPanel } from "./files-panel"
 import { FormsPanel } from "./forms-panel"
 import { Inspector } from "./inspector"
 import { LayersPane, blockName } from "./layers-pane"
+import { A11yPanel, KIND_INFO } from "./a11y-panel"
 import { LookPanel } from "./look-panel"
+import { auditSite, type A11yItem } from "@shared/site-a11y"
 import { SectionsPane } from "./sections-pane"
 import { PagesPane } from "./pages-pane"
 import { PostsPanel } from "./posts-panel"
@@ -43,13 +45,14 @@ import { useSiteHistory } from "./use-site-history"
 
 const PANELS = {
   look: { title: "Look", icon: Palette },
+  access: { title: "Accessibility", icon: Accessibility },
   forms: { title: "Forms", icon: Inbox },
   settings: { title: "Settings", icon: Settings2 },
   files: { title: "Get files", icon: FileDown },
   posts: { title: "Posts", icon: Layers },
 } as const
 export type WorkspacePanel = keyof typeof PANELS
-const TOOLBAR: WorkspacePanel[] = ["look", "forms", "settings", "files"]
+const TOOLBAR: WorkspacePanel[] = ["look", "access", "forms", "settings", "files"]
 
 const DEVICES = { desktop: { width: "100%", icon: Monitor }, tablet: { width: "820px", icon: Tablet }, phone: { width: "390px", icon: Smartphone } } as const
 const LAYOUT_KEY = "blackwall.pagesmith-layout"
@@ -111,6 +114,7 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
   const setPref = usePrefs((s) => s.set)
 
   const [selected, setSelected] = useState<string | null>(null)
+  const [marksOn, setMarksOn] = useState(false)
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set())
   const [insertAt, setInsertAt] = useState<number | null>(null)
   const [device, setDevice] = useState<keyof typeof DEVICES>("desktop")
@@ -177,6 +181,18 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
     if (panel) setPanel(null)
     if (page) setCollapsed((c) => { const path = pathTo(page.sections, id) ?? []; return path.some((x) => x !== id && c.has(x)) ? new Set([...c].filter((x) => x === id || !path.includes(x))) : c })
     requestAnimationFrame(() => root.current?.querySelector(`[data-tree-row="${CSS.escape(id)}"]`)?.scrollIntoView({ block: "nearest" }))
+  }
+  /** Accessibility findings as badges on this page's blocks, only while they are switched on. */
+  const marks = useMemo(() => {
+    if (!marksOn || !page) return undefined
+    return auditSite(site, allPages, library, drafts).items.filter((i) => i.blockId && i.pageId === page.id).map((i) => ({ id: i.blockId!, glyph: KIND_INFO[i.kind].glyph, color: KIND_INFO[i.kind].badge, text: i.text }))
+  }, [marksOn, page, site, allPages, library, drafts])
+  /** From a finding: go to its page and block, or to the colours. */
+  const showFinding = (item: A11yItem) => {
+    if (item.area === "look") return setPanel("look")
+    if (item.pageId && item.pageId !== page?.id) navigate(sitePageHref(item.pageId))
+    if (item.blockId) select(item.blockId)
+    else setPanel(null)
   }
   const removeBlock = (id: string) => {
     if (!page) return
@@ -275,6 +291,7 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
 
   const panelBody = panel && (
     panel === "look" ? <LookPanel site={site} />
+      : panel === "access" ? <A11yPanel site={site} pageId={page?.id} marks={marksOn} onMarks={setMarksOn} onShow={showFinding} />
       : panel === "forms" ? <FormsPanel site={site} />
         : panel === "settings" ? <SettingsPanel site={site} />
           : panel === "files" ? <FilesPanel site={site} onPanel={setPanel} />
@@ -310,7 +327,7 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
   )
   const canvas = (
     <div className="relative flex h-full min-h-0 min-w-0 justify-center overflow-auto bg-well p-2" data-testid="canvas">
-      {page ? <SitePreview key={page.id} html={html} title={`Preview of ${page.title}`} width={DEVICES[device].width} selectedId={selectedId} onBlock={select} onLink={follow} editing={editing} className="h-full" />
+      {page ? <SitePreview key={page.id} html={html} title={`Preview of ${page.title}`} width={DEVICES[device].width} selectedId={selectedId} onBlock={select} onLink={follow} editing={editing} marks={marks} className="h-full" />
         : <div className="grid place-items-center"><EmptyState icon={LayoutTemplate} title="This site has no pages yet" action={<Button onClick={() => openForm({ kind: "sitePage" })}><Plus /> New page</Button>} /></div>}
       {narrow && block && <Button size="sm" className="absolute bottom-3 left-1/2 -translate-x-1/2 shadow-md" onClick={() => setInspectorSheet(true)}>Edit {blockName(block, false).toLowerCase()}</Button>}
     </div>

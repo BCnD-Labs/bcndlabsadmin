@@ -91,14 +91,14 @@ export async function checkLive(store: ConnectionStore, ws: Collections, siteId:
       return { status: 0, text: "" }
     }
   }
-  const expected = Object.keys(files).filter((f) => f.endsWith("index.html") && !/moved to/.test(files[f].slice(0, 400)) && !files[f].includes('http-equiv="refresh"')).slice(0, PAGE_LIMIT)
+  const expected = Object.keys(files).filter((f) => f.endsWith(".html") && !/moved to/.test(files[f].slice(0, 400)) && !files[f].includes('http-equiv="refresh"')).slice(0, PAGE_LIMIT)
   const pages: LivePage[] = []
   for (const file of expected) {
     const path = addressOf(file), got = await get(path)
     pages.push({ path, state: got.status !== 200 ? "missing" : contentOf(got.text) === contentOf(files[file]) ? "current" : "old" })
   }
   const gone: LivePage[] = []
-  for (const file of removed.filter((f) => f.endsWith("index.html")).slice(0, PAGE_LIMIT)) {
+  for (const file of removed.filter((f) => f.endsWith(".html")).slice(0, PAGE_LIMIT)) {
     const path = addressOf(file), got = await get(path)
     gone.push({ path, state: got.status === 404 || got.status === 410 ? "gone" : "still-there" })
   }
