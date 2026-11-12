@@ -13,6 +13,8 @@ import { findAsset, imagePathsInPost } from "./assets.ts"
 import type { Asset, Draft, Site, SiteBlock, SiteForm, SitePage } from "../src/lib/types.ts"
 import { ANIMATIONS, BOOTSTRAP, previewAssets, BOOTSTRAP_BRIDGE, COMPONENT_CSS, REDUCED_MOTION_CSS, THEME_SCRIPT, fontName, flatFile, googleFontsHref, isBootstrap, relativize } from "./site-bootstrap.ts"
 import { SITE_RUNTIME } from "./site-runtime.ts"
+import { ICONS, ICON_NAMES, iconSvg, type IconName } from "./site-icons.ts"
+
 
 /* ------------------------------------------------------------------ colours */
 
@@ -171,7 +173,7 @@ export const cleanDeclarations = (v: unknown) => str(v).replace(/[<>{}\\]/g, "")
 export const blockClass = (b: Pick<SiteBlock, "id">) => `x-${String(b.id).replace(/[^\w-]/g, "")}`
 
 /** The colours a badge or an alert can take. */
-export const TONES = [{ value: "primary", label: "Accent" }, { value: "secondary", label: "Quiet" }, { value: "success", label: "Green" }, { value: "warning", label: "Yellow" }, { value: "danger", label: "Red" }]
+export const TONES = [{ value: "primary", label: "Accent" }, { value: "secondary", label: "Quiet" }, { value: "success", label: "Green" }, { value: "info", label: "Blue" }, { value: "warning", label: "Yellow" }, { value: "danger", label: "Red" }, { value: "pink", label: "Pink" }, { value: "purple", label: "Purple" }, { value: "orange", label: "Orange" }]
 const tone = (b: SiteBlock) => (TONES.some((t) => t.value === b.tone) ? String(b.tone) : "primary")
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
@@ -563,6 +565,22 @@ export const BLOCKS: Record<string, BlockDef> = {
       return ['<div class="filter-grid" data-ps-filter>', '  <div class="filter-bar" role="toolbar" aria-label="Filter">', ...btns, "  </div>", '  <div class="filter-grid__items">']
     },
     close: () => ["  </div>", "</div>"],
+  },
+  icon: {
+    name: "Icon", def: { name: "star", size: "m", label: "" },
+    edit: [
+      { k: "name", l: "Which icon", kind: "select", options: ICON_NAMES.map((n) => ({ value: n, label: ICONS[n].name })) },
+      { k: "size", l: "Size", kind: "select", options: [{ value: "s", label: "Small" }, { value: "m", label: "Medium" }, { value: "l", label: "Large" }] },
+      { k: "label", l: "What it means (for screen readers)", note: "Leave blank when there is text beside the icon that already says what it is." },
+    ],
+    html: (b) => {
+      const name = String(b.name ?? "star") as IconName
+      const size = ["s", "m", "l"].includes(String(b.size)) ? String(b.size) : "m"
+      const label = str(b.label).trim()
+      const svgEl = iconSvg(name)
+      const attrs = label ? `role="img" aria-label="${esc(label)}"` : 'aria-hidden="true"'
+      return [`<span class="ps-icon ps-icon--${size}" ${attrs}>${svgEl}</span>`]
+    },
   },
   nav: {
     name: "Page links", def: {},
