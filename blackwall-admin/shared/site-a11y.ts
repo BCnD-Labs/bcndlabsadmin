@@ -7,7 +7,7 @@
  * site; `unchecked` says what was left out so a clean report is never read as more than it is.
  */
 import type { Asset, Draft, Site, SiteBlock, SitePage } from "../src/lib/types.ts"
-import { contrast, onAccent, pairLines } from "./sitebuilder.ts"
+import { cleanAnchor, contrast, onAccent, pairLines } from "./sitebuilder.ts"
 import { findAsset } from "./assets.ts"
 
 export type A11yKind = "error" | "contrast" | "alert" | "feature" | "structure"
@@ -88,9 +88,12 @@ export function auditSite(site: Site, pages: SitePage[], assets: Asset[] = [], p
     else titles.set(page.title.trim().toLowerCase(), [...(titles.get(page.title.trim().toLowerCase()) ?? []), page.id])
 
     let h1Used = false, prev = 0, described = 0
+    const anchors = new Map<string, string>()
     const linkTargets = new Map<string, Set<string>>(), firstLinkBlock = new Map<string, string>()
     walk(page.sections, (b) => {
       const id = { ...at, blockId: b.id }
+      const anchor = cleanAnchor(b.anchor)
+      if (anchor) { if (anchors.has(anchor)) add({ kind: "alert", rule: "duplicate-id", text: `${name}: two blocks use the anchor “${anchor}”. An id can only be on one block per page.`, ...id }); else anchors.set(anchor, b.id) }
       if (b.type === "heading") {
         const lv = b.level === "1" ? (h1Used ? 2 : 1) : [1, 2, 3].includes(Number(b.level || 2)) ? Number(b.level || 2) : 2
         if (lv === 1) h1Used = true

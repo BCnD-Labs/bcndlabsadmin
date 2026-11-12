@@ -2,7 +2,7 @@ import { ArrowLeftRight, Copy, Plus, Replace, Trash2 } from "lucide-react"
 import { useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
-import { BLOCKS, footerPages, type BlockField } from "@shared/sitebuilder"
+import { BLOCKS, blockClass, cleanAnchor, cleanClasses, cleanDeclarations, footerPages, type BlockField } from "@shared/sitebuilder"
 import { ANIMATIONS } from "@shared/site-bootstrap"
 import { canNest, pageTree } from "@shared/sitebuilder-tree"
 import { HEADER_KINDS, type ConvertTarget } from "@shared/site-convert"
@@ -148,6 +148,33 @@ function SwapMenu({ siblings, onSwap }: { siblings: { id: string; label: string 
   )
 }
 
+/** Advanced: for exact control of one block: a link target, your own class names, and CSS that applies to this block alone. */
+function AdvancedFields({ block, onPatch }: { block: SiteBlock; onPatch: (p: Record<string, unknown>) => void }) {
+  const text = (k: string) => (typeof block[k] === "string" ? (block[k] as string) : "")
+  const set = (k: string) => (v: string) => onPatch({ [k]: v.trim() ? v : undefined })
+  const anchor = cleanAnchor(block.anchor), ignored = text("css") !== "" && cleanDeclarations(block.css) !== text("css").trim()
+  return (
+    <div className="grid gap-3" data-testid="advanced-fields">
+      <div className="grid gap-1">
+        <Label htmlFor={`${block.id}-anchor`} className={fieldLabel}>Anchor (id)</Label>
+        <Input id={`${block.id}-anchor`} className="h-8 font-mono text-xs" value={text("anchor")} onChange={(e) => set("anchor")(e.target.value)} placeholder="pricing" />
+        <span className="text-[11px] text-faint">{anchor ? <>A link to <code className="font-mono">#{anchor}</code> jumps straight here.</> : "Lets a link such as /page/#pricing jump straight to this block."}</span>
+      </div>
+      <div className="grid gap-1">
+        <Label htmlFor={`${block.id}-classes`} className={fieldLabel}>Extra CSS classes</Label>
+        <Input id={`${block.id}-classes`} className="h-8 font-mono text-xs" value={text("classes")} onChange={(e) => set("classes")(e.target.value)} placeholder="highlight wide-card" />
+        <span className="text-[11px] text-faint">Class names you can style from Look → Your CSS{cleanClasses(block.classes) ? <>: <code className="font-mono">.{cleanClasses(block.classes).split(" ").join(" .")}</code></> : ""}.</span>
+      </div>
+      <div className="grid gap-1">
+        <Label htmlFor={`${block.id}-css`} className={fieldLabel}>Your CSS for this block</Label>
+        <Textarea id={`${block.id}-css`} rows={7} className="font-mono text-xs" value={text("css")} onChange={(e) => set("css")(e.target.value)} placeholder={"background: #fff7e6;\nborder-radius: 20px;\nletter-spacing: .04em;"} spellCheck={false} />
+        <span className="text-[11px] text-faint">Properties only, no braces. It applies to this block and nothing else, and shows in the preview as you type. The block's own class is <code className="font-mono">.{blockClass(block)}</code>, if you'd rather write the rule in Look → Your CSS.</span>
+        {ignored && <span className="text-[11px] text-amber">Some characters ({"{ } < > \\"} and @import) are left out when the site is built.</span>}
+      </div>
+    </div>
+  )
+}
+
 /** With nothing selected: this page's title, address, description and where it shows in the menus. */
 function PageFields({ site, page, pages, header }: { site: Site; page: SitePage; pages: SitePage[]; header: { items: SiteBlock[]; onAdd: (type: string) => void; onSelect: (id: string) => void } }) {
   const { update, remove } = useWorkspace.getState()
@@ -240,7 +267,7 @@ export function Inspector({ site, page, pages, block, blockTitle, trail, targets
           <Button variant="quiet" size="icon-xs" aria-label="Duplicate this block" title="Duplicate (⌘D)" onClick={onDuplicate}><Copy /></Button>
           <Button variant="quiet" size="icon-xs" aria-label="Remove this block" title="Remove (Delete)" onClick={onRemove}><Trash2 /></Button>
         </div>
-        <TabsList className="w-full"><TabsTrigger value="content">Content</TabsTrigger><TabsTrigger value="style">Style</TabsTrigger><TabsTrigger value="links">Links</TabsTrigger></TabsList>
+        <TabsList className="w-full"><TabsTrigger value="content">Content</TabsTrigger><TabsTrigger value="style">Style</TabsTrigger><TabsTrigger value="links">Links</TabsTrigger><TabsTrigger value="advanced">Advanced</TabsTrigger></TabsList>
       </div>
       <TabsContent value="content" className="min-h-0 flex-1 overflow-y-auto p-3">
         {fields.length ? (
@@ -257,6 +284,7 @@ export function Inspector({ site, page, pages, block, blockTitle, trail, targets
         {onEvenOut && <Button size="xs" variant="outline" className="mt-3" onClick={onEvenOut}>Even out the column widths</Button>}
       </TabsContent>
       <TabsContent value="style" className="min-h-0 flex-1 overflow-y-auto p-3"><StyleFields block={block} onPatch={onPatch} inRow={inRow} /></TabsContent>
+      <TabsContent value="advanced" className="min-h-0 flex-1 overflow-y-auto p-3"><AdvancedFields block={block} onPatch={onPatch} /></TabsContent>
       <TabsContent value="links" className="min-h-0 flex-1 overflow-y-auto p-3"><RecordTasks kind="page" id={page.id} name={page.title} /></TabsContent>
     </Tabs>
   )
