@@ -49,6 +49,7 @@ export function relativize(html: string, fromFile: string) {
 /** The look of a Bootstrap site: Bootstrap's own colors and fonts follow the site's palette, so Look still works. */
 export const BOOTSTRAP_BRIDGE = `/* Bootstrap follows the palette above */
 :root { --bs-body-bg: var(--bg); --bs-body-color: var(--text); --bs-secondary-color: var(--muted); --bs-tertiary-bg: var(--surface); --bs-border-color: var(--border); --bs-link-color: var(--accent); --bs-link-hover-color: var(--accent); --bs-body-font-family: var(--font); --bs-border-radius: var(--radius, 8px); }
+.alert-info { --bs-alert-bg: rgba(13,139,183,.12); --bs-alert-border-color: #0d8bb7; --bs-alert-color: #075b7b; } .alert-pink { --bs-alert-bg: rgba(214,51,132,.12); --bs-alert-border-color: #d63384; --bs-alert-color: #8c2057; } .alert-purple { --bs-alert-bg: rgba(111,66,193,.12); --bs-alert-border-color: #6f42c1; --bs-alert-color: #4b2b85; } .alert-orange { --bs-alert-bg: rgba(253,126,20,.12); --bs-alert-border-color: #fd7e14; --bs-alert-color: #a85310; }
 .btn-primary { --bs-btn-bg: var(--accent); --bs-btn-border-color: var(--accent); --bs-btn-color: var(--accent-text); --bs-btn-hover-bg: var(--accent); --bs-btn-hover-border-color: var(--accent); --bs-btn-hover-color: var(--accent-text); --bs-btn-active-bg: var(--accent); --bs-btn-active-border-color: var(--accent); --bs-btn-active-color: var(--accent-text); --bs-btn-focus-shadow-rgb: 128, 128, 128; }
 .btn-outline-primary { --bs-btn-color: var(--accent); --bs-btn-border-color: var(--accent); --bs-btn-hover-bg: var(--accent); --bs-btn-hover-border-color: var(--accent); --bs-btn-hover-color: var(--accent-text); --bs-btn-active-bg: var(--accent); --bs-btn-active-border-color: var(--accent); --bs-btn-active-color: var(--accent-text); }
 .progress { --bs-progress-bg: var(--surface); --bs-progress-bar-bg: var(--accent); --bs-progress-bar-color: var(--accent-text); --bs-progress-height: 1.5rem; }
@@ -108,9 +109,9 @@ export const REDUCED_MOTION_CSS = "@media (prefers-reduced-motion: reduce) { [cl
 export const COMPONENT_CSS = `.badge { display: inline-block; padding: .25em .65em; border-radius: 999px; font-size: .8em; font-weight: 700; line-height: 1.4; }
 .badge--primary, .text-bg-primary { background: var(--accent) !important; color: var(--accent-text) !important; }
 .badge--secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
-.badge--success { background: #1e7e34; color: #fff; } .badge--warning { background: #ffc107; color: #111; } .badge--danger { background: #b02a37; color: #fff; }
+.badge--success, .text-bg-success { background: #1e7e34 !important; color: #fff !important; } .badge--info, .text-bg-info { background: #0d8bb7 !important; color: #fff !important; } .badge--warning, .text-bg-warning { background: #ffc107 !important; color: #111 !important; } .badge--danger, .text-bg-danger { background: #b02a37 !important; color: #fff !important; } .badge--pink, .text-bg-pink { background: #d63384 !important; color: #fff !important; } .badge--purple, .text-bg-purple { background: #6f42c1 !important; color: #fff !important; } .badge--orange, .text-bg-orange { background: #fd7e14 !important; color: #111 !important; }
 .callout { padding: 12px 16px; border: 1px solid var(--border); border-left: 4px solid var(--tone, var(--accent)); border-radius: var(--radius, 8px); background: var(--surface); color: var(--text); margin: 0 0 20px; }
-.callout--secondary { --tone: var(--muted); } .callout--success { --tone: #1e7e34; } .callout--warning { --tone: #e0a800; } .callout--danger { --tone: #b02a37; }
+.callout--secondary { --tone: var(--muted); } .callout--success { --tone: #1e7e34; } .callout--info { --tone: #0d8bb7; } .callout--warning { --tone: #e0a800; } .callout--danger { --tone: #b02a37; } .callout--pink { --tone: #d63384; } .callout--purple { --tone: #6f42c1; } .callout--orange { --tone: #fd7e14; }
 .dd { position: relative; display: inline-block; } .dd > summary { list-style: none; cursor: pointer; } .dd > summary::-webkit-details-marker { display: none; } .dd > summary::after { content: " \\25BE"; }
 .dd__menu { position: absolute; z-index: 20; margin: 4px 0 0; padding: 6px 0; min-width: 180px; list-style: none; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius, 8px); }
 .dd__menu a { display: block; padding: 6px 14px; text-decoration: none; white-space: nowrap; }
@@ -169,5 +170,9 @@ export const COMPONENT_CSS = `.badge { display: inline-block; padding: .25em .65
 .filter-bar__btn { padding: 4px 10px; border: 1px solid var(--border); background: transparent; color: var(--text); border-radius: 999px; cursor: pointer; font: inherit; font-size: .9em; }
 .filter-bar__btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
 .filter-grid__items { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
+.ps-icon { display: inline-flex; align-items: center; justify-content: center; line-height: 0; vertical-align: -0.125em; color: inherit; }
+.ps-icon--s { width: 16px; height: 16px; } .ps-icon--m { width: 24px; height: 24px; } .ps-icon--l { width: 40px; height: 40px; }
+.ps-icon svg { width: 100%; height: 100%; display: block; }
+.btn .ps-icon, .badge .ps-icon { margin-right: .35em; }
 .filter-grid__item[hidden] { display: none !important; }
 `

@@ -130,9 +130,12 @@ export function LookPanel({ site }: { site: Site }) {
       )}
       {tab === "code" && (
         <>
-                        <Panel category="website" title="Your CSS" meta="for anything else" bodyClassName="px-3.5 py-3">
-              <Textarea rows={5} value={site.customCss} onChange={(e) => set({ customCss: e.target.value })} className="font-mono text-xs" placeholder=".site-title { letter-spacing: .05em; }" aria-label="Custom CSS" />
-              <p className="mt-1.5 text-[11px] text-faint">Added at the end of {site.framework === "bootstrap" ? "css/style.css" : "theme.css"} on every page.</p>
+          <p className="px-1 text-xs leading-snug text-muted-foreground" data-testid="code-lead">For style that goes beyond the choices in the other tabs. Written to the very end of {site.framework === "bootstrap" ? "css/style.css" : "theme.css"} on every page, so your rules win. For one block only, use its <b className="font-semibold text-ink-2">Advanced</b> tab instead.</p>
+          <Panel category="website" title="Your CSS for the whole site" meta="for anything else" bodyClassName="px-3.5 py-3">
+              <Textarea rows={6} value={site.customCss} onChange={(e) => set({ customCss: e.target.value })} className="font-mono text-xs" placeholder=".site-title { letter-spacing: .05em; }
+
+.chip--amber { background: #f0a000; color: #000; }" aria-label="Custom CSS" />
+              <p className="mt-1.5 text-[11px] text-faint">Example: a one-off background on a class you also typed into a block's Advanced → Extra CSS classes.</p>
             </Panel>
         </>
       )}

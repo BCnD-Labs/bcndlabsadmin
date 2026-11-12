@@ -21,7 +21,7 @@ export interface LibraryItem {
 export const LIBRARY_GROUPS = ["Ready-made sections", "Text", "Buttons and links", "Pictures and media", "Cards and layout", "Notes and progress", "Data and forms", "Advanced"] as const
 
 const card = (...kids: SiteBlock[]) => mk("card", {}, kids)
-const SMALL_TYPES = new Set(["heading", "text", "list", "divider", "spacer", "button", "buttons", "link", "dropdown", "badge", "breadcrumb", "tags", "alert", "tooltip", "meter", "progress", "pager"])
+const SMALL_TYPES = new Set(["heading", "text", "list", "divider", "spacer", "button", "buttons", "link", "dropdown", "badge", "breadcrumb", "tags", "alert", "tooltip", "meter", "progress", "pager", "icon"])
 const plain = (id: string, group: string, name: string, about: string, type: string, props: Record<string, unknown> = {}): LibraryItem => ({ id, group, name, about, ...(SMALL_TYPES.has(type) ? { size: "s" as const } : {}), make: () => mk(type, props) })
 const piece = (id: string, group: string, name: string, about: string, make: () => SiteBlock): LibraryItem => ({ id, group, name, about, make })
 
@@ -85,6 +85,8 @@ export const LIBRARY: LibraryItem[] = [
   piece("counter", "Notes and progress", "Counter", "A number that counts up when you scroll to it.", () => mk("counter")),
   piece("modal", "Advanced", "Popup on a button", "A button that opens a dialog with any blocks inside.", () => mk("modal", {}, [mk("heading", { level: "3", text: "A short title" }), mk("text")])),
   piece("filterGrid", "Cards and layout", "Cards with filter buttons", "Cards you can filter by category.", () => mk("filterGrid", {}, [mk("card", { tag: "Code" }, [mk("heading", { level: "3", text: "A project" }), mk("text")]), mk("card", { tag: "Writing" }, [mk("heading", { level: "3", text: "A post" }), mk("text")]), mk("card", { tag: "Code" }, [mk("heading", { level: "3", text: "Another project" }), mk("text")])])),
+  plain("icon", "Pictures and media", "Icon", "A built-in icon (GitHub, mail, calendar…).", "icon"),
+  piece("project-card", "Cards and layout", "Project card", "A picture, a heading, two lines and two buttons (Code, Demo).", () => card(mk("image", { shape: "square" }), mk("heading", { level: "3", text: "Project name" }), mk("text", { text: "What it is, in a line or two." }), mk("buttons", { items: "Code|https://github.com/…\nDemo|https://…" }))),
   plain("html", "Advanced", "Custom HTML", "Your own markup, published as written.", "html"),
 ]
 
