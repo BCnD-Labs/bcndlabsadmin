@@ -19,7 +19,7 @@ type Editor = Compose | Naming
 const newId = () => `log_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
 
 /** Compact dated entry list. Legacy main/section text remains editable without a migration. */
-export function DailyLogEditor({ data, day, logs, blocked, heading = "Log", embedded = false }: { data: Collections; day: string; logs: LogDrafts; blocked?: string; heading?: string; /** Inside a panel that already shows the title: only the quick-insert button remains. */ embedded?: boolean }) {
+export function DailyLogEditor({ data, day, logs, blocked, heading = "Log", embedded = false, tint = c.accent }: { data: Collections; day: string; logs: LogDrafts; blocked?: string; heading?: string; tint?: string; /** Inside a panel that already shows the title: only the quick-insert button remains. */ embedded?: boolean }) {
   const { mutate } = useWorkspace()
   const active = logs.activeSections[day] ?? null
   const setActive = (id: string | null) => logs.setActiveSections(current => ({ ...current, [day]: id }))
@@ -116,14 +116,14 @@ export function DailyLogEditor({ data, day, logs, blocked, heading = "Log", embe
 
   return <View style={styles.root}>
     <View style={styles.header}>{embedded ? <Text style={styles.heading}>Entries for this day</Text> : <><Icon name="create-outline" tint={c.text2} size={17} /><Text style={styles.heading} accessibilityRole="header">{heading}</Text></>}
-      <Pressable disabled={!!blocked || saving} onPress={() => { setError(null); setQuick(true) }} style={styles.icon} accessibilityRole="button" accessibilityLabel="Reflection quick inserts"><Icon name="add" tint={c.accent} size={19} /></Pressable>
+      <Pressable disabled={!!blocked || saving} onPress={() => { setError(null); setQuick(true) }} style={styles.icon} accessibilityRole="button" accessibilityLabel="Reflection quick inserts"><Icon name="add" tint={tint} size={19} /></Pressable>
     </View>
     {error && !editor && !quick ? <Text style={styles.error} accessibilityLiveRegion="polite">{error}</Text> : null}
     {[{ id: null, title: embedded ? "Entries" : heading, text: shownText(logs.drafts, data.journal, day), noteId: journal?.mainNoteId }, ...sections].map(section => {
       const entries = (journal?.entries ?? []).filter(entry => (entry.sectionId ?? null) === section.id && !entry.id.startsWith("journal-") && !entry.courseId && !entry.taskId)
       const expanded = active === section.id && !closed[`${day}/${section.id ?? ""}`]
       const count = entries.length + Number(!!section.text.trim())
-      return <View key={section.id ?? "main"} style={styles.group}>
+      return <View key={section.id ?? "main"} style={[styles.group, expanded && { borderLeftWidth: 2, borderLeftColor: tint, paddingLeft: 6 }]}>
         <View style={styles.groupHeader}>
           <Pressable onPress={() => toggleSection(section.id)} style={styles.groupButton} accessibilityRole="button" accessibilityState={{ expanded }} accessibilityLabel={`${section.title}, ${count} entries`}>
             <Text style={styles.groupTitle} numberOfLines={2}>{section.title}</Text><Text style={styles.groupCount}>{count}</Text><Icon name={expanded ? "chevron-up" : "chevron-down"} size={17} tint={c.muted} />

@@ -6,6 +6,7 @@ import { KeyboardFrame, KeyboardScrollView, TextInput } from "../editing/keyboar
 import { useWorkspace } from "../data/WorkspaceProvider.tsx"
 import { todayKey } from "../data/sync-view.ts"
 import { plannerColor as c } from "../planner-theme.ts"
+import { kit } from "../kit/tokens.ts"
 import { Icon } from "../ui.tsx"
 import { previewText } from "./planner/TaskPeek.tsx"
 import { selectedItem } from "../selected-item.ts"
@@ -52,7 +53,7 @@ export function ReflectionList({ data, courseId, taskId, onEdit }: { data: Colle
       const source = task?.title ?? course?.title ?? "Linked item was deleted"
       const summary = readLearningReflection(entry.item.text)
       const preview = summary.clicked || summary.fuzzy || summary.next || summary.notes || "Learning reflection"
-      return <View key={entry.item.id} style={[selectedItem.item, selected === entry.item.id && selectedItem.itemOn]}>
+      return <View key={entry.item.id} style={[selectedItem.item, selected === entry.item.id && selectedItem.itemOn, selected === entry.item.id && { borderLeftColor: kit.hue.learning, backgroundColor: "#302b42" }]}>
         <Pressable onPress={() => setSelected(id => id === entry.item.id ? null : entry.item.id)} accessibilityRole="button" accessibilityLabel={`Preview reflection for ${source}`} accessibilityState={{ expanded: selected === entry.item.id }} style={s.row}>
           <Text style={s.title} numberOfLines={1}>{source}</Text>
           <View style={s.chips}>{task && course ? <PropChip kind="course" label="Course" value={course.title} /> : null}<PropChip kind="date" label="Written" value={entry.date} /></View>
@@ -60,7 +61,7 @@ export function ReflectionList({ data, courseId, taskId, onEdit }: { data: Colle
         {selected === entry.item.id ? <View style={selectedItem.preview}><Text style={s.preview} numberOfLines={2} ellipsizeMode="tail">{previewText(preview)}</Text><Pressable onPress={() => onEdit(entry)} style={selectedItem.action} accessibilityRole="button"><Text style={selectedItem.actionText}>Open reflection</Text></Pressable></View> : null}
       </View>
     })}
-    {!entries.length ? <Text style={s.hint}>No learning reflections yet. A word or a short answer is enough to start.</Text> : null}
+    {!entries.length ? <Text style={[s.hint, { color: kit.hue.learning }]}>No learning reflections yet. A word or a short answer is enough to start.</Text> : null}
   </View>
 }
 

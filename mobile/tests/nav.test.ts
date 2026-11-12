@@ -11,7 +11,7 @@ test("the mini bar has at most four slots and every other destination has a grou
   assert.ok(PRIMARY.length >= 1 && PRIMARY.length <= 4)
   assert.deepEqual(
     PRIMARY.map((d) => d.key),
-    ["home", "planner", "learning", "dev"],
+    ["home", "planner", "learning", "journal"],
   )
   for (const d of DESTINATIONS.filter((x) => !x.primary)) assert.ok(d.group, d.key)
 })
@@ -39,9 +39,9 @@ test("Settings sits in the App group, which comes last", () => {
   assert.equal(groups[groups.length - 1].group, "App")
   assert.deepEqual(
     groups.find((g) => g.group === "Daily")?.items.map((i) => i.key),
-    ["journal", "notes", "insights"],
+    ["notes", "insights"],
   )
-  assert.deepEqual(groups.find((g) => g.group === "Build")?.items.map((i) => i.key), ["website", "social"])
+  assert.deepEqual(groups.find((g) => g.group === "Build")?.items.map((i) => i.key), ["dev", "website", "social"])
 })
 
 test("findDestination falls back to the first destination", () => {

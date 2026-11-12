@@ -23,7 +23,7 @@ type Props = {
 
 /**
  * A 56dp bubble at the bottom (left, center or right, per `side`) showing the current screen's
- * icon. Tap it and it grows into a mini bar (Home, Planner, Learning, Projects, All) that opens
+ * icon. Tap it and it grows into a mini bar (Home, Planner, Learning, Journal, All) that opens
  * from the bubble. One Animated.Value drives everything with the native driver: the bar's
  * background is scaled from a bubble-sized pill (never an animated width, see geometry.ts)
  * while the slots and the bubble cross-fade.
