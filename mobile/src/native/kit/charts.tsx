@@ -59,9 +59,9 @@ export function StackedBar({ parts, height = 10 }: { parts: StackPart[]; height?
 }
 
 /** The row of headline numbers at the top of a page. */
-export function StatStrip({ children }: { children: ReactNode }) { return <View style={s.strip}>{children}</View> }
-export function StatCell({ label, value, tint = c.text, children }: { label: string; value: string | number; tint?: string; children?: ReactNode }) {
-  return <View style={s.cell} accessible accessibilityLabel={`${label}: ${value}`}><Text style={s.cellLabel} numberOfLines={1}>{label.toUpperCase()}</Text><Text style={[s.cellValue, { color: tint }]}>{value}</Text>{children}</View>
+export function StatStrip({ children, compact = false }: { children: ReactNode; compact?: boolean }) { return <View style={[s.strip, compact && s.stripCompact]}>{children}</View> }
+export function StatCell({ label, value, tint = c.text, children, compact = false }: { label: string; value: string | number; tint?: string; children?: ReactNode; compact?: boolean }) {
+  return <View style={[s.cell, compact && s.cellCompact]} accessible accessibilityLabel={`${label}: ${value}`}>{compact ? <><Text style={[s.cellValue, s.cellValueCompact, { color: tint }]}>{value}</Text><Text style={[s.cellLabel, s.cellLabelCompact]} numberOfLines={2}>{label.toUpperCase()}</Text></> : <><Text style={s.cellLabel} numberOfLines={1}>{label.toUpperCase()}</Text><Text style={[s.cellValue, { color: tint }]}>{value}</Text>{children}</>}</View>
 }
 
 /** Seven small blocks, one per day, filled on days with a completion. Oldest first. */
@@ -111,10 +111,13 @@ const s = StyleSheet.create({
   legend: { flexDirection: "row", flexWrap: "wrap", columnGap: 12, rowGap: 4, marginTop: 6 },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 5 }, swatch: { width: 8, height: 8, borderRadius: 2 },
   legendText: { color: c.text2, fontFamily: mono, fontSize: 9.5, fontWeight: "700" },
-  strip: { flexDirection: "row", gap: 6 },
+  strip: { flexDirection: "row", gap: 6 }, stripCompact: { gap: 0, minHeight: 42, backgroundColor: c.panel, borderRadius: 8, borderWidth: 1, borderColor: c.line, overflow: "hidden" },
   cell: { flex: 1, minWidth: 0, backgroundColor: c.panel, borderRadius: shape.card, borderWidth: 1, borderColor: c.line, paddingHorizontal: 8, paddingVertical: 6, gap: 3 },
+  cellCompact: { minHeight: 40, borderWidth: 0, borderRightWidth: 1, borderRadius: 0, flexDirection: "row", alignItems: "center", paddingHorizontal: 6, paddingVertical: 4, gap: 4 },
   cellLabel: { color: kit.mutedInk, fontFamily: mono, fontSize: 8.5, fontWeight: "700", letterSpacing: 0.8 },
+  cellLabelCompact: { fontSize: 8, lineHeight: 10, letterSpacing: 0.2, flexShrink: 1 },
   cellValue: { fontSize: 20, lineHeight: 24, fontWeight: "700", fontVariant: ["tabular-nums"] },
+  cellValueCompact: { fontSize: 18, lineHeight: 22 },
   blocks: { flexDirection: "row", gap: 2, height: 14, alignItems: "center" }, block: { flex: 1, height: 8, borderRadius: 2 },
   weekArea: { height: 14 + BAR_AREA, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: c.border },
   weekCol: { width: 34, alignItems: "center", justifyContent: "flex-end", gap: 3 }, weekValue: { color: c.text2, fontFamily: mono, fontSize: 10, fontWeight: "700", height: 12 },
