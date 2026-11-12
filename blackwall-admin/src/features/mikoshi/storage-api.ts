@@ -42,7 +42,7 @@ export const storage = {
 }
 
 /** Upload with progress (fetch can't report upload progress; XHR can). */
-export function uploadFile(path: string, file: File, onProgress: (fraction: number) => void): Promise<void> {
+export function uploadFile(path: string, file: Blob, onProgress: (fraction: number) => void): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
     xhr.open("PUT", `/api/storage/upload?${q(path)}`)
