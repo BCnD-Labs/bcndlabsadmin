@@ -1,5 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
+import { fileNameOf, nextcloudLink, nextcloudPathOf } from "../src/features/documents/nextcloud-link.ts"
 import { cellText, columnName, documentKind, isLegacyOffice, safeHref } from "../src/features/documents/document-kind.ts"
 
 test("only the modern Word, Excel and PowerPoint formats open in the viewer", () => {
@@ -34,4 +35,17 @@ test("spreadsheet columns are lettered like Excel and cells print plainly", () =
   assert.equal(cellText(false), "false")
   assert.equal(cellText(new Date("2026-11-09T00:00:00Z")), "2026-11-09")
   assert.equal(cellText("hello"), "hello")
+})
+
+test("Nextcloud file links round-trip and can't climb out of the Nextcloud root", () => {
+  assert.equal(nextcloudLink("/Class/Week 3/deck.pptx"), "nextcloud:/Class/Week 3/deck.pptx")
+  assert.equal(nextcloudLink("Class//deck.pptx"), "nextcloud:/Class/deck.pptx")
+  assert.equal(nextcloudLink("/"), null)
+  assert.equal(nextcloudLink("/a/../../etc/passwd"), null)
+  assert.equal(nextcloudPathOf("nextcloud:/Class/deck.pptx"), "/Class/deck.pptx")
+  assert.equal(nextcloudPathOf(" NEXTCLOUD:/Class/deck.pptx "), "/Class/deck.pptx")
+  assert.equal(nextcloudPathOf("nextcloud:/a/../b"), null)
+  assert.equal(nextcloudPathOf("nextcloud:"), null)
+  assert.equal(nextcloudPathOf("https://cloud.example/f/12"), null)
+  assert.equal(fileNameOf("/Class/Week 3/deck.pptx"), "deck.pptx")
 })
