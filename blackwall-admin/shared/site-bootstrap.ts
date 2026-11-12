@@ -88,27 +88,10 @@ export const BOOTSTRAP_BRIDGE = `/* Bootstrap follows the palette above */
 `
 
 /** Runs in the head so the saved choice (or the device's setting) is applied before the page paints. */
-export const THEME_SCRIPT = `<script>
-(function () {
-  var t; try { t = localStorage.getItem("theme"); } catch (e) {}
-  if (t !== "light" && t !== "dark") t = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  var d = document.documentElement; d.setAttribute("data-theme", t); d.setAttribute("data-bs-theme", t);
-})();
-</script>`
+/** The one script Pagesmith inlines: a tiny hint that picks the saved (or device) theme before the page paints, so visitors never see a flash. Keep the body byte-for-byte: its SHA-256 goes into the published site's CSP. */
+export const THEME_INLINE_BODY = `(function(){var t;try{t=localStorage.getItem("theme")}catch(e){}if(t!=="light"&&t!=="dark")t=matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";var d=document.documentElement;d.setAttribute("data-theme",t);d.setAttribute("data-bs-theme",t)})();`
+export const THEME_SCRIPT = `<script>${THEME_INLINE_BODY}</script>`
 
-/** The button's behaviour, at the end of the page. */
-export const THEME_TOGGLE_SCRIPT = `<script>
-document.querySelectorAll("[data-theme-toggle]").forEach(function (b) {
-  function show() { var t = document.documentElement.getAttribute("data-theme"); b.setAttribute("aria-pressed", t === "dark"); b.querySelector("[data-theme-label]").textContent = t === "dark" ? "Light mode" : "Dark mode"; }
-  show();
-  b.addEventListener("click", function () {
-    var t = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
-    document.documentElement.setAttribute("data-theme", t); document.documentElement.setAttribute("data-bs-theme", t);
-    try { localStorage.setItem("theme", t); } catch (e) {}
-    show();
-  });
-});
-</script>`
 
 /** Entrance animations (Animista-style keyframes). Only the ones a site uses are written into its CSS. */
 export const ANIMATIONS: Record<string, { name: string; css: string }> = {
@@ -155,4 +138,36 @@ export const COMPONENT_CSS = `.badge { display: inline-block; padding: .25em .65
 .iconbox { display: flex; gap: 14px; align-items: flex-start; margin: 0 0 20px; } .iconbox p { margin: 0; } .iconbox__title { display: block; }
 .iconbox__icon { flex: none; display: grid; place-items: center; width: 2.6em; height: 2.6em; border-radius: var(--radius, 8px); background: var(--surface); border: 1px solid var(--border); font-size: 1.3em; }
 .site-extras { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.carousel { position: relative; margin: 0 0 20px; }
+.carousel__slides { list-style: none; margin: 0; padding: 0; position: relative; }
+.carousel__slide { position: absolute; inset: 0; opacity: 0; transition: opacity .35s ease; }
+.carousel__slide[aria-hidden="false"] { position: relative; opacity: 1; }
+.carousel__slide img, .carousel__slide .pic { width: 100%; height: auto; border-radius: var(--radius, 8px); }
+.carousel__prev, .carousel__next { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 999px; width: 2.4em; height: 2.4em; cursor: pointer; font-size: 1.2em; line-height: 1; display: grid; place-items: center; }
+.carousel__prev { left: 10px; } .carousel__next { right: 10px; }
+.carousel__dots { display: flex; gap: 6px; justify-content: center; margin-top: 10px; }
+.carousel__dot { width: 10px; height: 10px; padding: 0; border-radius: 999px; border: 1px solid var(--border); background: transparent; cursor: pointer; }
+.carousel__dot[aria-current="true"] { background: var(--accent); border-color: var(--accent); }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin: 0 0 20px; }
+.gallery__btn { padding: 0; border: 0; background: transparent; cursor: zoom-in; }
+.gallery__btn img, .gallery__btn .pic { width: 100%; height: 100%; object-fit: cover; aspect-ratio: 1; border-radius: var(--radius, 8px); display: block; }
+.ps-lightbox { max-width: 94vw; max-height: 94vh; padding: 0; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius, 8px); }
+.ps-lightbox::backdrop { background: rgba(0, 0, 0, .7); }
+.ps-lightbox img { max-width: 94vw; max-height: 80vh; display: block; }
+.ps-lightbox__close { position: absolute; top: 6px; right: 10px; background: transparent; color: inherit; border: 0; font-size: 1.6em; line-height: 1; cursor: pointer; }
+.codeblock { position: relative; }
+.codeblock__copy { position: absolute; top: 6px; right: 6px; padding: 4px 10px; border-radius: var(--radius, 6px); border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: .8em; cursor: pointer; opacity: .85; }
+.codeblock:hover .codeblock__copy, .codeblock:focus-within .codeblock__copy { opacity: 1; }
+.counter { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 1rem; }
+.counter__value { font-size: 2.6em; font-weight: 800; color: var(--accent); line-height: 1.05; font-variant-numeric: tabular-nums; }
+.counter__label { color: var(--muted); font-size: .95em; margin-top: 4px; }
+.ps-modal { max-width: 640px; width: calc(100% - 2rem); padding: 1.25rem 1.5rem; border: 1px solid var(--border); border-radius: var(--radius, 10px); background: var(--bg); color: var(--text); }
+.ps-modal::backdrop { background: rgba(0, 0, 0, .5); }
+.ps-modal__close { position: absolute; top: 6px; right: 10px; background: transparent; color: inherit; border: 0; font-size: 1.4em; line-height: 1; cursor: pointer; }
+.ps-modal__title { margin: 0 2rem 0.75rem 0; font-size: 1.15em; }
+.filter-bar { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 1rem; }
+.filter-bar__btn { padding: 4px 10px; border: 1px solid var(--border); background: transparent; color: var(--text); border-radius: 999px; cursor: pointer; font: inherit; font-size: .9em; }
+.filter-bar__btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.filter-grid__items { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
+.filter-grid__item[hidden] { display: none !important; }
 `
