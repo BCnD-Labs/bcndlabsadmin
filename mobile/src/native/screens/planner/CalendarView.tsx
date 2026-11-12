@@ -10,6 +10,7 @@ import { useReduceMotion } from "../../nav/useReduceMotion.ts"
 import { CalendarHeader } from "./calendar/CalendarHeader.tsx"
 import { DayAgenda } from "./calendar/DayAgenda.tsx"
 import { WorkspaceSection } from "../../WorkspacePage.tsx"
+import { kit } from "../../kit/tokens.ts"
 import { longDay, titleFor } from "./calendar/format.ts"
 import { columnsFor, monthGrid, stepBy, type CalendarView as View_ } from "./calendar/grid.ts"
 import { monthMinHeight, rubberBand } from "./calendar/month-density.ts"
@@ -101,12 +102,12 @@ export function CalendarView({ data, today, onEdit, onReflect, onCreateDue, logs
     <View {...resize.panHandlers} style={styles.handle} accessible accessibilityRole="adjustable" accessibilityLabel="Calendar height" accessibilityHint="Drag up or down to resize the calendar" accessibilityValue={{ min: 25, max: 80, now: Math.round(target / available * 100) }} accessibilityActions={[{ name: "increment", label: "Taller calendar" }, { name: "decrement", label: "Shorter calendar" }]} onAccessibilityAction={e => setLayout({ fraction: layout.fraction + (e.nativeEvent.actionName === "increment" ? 0.05 : -0.05) })}><View style={styles.grip} /></View>
     <KeyboardScrollView style={styles.fill} contentContainerStyle={styles.below} keyboardShouldPersistTaps="handled">
       {layout.order.filter(s => !layout.hidden.includes(s) && (s !== "notes" || linkedNotes.length > 0)).map(section => section === "agenda"
-        ? <WorkspaceSection key={section} title={longDay(selected)} icon="calendar-outline" tint={c.accent} count={agenda.length ? `${agenda.length} ${agenda.length === 1 ? "item" : "items"}` : "none"} flush>
+        ? <WorkspaceSection compact key={section} title={longDay(selected)} icon="calendar-outline" tint={kit.hue.productivity} count={agenda.length ? `${agenda.length} ${agenda.length === 1 ? "item" : "items"}` : "none"} flush>
           <DayAgenda day={selected} items={agenda} tasks={data.tasks} meta={meta} format={timeFormat} onEdit={id => { if (!isMeetingId(id)) onEdit(id) }} onReflect={onReflect} onToggle={toggle} showTimes={layout.showTimes} showCourses={layout.showCourses} />
         </WorkspaceSection>
         : section === "log"
-        ? <WorkspaceSection key={section} title="Log" icon="book-outline" tint={c.accent}><DailyLogEditor data={data} day={selected} logs={logs} blocked={blocked} heading="Log" embedded /></WorkspaceSection>
-        : <WorkspaceSection key={section} title="Notes" icon="document-text-outline" tint={c.blue} count={String(linkedNotes.length)} flush>
+        ? <WorkspaceSection compact key={section} title="Log" icon="book-outline" tint={kit.hue.journal}><DailyLogEditor data={data} day={selected} logs={logs} blocked={blocked} heading="Log" embedded /></WorkspaceSection>
+        : <WorkspaceSection compact key={section} title="Notes" icon="document-text-outline" tint={c.blue} count={String(linkedNotes.length)} flush>
           {[...notes.pinned, ...notes.others].map(n => <View key={n.id} style={[selectedItem.item, notePreviewId === n.id && selectedItem.itemOn]}><Pressable style={styles.note} onPress={() => setNotePreviewId(value => value === n.id ? null : n.id)} accessibilityRole="button" accessibilityLabel={`Preview ${noteTitle(n.text)}`} accessibilityState={{ expanded: notePreviewId === n.id }}><Text style={styles.noteTitle} numberOfLines={1}>{noteTitle(n.text)}</Text><Icon name={notePreviewId === n.id ? "chevron-up" : "chevron-down"} size={16} tint={c.muted} /></Pressable>{notePreviewId === n.id ? <View style={selectedItem.preview}><Text style={styles.noteText} numberOfLines={2} ellipsizeMode="tail">{previewText(n.text, 120)}</Text><Pressable onPress={() => setNoteEditor({ mode: "edit", id: n.id })} accessibilityRole="button" accessibilityLabel={`Open ${noteTitle(n.text)}`} style={selectedItem.action}><Text style={selectedItem.actionText}>Open</Text></Pressable></View> : null}</View>)}
         </WorkspaceSection>)}
       {layout.hidden.length === 3 ? <Pressable onPress={() => setSettings({ top: 140, right: 12 })} style={styles.add} accessibilityRole="button"><Text style={styles.muted}>Choose sections in Planner settings</Text></Pressable> : null}

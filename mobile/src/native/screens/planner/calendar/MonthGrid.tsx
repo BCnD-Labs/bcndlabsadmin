@@ -47,7 +47,7 @@ export function MonthGrid({ weeks, month, selected, today, byDay, weekStart, onS
               <Pressable
                 key={day}
                 onPress={() => onSelect(day)}
-                style={[styles.cell, chips > 0 && styles.cellTall]}
+                style={[styles.cell, chips > 0 && styles.cellTall, on && styles.cellOn]}
                 accessibilityRole="button"
                 accessibilityLabel={`${longDay(day)}${isToday ? ", today" : ""}${items.length ? `, ${items.length} ${items.length === 1 ? "item" : "items"}` : ""}`}
                 accessibilityState={{ selected: on }}
@@ -58,7 +58,7 @@ export function MonthGrid({ weeks, month, selected, today, byDay, weekStart, onS
                 {chips > 0 ? (
                   <View style={[styles.chipCol, outside && styles.outside]}>
                     {items.slice(0, chips).map((t) => (
-                      <View key={t.id} style={[styles.chip, { borderLeftColor: DOT[t.done ? "done" : t.due && t.due < today ? "overdue" : "open"] }]}>
+                      <View key={t.id} style={[styles.chip, t.kind === "event" && styles.chipEvent, { borderLeftColor: t.kind === "event" ? color.amber : DOT[t.done ? "done" : t.due && t.due < today ? "overdue" : "open"] }]}>
                         <Text style={[styles.chipText, t.done && styles.chipDone]} numberOfLines={1}>{t.title}</Text>
                       </View>
                     ))}
@@ -84,12 +84,14 @@ export function MonthGrid({ weeks, month, selected, today, byDay, weekStart, onS
 const styles = StyleSheet.create({
   card: { flex: 1, backgroundColor: color.ground, padding: 4 },
   row: { flexDirection: "row" },
-  week: { flex: 1 },
+  week: { flex: 1, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.line },
   head: { flex: 1, textAlign: "center", color: color.muted, fontSize: 12, fontWeight: "700", paddingVertical: 6 },
   cell: { flex: 1, alignItems: "center", justifyContent: "center", gap: 3 },
+  cellOn: { backgroundColor: color.selected, borderRadius: 5 },
   cellTall: { justifyContent: "flex-start", paddingTop: 3, paddingHorizontal: 1 },
   chipCol: { alignSelf: "stretch", gap: 2, paddingHorizontal: 1 },
-  chip: { minHeight: 16, justifyContent: "center", borderLeftWidth: 2, borderRadius: 3, backgroundColor: color.selected, paddingHorizontal: 3 },
+  chip: { minHeight: 16, justifyContent: "center", borderLeftWidth: 2, borderRadius: 3, backgroundColor: color.panel, paddingHorizontal: 3 },
+  chipEvent: { backgroundColor: "#3b3220" },
   chipText: { color: color.text, fontSize: 9, fontWeight: "600" },
   chipDone: { color: color.muted, textDecorationLine: "line-through" },
   num: { minWidth: 26, height: 26, borderRadius: 15, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: "transparent" },
