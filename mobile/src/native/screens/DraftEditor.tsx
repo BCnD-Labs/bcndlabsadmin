@@ -13,7 +13,7 @@ import { saveDraftRecord } from "./draft-records.ts"
 type Draft = Collections["drafts"][number]
 const states: Draft["status"][] = ["idea", "drafting", "review", "ready"]
 
-/** A compact Markdown writer for workspace drafts; publishing stays in the CMS workflow. */
+/** A compact Markdown writer for workspace posts and drafts. */
 export function DraftEditor({ value, data, siteId, onClose }: { value: Draft | "new"; data: Collections; siteId?: string; onClose: () => void }) {
   const { mutate, message } = useWorkspace()
   const previous = value === "new" ? null : value
@@ -25,18 +25,19 @@ export function DraftEditor({ value, data, siteId, onClose }: { value: Draft | "
   const [kind, setKind] = useState<Draft["kind"]>(previous?.kind ?? "post")
   const [status, setStatus] = useState<Draft["status"]>(previous?.status ?? "idea")
   const [selectedSite, setSelectedSite] = useState<string | undefined>(initialSite)
+  const [includeInSite, setIncludeInSite] = useState(!!previous?.publishedAt)
   const [more, setMore] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
-  const dirty = title !== (previous?.title ?? "") || body !== (previous?.body ?? "") || slug !== (previous?.slug ?? "") || excerpt !== (previous?.excerpt ?? "") || kind !== (previous?.kind ?? "post") || status !== (previous?.status ?? "idea") || selectedSite !== initialSite
+  const dirty = title !== (previous?.title ?? "") || body !== (previous?.body ?? "") || slug !== (previous?.slug ?? "") || excerpt !== (previous?.excerpt ?? "") || kind !== (previous?.kind ?? "post") || status !== (previous?.status ?? "idea") || selectedSite !== initialSite || includeInSite !== !!previous?.publishedAt
 
   async function save(closeAfter = true): Promise<boolean> {
     if (busy) return false
     if (!title.trim()) return (setError("Give this draft a title."), false)
     setBusy(true)
     let ok = false
-    try { ok = await mutate(["drafts"], data => saveDraftRecord(data, previous?.id, { title, body, slug, excerpt, kind, status, siteId: selectedSite }))
+    try { ok = await mutate(["drafts"], data => saveDraftRecord(data, previous?.id, { title, body, slug, excerpt, kind, status, siteId: selectedSite }, { includeInSite }))
     } catch { setError("Could not save. Your changes are still here.") } finally { setBusy(false) }
     if (ok && closeAfter) onClose()
     if (!ok) setError(message ?? "Could not save this draft. Your writing is still here.")
@@ -52,10 +53,11 @@ export function DraftEditor({ value, data, siteId, onClose }: { value: Draft | "
       {more ? <>
         <Text style={s.label}>Kind</Text><View style={s.options}><Pill label="Post" selected={kind === "post"} onPress={() => setKind("post")} /><Pill label="Page draft" selected={kind === "page"} onPress={() => setKind("page")} /></View>
         <Text style={s.label}>Writing status</Text><View style={s.options}>{states.map(choice => <Pill key={choice} label={choice[0].toUpperCase() + choice.slice(1)} selected={status === choice} onPress={() => setStatus(choice)} />)}</View>
-        <Text style={s.hint}>Ready marks your writing. Publishing happens in the web view.</Text>
+        <Text style={s.hint}>Ready marks your writing. Site publishing is a separate action.</Text>
         <Text style={s.label}>URL slug</Text><TextInput value={slug} onChangeText={setSlug} placeholder="Made from the title if empty" placeholderTextColor={c.muted} accessibilityLabel="URL slug" autoCapitalize="none" style={s.input} />
         <Text style={s.label}>Excerpt</Text><TextInput value={excerpt} onChangeText={setExcerpt} placeholder="Short summary" placeholderTextColor={c.muted} accessibilityLabel="Excerpt" multiline style={[s.input, s.excerpt]} />
         {data.sites.length ? <><Text style={s.label}>Site</Text><View style={s.options}><Pill label="Unassigned" selected={!selectedSite} onPress={() => setSelectedSite(undefined)} />{data.sites.map(site => <Pill key={site.id} label={site.name} selected={selectedSite === site.id} onPress={() => setSelectedSite(site.id)} />)}</View></> : null}
+        {kind === "post" && selectedSite ? <Pressable onPress={() => setIncludeInSite(true)} disabled={includeInSite} style={s.more} accessibilityRole="checkbox" accessibilityState={{ checked: includeInSite }}><Text style={s.moreText}>{includeInSite ? "✓ Included in site publish" : "□ Include in next site publish"}</Text></Pressable> : null}
       </> : null}
       {error ? <Text style={s.error}>{error}</Text> : null}
     </KeyboardScrollView>

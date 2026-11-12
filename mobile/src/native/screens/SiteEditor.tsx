@@ -4,6 +4,7 @@ import { shape } from "../../shape.ts"
 import { useState } from "react"
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
 import { STARTERS } from "../../../../blackwall-admin/shared/site-starters.ts"
+import { FONTS } from "../../../../blackwall-admin/shared/sitebuilder.ts"
 import type { Collections } from "../../lib/shared.ts"
 import { useWorkspace } from "../data/WorkspaceProvider.tsx"
 import { plannerColor as c } from "../planner-theme.ts"
@@ -13,7 +14,7 @@ import { saveSiteRecord } from "./site-records.ts"
 
 type Site = Collections["sites"][number]
 
-/** Core site setup; page layout and publishing remain in the web editor. */
+/** Phone-size Site and Look controls using the same site record as Pagesmith. */
 export function SiteEditor({ value, onClose }: { value: Site | "new"; onClose: () => void }) {
   const { mutate, message } = useWorkspace()
   const previous = value === "new" ? null : value
@@ -22,17 +23,19 @@ export function SiteEditor({ value, onClose }: { value: Site | "new"; onClose: (
   const [footerText, setFooterText] = useState(previous?.footerText ?? "")
   const [darkMode, setDarkMode] = useState(previous?.darkMode ?? true)
   const [starter, setStarter] = useState(previous?.starter ?? "midnight")
-  const [more, setMore] = useState(false)
+  const [font, setFont] = useState<Site["font"]>(previous?.font ?? "sans")
+  const [framework, setFramework] = useState<Site["framework"]>(previous?.framework)
+  const [tab, setTab] = useState<"site" | "look">("site")
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
-  const dirty = name !== (previous?.name ?? "") || domain !== (previous?.domain ?? "") || footerText !== (previous?.footerText ?? "") || darkMode !== (previous?.darkMode ?? true) || (!previous && starter !== "midnight")
+  const dirty = name !== (previous?.name ?? "") || domain !== (previous?.domain ?? "") || footerText !== (previous?.footerText ?? "") || darkMode !== (previous?.darkMode ?? true) || starter !== (previous?.starter ?? "midnight") || font !== (previous?.font ?? "sans") || framework !== previous?.framework
 
   async function save(closeAfter = true): Promise<boolean> {
     if (busy) return false
     if (!name.trim()) return (setError("Give this site a name."), false)
     setBusy(true)
     let ok = false
-    try { ok = await mutate(previous ? ["sites"] : ["sites", "pages"], data => saveSiteRecord(data, previous?.id, { name, domain, footerText, darkMode }, starter))
+    try { ok = await mutate(previous ? ["sites"] : ["sites", "pages"], data => saveSiteRecord(data, previous?.id, { name, domain, footerText, darkMode, font, framework }, starter))
     } catch { setError("Could not save. Your changes are still here.") } finally { setBusy(false) }
     if (ok && closeAfter) onClose()
     if (!ok) setError(message ?? "Could not save this site. Your changes are still here.")
@@ -41,12 +44,17 @@ export function SiteEditor({ value, onClose }: { value: Site | "new"; onClose: (
   const close = useEditorClose(dirty, busy, onClose, () => save(false))
   return <Modal visible transparent animationType="fade" onRequestClose={() => close()}><KeyboardFrame style={s.backdrop}><View style={s.sheet}>
     <View style={s.header}><Text style={s.heading}>{previous ? "Edit site" : "New site"}</Text><Pressable onPress={() => close()} accessibilityRole="button" accessibilityLabel="Close site editor"><Icon name="close" size={19} tint={c.text2} /></Pressable></View>
+    <View style={s.options}><Pill label="Site" selected={tab === "site"} onPress={() => setTab("site")} /><Pill label="Look" selected={tab === "look"} onPress={() => setTab("look")} /></View>
     <KeyboardScrollView style={s.scroll} contentContainerStyle={s.form} keyboardShouldPersistTaps="handled">
-      <Text style={s.label}>Name</Text><TextInput value={name} onChangeText={setName} placeholder="Site name" placeholderTextColor={c.muted} accessibilityLabel="Site name" style={s.input} />
+      {tab === "site" ? <><Text style={s.label}>Name</Text><TextInput value={name} onChangeText={setName} placeholder="Site name" placeholderTextColor={c.muted} accessibilityLabel="Site name" style={s.input} />
       <Text style={s.label}>Domain</Text><TextInput value={domain} onChangeText={setDomain} placeholder="example.com (optional)" placeholderTextColor={c.muted} accessibilityLabel="Site domain" autoCapitalize="none" keyboardType="url" style={s.input} />
-      {!previous ? <><Text style={s.label}>Starting palette</Text><View style={s.options}>{Object.entries(STARTERS).map(([key, palette]) => <Pill key={key} label={palette.name} selected={starter === key} onPress={() => setStarter(key)} />)}</View><Text style={s.hint}>Starts with an empty Home page. Build its layout in the web view.</Text></> : null}
-      <Pressable onPress={() => setMore(v => !v)} style={s.more} accessibilityRole="button" accessibilityState={{ expanded: more }}><Text style={s.moreText}>{more ? "− Fewer details" : "+ More details"}</Text></Pressable>
-      {more ? <><Text style={s.label}>Appearance</Text><View style={s.options}><Pill label="Dark default" selected={darkMode} onPress={() => setDarkMode(true)} /><Pill label="Light default" selected={!darkMode} onPress={() => setDarkMode(false)} /></View><Text style={s.label}>Footer text</Text><TextInput value={footerText} onChangeText={setFooterText} placeholder="Optional" placeholderTextColor={c.muted} accessibilityLabel="Site footer text" style={s.input} /></> : null}
+      <Text style={s.label}>Built with</Text><View style={s.options}><Pill label="Pagesmith styles" selected={!framework} onPress={() => setFramework(undefined)} /><Pill label="Bootstrap 5" selected={framework === "bootstrap"} onPress={() => setFramework("bootstrap")} /></View>
+      <Text style={s.label}>Footer text</Text><TextInput value={footerText} onChangeText={setFooterText} placeholder="Optional" placeholderTextColor={c.muted} accessibilityLabel="Site footer text" style={s.input} /></> : <>
+      <Text style={s.label}>Starter palette</Text><View style={s.options}>{Object.entries(STARTERS).map(([key, palette]) => <Pill key={key} label={palette.name} selected={starter === key} onPress={() => setStarter(key)} />)}</View>
+      <Text style={s.hint}>Choosing a palette replaces this site's light and dark colours.</Text>
+      <Text style={s.label}>Font</Text><View style={s.options}>{(Object.keys(FONTS) as (keyof typeof FONTS)[]).map(key => <Pill key={key} label={FONTS[key].name} selected={font === key} onPress={() => setFont(key)} />)}</View>
+      <Text style={s.label}>Visitor colours</Text><View style={s.options}><Pill label="Light only" selected={!darkMode} onPress={() => setDarkMode(false)} /><Pill label="Light and dark" selected={darkMode} onPress={() => setDarkMode(true)} /></View>
+      </>}
       {error ? <Text style={s.error}>{error}</Text> : null}
     </KeyboardScrollView>
     <View style={s.actions}><Pressable onPress={() => close()} style={s.action} accessibilityRole="button"><Text style={s.actionText}>Close</Text></Pressable><Pressable onPress={() => void save()} disabled={busy} style={[s.action, s.save, busy && s.disabled]} accessibilityRole="button"><Text style={s.saveText}>{busy ? "Saving…" : "Save site"}</Text></Pressable></View>

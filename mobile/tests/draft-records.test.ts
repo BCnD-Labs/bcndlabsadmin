@@ -26,3 +26,12 @@ test("editing a draft keeps its publishing metadata and other workspace records"
   assert.equal(after.notes, before.notes)
   assert.ok(validWorkspace(after))
 })
+
+test("a saved site post is included only when explicitly chosen", () => {
+  const before = emptyWorkspace()
+  const fieldsWithSite = { ...fields, siteId: "sit_native" }
+  const draft = saveDraftRecord(before, undefined, fieldsWithSite, { id: "drf_post", now })
+  assert.equal(draft.drafts[0]?.publishedAt, undefined)
+  const included = saveDraftRecord(draft, "drf_post", fieldsWithSite, { now, includeInSite: true })
+  assert.equal(included.drafts[0]?.publishedAt, now)
+})

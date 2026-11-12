@@ -1,30 +1,45 @@
-import { shape } from "../../shape.ts"
 import { useState } from "react"
-import { Linking, Modal, Pressable, StyleSheet, Text, View } from "react-native"
+import { Linking, Pressable, StyleSheet, Text, View } from "react-native"
+import { A11Y_KINDS, auditSite } from "../../../../blackwall-admin/shared/site-a11y.ts"
+import { siteOrigin } from "../../../../blackwall-admin/shared/sitebuilder.ts"
 import type { Collections } from "../../lib/shared.ts"
 import { useWorkspace } from "../data/WorkspaceProvider.tsx"
 import { plannerColor as c } from "../planner-theme.ts"
 import { selectedItem } from "../selected-item.ts"
 import { WorkspacePage, WorkspaceSection } from "../WorkspacePage.tsx"
 import { Icon } from "../ui.tsx"
+import { kit } from "../kit/tokens.ts"
 import { DraftEditor } from "./DraftEditor.tsx"
+import { PagesmithPageEditor } from "./PagesmithPageEditor.tsx"
+import { publishPagesmithSite, type PublishResult } from "./pagesmith-publish.ts"
 import { SiteEditor } from "./SiteEditor.tsx"
 
 type Site = Collections["sites"][number]
 type Draft = Collections["drafts"][number]
-function publicUrl(site: Site): string | null {
-  const domain = site.domain.trim().replace(/^https?:\/\//i, "").replace(/\/$/, "")
-  return /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.[a-z]{2,}$/i.test(domain) ? "https://" + domain : null
-}
 
 /** A live CMS overview; pages and drafts come from the same workspace as the web view. */
 export function WebsiteScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
-  const { data, status, message, refreshing, refresh } = useWorkspace()
+  const { data, address, status, message, pending, mutate, refreshing, refresh } = useWorkspace()
   const [open, setOpen] = useState<string | null>(null)
   const [pageOpen, setPageOpen] = useState<string | null>(null)
   const [editor, setEditor] = useState<{ value: Draft | "new"; siteId?: string } | null>(null)
   const [siteEditor, setSiteEditor] = useState<Site | "new" | null>(null)
   const [notice, setNotice] = useState("")
+  const [publishing, setPublishing] = useState(false)
+  const [published, setPublished] = useState<Record<string, PublishResult>>({})
+  const pageEditor = data?.pages.find(page => page.id === pageOpen)
+  const pageSite = data?.sites.find(site => site.id === pageEditor?.siteId)
+  async function publish(site: Site) {
+    if (status !== "ok" || pending || publishing) return
+    setPublishing(true); setNotice("")
+    try {
+      const result = await publishPagesmithSite(address, site.id)
+      setPublished(current => ({ ...current, [site.id]: result }))
+      const ok = await mutate(["sites"], current => ({ ...current, sites: current.sites.map(item => item.id === site.id ? { ...item, publishedAt: new Date().toISOString(), publishedSha: result.sha } : item) }))
+      setNotice(ok ? `Published ${result.files} files to ${result.repo}${result.removed ? `; removed ${result.removed} old files` : ""}.` : `Published ${result.files} files, but the date could not be saved in the workspace.`)
+    } catch (error) { setNotice(error instanceof Error ? error.message : "Publishing failed.") }
+    finally { setPublishing(false) }
+  }
   function edit(value: Draft | "new", siteId?: string) {
     if (status === "conflict") setNotice("Resolve the sync conflict before editing.")
     else if (!data) setNotice("Load your workspace first.")
@@ -39,54 +54,52 @@ export function WebsiteScreen({ onOpenSettings }: { onOpenSettings: () => void }
     {notice ? <Text style={s.error}>{notice}</Text> : null}
     {data ? <>
       <Text style={s.meta}>{data.sites.length} {data.sites.length === 1 ? "site" : "sites"} · {data.pages.length} {data.pages.length === 1 ? "page" : "pages"} · {data.drafts.length} {data.drafts.length === 1 ? "draft" : "drafts"}</Text>
-      <WorkspaceSection title="Sites" icon="globe-outline" count={String(data.sites.length)}>
+      <WorkspaceSection title="Sites" icon="globe-outline" tint={kit.hue.website} count={String(data.sites.length)}>
         {data.sites.map(site => {
           const pages = data.pages.filter(p => p.siteId === site.id).sort((a, b) => a.order - b.order)
-          const drafts = data.drafts.filter(d => d.siteId === site.id)
+          const drafts = data.drafts.filter(d => d.siteId === site.id && d.kind === "post")
           const expanded = open === site.id
-          const url = publicUrl(site)
-          return <View key={site.id} style={[selectedItem.item, expanded && selectedItem.itemOn]}>
+          const url = siteOrigin(site.domain)
+          const report = expanded ? auditSite(site, data.pages, data.assets, data.drafts) : null
+          return <View key={site.id} style={[selectedItem.item, expanded && selectedItem.itemOn, expanded && s.siteSelected]}>
             <Pressable onPress={() => setOpen(expanded ? null : site.id)} style={s.row} accessibilityRole="button" accessibilityState={{ expanded }} accessibilityLabel={site.name + ", " + pages.length + " pages"}>
-              <View style={s.siteMark}><Icon name="globe-outline" size={17} tint={c.blue} /></View><View style={s.flex}><Text style={s.title} numberOfLines={1}>{site.name}</Text><Text style={s.meta} numberOfLines={1}>{site.domain || "No domain"} · {pages.length} pages · {drafts.length} drafts</Text></View><Icon name={expanded ? "chevron-up" : "chevron-down"} size={16} tint={c.muted} />
+              <View style={s.siteMark}><Icon name="globe-outline" size={17} tint={kit.hue.website} /></View><View style={s.flex}><Text style={s.title} numberOfLines={1}>{site.name}</Text><Text style={s.meta} numberOfLines={1}>{site.domain || "No domain"} · {pages.length} pages · {drafts.length} posts</Text></View><Icon name={expanded ? "chevron-up" : "chevron-down"} size={16} tint={c.muted} />
             </Pressable>
             {expanded ? <View style={selectedItem.preview}>
-              <View style={s.summary}><Text style={s.meta}>{site.publishedAt ? "Published " + site.publishedAt.slice(0, 10) : "Not published yet"}</Text>{url && site.publishedAt ? <Pressable onPress={() => void Linking.openURL(url)} accessibilityRole="link" style={selectedItem.action}><Text style={selectedItem.actionText}>Open site</Text><Icon name="open-outline" size={13} tint={c.accent} /></Pressable> : null}</View>
-              <Pressable onPress={() => editSite(site)} style={selectedItem.action} accessibilityRole="button"><Text style={selectedItem.actionText}>Edit site details</Text></Pressable>
+              <View style={s.summary}><Text style={s.meta}>{site.publishedAt ? "Published " + site.publishedAt.slice(0, 10) : "Not published yet"}{published[site.id] ? ` · ${published[site.id].files} files committed` : ""}</Text>{url && site.publishedAt ? <Pressable onPress={() => void Linking.openURL(url)} accessibilityRole="link" style={selectedItem.action}><Text style={selectedItem.actionText}>Open site</Text><Icon name="open-outline" size={13} tint={c.accent} /></Pressable> : null}</View>
+              <Text style={s.groupTitle}>Pages</Text>
+              {pages.map(page => <Pressable key={page.id} onPress={() => setPageOpen(page.id)} style={s.subrow} accessibilityRole="button" accessibilityLabel={`Edit ${page.title}`}><Icon name="document-outline" size={15} tint={kit.hue.website} /><Text style={s.subTitle} numberOfLines={1}>{page.title}</Text><Text style={s.meta}>/{page.slug}</Text></Pressable>)}
+              {!pages.length ? <Text style={s.empty}>No pages yet. Create one in Web view.</Text> : null}
+              <Text style={s.groupTitle}>Posts</Text>
               {drafts.map(draft => <Pressable key={draft.id} onPress={() => edit(draft)} style={s.subrow} accessibilityRole="button" accessibilityLabel={`Edit ${draft.title}`}><Icon name="create-outline" size={15} tint={c.amber} /><Text style={s.subTitle} numberOfLines={1}>{draft.title}</Text><Text style={s.meta}>{draft.status}</Text></Pressable>)}
-              <Pressable onPress={() => edit("new", site.id)} style={selectedItem.action} accessibilityRole="button"><Text style={selectedItem.actionText}>+ New draft for this site</Text></Pressable>
-              {!pages.length && !drafts.length ? <Text style={s.meta}>No pages or drafts yet.</Text> : null}
+              {!drafts.length ? <Text style={s.empty}>No posts for this site yet.</Text> : null}
+              <View style={s.actions}><Pressable onPress={() => edit("new", site.id)} style={selectedItem.action} accessibilityRole="button"><Text style={selectedItem.actionText}>+ New post</Text></Pressable><Pressable onPress={() => editSite(site)} style={selectedItem.action} accessibilityRole="button"><Text style={selectedItem.actionText}>Look & settings</Text></Pressable></View>
+              <Text style={s.groupTitle}>Accessibility</Text>
+              <View style={s.counts}>{A11Y_KINDS.map(kind => <View key={kind} style={s.count}><Text style={s.countNumber}>{report?.counts[kind] ?? 0}</Text><Text style={s.meta}>{kind}</Text></View>)}</View>
+              <Text style={s.meta}>Custom HTML and CSS need a live-site accessibility review.</Text>
+              <Text style={s.groupTitle}>Publish</Text>
+              <Pressable onPress={() => void publish(site)} disabled={status !== "ok" || pending || publishing} style={[s.publish, (status !== "ok" || pending || publishing) && s.disabled]} accessibilityRole="button" accessibilityLabel={`Publish ${site.name}`}><Text style={s.publishText}>{publishing ? "Publishing…" : "Publish"}</Text></Pressable>
+              {pending ? <Text style={s.meta}>Waiting for workspace edits to save.</Text> : status !== "ok" ? <Text style={s.meta}>Connect and sync to publish.</Text> : null}
             </View> : null}
           </View>
         })}
         {!data.sites.length ? <Pressable onPress={() => editSite("new")} style={selectedItem.action} accessibilityRole="button"><Text style={selectedItem.actionText}>+ Create a site</Text></Pressable> : null}
       </WorkspaceSection>
-      <WorkspaceSection title="Pagesmith" icon="layers-outline" count={String(data.pages.length)}>
-        <Text style={s.meta}>Page layouts and publishing controls are in Web view.</Text>
-        {data.pages.slice().sort((a, b) => a.siteId.localeCompare(b.siteId) || a.order - b.order).map(page => {
-          const selected = pageOpen === page.id
-          const site = data.sites.find(item => item.id === page.siteId)
-          return <View key={page.id} style={[selectedItem.item, selected && selectedItem.itemOn]}>
-            <Pressable onPress={() => setPageOpen(selected ? null : page.id)} style={s.pageRow} accessibilityRole="button" accessibilityState={{ expanded: selected }} accessibilityLabel={`Preview page ${page.title}`}>
-              <Icon name="document-outline" size={16} tint={c.accent} /><View style={s.flex}><Text style={s.title} numberOfLines={1}>{page.title}</Text><Text style={s.meta} numberOfLines={1}>{site?.name ?? "Site removed"} · /{page.slug}</Text></View><Icon name={selected ? "chevron-up" : "chevron-down"} size={16} tint={c.muted} />
-            </Pressable>
-            {selected ? <View style={selectedItem.preview}><Text style={s.meta} numberOfLines={2}>{page.description || "No description yet."}</Text><Text style={s.meta}>{page.sections.length} layout {page.sections.length === 1 ? "block" : "blocks"} · {page.inMenu ? "In menu" : "Hidden from menu"}</Text></View> : null}
-          </View>
-        })}
-        {!data.pages.length ? <Text style={s.empty}>No pages yet. Create a page in Web view.</Text> : null}
-      </WorkspaceSection>
       <WorkspaceSection title="Other website tools" icon="grid-outline">
-        <View style={s.toolRow}><Text style={s.subTitle}>Posts</Text><Text style={s.meta}>{data.drafts.filter(d => d.kind === "post").length} saved</Text></View>
         <View style={s.toolRow}><Text style={s.subTitle}>Forms</Text><Text style={s.meta}>{data.forms.length} saved</Text></View>
         <View style={s.toolRow}><Text style={s.subTitle}>Media</Text><Text style={s.meta}>Web view</Text></View>
         <View style={s.toolRow}><Text style={s.subTitle}>Traffic</Text><Text style={s.meta}>Web view</Text></View>
-        <Text style={s.meta}>Form inbox, media uploads, traffic and publishing are available in Web view.</Text>
+        <Text style={s.meta}>Form inbox, media uploads and traffic are available in Web view.</Text>
       </WorkspaceSection>
       {data.drafts.filter(d => !d.siteId || !data.sites.some(site => site.id === d.siteId)).length ? <WorkspaceSection title="Unassigned drafts" icon="create-outline" tint={c.amber}>{data.drafts.filter(d => !d.siteId || !data.sites.some(site => site.id === d.siteId)).map(d => <Pressable key={d.id} onPress={() => edit(d)} style={s.subrow} accessibilityRole="button" accessibilityLabel={`Edit ${d.title}`}><Icon name="create-outline" size={15} tint={c.amber} /><Text style={s.subTitle} numberOfLines={1}>{d.title}</Text><Text style={s.meta}>{d.status}</Text></Pressable>)}</WorkspaceSection> : null}
     </> : <Text style={s.empty}>{status === "signed-out" ? "Sign in under Settings to see your sites." : message ?? "Loading your workspace…"}</Text>}
     {data && editor ? <DraftEditor key={editor.value === "new" ? `new-${editor.siteId ?? "none"}` : editor.value.id} value={editor.value} siteId={editor.siteId} data={data} onClose={() => setEditor(null)} /> : null}
     {siteEditor ? <SiteEditor key={siteEditor === "new" ? "new" : siteEditor.id} value={siteEditor} onClose={() => setSiteEditor(null)} /> : null}
+    {data && pageEditor && pageSite ? <PagesmithPageEditor key={pageEditor.id} data={data} site={pageSite} page={pageEditor} onClose={() => setPageOpen(null)} /> : null}
   </WorkspacePage>
 }
 
-const s = StyleSheet.create({ add: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: c.panel, borderWidth: 1, borderColor: c.line }, menuBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)" }, menuDismiss: { position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }, menu: { position: "absolute", top: 89, right: 16, width: 158, padding: 9, borderRadius: shape.menu, backgroundColor: c.panel, borderColor: c.border, borderWidth: 1 }, menuLabel: { color: c.muted, fontSize: 10, paddingHorizontal: 7, paddingBottom: 3 }, menuItem: { minHeight: 35, flexDirection: "row", alignItems: "center", gap: 9, paddingHorizontal: 7 }, menuText: { color: c.text, fontSize: 13 }, error: { color: "#ffa8a8", fontSize: 12 }, meta: { color: c.muted, fontSize: 11 }, row: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 9 }, siteMark: { width: 26, height: 26, borderRadius: 8, backgroundColor: "#2196f326", alignItems: "center", justifyContent: "center" }, flex: { flex: 1, gap: 3 }, title: { color: c.text, fontSize: 14, fontWeight: "600" }, summary: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, subrow: { minHeight: 32, flexDirection: "row", alignItems: "center", gap: 8 }, pageRow: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 9 }, toolRow: { minHeight: 32, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.line }, subTitle: { color: c.text2, fontSize: 12, flex: 1 }, empty: { color: c.muted, fontSize: 12, paddingVertical: 9 } })
+const s = StyleSheet.create({
+  error: { color: "#ffa8a8", fontSize: 12 }, meta: { color: c.muted, fontSize: 11 }, row: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 9 }, siteMark: { width: 26, height: 26, borderRadius: 8, backgroundColor: "#4b3025", alignItems: "center", justifyContent: "center" }, flex: { flex: 1, gap: 3 }, title: { color: c.text, fontSize: 14, fontWeight: "600" }, summary: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 6 }, subrow: { minHeight: 40, flexDirection: "row", alignItems: "center", gap: 8 }, toolRow: { minHeight: 32, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.line }, subTitle: { color: c.text2, fontSize: 12, flex: 1 }, empty: { color: kit.hue.website, fontSize: 12, paddingVertical: 9 }, siteSelected: { backgroundColor: "#3b302e", borderLeftColor: kit.hue.website }, groupTitle: { color: kit.hue.website, fontSize: 11, fontWeight: "700", textTransform: "uppercase", paddingTop: 5 }, actions: { flexDirection: "row", gap: 7, flexWrap: "wrap" }, counts: { flexDirection: "row", gap: 4 }, count: { flex: 1, alignItems: "center", backgroundColor: c.panel, paddingVertical: 7, borderRadius: 8 }, countNumber: { color: c.text, fontSize: 16, fontWeight: "700" }, publish: { alignSelf: "flex-start", minHeight: 34, justifyContent: "center", backgroundColor: c.action, borderRadius: 17, paddingHorizontal: 14 }, publishText: { color: "#fff", fontSize: 12, fontWeight: "700" }, disabled: { opacity: 0.45 },
+})
 
