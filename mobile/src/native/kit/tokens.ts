@@ -6,8 +6,8 @@ import { plannerColor as c } from "../planner-theme.ts"
  */
 export const kit = {
   titlebar: "#242527",
-  /** Category hues (icon tile only): Productivity blue, Learning violet, Projects pink, Website orange. */
-  hue: { productivity: c.accent, learning: "#b39ddb", projects: "#f2649f", website: "#ff8a4d", github: "#1fc8e0", neutral: "#b4b8c0" },
+  /** Category hues for native panels and selected content. */
+  hue: { productivity: c.accent, journal: "#ffb74d", learning: "#b39ddb", projects: "#f2649f", website: "#ff8a4d", github: "#1fc8e0", neutral: "#b4b8c0" },
   good: "#66bb6a",
   open: "#2196f3",
   bad: "#ef5350",

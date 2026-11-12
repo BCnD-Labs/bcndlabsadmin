@@ -9,14 +9,14 @@ export interface TabItem<K extends string> { key: K; label: string; /** A small 
  * The one tab bar: equal blocky segments with a thin line, the selected one filled blue with an accent edge.
  * Used by the Planner, Learning and Journal so their tabs look the same.
  */
-export function Tabs<K extends string>({ items, value, onChange, label }: { items: readonly TabItem<K>[]; value: K | null; onChange: (key: K) => void; label?: string }) {
+export function Tabs<K extends string>({ items, value, onChange, label, tint = c.accent }: { items: readonly TabItem<K>[]; value: K | null; onChange: (key: K) => void; label?: string; tint?: string }) {
   return <View style={s.row} accessibilityRole="tablist" accessibilityLabel={label}>
     {items.map(item => {
       const on = item.key === value
-      return <Pressable key={item.key} onPress={() => onChange(item.key)} style={({ pressed }) => [s.tab, on && s.on, pressed && !on && s.pressed]} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={item.count != null ? `${item.label}, ${item.count}` : item.label}>
-        <Text style={[s.text, on && s.textOn]} numberOfLines={1}>{item.label}</Text>
-        {item.count != null ? <Text style={[s.count, on && s.textOn]}>{item.count}</Text> : null}
-        {on ? <View style={s.edge} /> : null}
+      return <Pressable key={item.key} onPress={() => onChange(item.key)} style={({ pressed }) => [s.tab, on && s.on, on && { borderColor: tint }, pressed && !on && s.pressed]} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={item.count != null ? `${item.label}, ${item.count}` : item.label}>
+        <Text style={[s.text, on && s.textOn, on && { color: tint }]} numberOfLines={1}>{item.label}</Text>
+        {item.count != null ? <Text style={[s.count, on && s.textOn, on && { color: tint }]}>{item.count}</Text> : null}
+        {on ? <View style={[s.edge, { backgroundColor: tint }]} /> : null}
       </Pressable>
     })}
   </View>

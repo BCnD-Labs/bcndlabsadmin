@@ -15,7 +15,7 @@ import type { LogDrafts } from "./useLogDrafts.ts"
  * that have an entry, an inline composer with explicit Save entry, custom section tabs, the tasks done
  * and due that day, and the latest entries. Text stays in a draft until the workspace holds it.
  */
-export function LogView({ data, today, logs, day, onDay: setDay, blocked, onEditTask, hideNav = false, intro }: { hideNav?: boolean; /** A line of explanation at the top of the Log panel. */ intro?: string; data: Collections; today: string; day: string; onDay: (day: string) => void; logs: LogDrafts; blocked?: string; onEditTask: (id: string) => void }) {
+export function LogView({ data, today, logs, day, onDay: setDay, blocked, onEditTask, hideNav = false, intro, tint = color.accent }: { hideNav?: boolean; /** A line of explanation at the top of the Log panel. */ intro?: string; tint?: string; data: Collections; today: string; day: string; onDay: (day: string) => void; logs: LogDrafts; blocked?: string; onEditTask: (id: string) => void }) {
   const { drafts } = logs
   const recent = recentEntries(data.journal, drafts)
 
@@ -46,15 +46,15 @@ export function LogView({ data, today, logs, day, onDay: setDay, blocked, onEdit
         ))}
       </View>
 
-      <WorkspaceSection title="Log" icon="book-outline" tint={color.accent}>
+      <WorkspaceSection title="Log" icon="book-outline" tint={tint}>
         {intro ? <Text style={styles.intro}>{intro}</Text> : null}
-        <DailyLogEditor data={data} day={day} logs={logs} blocked={blocked} embedded />
+        <DailyLogEditor data={data} day={day} logs={logs} blocked={blocked} embedded tint={tint} />
       </WorkspaceSection>
 
       <LogLists tasks={data.tasks} day={day} onEditTask={onEditTask} />
 
-      <WorkspaceSection title="Recent entries" icon="time-outline" tint={color.accent} count={recent.length ? String(recent.length) : undefined} collapsible flush>
-        {recent.length === 0 ? <Text style={styles.intro}>No entries yet. Your dated entries appear here.</Text> : null}
+      <WorkspaceSection title="Recent entries" icon="time-outline" tint={tint} count={recent.length ? String(recent.length) : undefined} collapsible flush>
+        {recent.length === 0 ? <Text style={[styles.intro, { color: tint }]}>No entries yet. Your dated entries appear here.</Text> : null}
         {recent.map((e) => (
           <Pressable key={e.day} onPress={() => setDay(e.day)} style={({ pressed }) => [styles.recent, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={`Open the log for ${e.day}`}>
             <Text style={styles.recentDay}>{dayTitle(e.day, today)}</Text>
