@@ -28,6 +28,7 @@ export function Panel({
   command,
   title,
   meta,
+  count,
   badge,
   actions,
   children,
@@ -48,6 +49,8 @@ export function Panel({
   title?: string
   /** Small muted text on the right of the header. */
   meta?: ReactNode
+  /** A count shown in the title bar itself, in the category hue ("4 items"), without adding a toolbar row. */
+  count?: ReactNode
   badge?: ReactNode
   actions?: ReactNode
   children: ReactNode
@@ -74,7 +77,7 @@ export function Panel({
       {/* The title bar is the icon and the title, nothing else. Everything else sits in the row below. */}
       <header {...headerProps} className={cn("bw-panel-heading flex shrink-0 items-center gap-2.5", headerClassName, headerProps?.className)}>
         <h2 id={headingId} title={title ? [tool, command].filter((v) => typeof v === "string").join(" $ ") : undefined} className="flex min-w-0 items-center gap-2.5">
-          {title ? <>{category ? <CategoryIcon category={category} /> : <span className="font-mono text-red" aria-hidden>❯</span>}<span className="bw-panel-title truncate">{title}</span></> : <Prompt tool={tool} command={command} />}
+          {title ? <>{category ? <CategoryIcon category={category} /> : <span className="font-mono text-red" aria-hidden>❯</span>}<span className="bw-panel-title truncate">{title}</span>{count != null && <span className="font-mono text-xs font-normal text-[var(--bw-category,var(--bw-muted))]">{count}</span>}</> : <Prompt tool={tool} command={command} />}
         </h2>
       </header>
       {(subtitle != null || badge != null || meta != null || actions != null) && (

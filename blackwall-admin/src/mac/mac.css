@@ -257,9 +257,6 @@ html[data-runtime="mac-native"] .mac-notes-tool .bw-panel { border: 0; backgroun
 html[data-runtime="mac-native"] .mac-statusbar { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 0 10px; border-top: 1px solid var(--bw-border); background: var(--bw-titlebar); color: var(--bw-muted); font: 10px/1 var(--font-mono); letter-spacing: .03em; }
 html[data-runtime="mac-native"] .mac-status-item { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-html[data-runtime="mac-native"] [data-testid="course-card"] { gap: 8px; padding: 10px; border-left: 2px solid var(--bw-category); transition: transform .16s, border-color .16s, background-color .16s; }
-html[data-runtime="mac-native"] [data-testid="course-card"]:hover { transform: translateY(-1px); border-color: var(--bw-category); }
-
 @media (max-width: 1050px) {
   html[data-runtime="mac-native"] .mac-navigator { width: 168px; }
 }
@@ -274,6 +271,5 @@ html[data-runtime="mac-native"] [data-testid="course-card"]:hover { transform: t
 
 @media (prefers-reduced-motion: reduce) {
   html[data-runtime="mac-native"] .mac-nav-parent,
-  html[data-runtime="mac-native"] .mac-nav-child,
-  html[data-runtime="mac-native"] [data-testid="course-card"] { transition: none; transform: none; }
+  html[data-runtime="mac-native"] .mac-nav-child { transition: none; }
 }
