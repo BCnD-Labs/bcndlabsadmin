@@ -51,7 +51,7 @@ export function LogView({ data, today, logs, day, onDay: setDay, blocked, onEdit
         <DailyLogEditor data={data} day={day} logs={logs} blocked={blocked} embedded tint={tint} />
       </WorkspaceSection>
 
-      <LogLists tasks={data.tasks} day={day} onEditTask={onEditTask} />
+      <LogLists data={data} day={day} onEditTask={onEditTask} />
 
       <WorkspaceSection title="Recent entries" icon="time-outline" tint={tint} count={recent.length ? String(recent.length) : undefined} collapsible flush>
         {recent.length === 0 ? <Text style={[styles.intro, { color: tint }]}>No entries yet. Your dated entries appear here.</Text> : null}
