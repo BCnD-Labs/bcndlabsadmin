@@ -46,3 +46,13 @@ A **card can become a Picture** (and a picture a card, keeping its picture and d
 ## Style options
 
 Select any block and open **Style**: text size, text colour (accent or quiet), a small-caps label look, width (full, medium, narrow), padding inside, background (shaded, soft tint, accent, dark), corners (square, round, pill), shadow, a thin outline, plus the alignment, spacing and animation that were already there. An unstyled site carries none of the extra CSS.
+
+## Layout: moving, swapping and widths
+
+- **Move left and right.** Select a block inside a row and the move buttons on its toolbar read **←** and **→** (they stay ↑ and ↓ elsewhere). Alt+arrow keys and dragging in Layers do the same.
+- **A width belongs to its block.** A ready-made split such as "Wide left, narrow right" used to belong to the *positions*, so moving the wide card just put it in the narrow slot. Moving or swapping a block now writes the split onto the blocks first, so the wide card stays wide wherever you put it.
+- **Swap with…** (in the inspector) trades places with any other block in the same place: two cards, two headings, two sections. Widths go with the blocks.
+- **Width in the row** (Style tab, for a block inside a row): Auto, ¼, ⅓, ½, ⅔, ¾ or Full, in twelfths of the row. Blocks you haven't set share what's left. **Even out the column widths** on the row puts everything back to its ready-made split.
+- **Row options:** more ready-made splits (two, three or four equal; wide left; narrow left) plus the **space between** columns and how they **line up** (same height, top or middle).
+- **Section and block options:** content width (medium, narrow, wide, full) that reaches inside a section's content, a minimum **height** (small to full screen), and **Show on** (everywhere, desktop only or phone only).
+- Rows stack on phones in order. Rows from before this change draw exactly as they did.

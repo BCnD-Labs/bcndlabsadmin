@@ -2,7 +2,7 @@
  * The site editor's moves, as pure functions: blocks in a page's tree and pages in the site's menu.
  * Dragging, Alt+arrow keys and the inspector all go through these, so the rules live in one place.
  */
-import { BLOCKS, cloneBlocks } from "./sitebuilder.ts"
+import { BLOCKS, ROW_LAYOUTS, cloneBlocks, isFreeRow } from "./sitebuilder.ts"
 import type { SiteBlock, SitePage } from "../src/lib/types.ts"
 
 export function findBlock(list: SiteBlock[], id: string): SiteBlock | undefined {
@@ -66,6 +66,54 @@ function siblingsOf(list: SiteBlock[], id: string): { parentId: string | null; s
   if (!path || path.length < 2) return null
   const parentId = path[path.length - 2]
   return { parentId, sibs: findBlock(list, parentId)?.kids ?? [] }
+}
+
+/** The blocks beside this one (same container, or the top level), in order, and the container's id. */
+export function siblingsIn(list: SiteBlock[], id: string): { parentId: string | null; sibs: SiteBlock[] } | null {
+  return siblingsOf(list, id)
+}
+
+/** Two blocks trade places. They must sit in the same container; anything else changes nothing. */
+export function swapBlocks(list: SiteBlock[], aId: string, bId: string): SiteBlock[] {
+  const here = siblingsOf(list, aId)
+  if (!here || aId === bId) return list
+  const i = here.sibs.findIndex((b) => b.id === aId), j = here.sibs.findIndex((b) => b.id === bId)
+  if (i < 0 || j < 0) return list
+  const swap = (sibs: SiteBlock[]) => { const n = [...sibs]; [n[i], n[j]] = [n[j], n[i]]; return n }
+  return here.parentId === null ? swap(list) : mapTree(list, here.parentId, (p) => ({ ...p, kids: swap(p.kids ?? []) }))
+}
+
+/**
+ * A row that uses a ready-made split ("wide left, narrow right") ties each width to a position, so moving a block would
+ * hand its width to another. Freezing writes the split onto the blocks (their own width) so a width goes wherever its block does.
+ * A row that already has its own widths, or isn't a row, is returned as it was.
+ */
+export function freezeRow(list: SiteBlock[], rowId: string): SiteBlock[] {
+  const row = findBlock(list, rowId)
+  if (!row || row.type !== "row" || isFreeRow(row)) return list
+  const spans = (ROW_LAYOUTS[String(row.cols)] ?? ROW_LAYOUTS["3"]).spans
+  return mapTree(list, rowId, (r) => ({ ...r, kids: (r.kids ?? []).map((k, i) => ({ ...k, design: { ...k.design, span: spans[i % spans.length] } })) }))
+}
+
+/** Freezes the row a block sits in, if it sits in one: call this before moving or swapping it. */
+export function freezeAround(list: SiteBlock[], id: string): SiteBlock[] {
+  const here = siblingsOf(list, id)
+  return here?.parentId ? freezeRow(list, here.parentId) : list
+}
+
+/** Moves a block one place earlier or later, first giving a block in a row its width so the width goes with it. Unchanged when it can't move. */
+export function nudgeKeepingWidths(list: SiteBlock[], id: string, d: -1 | 1): SiteBlock[] {
+  const frozen = freezeAround(list, id)
+  const next = nudgeBlock(frozen, id, d)
+  return next === frozen ? list : next
+}
+
+/** Moves a block anywhere (drag), keeping the widths of the rows it leaves and joins. Unchanged when the move isn't allowed. */
+export function moveKeepingWidths(list: SiteBlock[], id: string, parentId: string | null, beforeId: string | null): SiteBlock[] {
+  let frozen = freezeAround(list, id)
+  if (parentId) frozen = freezeRow(frozen, parentId)
+  const next = moveBlock(frozen, id, parentId, beforeId)
+  return next === frozen ? list : next
 }
 
 /** Alt+Up / Alt+Down: one place earlier or later among its siblings. */

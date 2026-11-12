@@ -51,6 +51,7 @@ export const LIBRARY: LibraryItem[] = [
   piece("pricing", "Cards and layout", "Plan or price card", "A label, a price, what's included and a button.", () => card(mk("badge", { text: "Popular", tone: "primary" }), mk("heading", { level: "3", text: "$12 a month" }), mk("list", { items: "First thing included\nSecond thing included\nThird thing included" }), mk("button", { text: "Choose this" }))),
   piece("row2", "Cards and layout", "Two columns", "Two cards side by side.", () => mk("row", { cols: "2" }, [card(mk("heading", { level: "3" }), mk("text")), card(mk("heading", { level: "3" }), mk("text"))])),
   piece("row3", "Cards and layout", "Three columns", "Three cards side by side.", () => mk("row", { cols: "3" }, [0, 1, 2].map(() => card(mk("heading", { level: "3" }), mk("text"))))),
+  piece("side-main", "Cards and layout", "Side and main", "A narrow column on the left and a wide one.", () => mk("row", { cols: "left" }, [card(mk("heading", { level: "3", text: "On the side" }), mk("list")), card(mk("heading", { level: "3" }), mk("richtext"))])),
   piece("main-side", "Cards and layout", "Main and side", "A wide column and a narrow one.", () => mk("row", { cols: "side" }, [card(mk("heading", { level: "3" }), mk("richtext")), card(mk("heading", { level: "3", text: "On the side" }), mk("list"))])),
 
   plain("alert", "Notes and progress", "Alert", "A coloured note.", "alert"),
