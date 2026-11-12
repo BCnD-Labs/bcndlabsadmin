@@ -2,9 +2,9 @@ name: Android APK
 
 # Builds the installable Android app on GitHub's machines (no Mac needed) and attaches it,
 # with the android.json update manifest the in-app "Check for update" reads, to a prerelease:
-#   - on every pull request that changes mobile/ (tag apk-pr-<number>), so a PR can be tested on a phone;
 #   - after a mobile change is merged to main (tag apk-build-<number>);
 #   - on request (Actions -> Android APK -> Run workflow).
+# Pull requests retain a skipped APK check so branch rules can still evaluate it quickly.
 # The APK is signed with the debug key Expo's generated project ships with: fine for your own
 # phone, not for the Play Store.
 
@@ -30,6 +30,7 @@ concurrency:
 jobs:
   apk:
     name: Build APK
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
@@ -48,6 +49,9 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
       - run: npm --prefix mobile ci --ignore-scripts
       - name: Assign a new Android build number
         working-directory: mobile
@@ -69,7 +73,7 @@ jobs:
         run: npx expo prebuild --platform android --clean
       - name: "Build the release APK (arm64 only, for phones, keeps it fast)"
         working-directory: mobile/android
-        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon --console=plain
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --build-cache --no-daemon --console=plain
       - name: Name the APK and write the update manifest
         working-directory: mobile
         run: |
@@ -90,13 +94,12 @@ jobs:
       - name: Publish to a prerelease
         env:
           GH_TOKEN: ${{ github.token }}
-          PR: ${{ github.event.pull_request.number }}
-          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          SHA: ${{ github.sha }}
         run: |
           code=$(node -p 'JSON.parse(require("fs").readFileSync("mobile/dist-apk/android.json","utf8")).versionCode')
-          tag="apk-${PR:+pr-$PR-}build-$code"
+          tag="apk-build-$code"
           gh release delete "$tag" --yes --cleanup-tag --repo "$GITHUB_REPOSITORY" || true
           gh release create "$tag" mobile/dist-apk/* --repo "$GITHUB_REPOSITORY" --target "$SHA" --prerelease \
-            --title "Android build $code${PR:+ (pull request #$PR)}" \
+            --title "Android build $code" \
             --notes "Debug-signed Android build $code from commit ${SHA:0:7}. Install the .apk; android.json is the update manifest."
           echo "Published $tag" | tee -a "$GITHUB_STEP_SUMMARY"
