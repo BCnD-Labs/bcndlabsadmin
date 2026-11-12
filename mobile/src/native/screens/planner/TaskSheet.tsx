@@ -28,7 +28,7 @@ import { undoDelete, type UndoAction } from "./task-undo.ts"
 import { offerUndo } from "./undo-snack.ts"
 
 /** What the sheet is doing: a new task (optionally pre-dated), or an existing task by id. */
-export type Editor = { mode: "create"; due?: string; kind?: "task" | "event"; courseId?: string; learningType?: NonNullable<Collections["tasks"][number]["learningType"]> } | { mode: "edit"; id: string }
+export type Editor = { mode: "create"; due?: string; kind?: "task" | "event"; courseId?: string; learningType?: NonNullable<Collections["tasks"][number]["learningType"]> } | { mode: "edit"; id: string; reflection?: boolean }
 type SectionKey = "schedule" | "learning" | "steps" | "reflection" | "links" | "records"
 
 /**
@@ -54,7 +54,8 @@ export function TaskSheet({ editor, data, today, onClose, embedded = false, regi
   const [compactDate, setCompactDate] = useState(false)
   const [compactTime, setCompactTime] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
-  const [openSection, setOpenSection] = useState<SectionKey | null>(null)
+  const [openSection, setOpenSection] = useState<SectionKey | null>(editor.mode === "edit" && editor.reflection ? "reflection" : null)
+  useEffect(() => { if (editor.mode === "edit" && editor.reflection) grow.expand() }, [])
   const [confirming, setConfirming] = useState(false)
   const [studying, setStudying] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -178,9 +179,9 @@ export function TaskSheet({ editor, data, today, onClose, embedded = false, regi
               {!event ? <Section title="Steps" summary={x.subtasks.length ? `${x.subtasks.filter((st) => st.done).length} of ${x.subtasks.length} done` : "None"} open={openSection === "steps"} onToggle={() => toggleSection("steps")}>
                 <StepsSection steps={x.subtasks} onChange={(subtasks) => setX({ subtasks })} today={today} onPlanStudy={task && (x.learningType === "exam" || x.learningType === "quiz") && !!x.courseId && !draft.done && validDateKey(draft.due) ? () => setStudying(true) : undefined} />
               </Section> : null}
-              {!event ? <Section title="Reflection" summary={reflectionSummary(x)} open={openSection === "reflection"} onToggle={() => toggleSection("reflection")} error={!!errors.reflection}>
+              <Section title="Reflection" summary={reflectionSummary(x)} open={openSection === "reflection"} onToggle={() => toggleSection("reflection")} error={!!errors.reflection}>
                 <ReflectionSection value={x.reflection} onChange={(reflection) => setX({ reflection })} error={errors.reflection} />
-              </Section> : null}
+              </Section>
               <Section title="Linked documents" summary={linksSummary(x)} open={openSection === "links"} onToggle={() => toggleSection("links")} error={!!errors.links}>
                 <LinksSection links={x.links} onChange={(links) => setX({ links })} error={errors.links} />
               </Section>

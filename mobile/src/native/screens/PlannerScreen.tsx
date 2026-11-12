@@ -24,6 +24,7 @@ export function PlannerScreen({ onOpenSettings, focused = true }: { onOpenSettin
   const [selectedDay, setSelectedDay] = useState(() => todayKey())
   const [editor, setEditor] = useState<Editor | null>(null), [createDue, setCreateDue] = useState<string | undefined>()
   const edit = useCallback((id: string) => setEditor({ mode: "edit", id }), [])
+  const reflect = useCallback((id: string) => setEditor({ mode: "edit", id, reflection: true }), [])
   const today = todayKey(), access = editAccess(status, true)
   useQuickAddDue(createDue, focused)
   const logs = useLogDrafts(data?.journal, mutate, access.ok)
@@ -31,7 +32,7 @@ export function PlannerScreen({ onOpenSettings, focused = true }: { onOpenSettin
   let body
   if (data) {
     body = floating ? <TasksView data={data} today={today} onEdit={edit} onCreateDue={setCreateDue} search={search} onSearchChange={setSearch} />
-      : <CalendarView selected={selectedDay} onSelect={setSelectedDay} data={data} today={today} onEdit={edit} onCreateDue={setCreateDue} logs={logs} blocked={access.reason} />
+      : <CalendarView selected={selectedDay} onSelect={setSelectedDay} data={data} today={today} onEdit={edit} onReflect={reflect} onCreateDue={setCreateDue} logs={logs} blocked={access.reason} />
   } else if (status === "loading") {
     body = <View style={styles.loading}><ActivityIndicator color={c.accent} /><Text style={styles.note}>Loading your workspace…</Text></View>
   } else if (status === "signed-out") {
