@@ -40,8 +40,8 @@ export function SetupGuide({ site, onPanel }: { site: Site; onPanel: (panel: Wor
       { id: "fill", title: "Replace the placeholder text", why: placeholders.length ? `${unfinishedPages} ${unfinishedPages === 1 ? "page still has" : "pages still have"} sample text or empty pictures. Click anything in the preview to write your own.` : "Every page has your own words and pictures.", done: !placeholders.length && own.length > 0, label: firstUnfinished ? `Edit ${firstUnfinished.title || "page"}` : "Add a page", run: () => (firstUnfinished ? navigate(sitePageHref(firstUnfinished.id)) : openForm({ kind: "sitePage" })) },
       { id: "page", title: "Add a page of your own", why: "About, Projects, Services… pick one and it arrives with sections already laid out.", done: own.some((p) => Date.parse(p.createdAt) > fresh), label: "Add a page", run: () => openForm({ kind: "sitePage" }) },
       { id: "post", title: "Write your first post", why: "Posts are written in plain text with simple formatting and show up on your blog and course pages.", done: !!post, label: "New post", run: () => navigate(`/cms/posts/${createDraft({ siteId: site.id }).id}`) },
-      { id: "details", title: "Add your domain and footer", why: "So the sitemap, links and footer say the right things.", done: !!site.domain.trim() && !!site.footerText.trim(), label: "Open Settings", run: () => onPanel("settings") },
-      { id: "files", title: "Check it and get the files", why: "Blackwall looks for problems, then gives you everything to copy to your host.", done: !!site.exportedAt || !!site.publishedAt, label: "Get files", run: () => onPanel("files") },
+      { id: "details", title: "Add your domain and footer", why: "So the sitemap, links and footer say the right things.", done: !!site.domain.trim() && !!site.footerText.trim(), label: "Site settings", run: () => onPanel("settings") },
+      { id: "files", title: "Check it and publish", why: "Blackwall looks for problems, then publishes the site or gives you the files for your host.", done: !!site.exportedAt || !!site.publishedAt, label: "Publish", run: () => onPanel("files") },
     ]
   }, [site, pages, drafts, forms, assets, openForm, createDraft, navigate, onPanel])
 
@@ -52,7 +52,7 @@ export function SetupGuide({ site, onPanel }: { site: Site; onPanel: (panel: Wor
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant={showCount ? "outline" : "quiet"} size="sm" aria-label={`Set up your site, ${done} of ${steps.length} done`} title="Set up your site"><ListChecks />{showCount && <span className="tabular-nums">{done}/{steps.length}</span>}</Button>
+        <Button variant={showCount ? "outline" : "quiet"} size="sm" aria-label={`Set up your site, ${done} of ${steps.length} done`} title="Set up your site"><ListChecks /><span className="hidden @5xl/top:inline">Setup</span>{showCount && <span className="tabular-nums">{done}/{steps.length}</span>}</Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-[22rem] gap-0 p-0">
         <div className="flex items-baseline justify-between px-3.5 pt-3 pb-2"><b className="text-[13px] text-ink">Set up your site</b><span className="text-[11px] text-muted-foreground">{done} of {steps.length} done</span></div>

@@ -1,4 +1,5 @@
 import { Check } from "lucide-react"
+import { useState } from "react"
 import { toast } from "sonner"
 import { CORNERS, FONTS, STARTERS, SWATCH_INFO, SWATCH_KEYS, WIDTHS, contrast } from "@shared/sitebuilder"
 import { SUGGESTED_FONTS, fontName } from "@shared/site-bootstrap"
@@ -7,6 +8,7 @@ import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Panel } from "@/components/common/panel"
+import { SegmentedTabs } from "@/components/common/segmented-tabs"
 import { OptionSelect } from "@/components/forms/fields"
 import type { Site, SitePalette } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -45,17 +47,24 @@ function Choice<V extends string>({ label, value, options, onPick }: { label: st
   )
 }
 
+type Tab = "colors" | "text" | "shape" | "code"
+const TABS: { value: Tab; label: string }[] = [{ value: "colors", label: "Colors" }, { value: "text", label: "Text" }, { value: "shape", label: "Shape" }, { value: "code", label: "Code" }]
+
 /** Look: colors, type, corners and width. The canvas beside it is the live preview, so every click shows straight away. */
 export function LookPanel({ site }: { site: Site }) {
   const sites = useWorkspace((s) => s.sites)
   const { update } = useWorkspace.getState()
   const set = (patch: Partial<Site>) => update("sites", site.id, patch)
+  const [tab, setTab] = useState<Tab>("colors")
   const others = sites.filter((s) => s.id !== site.id)
   const starterHere = (k: string) => JSON.stringify(STARTERS[k].light) === JSON.stringify(site.light) && JSON.stringify(STARTERS[k].dark) === JSON.stringify(site.dark)
 
   return (
-    <div className="grid content-start gap-[var(--bw-grid-gap)]">
-            <Panel category="website" title="Theme" meta="colors, light and dark" bodyClassName="grid gap-3 px-3.5 py-3">
+    <div className="grid content-start gap-[var(--bw-grid-gap)]" data-testid="look-panel">
+      <SegmentedTabs label="What to change" value={tab} onChange={setTab} tabClassName="flex-1" tabs={TABS} />
+      {tab === "colors" && (
+        <>
+            <Panel category="website" title="Theme" meta="starting colors" bodyClassName="grid gap-3 px-3.5 py-3">
               <div role="radiogroup" aria-label="Theme" className="grid grid-cols-2 gap-2">
                 {Object.entries(STARTERS).map(([k, t]) => (
                   <button key={k} type="button" role="radio" aria-checked={starterHere(k)} onClick={() => set({ starter: k, light: { ...t.light }, dark: { ...t.dark } })} className={cn("overflow-hidden rounded-[10px] bg-raised text-left transition-colors hover:bg-selected", starterHere(k) && "ring-2 ring-[var(--bw-red)]")}>
@@ -74,15 +83,25 @@ export function LookPanel({ site }: { site: Site }) {
                 </div>
               )}
             </Panel>
-            <Panel category="website" title="Type, corners and width" bodyClassName="grid gap-4 px-3.5 py-3">
-              <div className="grid gap-1.5"><span className="text-xs font-semibold text-ink">Type</span>
-                <Choice label="Type" value={site.font ?? "sans"} onPick={(font) => set({ font })} options={(Object.keys(FONTS) as (keyof typeof FONTS)[]).map((k) => ({ value: k, name: FONTS[k].name, about: FONTS[k].about, node: <span style={{ fontFamily: FONTS[k].css }}>Aa</span> }))} /></div>
-              <div className="grid gap-1.5"><span className="text-xs font-semibold text-ink">Corners</span>
-                <Choice label="Corners" value={site.corners ?? "soft"} onPick={(corners) => set({ corners })} options={(Object.keys(CORNERS) as (keyof typeof CORNERS)[]).map((k) => ({ value: k, name: CORNERS[k].name, node: <span className="inline-block size-6 border-t-2 border-l-2 border-ink-2" style={{ borderTopLeftRadius: CORNERS[k].px }} /> }))} /></div>
-              <div className="grid gap-1.5"><span className="text-xs font-semibold text-ink">Page width</span>
-                <Choice label="Page width" value={site.width ?? "normal"} onPick={(width) => set({ width })} options={(Object.keys(WIDTHS) as (keyof typeof WIDTHS)[]).map((k) => ({ value: k, name: WIDTHS[k].name, about: `${WIDTHS[k].px}px`, node: <span className="inline-block h-3 rounded-sm bg-ink-2" style={{ width: `${(WIDTHS[k].px / 1320) * 28}px` }} /> }))} /></div>
+            <Panel category="website" title="Light and dark" bodyClassName="grid gap-3 px-3.5 py-3">
+              <div className="flex items-center gap-2"><Switch id="look-dark" checked={site.darkMode} onCheckedChange={(darkMode) => set({ darkMode })} /><Label htmlFor="look-dark" className="text-xs font-normal">Dark colors for visitors whose device is set to dark</Label></div>
+              <div className="flex items-center gap-2"><Switch id="look-toggle" checked={!!site.themeToggle} onCheckedChange={(themeToggle) => set({ themeToggle, ...(themeToggle ? { darkMode: true } : {}) })} /><Label htmlFor="look-toggle" className="text-xs font-normal">A light / dark button in the menu (remembers the visitor's choice)</Label></div>
             </Panel>
-            <Panel category="website" title="Google Fonts" meta="optional" bodyClassName="grid gap-3 px-3.5 py-3">
+                        <Panel category="website" title="Fine-tune colors" meta="optional" bodyClassName="grid gap-3 px-3.5 py-3">
+              <p className="text-[11px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Light</p>
+              <Palette site={site} mode="light" onChange={(light) => set({ light })} />
+              <p className="border-t border-line-soft pt-3 text-[11px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Dark</p>
+              {site.darkMode ? <Palette site={site} mode="dark" onChange={(dark) => set({ dark })} /> : <p className="text-[11px] text-faint">Dark colors are off. Turn them on under Light and dark above.</p>}
+            </Panel>
+        </>
+      )}
+      {tab === "text" && (
+        <>
+            <Panel category="website" title="Type" bodyClassName="grid gap-4 px-3.5 py-3">
+              <div className="grid gap-1.5">
+                <Choice label="Type" value={site.font ?? "sans"} onPick={(font) => set({ font })} options={(Object.keys(FONTS) as (keyof typeof FONTS)[]).map((k) => ({ value: k, name: FONTS[k].name, about: FONTS[k].about, node: <span style={{ fontFamily: FONTS[k].css }}>Aa</span> }))} /></div>
+            </Panel>
+                        <Panel category="website" title="Google Fonts" meta="optional, any family" bodyClassName="grid gap-3 px-3.5 py-3">
               <datalist id="look-fonts">{SUGGESTED_FONTS.map((f) => <option key={f} value={f} />)}</datalist>
               {([["fontHeading", "Headings", "Poppins"], ["fontBody", "Body text", "Inter"]] as const).map(([k, label, ph]) => {
                 const v = site[k] ?? ""
@@ -96,18 +115,27 @@ export function LookPanel({ site }: { site: Site }) {
                 )
               })}
               <p className="text-[11px] text-faint">Added to every page as a Google Fonts link. Empty keeps the Type choice above.</p>
-              <div className="flex items-center gap-2 border-t border-line-soft pt-3"><Switch id="look-toggle" checked={!!site.themeToggle} onCheckedChange={(themeToggle) => set({ themeToggle, ...(themeToggle ? { darkMode: true } : {}) })} /><Label htmlFor="look-toggle" className="text-xs font-normal">A light / dark button in the menu (remembers the visitor's choice)</Label></div>
             </Panel>
-            <Panel category="website" title="Fine-tune colors" meta="optional" bodyClassName="grid gap-3 px-3.5 py-3">
-              <p className="text-[11px] font-semibold tracking-[0.07em] text-muted-foreground uppercase">Light</p>
-              <Palette site={site} mode="light" onChange={(light) => set({ light })} />
-              <div className="flex items-center gap-2 border-t border-line-soft pt-3"><Switch id="look-dark" checked={site.darkMode} onCheckedChange={(darkMode) => set({ darkMode })} /><Label htmlFor="look-dark" className="text-xs font-normal">Dark mode for visitors whose device is set to dark</Label></div>
-              {site.darkMode && <Palette site={site} mode="dark" onChange={(dark) => set({ dark })} />}
+        </>
+      )}
+      {tab === "shape" && (
+        <>
+            <Panel category="website" title="Corners and width" bodyClassName="grid gap-4 px-3.5 py-3">
+              <div className="grid gap-1.5"><span className="text-xs font-semibold text-ink">Corners</span>
+                <Choice label="Corners" value={site.corners ?? "soft"} onPick={(corners) => set({ corners })} options={(Object.keys(CORNERS) as (keyof typeof CORNERS)[]).map((k) => ({ value: k, name: CORNERS[k].name, node: <span className="inline-block size-6 border-t-2 border-l-2 border-ink-2" style={{ borderTopLeftRadius: CORNERS[k].px }} /> }))} /></div>
+              <div className="grid gap-1.5"><span className="text-xs font-semibold text-ink">Page width</span>
+                <Choice label="Page width" value={site.width ?? "normal"} onPick={(width) => set({ width })} options={(Object.keys(WIDTHS) as (keyof typeof WIDTHS)[]).map((k) => ({ value: k, name: WIDTHS[k].name, about: `${WIDTHS[k].px}px`, node: <span className="inline-block h-3 rounded-sm bg-ink-2" style={{ width: `${(WIDTHS[k].px / 1320) * 28}px` }} /> }))} /></div>
             </Panel>
-            <Panel category="website" title="Your CSS" meta="for anything else" bodyClassName="px-3.5 py-3">
+        </>
+      )}
+      {tab === "code" && (
+        <>
+                        <Panel category="website" title="Your CSS" meta="for anything else" bodyClassName="px-3.5 py-3">
               <Textarea rows={5} value={site.customCss} onChange={(e) => set({ customCss: e.target.value })} className="font-mono text-xs" placeholder=".site-title { letter-spacing: .05em; }" aria-label="Custom CSS" />
               <p className="mt-1.5 text-[11px] text-faint">Added at the end of {site.framework === "bootstrap" ? "css/style.css" : "theme.css"} on every page.</p>
             </Panel>
+        </>
+      )}
     </div>
   )
 }

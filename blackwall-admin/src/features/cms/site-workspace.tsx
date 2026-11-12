@@ -1,4 +1,4 @@
-import { Accessibility, Blocks, ChevronLeft, Eye, FileDown, Inbox, Layers, LayoutTemplate, Monitor, Palette, PanelRight, Plus, Redo2, Rocket, Settings2, Smartphone, Tablet, Undo2, X } from "lucide-react"
+import { Accessibility, Blocks, ChevronLeft, Eye, Inbox, Layers, LayoutTemplate, Monitor, Palette, PanelRight, Plus, Redo2, Rocket, Settings2, Smartphone, Tablet, Undo2, X } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom"
 import { usePanelRef, type Layout } from "react-resizable-panels"
@@ -43,20 +43,26 @@ import { SetupGuide } from "./setup-guide"
 import { SitePreview, type BlockAction, type CanvasEditing } from "./site-preview"
 import { SiteViewer } from "./sites-page"
 import { SiteSwitcher } from "./site-switcher"
-import { publishSite, selectSite, useCurrentSite, usePublishRuns } from "./use-cms"
+import { selectSite, useCurrentSite, usePublishRuns, useUnpublished } from "./use-cms"
 import { useSiteHistory } from "./use-site-history"
 
+/** Every side panel: what it is called, whether it changes this page or the whole site, and one plain sentence about it. */
 const PANELS = {
-  components: { title: "Components", icon: Blocks },
-  look: { title: "Look", icon: Palette },
-  access: { title: "Accessibility", icon: Accessibility },
-  forms: { title: "Forms", icon: Inbox },
-  settings: { title: "Settings", icon: Settings2 },
-  files: { title: "Get files", icon: FileDown },
-  posts: { title: "Posts", icon: Layers },
+  components: { title: "Components", icon: Blocks, scope: "Adds to this page", about: "" },
+  look: { title: "Look", icon: Palette, scope: "Whole site", about: "Colors, text and shape for every page. The preview changes as you click." },
+  access: { title: "Accessibility", icon: Accessibility, scope: "This page or the whole site", about: "" },
+  forms: { title: "Forms", icon: Inbox, scope: "Whole site", about: "What visitors send you, and the forms it comes from." },
+  settings: { title: "Site settings", icon: Settings2, scope: "Whole site", about: "Name, domain, header and footer, where it publishes, and how forms are received." },
+  files: { title: "Publish", icon: Rocket, scope: "Whole site", about: "Check the site, put it online, or download the files for VS Code or any host." },
+  posts: { title: "Posts", icon: Layers, scope: "Whole site", about: "" },
 } as const
 export type WorkspacePanel = keyof typeof PANELS
-const TOOLBAR: WorkspacePanel[] = ["components", "look", "access", "forms", "settings", "files"]
+/** The toolbar's panel buttons in groups, so what each one changes reads at a glance. Publish stands apart at the end. */
+const TOOLBAR_GROUPS: { label: string; panels: WorkspacePanel[] }[] = [
+  { label: "Add to the page", panels: ["components"] },
+  { label: "Whole site", panels: ["look", "settings", "forms"] },
+  { label: "Check", panels: ["access"] },
+]
 
 const DEVICES = { desktop: { width: "100%", icon: Monitor }, tablet: { width: "820px", icon: Tablet }, phone: { width: "390px", icon: Smartphone } } as const
 const LAYOUT_KEY = "blackwall.pagesmith-layout"
@@ -112,8 +118,8 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
   const { update } = useWorkspace.getState()
   const { undo, redo, canUndo, canRedo } = useSiteHistory(site.id)
   const layersTree = usePrefs((s) => s.layersTree)
-  const canPublish = useConnections((s) => s.list).some((c) => c.provider === "website")
   const publishing = usePublishRuns((s) => s.runs[site.id]?.state === "publishing")
+  const unpublished = useUnpublished(site).count
   useEffect(() => { void useConnections.getState().refresh() }, [])
   const setPref = usePrefs((s) => s.set)
 
@@ -221,7 +227,8 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
     setSelected(nb.id)
     toast.success(`${item.name} added`)
   }
-  const addHeaderItem = (type: string) => { const nb = mk(type); setHeader([...headerBlocks, nb]); setSelected(nb.id) }
+  /** Adds the piece and selects it; selecting closes the panel, so its editor shows next to the preview. */
+  const addHeaderItem = (type: string) => { const nb = mk(type); setHeader([...headerBlocks, nb]); select(nb.id) }
 
   /** After undo or redo, show the page that changed if it isn't the one on screen. */
   const showChanged = (ids: string[]) => {
@@ -357,19 +364,25 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
       : panel === "look" ? <LookPanel site={site} />
       : panel === "access" ? <A11yPanel site={site} pageId={page?.id} marks={marksOn} onMarks={setMarksOn} onShow={showFinding} />
       : panel === "forms" ? <FormsPanel site={site} />
-        : panel === "settings" ? <SettingsPanel site={site} />
+        : panel === "settings" ? <SettingsPanel site={site} header={{ items: headerBlocks, onAdd: addHeaderItem, onSelect: select }} />
           : panel === "files" ? <FilesPanel site={site} onPanel={setPanel} />
             : <PostsPanel site={site} />
   )
   const right = panel ? (
     <div className="flex h-full min-h-0 flex-col" data-testid={`panel-${panel}`}>
-      <div className="flex h-9 shrink-0 items-center justify-between border-b border-line-soft pr-1.5 pl-3"><h2 className="text-[13px] font-semibold text-ink">{PANELS[panel].title}</h2><Button variant="quiet" size="icon-xs" aria-label={`Close ${PANELS[panel].title}`} onClick={() => setPanel(null)}><X /></Button></div>
-      <div className="@container min-h-0 flex-1 overflow-y-auto p-2">{panelBody}</div>
+      <div className="flex shrink-0 items-center gap-2 border-b border-line-soft py-1.5 pr-1.5 pl-3">
+        <h2 className="text-[13px] font-semibold text-ink">{PANELS[panel].title}</h2>
+        <span className="rounded-full bg-ink-2/8 px-2 py-0.5 text-[10px] font-bold tracking-[0.03em] text-ink-2 uppercase" data-testid="panel-scope">{PANELS[panel].scope}</span>
+        <Button variant="quiet" size="icon-xs" className="ml-auto" aria-label={`Close ${PANELS[panel].title}`} onClick={() => setPanel(null)}><X /></Button>
+      </div>
+      <div className="@container min-h-0 flex-1 overflow-y-auto p-2">
+        {PANELS[panel].about && <p className="px-1.5 pb-2 text-xs leading-snug text-muted-foreground" data-testid="panel-about">{PANELS[panel].about}</p>}
+        {panelBody}
+      </div>
     </div>
   ) : (
     <Inspector site={site} page={page} pages={pages} block={block} blockTitle={block ? blockName(block, !!page?.sections.some((s) => s.id === block.id)) : ""}
       targets={block ? targetsFor(block.id) : []} changeOpen={changeOpen} onChangeOpen={setChangeOpen} onConvert={(to) => block && convert(block.id, to)}
-      header={{ items: headerBlocks, onAdd: addHeaderItem, onSelect: select }}
       siblings={block ? siblingsOfBlock(block.id) : []} onSwap={(otherId) => block && swapWith(block.id, otherId)} inRow={!!block && !!rowOf(block.id)} onEvenOut={block?.type === "row" && (block.kids ?? []).some((k) => k.design?.span) ? () => evenOut(block.id) : undefined}
       trail={treeOf(block?.id ?? "")?.header ? "In the header" : page && block ? (pathTo(page.sections, block.id) ?? []).slice(0, -1).map((id, i) => { const b = findBlock(page.sections, id); return b ? blockName(b, i === 0) : "" }).join(" › ") : ""}
       onPatch={(p) => block && patchBlock(block.id, p)} onDuplicate={() => block && duplicate(block.id)} onRemove={() => block && removeBlock(block.id)} />
@@ -416,8 +429,14 @@ function Workspace({ site, page }: { site: Site; page: SitePage | undefined }) {
         <span className="mx-0.5 h-5 w-px bg-line-soft" aria-hidden />
         <SetupGuide site={site} onPanel={setPanel} />
         <Button variant="quiet" size="sm" title="Walk through the site as visitors see it" onClick={() => setViewing(true)}><Eye /><span className="hidden @4xl/top:inline">View</span></Button>
-        {TOOLBAR.map((p) => { const Icon = PANELS[p].icon; return <Button key={p} variant={panel === p ? "secondary" : "quiet"} size="sm" aria-pressed={panel === p} aria-label={PANELS[p].title} title={PANELS[p].title} onClick={() => setPanel(panel === p ? null : p)}><Icon /><span className="hidden @4xl/top:inline">{PANELS[p].title}</span></Button> })}
-        {canPublish && <Button size="sm" disabled={publishing} onClick={() => { setPanel("files"); publishSite(site).catch((e: Error) => toast.error(e.message)) }}><Rocket /> {publishing ? "Publishing…" : "Publish"}</Button>}
+        {TOOLBAR_GROUPS.map((g) => (
+          <div key={g.label} role="group" aria-label={g.label} className="flex items-center gap-0.5 rounded-[8px] bg-well p-0.5 ring-1 ring-line-soft" title={g.label}>
+            {g.panels.map((p) => { const Icon = PANELS[p].icon; return <Button key={p} variant={panel === p ? "secondary" : "quiet"} size="sm" aria-pressed={panel === p} aria-label={PANELS[p].title} title={`${PANELS[p].title}: ${PANELS[p].scope.toLowerCase()}`} onClick={() => setPanel(panel === p ? null : p)}><Icon /><span className="hidden @4xl/top:inline">{PANELS[p].title}</span></Button> })}
+          </div>
+        ))}
+        <Button size="sm" variant={panel === "files" ? "secondary" : "default"} aria-pressed={panel === "files"} aria-label="Publish" title={unpublished ? `Publish: ${unpublished} ${unpublished === 1 ? "change" : "changes"} since the files last left Blackwall` : "Publish: check the site, put it online or download the files"} data-testid="publish-button" onClick={() => setPanel(panel === "files" ? null : "files")}>
+          <Rocket /><span className="hidden @4xl/top:inline">{publishing ? "Publishing…" : "Publish"}</span>{unpublished > 0 && !publishing && <span className="grid h-4 min-w-4 place-items-center rounded-full bg-black/20 px-1 text-[10px] leading-none font-bold tabular-nums" aria-hidden>{unpublished}</span>}
+        </Button>
         {narrow && <Button variant="quiet" size="icon-sm" aria-label="Inspector" title="Inspector" onClick={() => setInspectorSheet(true)}><PanelRight /></Button>}
       </header>
       <div className="min-h-0 flex-1">

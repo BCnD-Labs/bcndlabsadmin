@@ -602,7 +602,7 @@ function SitePostPanel({ draft }: { draft: Draft }) {
       <div className="flex flex-wrap gap-2">
         <Button disabled={busy || (repo ? state === "live" : state !== "draft")} onClick={() => void go(true)}>{busy ? <Loader2 className="animate-spin" /> : <Rocket />} {repo ? (state === "draft" ? "Publish" : state === "pending" ? "Publish changes" : "Up to date") : (state === "draft" ? "Add to the site" : "On the site")}</Button>
         {draft.publishedAt && <Button variant="quiet" disabled={busy} onClick={() => void go(false)}><Undo2 /> {repo ? "Unpublish" : "Take off the site"}</Button>}
-        {!repo && <Button variant="outline" asChild><Link to={siteFilesHref}>Get files</Link></Button>}
+        {!repo && <Button variant="outline" asChild><Link to={siteFilesHref}>Publish</Link></Button>}
       </div>
       <LiveStatus site={site} />
       <p className="text-[11px] text-faint">{repo ? "Publishing rebuilds and commits the whole site, so the course portal and post lists update too." : "Adding a post puts it in the site's files, its blog list and its course pages. Then get the files and copy them over."}</p>
