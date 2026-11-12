@@ -153,3 +153,46 @@ export function dragRect(r: Rect, handle: Handle, dx: number, dy: number, bounds
   const y = fixedBottom ? r.y + r.height - height : fixedTop ? r.y : cy - height / 2
   return clampRect({ x, y, width, height }, bounds.width, bounds.height, 1)
 }
+
+/* ------------------------------------------------------------ organising */
+
+export type AssetSort = "newest" | "oldest" | "name" | "largest" | "unused"
+export const ASSET_SORTS: { value: AssetSort; label: string }[] = [{ value: "newest", label: "Newest first" }, { value: "oldest", label: "Oldest first" }, { value: "name", label: "Name A to Z" }, { value: "largest", label: "Largest files first" }, { value: "unused", label: "Unused first" }]
+/** The collection filter value for pictures that are in none. */
+export const UNSORTED = "-"
+export interface AssetView { q: string; /** "" is every picture, UNSORTED those in no collection, anything else a collection name. */ collection: string; tag: string; use: "any" | "used" | "unused"; sort: AssetSort }
+export const DEFAULT_VIEW: AssetView = { q: "", collection: "", tag: "", use: "any", sort: "newest" }
+export const isFiltered = (v: AssetView) => !!(v.q || v.collection || v.tag || v.use !== "any")
+
+/** A collection name as it is stored: trimmed, single spaces, at most 40 letters. Empty means none. */
+export const cleanCollection = (v: string) => v.trim().replace(/\s+/g, " ").slice(0, 40)
+
+export function collectionsOf(assets: readonly Asset[]): { name: string; count: number }[] {
+  const n = new Map<string, number>()
+  for (const a of assets) if (a.collection) n.set(a.collection, (n.get(a.collection) ?? 0) + 1)
+  return [...n].map(([name, count]) => ({ name, count })).sort((a, b) => a.name.localeCompare(b.name))
+}
+
+export function tagsOf(assets: readonly Asset[]): { tag: string; count: number }[] {
+  const n = new Map<string, number>()
+  for (const a of assets) for (const t of a.tags ?? []) n.set(t, (n.get(t) ?? 0) + 1)
+  return [...n].map(([tag, count]) => ({ tag, count })).sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
+}
+
+/** The pictures to show for a search, a collection, a tag, a used/unused choice and a sort order. `uses` says how many places a picture is used. */
+export function viewAssets(assets: readonly Asset[], uses: (a: Asset) => number, v: AssetView): Asset[] {
+  const q = v.q.trim().toLowerCase()
+  const shown = assets.filter((a) => {
+    if (q && !`${a.name} ${a.file} ${a.alt} ${a.collection ?? ""} ${(a.tags ?? []).join(" ")}`.toLowerCase().includes(q)) return false
+    if (v.collection === UNSORTED ? !!a.collection : v.collection && a.collection !== v.collection) return false
+    if (v.tag && !(a.tags ?? []).includes(v.tag)) return false
+    if (v.use !== "any" && (uses(a) > 0) !== (v.use === "used")) return false
+    return true
+  })
+  const newest = (a: Asset, b: Asset) => b.createdAt.localeCompare(a.createdAt)
+  const by: Record<AssetSort, (a: Asset, b: Asset) => number> = {
+    newest, oldest: (a, b) => -newest(a, b), name: (a, b) => a.name.localeCompare(b.name), largest: (a, b) => b.bytes - a.bytes || newest(a, b),
+    unused: (a, b) => uses(a) - uses(b) || newest(a, b),
+  }
+  return [...shown].sort(by[v.sort])
+}

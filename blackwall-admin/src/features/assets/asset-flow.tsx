@@ -2,7 +2,8 @@ import { ArrowUp, Folder, ImageIcon, Loader2, Monitor, Plus, Search, Cloud } fro
 import { useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { create } from "zustand"
-import { assetCloudPath, humanBytes } from "@shared/assets"
+import { DEFAULT_VIEW, UNSORTED, assetCloudPath, collectionsOf, humanBytes, viewAssets } from "@shared/assets"
+import { OptionSelect } from "@/components/forms/fields"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -127,13 +128,16 @@ export function AssetImage({ asset, className, alt }: { asset: Asset; className?
 function Chooser({ onPick, onClose }: { onPick: (a: Asset) => void; onClose: () => void }) {
   const assets = useWorkspace((s) => s.assets)
   const [q, setQ] = useState("")
+  const [coll, setColl] = useState("")
   const urls = useAssetUrls(assets)
-  const shown = useMemo(() => [...assets].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).filter((a) => !q || `${a.name} ${a.alt} ${(a.tags ?? []).join(" ")}`.toLowerCase().includes(q.toLowerCase())), [assets, q])
+  const collections = useMemo(() => collectionsOf(assets), [assets])
+  const shown = useMemo(() => viewAssets(assets, () => 0, { ...DEFAULT_VIEW, q, collection: coll }), [assets, q, coll])
   return (
     <div className="flex max-h-[85dvh] flex-col">
       <div className="flex flex-wrap items-center gap-2 border-b border-line py-3 pr-12 pl-4">
         <div className="mr-auto"><DialogTitle className="font-heading text-base font-bold">Choose a picture</DialogTitle><DialogDescription className="text-xs text-muted-foreground">From your asset library.</DialogDescription></div>
         <label className="relative w-44"><Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-faint" /><Input aria-label="Search pictures" className="h-8 pl-7 text-xs" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" /></label>
+        {collections.length > 0 && <OptionSelect label="Collection" value={coll || "all"} onChange={(v) => setColl(v === "all" ? "" : v)} className="h-8 w-auto min-w-32 text-xs" options={[{ value: "all", label: "All pictures" }, { value: UNSORTED, label: "Not in a collection" }, ...collections.map((c) => ({ value: c.name, label: `${c.name} (${c.count})` }))]} />}
         <AddPictureButton variant="outline" label="Add a picture" after={(a) => { onPick(a); onClose() }} />
       </div>
       {shown.length ? (
