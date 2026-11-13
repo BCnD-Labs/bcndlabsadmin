@@ -12,6 +12,7 @@ import {
   FolderInput,
   FolderPlus,
   Eye,
+  Minimize2,
   HardDrive,
   MoreHorizontal,
   Pencil,
@@ -29,6 +30,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Input } from "@/components/ui/input"
 import { EmptyState } from "@/components/common/empty-state"
 import { useDocs } from "@/features/documents/docs-store"
+import { ShrinkDialog, type ShrinkChoice } from "@/features/documents/shrink-dialog"
+import { isShrinkable, savedLabel, shrinkOffice } from "@/features/documents/shrink-office"
 import { documentKind, isLegacyOffice } from "@/features/documents/document-kind"
 import { PageHeader } from "@/components/common/page-header"
 import { Panel } from "@/components/common/panel"
@@ -240,7 +243,8 @@ export function FilesPage() {
   const [ask, setAsk] = useState<Ask>(null)
   const [editing, setEditing] = useState<StorageEntry | null>(null)
   const [viewing, setViewing] = useState<StorageEntry | null>(null)
-  const [uploads, setUploads] = useState<{ name: string; progress: number }[]>([])
+  const [uploads, setUploads] = useState<{ name: string; progress: number; note?: string }[]>([])
+  const [shrinkAsk, setShrinkAsk] = useState<{ files: File[]; resolve: (choice: ShrinkChoice) => void } | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
 
@@ -273,11 +277,26 @@ export function FilesPage() {
     const existing = new Set(listing?.entries.map((e) => e.name))
     const clash = list.filter((f) => existing.has(f.name)).map((f) => f.name)
     if (clash.length && !confirm(`Replace ${clash.length === 1 ? `“${clash[0]}”` : `${clash.length} files`} already in this folder?`)) return
+    const big = list.filter((f) => isShrinkable(f.name, f.size))
+    let choice: ShrinkChoice = "asis"
+    if (big.length) {
+      choice = await new Promise<ShrinkChoice>((resolve) => setShrinkAsk({ files: big, resolve }))
+      if (choice === "cancel") return
+    }
     setUploads(list.map((f) => ({ name: f.name, progress: 0 })))
+    const note = (i: number, text?: string, progress = 0) => setUploads((u) => u.map((x, j) => (j === i ? { ...x, note: text, progress } : x)))
     let ok = 0
     for (const [i, f] of list.entries()) {
       try {
-        await uploadFile(joinPath(dir, f.name), f, (p) => setUploads((u) => u.map((x, j) => (j === i ? { ...x, progress: p } : x))))
+        let body: Blob = f
+        if (choice === "shrink" && isShrinkable(f.name, f.size)) {
+          note(i, "Shrinking pictures…")
+          const r = await shrinkOffice(f, { onProgress: (done, total) => note(i, `Shrinking pictures ${done} of ${total}`, total ? done / total : 0) })
+          body = r.blob
+          if (r.shrunk) toast.message(`${f.name}: ${savedLabel(r.before, r.after)}`)
+          note(i, "Uploading…")
+        }
+        await uploadFile(joinPath(dir, f.name), body, (p) => setUploads((u) => u.map((x, j) => (j === i ? { ...x, progress: p } : x))))
         ok++
       } catch (e) {
         toast.error(`${f.name}: ${(e as Error).message}`)
@@ -286,6 +305,27 @@ export function FilesPage() {
     setUploads([])
     if (ok) toast.success(`Uploaded ${ok} ${ok === 1 ? "file" : "files"}`)
     void load()
+  }
+
+  /** Saves a smaller copy of a large Office file next to it. The original is left exactly as it is. */
+  const shrinkCopy = async (e: StorageEntry) => {
+    const copyName = e.name.replace(/(\.[^.]+)$/, " (smaller)$1")
+    if (listing?.entries.some((x) => x.name === copyName) && !confirm(`Replace “${copyName}” already in this folder?`)) return
+    const note = (text: string, progress = 0) => setUploads([{ name: copyName, progress, note: text }])
+    try {
+      note("Downloading…")
+      const blob = await fetchFile(e.path)
+      const r = await shrinkOffice(blob, { onProgress: (done, total) => note(`Shrinking pictures ${done} of ${total}`, total ? done / total : 0) })
+      if (!r.shrunk) return void toast.message(`${e.name}: nothing to shrink. Its pictures are already small.`)
+      note("Uploading…")
+      await uploadFile(joinPath(parentOf(e.path), copyName), r.blob, (p) => setUploads([{ name: copyName, progress: p, note: "Uploading…" }]))
+      toast.success(`${copyName}: ${savedLabel(r.before, r.after)}. The original is unchanged.`)
+      void load()
+    } catch (err) {
+      toast.error((err as Error).message)
+    } finally {
+      setUploads([])
+    }
   }
 
   const open = (e: StorageEntry) => {
@@ -317,6 +357,7 @@ export function FilesPage() {
     <>
       <DropdownMenuItem onSelect={() => open(e)}>{e.type === "dir" ? <><Folder /> Open</> : isTextFile(e) ? <><Pencil /> Edit</> : documentKind(e.name) ? <><Eye /> Open in Docs</> : isOffice(e) ? <><ArrowUpRight /> Open in Nextcloud</> : <><Download /> {isImage(e) ? "Preview" : "Download"}</>}</DropdownMenuItem>
       {e.type === "file" && (isTextFile(e) || isImage(e) || isOffice(e)) && <DropdownMenuItem onSelect={() => void downloadFile(e).catch((err) => toast.error((err as Error).message))}><Download /> Download</DropdownMenuItem>}
+      {e.type === "file" && isShrinkable(e.name, e.size) && <DropdownMenuItem onSelect={() => void shrinkCopy(e)}><Minimize2 /> Make a smaller copy</DropdownMenuItem>}
       <DropdownMenuItem onSelect={() => setAsk({ kind: "rename", entry: e })}><Pencil /> Rename</DropdownMenuItem>
       <DropdownMenuItem onSelect={() => setAsk({ kind: "move", entry: e })}><FolderInput /> Move…</DropdownMenuItem>
       {nextcloudLink(e) && documentKind(e.name) && <DropdownMenuItem asChild><a href={nextcloudLink(e)} target="_blank" rel="noreferrer"><ArrowUpRight /> Open in Nextcloud</a></DropdownMenuItem>}
@@ -390,6 +431,7 @@ export function FilesPage() {
                   {uploads.map((u) => (
                     <li key={u.name} className="flex items-center gap-3 py-1 text-xs">
                       <span className="min-w-0 flex-1 truncate">{u.name}</span>
+                      {u.note && <span className="shrink-0 text-muted-foreground">{u.note}</span>}
                       <span className="h-1.5 w-32 overflow-hidden rounded-full bg-off"><span className="block h-full rounded-full bg-[var(--bw-category)]" style={{ width: `${Math.round(u.progress * 100)}%` }} /></span>
                       <span className="w-9 text-right tabular-nums text-muted-foreground">{Math.round(u.progress * 100)}%</span>
                     </li>
@@ -496,6 +538,7 @@ export function FilesPage() {
         </Dialog>
       )}
       {editing && <TextEditor entry={editing} onClose={() => setEditing(null)} onSaved={() => void load()} />}
+      {shrinkAsk && <ShrinkDialog files={shrinkAsk.files} onChoose={(c) => { shrinkAsk.resolve(c); setShrinkAsk(null) }} />}
       {viewing && <ImagePreview entry={viewing} onClose={() => setViewing(null)} />}
     </>
   )
