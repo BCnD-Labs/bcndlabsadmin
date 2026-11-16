@@ -1,5 +1,5 @@
 import { format } from "date-fns"
-import { CheckCircle2, ChevronLeft, ChevronRight, ChevronRight as Go, NotebookPen, Plus, Sun } from "lucide-react"
+import { BookOpen, CalendarDays, CalendarRange, CheckCircle2, ChevronLeft, ChevronRight, ChevronRight as Go, History, NotebookPen, Plus, Sun } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -19,6 +19,7 @@ import { parseKey, todayKey } from "@/lib/dates"
 import { cn } from "@/lib/utils"
 import { LogTool } from "@/mac/dock/tools"
 import { useDock } from "@/mac/dock/dock-store"
+import { MacToolNavigation } from "@/mac/tool-navigation"
 import { useWorkspace } from "@/stores/workspace"
 import { addDaysToKey } from "@shared/date-keys"
 import { validDateKey } from "@shared/planner"
@@ -152,12 +153,7 @@ export function JournalPage() {
   const choose = (next: View) => setParams((p) => { const n = new URLSearchParams(p); n.set("view", next); return n }, { replace: true })
   const firstLine = (j: (typeof journal)[number]) => (j.text.trim() || j.entries?.find((i) => !i.courseId && !i.taskId)?.text || "").split("\n").map((l) => l.replace(/^#+\s*/, "").trim()).find(Boolean) ?? "Saved"
 
-  return (
-    <>
-      <PageHeader title="Journal" subtitle={view === "reflections" ? undefined : periodLabel(period, anchor)}
-        actions={view === "reflections" ? undefined : <><Button variant="outline" size="sm" disabled={anchor === periodStart(period, today)} onClick={() => setDay(today)}>Today</Button><Button variant="quiet" size="icon-sm" aria-label={`Previous ${period === "daily" ? "day" : period.slice(0, -2)}`} onClick={() => step(-1)}><ChevronLeft /></Button><Button variant="quiet" size="icon-sm" aria-label={`Next ${period === "daily" ? "day" : period.slice(0, -2)}`} onClick={() => step(1)}><ChevronRight /></Button></>} />
-      <div className="mb-3"><SegmentedTabs<View> label="Journal view" value={view} onChange={choose} className="max-w-full overflow-x-auto" tabs={VIEWS} /></div>
-      {view === "reflections" ? <Reflections /> : (
+  const content = view === "reflections" ? <Reflections /> : (
         <WorkspaceGrid>
           {view !== "daily" && <GridItem span={2}>
             <Panel category="journal" title={formWording(period).title} tool="journal" command="check-in" bodyClassName="grid gap-2 p-3">
@@ -190,7 +186,18 @@ export function JournalPage() {
             </GridItem>
           )}
         </WorkspaceGrid>
-      )}
+      )
+  return (
+    <>
+      <PageHeader title="Journal" subtitle={view === "reflections" ? undefined : periodLabel(period, anchor)}
+        actions={view === "reflections" ? undefined : <><Button variant="outline" size="sm" disabled={anchor === periodStart(period, today)} onClick={() => setDay(today)}>Today</Button><Button variant="quiet" size="icon-sm" aria-label={`Previous ${period === "daily" ? "day" : period.slice(0, -2)}`} onClick={() => step(-1)}><ChevronLeft /></Button><Button variant="quiet" size="icon-sm" aria-label={`Next ${period === "daily" ? "day" : period.slice(0, -2)}`} onClick={() => step(1)}><ChevronRight /></Button></>} />
+      {IS_MAC ? <MacToolNavigation label="Journal" value={view} onChange={choose} items={[
+        { value: "daily", label: "Daily", icon: <Sun /> },
+        { value: "weekly", label: "Weekly", icon: <CalendarDays /> },
+        { value: "monthly", label: "Monthly", icon: <CalendarRange /> },
+        { value: "yearly", label: "Yearly", icon: <BookOpen /> },
+        { value: "reflections", label: "Reflections", icon: <History /> },
+      ]}>{content}</MacToolNavigation> : <><div className="mb-3"><SegmentedTabs<View> label="Journal view" value={view} onChange={choose} className="max-w-full overflow-x-auto" tabs={VIEWS} /></div>{content}</>}
       {dialog && <CheckInDialog key={`${period}${anchor}${dialog.slot ?? ""}`} period={period} anchor={anchor} slot={dialog.slot} todayTitles={todayTitles} onClose={() => setDialog(null)} />}
     </>
   )
