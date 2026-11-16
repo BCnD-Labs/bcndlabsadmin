@@ -70,7 +70,7 @@ const s = StyleSheet.create({
   backdrop: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.48)" },
   sheet: { width: "92%", maxWidth: 560, maxHeight: "62%", backgroundColor: c.panel, borderRadius: shape.dialog, borderWidth: 1, borderColor: c.border, overflow: "hidden", elevation: 18, shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 18, shadowOffset: { width: 0, height: 8 } },
   header: { flexDirection: "row", alignItems: "center", gap: 4, paddingLeft: 14, paddingRight: 8, paddingVertical: 3, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.line },
-  heading: { flex: 1 }, title: { color: c.text, fontSize: 17, fontWeight: "600" }, date: { color: c.muted, fontSize: 11 }, close: { width: 28, height: 28, alignItems: "center", justifyContent: "center", borderRadius: 18 },
+  heading: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8 }, title: { color: c.text, fontSize: 17, fontWeight: "600", flexShrink: 1 }, date: { color: c.muted, fontSize: 11 }, close: { width: 28, height: 28, alignItems: "center", justifyContent: "center", borderRadius: 18 },
   scroll: { flexGrow: 0, flexShrink: 1 }, body: { paddingHorizontal: 14, paddingTop: 8, gap: 8 },
   properties: { flexDirection: "row", flexWrap: "wrap", gap: 6, paddingBottom: 6 },
   property: { minHeight: 32, maxWidth: "100%", flexDirection: "row", alignItems: "center", paddingHorizontal: 10, borderRadius: 16, backgroundColor: c.raised }, propertyOn: { backgroundColor: c.selected },
