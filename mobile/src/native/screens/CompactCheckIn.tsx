@@ -58,7 +58,7 @@ export function CompactCheckIn({ slot, day, fields, answers, onChange, onSave, o
         </KeyboardScrollView>
         <View style={s.footer}>
           <Pressable onPress={onClose} style={s.cancel} accessibilityRole="button"><Text style={s.cancelText}>Close</Text></Pressable>
-          <Pressable onPress={onSave} disabled={!canSave} style={[s.save, !canSave && s.disabled]} accessibilityRole="button" accessibilityState={{ disabled: !canSave }}><Icon name="checkmark" size={14} tint="#fff" /><Text style={s.saveText}>{saving ? "Saving…" : "Save check-in"}</Text></Pressable>
+          <Pressable onPress={onSave} disabled={!canSave} style={({ pressed }) => [s.save, pressed && s.savePressed, !canSave && s.disabled]} accessibilityRole="button" accessibilityState={{ disabled: !canSave }}><Icon name="checkmark" size={14} tint="#fff" /><Text style={s.saveText}>{saving ? "Saving…" : "Save check-in"}</Text></Pressable>
         </View>
       </View>
     </KeyboardFrame>
@@ -71,9 +71,9 @@ const s = StyleSheet.create({
   sheet: { width: "92%", maxWidth: 560, maxHeight: "62%", backgroundColor: c.panel, borderRadius: shape.dialog, borderWidth: 1, borderColor: c.border, overflow: "hidden", elevation: 18, shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 18, shadowOffset: { width: 0, height: 8 } },
   header: { flexDirection: "row", alignItems: "center", gap: 4, paddingLeft: 14, paddingRight: 8, paddingVertical: 3, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.line },
   heading: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8 }, title: { color: c.text, fontSize: 17, fontWeight: "600", flexShrink: 1 }, date: { color: c.muted, fontSize: 11 }, close: { width: 28, height: 28, alignItems: "center", justifyContent: "center", borderRadius: 18 },
-  scroll: { flexGrow: 0, flexShrink: 1 }, body: { paddingHorizontal: 14, paddingTop: 8, gap: 8 },
+  scroll: { flexGrow: 0, flexShrink: 1 }, body: { paddingHorizontal: 14, paddingTop: 4, gap: 8 },
   properties: { flexDirection: "row", flexWrap: "wrap", gap: 6, paddingBottom: 6 },
-  property: { minHeight: 32, maxWidth: "100%", flexDirection: "row", alignItems: "center", paddingHorizontal: 10, borderRadius: 16, backgroundColor: c.raised }, propertyOn: { backgroundColor: c.selected },
+  property: { minHeight: 32, maxWidth: "100%", flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, borderRadius: 16, backgroundColor: c.raised }, propertyOn: { backgroundColor: c.selected },
   propertyText: { color: c.text2, fontSize: 12 }, more: { minHeight: 32, justifyContent: "center", paddingHorizontal: 8, borderRadius: 16 },
   editor: { gap: 6, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line, paddingTop: 8 }, question: { color: c.text2, fontSize: 12 },
   choices: { flexDirection: "row", flexWrap: "wrap", gap: 6 }, scale: { flexWrap: "nowrap" },
@@ -82,5 +82,5 @@ const s = StyleSheet.create({
   note: { minHeight: 54, maxHeight: 110, paddingTop: 10, paddingBottom: 8, color: c.text, fontSize: 13, lineHeight: 19, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line },
   footer: { flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 4, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line, backgroundColor: c.panel },
   cancel: { minHeight: 32, paddingHorizontal: 10, justifyContent: "center", borderRadius: 16, backgroundColor: c.raised }, cancelText: { color: c.muted, fontSize: 12 },
-  save: { minHeight: 32, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, paddingHorizontal: 10, borderRadius: 16, backgroundColor: c.action }, saveText: { color: "#fff", fontSize: 12, fontWeight: "600" }, disabled: { opacity: 0.45 }, error: { color: "#ffa8a8", fontSize: 11 },
+  save: { minHeight: 32, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, paddingHorizontal: 10, borderRadius: 16, backgroundColor: c.action }, savePressed: { backgroundColor: c.actionPressed }, saveText: { color: "#fff", fontSize: 12, fontWeight: "600" }, disabled: { opacity: 0.45 }, error: { color: "#ffa8a8", fontSize: 11 },
 })
