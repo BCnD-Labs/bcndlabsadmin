@@ -5,7 +5,7 @@ import { CalendarClock, ExternalLink, FileX, ImagePlus, Loader2, Rocket, Trash2,
 import { useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { joinUrl, renderPostPage, type SiteChrome } from "@shared/site"
+import { joinUrl, renderPostPage, scheduleKey, type SiteChrome } from "@shared/site"
 import { assetPath, imagePathsInPost } from "@shared/assets"
 import { renderPost } from "@shared/sitebuilder"
 import { AssetField } from "@/features/assets/asset-field"
@@ -29,9 +29,9 @@ import { Field, OptionSelect, ProjectSelect } from "@/components/forms/fields"
 import { slugify } from "@/lib/ids"
 import { timeAgo, timeFmt } from "@/lib/dates"
 import { postsHref, siteFilesHref } from "@/lib/routes"
-import type { Draft, DraftKind } from "@/lib/types"
+import type { Draft, DraftKind, Site } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { draftToPost, localImages, mergePosts, uploadSiteImage, useSite, useSiteChrome, useSiteStore, type PostItem } from "@/services/site"
+import { draftToPost, localImages, mergePosts, pagesmithScheduleKey, schedulePagesmithPost, unschedulePagesmithPost, uploadSiteImage, useSchedules, useSite, useSiteChrome, useSiteStore, type PostItem } from "@/services/site"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
 import { PostStateChip, postUrl } from "./content-page"
@@ -505,6 +505,12 @@ function PublishPanel({ draft, item, site, onRemoteSlug }: { draft: Draft; item?
   const doPublish = () =>
     run("publish", async () => {
       const r = await publish(draftToPost(draft), previousSlug)
+      if (r.cancelled) return
+      if (r.pr) {
+        toast.success(`Opened pull request #${r.pr.number}`, { description: "Nothing changes on the site until you merge it.", action: { label: "View", onClick: () => window.open(r.pr!.url, "_blank", "noreferrer") } })
+        return
+      }
+      if (r.unchanged) { toast("Nothing to publish", { description: "The site already has this post exactly as it is." }); onRemoteSlug(draft.slug); return }
       onRemoteSlug(draft.slug)
       toast.success(state === "published" ? "Post updated" : "Published", {
         description: "It's live once your site finishes redeploying, usually a minute or two.",
@@ -584,7 +590,7 @@ function PublishPanel({ draft, item, site, onRemoteSlug }: { draft: Draft; item?
           </Button>
         )}
         {state === "published" && (
-          <Button variant="quiet" disabled={!!busy} onClick={() => run("unpublish", async () => { await unpublish(item!.slug); onRemoteSlug(undefined); toast.success("Removed from the site. Your draft is still here.") })}>
+          <Button variant="quiet" disabled={!!busy} onClick={() => run("unpublish", async () => { const r = await unpublish(item!.slug); if (r.cancelled) return; if (r.pr) { toast.success(`Opened pull request #${r.pr.number}`, { description: "The post stays on the site until you merge it." }); return } onRemoteSlug(undefined); toast.success("Removed from the site. Your draft is still here.") })}>
             {busy === "unpublish" ? <Loader2 className="animate-spin" /> : <Undo2 />} Unpublish
           </Button>
         )}
@@ -635,8 +641,10 @@ function SitePostPanel({ draft }: { draft: Draft }) {
   const go = async (live: boolean) => {
     setBusy(true)
     try {
+      const was = { publishedAt: draft.publishedAt, status: draft.status }
       update("drafts", draft.id, { publishedAt: live ? draft.publishedAt ?? new Date().toISOString() : undefined, status: live ? "ready" : draft.status })
-      if (repo) await publishSiteNow(site)
+      // Cancelled on the review screen: it was never published, so the post goes back to how it was.
+      if (repo) { if (!(await publishSiteNow(site))) update("drafts", draft.id, was) }
       else toast.success(live ? "Added to the site" : "Taken off the site", { description: "It's in your files the next time you get them.", action: { label: "Get files", onClick: () => navigate(siteFilesHref) } })
     } catch (e) {
       toast.error((e as Error).message)
@@ -654,9 +662,45 @@ function SitePostPanel({ draft }: { draft: Draft }) {
         {draft.publishedAt && <Button variant="quiet" disabled={busy} onClick={() => void go(false)}><Undo2 /> {repo ? "Unpublish" : "Take off the site"}</Button>}
         {!repo && <Button variant="outline" asChild><Link to={siteFilesHref}>Publish</Link></Button>}
       </div>
+      {repo && <PagesmithSchedule site={site} draft={draft} />}
       <LiveStatus site={site} />
       <p className="text-[11px] text-faint">{repo ? "Publishing rebuilds and commits the whole site, so the course portal and post lists update too." : "Adding a post puts it in the site's files, its blog list and its course pages. Then get the files and copy them over."}</p>
     </Panel>
+  )
+}
+
+/** Schedule a Pagesmith post: the server publishes it at that time, through the same checks as a click, and says here if it couldn't. */
+function PagesmithSchedule({ site, draft }: { site: Site; draft: Draft }) {
+  const { items, load } = useSchedules()
+  const [busy, setBusy] = useState(false)
+  const [when, setWhen] = useState(() => format(new Date(Date.now() + 24 * 3600_000), "yyyy-MM-dd'T'09:00"))
+  const [pr, setPr] = useState(false)
+  useEffect(() => { void load() }, [load])
+  const waiting = items.find((s) => scheduleKey(s) === pagesmithScheduleKey(site.id, draft.id))
+  const act = async (fn: () => Promise<unknown>, done: string) => {
+    setBusy(true)
+    try { await fn(); toast.success(done) } catch (e) { toast.error((e as Error).message) } finally { setBusy(false) }
+  }
+  if (waiting) {
+    return (
+      <div className="grid gap-1.5 border-t border-line-soft pt-2.5" data-testid="pagesmith-schedule">
+        <p className="flex items-center gap-1.5 text-xs text-ink"><CalendarClock className="size-3.5" /> {waiting.error ? "Was due" : "Goes out"} {format(new Date(waiting.publishAt), `MMM d, ${timeFmt()}`)}{waiting.mode === "pr" ? " (as a pull request)" : ""}</p>
+        {waiting.error && <p role="alert" className="text-[11.5px] text-red-text">It couldn't go out: {waiting.error} Blackwall tries again every 10 minutes.</p>}
+        <Button variant="outline" size="sm" className="justify-self-start" disabled={busy} onClick={() => void act(() => unschedulePagesmithPost(site.id, draft.id), "Schedule cancelled")}>Cancel schedule</Button>
+      </div>
+    )
+  }
+  if (draft.publishedAt) return null
+  return (
+    <div className="grid gap-1.5 border-t border-line-soft pt-2.5" data-testid="pagesmith-schedule">
+      <label htmlFor="pagesmith-when" className="text-[11px] text-muted-foreground">Or schedule it</label>
+      <div className="flex flex-wrap items-center gap-2">
+        <Input id="pagesmith-when" type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} className="h-8 w-auto text-xs" />
+        <Button variant="outline" size="sm" disabled={busy || !draft.title.trim()} onClick={() => void act(() => schedulePagesmithPost(site.id, draft.id, new Date(when).toISOString(), pr ? "pr" : "direct"), "Scheduled")}><CalendarClock /> Schedule</Button>
+      </div>
+      <label className="flex items-center gap-1.5 text-[11.5px] text-muted-foreground"><input type="checkbox" checked={pr} onChange={(e) => setPr(e.target.checked)} /> Open a pull request instead of publishing live</label>
+      <p className="text-[11px] text-faint">The server builds the whole site with this post in it and publishes at that time. It never replaces a file of yours.</p>
+    </div>
   )
 }
 

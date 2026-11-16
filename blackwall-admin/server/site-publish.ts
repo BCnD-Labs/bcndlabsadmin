@@ -3,6 +3,7 @@ import { trimSlashes } from "../shared/site.ts"
 import type { Collections } from "../shared/workspace.ts"
 import { ProviderError } from "./http.ts"
 import { repoFor } from "./providers/website.ts"
+import { deliver, gitBlobSha, type DeliverOptions } from "./publish-plan.ts"
 import type { ConnectionStore } from "./store.ts"
 import { approvedComments } from "../shared/site-inbox.ts"
 import { readInbox } from "./forms-inbox.ts"
@@ -32,11 +33,12 @@ async function pictureFiles(store: ConnectionStore, ws: Collections, siteId: str
 }
 
 /**
- * Builds a CMS site from the workspace and commits it to its repository in one commit:
- * every page, published post, stylesheet, sitemap and redirect. Files Blackwall made
- * before but doesn't make now are deleted; files it never made are never touched.
+ * Builds a CMS site from the workspace and puts it in its repository as one commit (or one pull request): every page, published
+ * post, stylesheet, sitemap and redirect. Files Blackwall made before but doesn't make now are deleted. A file Blackwall never made,
+ * or one edited somewhere else since Blackwall wrote it, is never replaced unless the owner agreed (`acknowledge`) after seeing the
+ * plan, and nothing is written if the branch moved since they reviewed it (`expectedHead`).
  */
-export async function publishSite(store: ConnectionStore, ws: Collections, siteId: string) {
+export async function publishSite(store: ConnectionStore, ws: Collections, siteId: string, opts: DeliverOptions = {}) {
   const site = ws.sites.find((s) => s.id === siteId)
   if (!site) throw new ProviderError("That site doesn't exist", 404)
   if (site.adopted) throw new ProviderError("This site is run from its own files. Blackwall only changes the marked regions and the posts it publishes, so it doesn't rebuild or publish the whole site.", 409)
@@ -48,20 +50,42 @@ export async function publishSite(store: ConnectionStore, ws: Collections, siteI
   const comments = approvedComments(await readInbox(store), site.id)
   const files: Record<string, string | Buffer> = { ...buildSite(site, ws.pages, ws.drafts, ws.forms, comments, ws.assets), ...await pictureFiles(store, ws, site.id) }
   let previous: string[] = []
+  let wrote: Record<string, string> = {}
   try {
-    previous = JSON.parse((await repo.read(at(MANIFEST))) ?? "{}").files ?? []
+    const m = JSON.parse((await repo.read(at(MANIFEST))) ?? "{}")
+    previous = m.files ?? []
+    wrote = m.hashes ?? {}
   } catch {
     previous = []
   }
-  const paths = Object.keys(files)
+  const paths = Object.keys(files).sort()
+  const hashes = Object.fromEntries(paths.map((p) => [p, gitBlobSha(files[p])]))
+  const gone = previous.filter((p) => !(p in files))
   const changes = [
     ...paths.map((p) => ({ path: at(p), content: files[p] })),
-    ...previous.filter((p) => !(p in files)).map((p) => ({ path: at(p), delete: true as const })),
-    { path: at(MANIFEST), content: `${JSON.stringify({ generator: "Blackwall", site: site.name, files: paths.sort() }, null, 2)}\n` },
+    ...gone.map((p) => ({ path: at(p), delete: true as const })),
+    { path: at(MANIFEST), content: `${JSON.stringify({ generator: "Blackwall", site: site.name, files: paths, hashes }, null, 2)}\n` },
   ]
+  // What Blackwall made last time, with the fingerprint it wrote ("" when an older publish didn't record one).
+  const owned = new Map<string, string>([...previous.map((p) => [at(p), wrote[p] ?? ""] as [string, string]), [at(MANIFEST), ""]])
   const posts = ws.drafts.filter((d) => d.siteId === site.id && d.publishedAt).length
-  const sha = await repo.commit(`Publish ${site.name}: ${ws.pages.filter((p) => p.siteId === site.id).length} pages, ${posts} posts (via Blackwall)`, changes)
-  return { sha, files: paths.length, removed: previous.filter((p) => !(p in files)).length, removedPaths: previous.filter((p) => !(p in files)), repo: cfg.repo, branch: cfg.branch, url: site.domain ? `https://${site.domain.replace(/^https?:\/\//, "")}` : undefined }
+  const pages = ws.pages.filter((p) => p.siteId === site.id).length
+  const message = `Publish ${site.name}: ${pages} pages, ${posts} posts (via Blackwall)`
+  const done = await deliver(repo, message, changes, owned, opts, { title: message, body: `Built from the Blackwall site “${site.name}”: ${pages} pages and ${posts} posts.` })
+  if (opts.plan) return { plan: done.plan }
+  return {
+    sha: done.committed?.sha ?? done.plan.head,
+    /** Nothing differed from what is already in the repository. */
+    unchanged: !done.committed,
+    files: paths.length,
+    removed: gone.length,
+    removedPaths: gone,
+    repo: cfg.repo,
+    branch: done.committed?.branch ?? cfg.branch,
+    pr: done.committed?.pr,
+    plan: done.plan,
+    url: site.domain ? `https://${site.domain.replace(/^https?:\/\//, "")}` : undefined,
+  }
 }
 
 /** What identifies a page's content: its title and main area, ignoring whitespace and anything a host adds around them. */

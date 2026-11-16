@@ -2,7 +2,9 @@ import { useEffect, useState } from "react"
 import { create } from "zustand"
 import { FALLBACK_CHROME, type ScheduledPost, type SiteChrome, type SiteMediaItem, type SiteOverview, type SitePost } from "@shared/site"
 import type { Draft } from "@/lib/types"
+import type { PublishChoice, PublishPlan } from "@shared/publish-plan"
 import { api, useConnectionFor, useConnections, useSession } from "./connector"
+import { branchOf, reviewPublish } from "./publish-review"
 import type { SourceStatus } from "./types"
 
 /**
@@ -16,11 +18,15 @@ interface SiteState {
   loading: boolean
   loadedFor?: string
   load: (connId: string, force?: boolean) => Promise<void>
-  publish: (post: SitePost, previousSlug?: string) => Promise<{ url: string }>
+  /** Shows what would change, then publishes. `cancelled` when the owner backed out; `pr` when it went to a pull request instead of live. */
+  publish: (post: SitePost, previousSlug?: string) => Promise<PostPublish>
   schedule: (post: SitePost, publishAt: string) => Promise<ScheduledPost>
   unschedule: (slug: string) => Promise<void>
-  unpublish: (slug: string) => Promise<void>
+  unpublish: (slug: string) => Promise<PostPublish>
 }
+
+export interface PostPublish { url: string; cancelled?: boolean; pr?: { url: string; number: number }; unchanged?: boolean }
+interface PostResult { url?: string; plan: PublishPlan; committed?: { sha: string; branch: string; pr?: { url: string; number: number } } }
 
 /** Adds the website connection to a request, so each site talks to its own repository. */
 export const forConnection = (path: string, connId?: string) => (connId ? `${path}${path.includes("?") ? "&" : "?"}connection=${encodeURIComponent(connId)}` : path)
@@ -42,10 +48,13 @@ export const useSiteStore = create<SiteState>()((set, get) => {
       }
     },
     publish: async (post, previousSlug) => {
-      const r = await api<{ url: string }>(forConnection(`site/posts/${post.slug}`, get().loadedFor), { method: "PUT", body: JSON.stringify({ post, previousSlug }) })
-      if (previousSlug && previousSlug !== post.slug) await api(forConnection(`site/schedule/${previousSlug}`, get().loadedFor), { method: "DELETE" }).catch(() => {})
+      const conn = get().loadedFor
+      const send = (body: object) => api<PostResult>(forConnection(`site/posts/${post.slug}`, conn), { method: "PUT", body: JSON.stringify({ post, previousSlug, ...body }) })
+      const r = await reviewPublish({ title: `Publish “${post.title}”`, branch: branchOf(conn), plan: async () => (await send({ plan: true })).plan, run: (choice: PublishChoice) => send(choice) })
+      if (!r) return { url: "", cancelled: true }
+      if (previousSlug && previousSlug !== post.slug && !r.committed?.pr) await api(forConnection(`site/schedule/${previousSlug}`, conn), { method: "DELETE" }).catch(() => {})
       await reload()
-      return r
+      return { url: r.url ?? "", pr: r.committed?.pr, unchanged: !r.committed }
     },
     schedule: async (post, publishAt) => {
       const r = await api<ScheduledPost>(forConnection(`site/schedule/${post.slug}`, get().loadedFor), { method: "PUT", body: JSON.stringify({ post, publishAt }) })
@@ -57,8 +66,12 @@ export const useSiteStore = create<SiteState>()((set, get) => {
       await reload()
     },
     unpublish: async (slug) => {
-      await api(forConnection(`site/posts/${slug}`, get().loadedFor), { method: "DELETE" })
+      const conn = get().loadedFor
+      const send = (body: object) => api<PostResult>(forConnection(`site/posts/${slug}`, conn), { method: "DELETE", body: JSON.stringify(body) })
+      const r = await reviewPublish({ title: "Take this post off the site", branch: branchOf(conn), plan: async () => (await send({ plan: true })).plan, run: (choice: PublishChoice) => send(choice) })
+      if (!r) return { url: "", cancelled: true }
       await reload()
+      return { url: "", pr: r.committed?.pr, unchanged: !r.committed }
     },
   }
 })
@@ -246,3 +259,39 @@ export function mergePosts(drafts: Draft[], overview?: SiteOverview): PostItem[]
   const rank: Record<PostState, number> = { draft: 0, scheduled: 1, published: 2 }
   return items.sort((a, b) => rank[a.state] - rank[b.state] || (b.date ?? b.updatedAt ?? "").localeCompare(a.date ?? a.updatedAt ?? ""))
 }
+
+/* --- schedules (every post waiting to go out, on every site) ------------------------ */
+
+interface SchedulesState {
+  items: ScheduledPost[]
+  loaded: boolean
+  load: () => Promise<void>
+}
+
+/** Posts waiting to be published, with their next run and the last failure. Read again when a screen opens and after any change. */
+export const useSchedules = create<SchedulesState>()((set) => ({
+  items: [],
+  loaded: false,
+  load: async () => {
+    try {
+      set({ items: (await api<{ schedules: ScheduledPost[] }>("schedules")).schedules, loaded: true })
+    } catch {
+      set({ loaded: true })
+    }
+  },
+}))
+
+/** Schedules a Pagesmith post: when the time comes the server builds the site with the post in it and publishes through the same safe path as a click. */
+export async function schedulePagesmithPost(siteId: string, draftId: string, publishAt: string, mode: "direct" | "pr" = "direct") {
+  const r = await api<ScheduledPost>(`sites/${siteId}/schedule/${draftId}`, { method: "PUT", body: JSON.stringify({ publishAt, mode }) })
+  await useSchedules.getState().load()
+  return r
+}
+
+export async function unschedulePagesmithPost(siteId: string, draftId: string) {
+  await api(`sites/${siteId}/schedule/${draftId}`, { method: "DELETE" })
+  await useSchedules.getState().load()
+}
+
+/** The schedule a Pagesmith post is filed under. */
+export const pagesmithScheduleKey = (siteId: string, draftId: string) => `${siteId}:${draftId}`

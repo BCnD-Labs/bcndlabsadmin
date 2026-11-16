@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto"
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import type { ConnectionInput, PublicConnection } from "../shared/connections.ts"
-import type { ScheduledPost } from "../shared/site.ts"
+import { scheduleKey, type ScheduledPost } from "../shared/site.ts"
 
 /** A connection as the server holds it, secrets in the clear (in memory only). */
 export interface StoredConnection extends Omit<PublicConnection, "secrets"> {
@@ -21,7 +21,7 @@ export abstract class ConnectionStore {
   protected abstract all(): Promise<StoredConnection[]>
   protected abstract save(c: StoredConnection): Promise<void>
   protected abstract delete(id: string): Promise<boolean>
-  /** Posts waiting to be published at a set time (CMS → Schedule). Keyed by slug. */
+  /** Posts waiting to be published at a set time (CMS → Schedule). Keyed by `scheduleKey`: the slug unless the schedule names a key. */
   abstract listSchedules(): Promise<ScheduledPost[]>
   abstract putSchedule(s: ScheduledPost): Promise<void>
   abstract deleteSchedule(slug: string): Promise<boolean>
@@ -125,13 +125,13 @@ export class FileConnectionStore extends ConnectionStore {
   }
 
   async putSchedule(s: ScheduledPost) {
-    this.data.schedules = [...(this.data.schedules ?? []).filter((x) => x.post.slug !== s.post.slug), s]
+    this.data.schedules = [...(this.data.schedules ?? []).filter((x) => scheduleKey(x) !== scheduleKey(s)), s]
     this.flush()
   }
 
   async deleteSchedule(slug: string) {
     const before = this.data.schedules?.length ?? 0
-    this.data.schedules = (this.data.schedules ?? []).filter((x) => x.post.slug !== slug)
+    this.data.schedules = (this.data.schedules ?? []).filter((x) => scheduleKey(x) !== slug)
     if (this.data.schedules.length === before) return false
     this.flush()
     return true

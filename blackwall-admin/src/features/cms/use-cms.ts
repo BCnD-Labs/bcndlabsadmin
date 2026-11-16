@@ -1,9 +1,11 @@
 import { toast } from "sonner"
 import { create } from "zustand"
 import { liveConfirmed, type LiveReport } from "@shared/site-live"
+import type { PublishPlan } from "@shared/publish-plan"
 import { cloneBlocks, siteFromSite, siteFromTemplate } from "@shared/sitebuilder"
 import type { Site, SitePage } from "@/lib/types"
 import { api } from "@/services/connector"
+import { branchOf, reviewPublish } from "@/services/publish-review"
 import { syncWorkspace, useWorkspaceSync } from "@/services/workspace-sync"
 import { usePrefs } from "@/stores/prefs"
 import { useWorkspace } from "@/stores/workspace"
@@ -128,18 +130,45 @@ export async function confirmLive(site: Site, removed: string[], tries = LIVE_TR
   }
 }
 
-export async function publishSite(site: Site) {
-  setRun(site.id, { state: "publishing" })
-  try {
-    await flushWorkspace()
-    const r = await api<{ sha: string; files: number; removed: number; removedPaths: string[]; repo: string; branch: string; url?: string }>(`sites/${site.id}/publish`, { method: "POST" })
-    // Recorded a second after the edits so they no longer count as unpublished.
-    useWorkspace.getState().update("sites", site.id, { publishedAt: new Date(Date.now() + 1000).toISOString(), publishedSha: r.sha })
-    toast.success(`Published ${r.files} files to ${r.repo}`, { description: r.removed ? `${r.removed} old files removed` : undefined })
-    void confirmLive(site, r.removedPaths)
+export interface PublishOutcome { sha: string; files: number; removed: number; removedPaths: string[]; repo: string; branch: string; url?: string; unchanged?: boolean; pr?: { url: string; number: number } }
+
+const clearRun = (id: string) => usePublishRuns.setState((s) => { const runs = { ...s.runs }; delete runs[id]; return { runs } })
+
+/**
+ * Builds the site and puts it in its repository, after showing what would change. Resolves undefined if the owner cancelled.
+ * A pull request or an unchanged site leaves the site's "published" state alone, because nothing went live.
+ */
+export async function publishSite(site: Site): Promise<PublishOutcome | undefined> {
+  await flushWorkspace()
+  const post = (body: object) => api<PublishOutcome & { plan: PublishPlan }>(`sites/${site.id}/publish`, { method: "POST", body: JSON.stringify(body) })
+  const r = await reviewPublish({
+    title: `Publish ${site.name}`,
+    branch: branchOf(site.connectionId),
+    plan: async () => (await post({ plan: true })).plan,
+    run: async (choice) => {
+      setRun(site.id, { state: "publishing" })
+      try {
+        return await post(choice)
+      } catch (e) {
+        setRun(site.id, { state: "failed", removed: [], message: (e as Error).message })
+        throw e
+      }
+    },
+  })
+  if (!r) { clearRun(site.id); return undefined }
+  if (r.pr) {
+    clearRun(site.id)
+    toast.success(`Opened pull request #${r.pr.number}`, { description: "Nothing goes live until you merge it.", action: { label: "View", onClick: () => window.open(r.pr!.url, "_blank", "noreferrer") } })
     return r
-  } catch (e) {
-    setRun(site.id, { state: "failed", removed: [], message: (e as Error).message })
-    throw e
   }
+  if (r.unchanged) {
+    clearRun(site.id)
+    toast("Nothing to publish", { description: "The repository already matches this site." })
+    return r
+  }
+  // Recorded a second after the edits so they no longer count as unpublished.
+  useWorkspace.getState().update("sites", site.id, { publishedAt: new Date(Date.now() + 1000).toISOString(), publishedSha: r.sha })
+  toast.success(`Published ${r.files} files to ${r.repo}`, { description: r.removed ? `${r.removed} old files removed` : undefined })
+  void confirmLive(site, r.removedPaths)
+  return r
 }

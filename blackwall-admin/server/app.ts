@@ -7,9 +7,10 @@ import { ProviderError } from "./http.ts"
 import { analyticsReport } from "./providers/analytics.ts"
 import { githubOverview } from "./providers/github.ts"
 import { deleteImage, publishPost, readAdoptedPage, saveRegion, scanSite, siteChrome, siteMedia, siteOverview, siteRaw, unpublishPost, uploadImage } from "./providers/website.ts"
-import { SLUG_RE, cardIssues, cleanPost, type ScheduledPost, type SitePost } from "../shared/site.ts"
+import { SLUG_RE, cardIssues, cleanPost, scheduleKey, type ScheduledPost, type SitePost } from "../shared/site.ts"
 import { testConnection } from "./providers/index.ts"
 import { toPublic, type ConnectionStore } from "./store.ts"
+import type { DeliverOptions } from "./publish-plan.ts"
 import { validWorkspace } from "../shared/workspace.ts"
 import { serviceIcon } from "./icons.ts"
 import { checkServices, validStatusUrls } from "./service-status.ts"
@@ -133,6 +134,16 @@ async function cardTemplateFor(workspace: WorkspaceStore, connectionId: string):
   return template
 }
 
+/** What a publish request may ask for. Anything else is ignored. */
+function deliverOptions(body: { mode?: string; plan?: boolean; expectedHead?: string; acknowledge?: unknown } | undefined): DeliverOptions {
+  return {
+    mode: body?.mode === "pr" ? "pr" : "direct",
+    plan: body?.plan === true,
+    expectedHead: typeof body?.expectedHead === "string" && /^[A-Za-z0-9]{1,64}$/.test(body.expectedHead) ? body.expectedHead : undefined,
+    acknowledge: Array.isArray(body?.acknowledge) ? body.acknowledge.filter((p): p is string => typeof p === "string").slice(0, 500) : [],
+  }
+}
+
 /** Recent backup files plus the backup job's last status file, if present. */
 function readBackups(dir: string) {
   if (!existsSync(dir)) return { configured: false as const }
@@ -180,22 +191,65 @@ export function createApi(opts: ApiOptions) {
   inboxTimer.unref?.()
   setTimeout(() => void collect().catch(() => {}), 8_000).unref?.()
 
+  /**
+   * Marks a Pagesmith post published in the shared workspace after its site went out. Re-reads and tries again if the workspace changed
+   * meanwhile, so an edit made while the schedule ran is never lost.
+   */
+  const markPublished = async (s: ScheduledPost, result: { sha: string; pr?: unknown }) => {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const snap = await opts.workspace.readWorkspace()
+      const data = structuredClone(snap.data)
+      const draft = data.drafts.find((d) => d.id === s.draftId)
+      if (!draft) return
+      const now = new Date().toISOString()
+      draft.publishedAt = draft.publishedAt ?? s.publishAt
+      draft.status = "ready"
+      draft.updatedAt = now
+      const site = data.sites.find((x) => x.id === s.siteId)
+      // A pull request isn't live until it is merged, so the site isn't marked as published by it.
+      if (site && !result.pr) { site.publishedAt = new Date(Date.now() + 1000).toISOString(); site.publishedSha = result.sha }
+      if (await opts.workspace.writeWorkspace(snap.id, snap.revision, data)) return
+    }
+    throw new Error("The post went out, but your workspace kept changing so it couldn't be marked published. Open the site and publish again to fix the status.")
+  }
+
+  /** A Pagesmith post: the whole site is built with the post included, and goes out through the same safe publish as a click. */
+  const runPagesmith = async (s: ScheduledPost) => {
+    const snap = await opts.workspace.readWorkspace()
+    const draft = snap.data.drafts.find((d) => d.id === s.draftId && d.siteId === s.siteId)
+    if (!draft) throw new Error("This post no longer exists, so it can't be published. Cancel the schedule.")
+    const data = structuredClone(snap.data)
+    const d = data.drafts.find((x) => x.id === s.draftId)!
+    d.publishedAt = d.publishedAt ?? s.publishAt
+    const result = await publishSite(opts.store, data, s.siteId!, { mode: s.mode ?? "direct" })
+    if ("plan" in result && !("sha" in result)) throw new Error("Nothing was published")
+    await markPublished(s, result as { sha: string; pr?: unknown })
+  }
+
+  /**
+   * Once a minute, and once when the server starts (so a post whose time passed while the server was off goes out then, marked late),
+   * publish every schedule that is due. A failure is kept with its error, shown in the app, and retried every 10 minutes.
+   */
   const publishDue = async () => {
     const due = (await opts.store.listSchedules()).filter(
       (s) => Date.parse(s.publishAt) <= Date.now() && (!s.triedAt || Date.now() - Date.parse(s.triedAt) > 10 * 60_000),
     )
-    if (!due.length) return
     for (const s of due) {
+      const key = scheduleKey(s)
+      const late = Date.now() - Date.parse(s.publishAt) > 3 * 60_000
       try {
-        const site = s.connectionId ? await opts.store.get(s.connectionId) : await opts.store.firstOk("website")
-        if (!site || site.provider !== "website") throw new Error("Website publishing isn't connected")
-        await publishPost(site, { ...s.post, date: s.publishAt }, undefined, await cardTemplateFor(opts.workspace, site.id))
-        await opts.store.deleteSchedule(s.post.slug)
-        await notifier.siteCleared(s.post.slug)
-        await notifier.sitePublished(s.post.title).catch(() => {})
+        if (s.siteId && s.draftId) await runPagesmith(s)
+        else {
+          const site = s.connectionId ? await opts.store.get(s.connectionId) : await opts.store.firstOk("website")
+          if (!site || site.provider !== "website") throw new Error("Website publishing isn't connected")
+          await publishPost(site, { ...s.post, date: s.publishAt }, undefined, await cardTemplateFor(opts.workspace, site.id), { mode: s.mode ?? "direct" })
+        }
+        await opts.store.deleteSchedule(key)
+        await notifier.siteCleared(key)
+        await notifier.sitePublished(late ? `${s.post.title} (it ran late: the server wasn't running at ${new Date(s.publishAt).toLocaleString("en-US")})` : s.post.title).catch(() => {})
       } catch (e) {
-        await opts.store.putSchedule({ ...s, error: (e as Error).message, triedAt: new Date().toISOString() })
-        await notifier.siteFailed(s.post.slug, s.post.title, (e as Error).message).catch(() => {})
+        await opts.store.putSchedule({ ...s, error: (e as Error).message, triedAt: new Date().toISOString(), late: late || s.late })
+        await notifier.siteFailed(key, s.post.title, (e as Error).message).catch(() => {})
       }
     }
   }
@@ -203,13 +257,15 @@ export function createApi(opts: ApiOptions) {
   timer.unref?.()
   void publishDue().catch(() => {})
 
-  return async function handle(req: IncomingMessage, res: ServerResponse) {
+  async function handle(req: IncomingMessage, res: ServerResponse) {
     try {
       await route(req, res)
     } catch (e) {
       send(res, e instanceof ProviderError ? e.status : 500, { error: (e as Error).message })
     }
   }
+  // `publishDue` is exposed so a test (or a restart check) can run the schedule without waiting for the minute timer.
+  return Object.assign(handle, { publishDue })
 
   async function route(req: IncomingMessage, res: ServerResponse) {
     const host = req.headers.host ?? ""
@@ -279,11 +335,38 @@ export function createApi(opts: ApiOptions) {
 
     // --- CMS sites: build and commit ------------------------------------------
     if (parts[0] === "sites" && parts[2] === "publish" && method === "POST" && parts[1]) {
-      return send(res, 200, await publishSite(store, (await opts.workspace.readWorkspace()).data, parts[1]))
+      // The body may ask for a plan only, a pull request, the commit it reviewed, and the files it agreed to replace.
+      const body = (await readJson(req).catch(() => ({}))) as { mode?: string; plan?: boolean; expectedHead?: string; acknowledge?: unknown }
+      return send(res, 200, await publishSite(store, (await opts.workspace.readWorkspace()).data, parts[1], deliverOptions(body)))
     }
     if (parts[0] === "sites" && parts[2] === "live" && method === "POST" && parts[1]) {
       const body = await readJson(req) as { removed?: unknown }
       return send(res, 200, await checkLive(store, (await opts.workspace.readWorkspace()).data, parts[1], Array.isArray(body?.removed) ? body.removed.filter((p): p is string => typeof p === "string") : []))
+    }
+
+    // GET /api/schedules: every post waiting to go out, with its next run and any failure.
+    if (parts[0] === "schedules" && !parts[1] && method === "GET") return send(res, 200, { schedules: await store.listSchedules() })
+
+    // PUT /api/sites/:siteId/schedule/:draftId { publishAt, mode? }   DELETE the same: schedule a Pagesmith post.
+    if (parts[0] === "sites" && parts[2] === "schedule" && parts[1] && parts[3]) {
+      const siteId = parts[1], draftId = parts[3], key = `${siteId}:${draftId}`
+      if (method === "DELETE") { await store.deleteSchedule(key); return send(res, 204, null) }
+      if (method === "PUT") {
+        const body = await readJson<{ publishAt?: string; mode?: string }>(req)
+        const data = (await opts.workspace.readWorkspace()).data
+        const site = data.sites.find((x) => x.id === siteId)
+        const draft = data.drafts.find((d) => d.id === draftId && d.siteId === siteId && d.kind === "post")
+        if (!site || site.adopted) throw new ProviderError("That site isn't a Pagesmith site", 404)
+        if (!draft) throw new ProviderError("That post isn't on this site", 404)
+        const at = Date.parse(body.publishAt ?? "")
+        if (!Number.isFinite(at)) throw new ProviderError("Pick a date and time to publish", 400)
+        if (at < Date.now() - 60_000) throw new ProviderError("That time has already passed. Publish now instead.", 400)
+        if (!draft.title.trim()) throw new ProviderError("Give the post a title before scheduling it", 400)
+        const post = { slug: draft.slug, title: draft.title, excerpt: draft.excerpt, tags: draft.tags ?? [], date: new Date(at).toISOString(), markdown: draft.body }
+        const scheduled: ScheduledPost = { key, siteId, draftId, post, publishAt: new Date(at).toISOString(), createdAt: new Date().toISOString(), connectionId: site.connectionId, mode: body.mode === "pr" ? "pr" : "direct" }
+        await store.putSchedule(scheduled)
+        return send(res, 200, scheduled)
+      }
     }
 
     // --- site inbox (form receiver) ----------------------------------------------
@@ -443,12 +526,15 @@ export function createApi(opts: ApiOptions) {
       }
       // PUT /api/site/posts/:slug  { post, previousSlug? }   DELETE /api/site/posts/:slug
       if (what === "posts" && slug && method === "PUT") {
-        const body = await readJson<{ post?: Partial<SitePost>; previousSlug?: string }>(req, 2 * 1024 * 1024)
-        const result = await publishPost(site, { ...body.post, slug }, body.previousSlug, await cardTemplateFor(opts.workspace, site.id))
-        await store.deleteSchedule(slug)
+        const body = await readJson<{ post?: Partial<SitePost>; previousSlug?: string; mode?: string; plan?: boolean; expectedHead?: string; acknowledge?: unknown }>(req, 2 * 1024 * 1024)
+        const want = deliverOptions(body)
+        const result = await publishPost(site, { ...body.post, slug }, body.previousSlug, await cardTemplateFor(opts.workspace, site.id), want)
+        // A pull request isn't live yet, so the schedule stays until the post really is published.
+        if (!want.plan && result.committed && !result.committed.pr) await store.deleteSchedule(slug)
         return send(res, 200, result)
       }
-      if (what === "posts" && slug && method === "DELETE") return send(res, 200, await unpublishPost(site, slug, await cardTemplateFor(opts.workspace, site.id)))
+      // DELETE /api/site/posts/:slug  (the body may carry the same plan/pr/expectedHead/acknowledge options)
+      if (what === "posts" && slug && method === "DELETE") return send(res, 200, await unpublishPost(site, slug, await cardTemplateFor(opts.workspace, site.id), deliverOptions(await readJson<Parameters<typeof deliverOptions>[0]>(req).catch(() => ({})))))
       // PUT /api/site/schedule/:slug  { post, publishAt }   DELETE /api/site/schedule/:slug
       if (what === "schedule" && slug && method === "PUT") {
         const body = await readJson<{ post?: Partial<SitePost>; publishAt?: string }>(req, 2 * 1024 * 1024)
@@ -461,6 +547,9 @@ export function createApi(opts: ApiOptions) {
         const at = Date.parse(body.publishAt ?? "")
         if (!Number.isFinite(at)) throw new ProviderError("Pick a date and time to publish", 400)
         if (at < Date.now() - 60_000) throw new ProviderError("That time has already passed. Publish now instead.", 400)
+        // Schedules are filed by the post's address, so two sites can't both have one waiting under the same address.
+        const taken = (await store.listSchedules()).find((x) => scheduleKey(x) === slug && (x.connectionId ?? "") !== (url.searchParams.get("connection") ?? ""))
+        if (taken) throw new ProviderError(`Another site already has a post at “${slug}” waiting to publish. Change this post's address or wait for that one to go out.`, 409)
         const scheduled: ScheduledPost = { post: { ...post, date: new Date(at).toISOString() }, publishAt: new Date(at).toISOString(), createdAt: new Date().toISOString(), connectionId: url.searchParams.get("connection") ?? undefined }
         await store.putSchedule(scheduled)
         return send(res, 200, scheduled)
