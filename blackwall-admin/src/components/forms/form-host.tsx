@@ -11,13 +11,14 @@ import { TaskForm } from "./task-form"
 
 /** Single app-wide host for record forms opened via `useUi().openForm`. */
 export function FormHost() {
+  const mac = document.documentElement.dataset.runtime === "mac-native"
   const form = useUi((s) => s.form)
   const close = useUi((s) => s.closeForm)
   const key = form ? `${form.kind}:${form.id ?? "new"}` : "none"
 
   return (
-    <Dialog open={!!form} onOpenChange={(o) => !o && close()}>
-      <DialogContent className={form?.kind === "course" || form?.kind === "siteForm" || form?.kind === "site" ? "gap-0 p-0 sm:max-w-xl" : "gap-0 p-0 sm:max-w-lg"} aria-describedby={undefined}>
+    <Dialog open={!!form} modal={!mac} onOpenChange={(o) => !o && close()}>
+      <DialogContent showOverlay={!mac} onInteractOutside={event => { if (mac) event.preventDefault() }} className={`mac-record-editor ${form?.kind === "course" || form?.kind === "siteForm" || form?.kind === "site" ? "gap-0 p-0 sm:max-w-xl" : "gap-0 p-0 sm:max-w-lg"}`} aria-describedby={undefined}>
         {form?.kind === "task" && <TaskForm key={key} id={form.id} defaults={form.defaults} onDone={close} />}
         {form?.kind === "note" && <NoteForm key={key} id={form.id} defaults={form.defaults} onDone={close} />}
         {form?.kind === "project" && <ProjectForm key={key} id={form.id} defaults={form.defaults} onDone={close} />}

@@ -14,11 +14,11 @@ html[data-runtime="mac-native"] .mac-dw-desktop::before {
   background-image: linear-gradient(#b4b8c0 1px, transparent 1px), linear-gradient(90deg, #b4b8c0 1px, transparent 1px);
   background-size: 24px 24px;
 }
-html[data-runtime="mac-native"] .mac-dw-dragbar { position: absolute; inset: 0 0 auto; height: 42px; -webkit-app-region: drag; }
+html[data-runtime="mac-native"] .mac-dw-dragbar { position: absolute; inset: 0 0 auto; height: 30px; border-bottom: 1px solid var(--bw-line); background: var(--bw-titlebar); -webkit-app-region: drag; }
 html[data-runtime="mac-native"] .mac-dw-rail {
   position: absolute;
   z-index: 40;
-  inset: 0 auto 0 0;
+  inset: 30px auto 0 0;
   width: 43px;
   display: flex;
   align-items: center;
@@ -53,7 +53,7 @@ html[data-runtime="mac-native"] .mac-dw-rail button:not(.mac-dw-rail-close):hove
 html[data-runtime="mac-native"] .mac-dw-rail [data-testid="workspace-status"]:hover { color: var(--bw-text); background: var(--bw-raised); }
 html[data-runtime="mac-native"] .mac-dw-rail button:not(.mac-dw-rail-close)[aria-pressed="true"] { color: var(--dw-hue); background: color-mix(in srgb, var(--dw-hue) 16%, var(--bw-titlebar)); border-color: color-mix(in srgb, var(--dw-hue) 38%, var(--bw-line)); }
 html[data-runtime="mac-native"] .mac-dw-flex { flex: 1; min-height: 12px; }
-html[data-runtime="mac-native"] .mac-dw-top { position: absolute; z-index: 15; top: 9px; right: 10px; display: flex; align-items: center; gap: 5px; -webkit-app-region: no-drag; }
+html[data-runtime="mac-native"] .mac-dw-top { position: absolute; z-index: 15; top: 34px; right: 10px; display: flex; align-items: center; gap: 5px; -webkit-app-region: no-drag; }
 html[data-runtime="mac-native"] .mac-dw-top > button,
 html[data-runtime="mac-native"] .mac-dw-top > time { display: flex; align-items: center; justify-content: center; gap: 4px; height: 27px; min-width: 27px; padding: 0 7px; border: 1px solid var(--bw-line); border-radius: 5px; background: var(--bw-panel); color: var(--bw-text-2); font-size: 12px; font-weight: 550; white-space: nowrap; }
 html[data-runtime="mac-native"] .mac-dw-top > button:hover { border-color: var(--bw-blue); color: var(--bw-text); }
@@ -155,7 +155,7 @@ html[data-runtime="mac-native"] .mac-dw-window[data-collapsed="true"] { min-heig
 html[data-runtime="mac-native"] .mac-dw-content[hidden] { display: none; }
 
 /* Browser window: tabs, address bar and the page (a <webview>) inside the normal window frame. */
-html[data-runtime="mac-native"] .mac-br { display: flex; flex-direction: column; width: 100%; height: 100%; min-height: 0; background: var(--bw-ground); }
+html[data-runtime="mac-native"] .mac-br { position: relative; display: flex; flex-direction: column; width: 100%; height: 100%; min-height: 0; background: var(--bw-ground); }
 html[data-runtime="mac-native"] .mac-br-tabs { display: flex; align-items: stretch; flex: none; gap: 2px; height: 27px; padding: 3px 4px 0; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--bw-line); background: var(--bw-titlebar); }
 html[data-runtime="mac-native"] .mac-br-tabs::-webkit-scrollbar { display: none; }
 html[data-runtime="mac-native"] .mac-br-tab { display: flex; align-items: center; gap: 6px; flex: 0 1 170px; min-width: 70px; padding: 0 4px 0 8px; border: 1px solid transparent; border-bottom: 0; border-radius: 4px 4px 0 0; color: var(--bw-muted); font-size: 12px; cursor: default; }
@@ -176,6 +176,10 @@ html[data-runtime="mac-native"] .mac-br-bar button { width: 25px; height: 24px; 
 html[data-runtime="mac-native"] .mac-br-bar button:disabled { opacity: .35; cursor: default; }
 html[data-runtime="mac-native"] .mac-br-bar input { flex: 1; min-width: 0; height: 24px; margin-left: 3px; padding: 0 9px; border: 1px solid var(--bw-line); border-radius: 12px; outline: 0; background: var(--bw-ground); color: var(--bw-text); font-size: 12px; }
 html[data-runtime="mac-native"] .mac-br-bar input:focus { border-color: var(--bw-blue); }
+html[data-runtime="mac-native"] .mac-br-bookmarks { position: absolute; z-index: 3; top: 59px; right: 8px; display: grid; min-width: 180px; max-width: min(340px, calc(100% - 16px)); max-height: min(320px, 60%); overflow: auto; padding: 4px; border: 1px solid var(--bw-border); border-radius: 6px; background: var(--bw-raised); box-shadow: var(--bw-shadow-float); }
+html[data-runtime="mac-native"] .mac-br-bookmarks button { overflow: hidden; padding: 7px 9px; border-radius: 4px; color: var(--bw-text); text-align: left; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+html[data-runtime="mac-native"] .mac-br-bookmarks button:hover { background: var(--bw-selected); }
+html[data-runtime="mac-native"] .mac-br-bookmarks p { margin: 0; padding: 9px; color: var(--bw-muted); font-size: 12px; }
 html[data-runtime="mac-native"] .mac-br-stage { position: relative; flex: 1; min-height: 0; }
 /* Every page stays alive (stacked); only the active one shows. display:none would reset a webview. */
 html[data-runtime="mac-native"] webview.mac-br-page { position: absolute; inset: 0; width: 100%; height: 100%; background: var(--bw-ground); }

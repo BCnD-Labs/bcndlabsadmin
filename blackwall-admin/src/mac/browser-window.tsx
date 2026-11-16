@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react"
 import { create } from "zustand"
-import { ArrowLeft, ArrowRight, Globe, Plus, RotateCw, X } from "lucide-react"
+import { toast } from "sonner"
+import { ArrowLeft, ArrowRight, Bookmark, ExternalLink, Globe, Plus, RotateCw, X } from "lucide-react"
 import { addressToUrl } from "../../desktop/src/main/url.ts"
 
 /**
@@ -46,6 +47,15 @@ interface BrowserStore {
 }
 
 const KEY = "blackwall-mac-browser-v1"
+const BOOKMARKS_KEY = "blackwall-mac-bookmarks-v1"
+type BookmarkItem = { url: string; title: string }
+function readBookmarks(): BookmarkItem[] {
+  try {
+    const saved: unknown = JSON.parse(localStorage.getItem(BOOKMARKS_KEY) ?? "[]")
+    return Array.isArray(saved) ? saved.filter((item): item is BookmarkItem =>
+      !!item && typeof item.url === "string" && /^https?:\/\//.test(item.url) && typeof item.title === "string").slice(0, 50) : []
+  } catch { return [] }
+}
 const blank = (id: number): BrowserTab => ({ id, src: "", url: "", title: "", favicon: null, loading: false, canBack: false, canForward: false })
 
 function restore(): { tabs: BrowserTab[]; activeId: number } {
@@ -168,6 +178,24 @@ export function BrowserApp({ onFocus }: { onFocus: () => void }) {
   const draft = typing && typing.id === active?.id ? typing.text : null
   const setDraft = (text: string | null) => setTyping(text === null || !active ? null : { id: active.id, text })
   const address = useRef<HTMLInputElement>(null)
+  const [bookmarks, setBookmarks] = useState(readBookmarks)
+  const [showBookmarks, setShowBookmarks] = useState(false)
+  const currentUrl = active?.url || active?.src || ""
+  const bookmarked = bookmarks.some(item => item.url === currentUrl)
+  const saveBookmarks = (items: BookmarkItem[]) => {
+    setBookmarks(items)
+    try { localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(items)) } catch { /* Keep bookmarks for this session. */ }
+  }
+  const toggleBookmark = () => {
+    if (!/^https?:\/\//.test(currentUrl)) return
+    saveBookmarks(bookmarked ? bookmarks.filter(item => item.url !== currentUrl) : [...bookmarks, { url: currentUrl, title: active?.title || hostOf(currentUrl) }].slice(-50))
+  }
+  const openInDefaultBrowser = () => {
+    if (!/^https?:\/\//.test(currentUrl)) return
+    void fetch("/__mac/shell/open-external-browser", { method: "POST", headers: { "X-Blackwall": "1", "Content-Type": "application/json" }, body: JSON.stringify({ url: currentUrl }) })
+      .then(response => { if (!response.ok) toast.error("Could not open this page in your default browser.") })
+      .catch(() => toast.error("Could not open this page in your default browser."))
+  }
 
   // A blank tab is for typing an address.
   const blankId = active && !active.src ? active.id : 0
@@ -196,7 +224,13 @@ export function BrowserApp({ onFocus }: { onFocus: () => void }) {
       <button type="button" aria-label={active?.loading ? "Stop" : "Reload"} title={active?.loading ? "Stop" : "Reload"} disabled={!active?.src} onClick={() => active && drive(active.id, (v) => (active.loading ? v.stop() : v.reload()))}>{active?.loading ? <X size={15} /> : <RotateCw size={14} />}</button>
       <input ref={address} aria-label="Address" spellCheck={false} autoCapitalize="off" autoCorrect="off" placeholder="Search or enter a web address" value={draft ?? active?.url ?? ""}
         onFocus={(e) => { setDraft(active?.url ?? ""); e.currentTarget.select() }} onChange={(e) => setDraft(e.target.value)} onBlur={() => setDraft(null)} onKeyDown={(e) => { if (e.key === "Escape") { setDraft(null); e.currentTarget.blur() } }} />
+      <button type="button" aria-label={bookmarked ? "Remove bookmark" : "Bookmark this page"} title={bookmarked ? "Remove bookmark" : "Bookmark this page"} disabled={!/^https?:\/\//.test(currentUrl)} onClick={toggleBookmark}><Bookmark size={15} fill={bookmarked ? "currentColor" : "none"} /></button>
+      <button type="button" aria-label="Show bookmarks" title="Bookmarks" aria-expanded={showBookmarks} onClick={() => setShowBookmarks(value => !value)}>▾</button>
+      <button type="button" aria-label="Open in default browser" title="Open in default browser (for Proton Pass extension)" disabled={!/^https?:\/\//.test(currentUrl)} onClick={openInDefaultBrowser}><ExternalLink size={14} /></button>
     </form>
+    {showBookmarks && <div className="mac-br-bookmarks" role="menu" aria-label="Bookmarks">
+      {bookmarks.length ? bookmarks.map(item => <button key={item.url} type="button" role="menuitem" title={item.url} onClick={() => { if (active) go(active.id, item.url); setShowBookmarks(false) }}>{item.title || hostOf(item.url)}</button>) : <p>No bookmarks yet. Use the bookmark button to save a page.</p>}
+    </div>}
     <div className="mac-br-stage">
       {tabs.map((tab) => tab.src ? <PageView key={tab.id} tab={tab} active={tab.id === active?.id} onFocus={onFocus} /> : null)}
       {active && !active.src && <div className="mac-br-empty"><Globe size={26} aria-hidden /><p>Type an address or a search above.</p><small>Links in your Blackwall pages open here, next to your other windows.</small></div>}

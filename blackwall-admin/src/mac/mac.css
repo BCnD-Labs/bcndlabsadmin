@@ -228,6 +228,12 @@ html[data-runtime="mac-native"] .mac-checkin-chip:hover { border-color: var(--bw
 html[data-runtime="mac-native"] .mac-checkin-chip[data-now="true"] { border-color: color-mix(in srgb, var(--bw-amber) 60%, var(--bw-line)); }
 html[data-runtime="mac-native"] .mac-checkin-chip.is-done { border-color: var(--bw-blue); background: var(--bw-selected); color: var(--bw-blue); }
 html[data-runtime="mac-native"] .mac-checkin-chip svg { width: 12px; height: 12px; }
+html[data-runtime="mac-native"] .mac-checkin-dialog { width: min(440px, calc(100vw - 32px)); max-height: min(72vh, 620px); gap: 10px; padding: 14px; border: 1px solid var(--bw-border); box-shadow: var(--bw-shadow-float); }
+html[data-runtime="mac-native"] .mac-checkin-fields { min-height: 0; max-height: min(calc(72vh - 145px), 480px); gap: 12px; }
+html[data-runtime="mac-native"] .mac-checkin-dialog [data-slot="dialog-footer"] { margin: 0 -14px -14px; padding: 9px 14px; }
+html[data-runtime="mac-native"] .mac-record-editor { width: min(480px, calc(100vw - 32px)); max-height: min(76vh, 680px); border: 1px solid var(--bw-border); box-shadow: var(--bw-shadow-float); }
+html[data-runtime="mac-native"] .mac-record-editor form { max-height: min(76vh, 680px); }
+html[data-runtime="mac-native"] .mac-record-editor .mac-record-form > div:nth-child(2) { min-height: 0; gap: 10px; padding-block: 12px; }
 html[data-runtime="mac-native"] .mac-log-groups { display: grid; gap: 3px; margin: 4px; }
 html[data-runtime="mac-native"] .mac-log-group { border: 1px solid var(--bw-line); border-radius: 6px; overflow: hidden; background: var(--bw-panel); }
 html[data-runtime="mac-native"] .mac-log-group-head { display: flex; align-items: center; min-height: 29px; background: var(--bw-raised); }

@@ -2,6 +2,7 @@ import { existsSync, statSync } from "node:fs"
 import path from "node:path"
 import { net, type Session } from "electron"
 import { fileURLToPath, pathToFileURL } from "node:url"
+import { isWebUrl } from "./url.ts"
 import type { MacUpdater } from "./updater.ts"
 import type { SourceUpdater } from "./source-updater.ts"
 
@@ -12,6 +13,7 @@ const NATIVE_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), ".."
 export interface WorkspaceShell {
   /** Opens a browser tab (the workspace has no browser chrome of its own). */
   openBrowser(): void
+  openExternalBrowser(url: string): Promise<void>
 }
 
 export function registerNativeWorkspace(ses: Session, serverAddress: () => string | null, updater?: MacUpdater, sourceUpdater?: SourceUpdater, shell?: WorkspaceShell) {
@@ -22,6 +24,17 @@ export function registerNativeWorkspace(ses: Session, serverAddress: () => strin
     if (url.pathname === "/__mac/shell/browser") {
       if (!shell || request.method !== "POST" || request.headers.get("x-blackwall") !== "1") return new Response("Not found", { status: 404 })
       shell.openBrowser()
+      return Response.json({ ok: true })
+    }
+    if (url.pathname === "/__mac/shell/open-external-browser") {
+      if (!shell || request.method !== "POST" || request.headers.get("x-blackwall") !== "1") return new Response("Not found", { status: 404 })
+      let address: unknown
+      try {
+        const body: unknown = await request.json()
+        address = body && typeof body === "object" && "url" in body ? body.url : null
+      } catch { return new Response("Bad address", { status: 400 }) }
+      if (typeof address !== "string" || address.length > 8192 || !isWebUrl(address)) return new Response("Bad address", { status: 400 })
+      try { await shell.openExternalBrowser(address) } catch { return new Response("Could not open browser", { status: 500 }) }
       return Response.json({ ok: true })
     }
 
