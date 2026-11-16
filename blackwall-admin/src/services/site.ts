@@ -186,11 +186,15 @@ export function draftToPost(d: Draft, date?: string): SitePost {
     coverAlt: d.coverAlt,
     date: date ?? new Date().toISOString(),
     markdown: d.body,
+    ...(d.categories?.length ? { categories: d.categories } : {}),
+    ...(d.featured ? { featured: true } : {}),
+    ...(d.thumbnail ? { thumbnail: d.thumbnail, thumbnailAlt: d.thumbnailAlt } : {}),
   }
 }
 
 const same = (d: Draft, p: SitePost) =>
-  d.slug === p.slug && d.title.trim() === p.title && d.excerpt.trim() === p.excerpt && d.body === p.markdown && (d.cover ?? "") === (p.cover ?? "") && JSON.stringify(d.tags ?? []) === JSON.stringify(p.tags)
+  d.slug === p.slug && d.title.trim() === p.title && d.excerpt.trim() === p.excerpt && d.body === p.markdown && (d.cover ?? "") === (p.cover ?? "") && JSON.stringify(d.tags ?? []) === JSON.stringify(p.tags) &&
+  JSON.stringify(d.categories ?? []) === JSON.stringify(p.categories ?? []) && !!d.featured === !!p.featured && (d.thumbnail ?? "") === (p.thumbnail ?? "")
 
 /** Merges local post drafts with what's on the site (published) and waiting (scheduled). */
 export function mergePosts(drafts: Draft[], overview?: SiteOverview): PostItem[] {

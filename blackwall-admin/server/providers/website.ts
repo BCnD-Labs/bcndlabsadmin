@@ -297,7 +297,7 @@ export async function siteRaw(c: StoredConnection, path: string) {
 
 // --- writing -------------------------------------------------------------------
 
-async function writePosts(c: StoredConnection, message: string, mutate: (posts: SitePost[]) => { posts: SitePost[]; changes: PostChange[] }) {
+async function writePosts(c: StoredConnection, message: string, mutate: (posts: SitePost[]) => { posts: SitePost[]; changes: PostChange[] }, template?: string) {
   const { cfg, repo } = repoFor(c)
   const manifestPath = `${cfg.postsDir}/index.json`
   const [manifestText, index, chrome] = await Promise.all([repo.read(manifestPath), repo.read(cfg.blogIndex), siteChrome(c)])
@@ -310,7 +310,7 @@ async function writePosts(c: StoredConnection, message: string, mutate: (posts: 
   })
   all.push({ path: manifestPath, content: `${JSON.stringify({ version: 1, posts: sortPosts(posts) }, null, 2)}\n` })
   if (index) {
-    const next = updateIndexBlock(index, posts, (p) => relativePath(cfg.blogIndex, postPath(cfg.postsDir, p.slug)))
+    const next = updateIndexBlock(index, posts, (p) => relativePath(cfg.blogIndex, postPath(cfg.postsDir, p.slug)), template)
     if (next !== null && next !== index) all.push({ path: cfg.blogIndex, content: next })
   }
   await repo.commit(message, all)
@@ -318,7 +318,7 @@ async function writePosts(c: StoredConnection, message: string, mutate: (posts: 
 }
 
 /** Publishes or updates a post. `previousSlug` renames it: the old page is removed in the same commit. */
-export async function publishPost(c: StoredConnection, input: Partial<SitePost>, previousSlug?: string) {
+export async function publishPost(c: StoredConnection, input: Partial<SitePost>, previousSlug?: string, template?: string) {
   let post: SitePost
   try {
     post = cleanPost(input)
@@ -339,19 +339,19 @@ export async function publishPost(c: StoredConnection, input: Partial<SitePost>,
     const changes: PostChange[] = [{ path: postPath(cfg.postsDir, post.slug), render: post.slug }]
     if (old && old.slug !== post.slug) changes.push({ path: postPath(cfg.postsDir, old.slug), delete: true })
     return { posts: [...posts.filter((p) => p !== old), post], changes }
-  })
+  }, template)
   return { ...result, post, url: cfg.siteUrl ? joinUrl(cfg.siteUrl, postPath(cfg.postsDir, post.slug)) : "" }
 }
 
 /** Takes a post off the site: its page, its manifest entry and its card in the blog index. */
-export async function unpublishPost(c: StoredConnection, slug: string) {
+export async function unpublishPost(c: StoredConnection, slug: string, template?: string) {
   if (!SLUG_RE.test(slug)) throw new ProviderError("Bad slug", 400)
   const { cfg } = repoFor(c)
   return writePosts(c, `Remove post: ${slug} (via Blackwall)`, (posts) => {
     const old = posts.find((p) => p.slug === slug)
     if (!old) throw new ProviderError("That post isn't published", 404)
     return { posts: posts.filter((p) => p !== old), changes: [{ path: postPath(cfg.postsDir, slug), delete: true }] }
-  })
+  }, template)
 }
 
 const IMAGE_TYPES: Record<string, string> = { png: "png", jpg: "jpg", jpeg: "jpg", gif: "gif", webp: "webp", avif: "avif", svg: "svg" }

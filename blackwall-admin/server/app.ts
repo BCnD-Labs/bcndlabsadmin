@@ -7,7 +7,7 @@ import { ProviderError } from "./http.ts"
 import { analyticsReport } from "./providers/analytics.ts"
 import { githubOverview } from "./providers/github.ts"
 import { deleteImage, publishPost, readAdoptedPage, saveRegion, scanSite, siteChrome, siteMedia, siteOverview, siteRaw, unpublishPost, uploadImage } from "./providers/website.ts"
-import { SLUG_RE, cleanPost, type ScheduledPost, type SitePost } from "../shared/site.ts"
+import { SLUG_RE, cardIssues, cleanPost, type ScheduledPost, type SitePost } from "../shared/site.ts"
 import { testConnection } from "./providers/index.ts"
 import { toPublic, type ConnectionStore } from "./store.ts"
 import { validWorkspace } from "../shared/workspace.ts"
@@ -123,6 +123,16 @@ async function websiteConnection(store: ConnectionStore, id: string | null) {
   return connection
 }
 
+/** The blog card template of the adopted site that publishes through this connection, if its owner chose one. A broken template stops the publish instead of putting odd markup in the blog index. */
+async function cardTemplateFor(workspace: WorkspaceStore, connectionId: string): Promise<string | undefined> {
+  const data = (await workspace.readWorkspace().catch(() => undefined))?.data
+  const template = data?.sites.find((s) => s.adopted && s.connectionId === connectionId)?.cardTemplate
+  if (template === undefined) return undefined
+  const issues = cardIssues(template)
+  if (issues.length) throw new ProviderError(`This site's blog card template has a problem, so nothing was published: ${issues.join(" ")}`, 409)
+  return template
+}
+
 /** Recent backup files plus the backup job's last status file, if present. */
 function readBackups(dir: string) {
   if (!existsSync(dir)) return { configured: false as const }
@@ -179,7 +189,7 @@ export function createApi(opts: ApiOptions) {
       try {
         const site = s.connectionId ? await opts.store.get(s.connectionId) : await opts.store.firstOk("website")
         if (!site || site.provider !== "website") throw new Error("Website publishing isn't connected")
-        await publishPost(site, { ...s.post, date: s.publishAt })
+        await publishPost(site, { ...s.post, date: s.publishAt }, undefined, await cardTemplateFor(opts.workspace, site.id))
         await opts.store.deleteSchedule(s.post.slug)
         await notifier.siteCleared(s.post.slug)
         await notifier.sitePublished(s.post.title).catch(() => {})
@@ -434,11 +444,11 @@ export function createApi(opts: ApiOptions) {
       // PUT /api/site/posts/:slug  { post, previousSlug? }   DELETE /api/site/posts/:slug
       if (what === "posts" && slug && method === "PUT") {
         const body = await readJson<{ post?: Partial<SitePost>; previousSlug?: string }>(req, 2 * 1024 * 1024)
-        const result = await publishPost(site, { ...body.post, slug }, body.previousSlug)
+        const result = await publishPost(site, { ...body.post, slug }, body.previousSlug, await cardTemplateFor(opts.workspace, site.id))
         await store.deleteSchedule(slug)
         return send(res, 200, result)
       }
-      if (what === "posts" && slug && method === "DELETE") return send(res, 200, await unpublishPost(site, slug))
+      if (what === "posts" && slug && method === "DELETE") return send(res, 200, await unpublishPost(site, slug, await cardTemplateFor(opts.workspace, site.id)))
       // PUT /api/site/schedule/:slug  { post, publishAt }   DELETE /api/site/schedule/:slug
       if (what === "schedule" && slug && method === "PUT") {
         const body = await readJson<{ post?: Partial<SitePost>; publishAt?: string }>(req, 2 * 1024 * 1024)

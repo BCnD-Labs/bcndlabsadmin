@@ -166,6 +166,11 @@ export interface Draft {
   /** Site-root path of the cover image (uploaded to the site's images folder). */
   cover?: string
   coverAlt?: string
+  /** Blog list: groups a site's own script can filter by (a post may have several), shown first when featured, and a small picture for its card. */
+  categories?: string[]
+  featured?: boolean
+  thumbnail?: string
+  thumbnailAlt?: string
   /**
    * Slug of the post on the site this draft publishes to, once it's been published
    * or scheduled. If the slug changes afterwards, the next update renames the post.
@@ -230,6 +235,8 @@ export interface Site {
   domain: string
   /** Website-publishing connection (GitHub repo + branch) it publishes to. */
   connectionId?: string
+  /** The markup of one blog card on an adopted site, with {{tokens}}. Unset: the card Blackwall has always made. */
+  cardTemplate?: string
   /** A hand-written site Blackwall runs without rebuilding it: its files are read from the repo and only marked regions are written. Unset: a Pagesmith site. */
   adopted?: boolean
   /** Folder in the repo the site is written to; "" = the repository root. */
