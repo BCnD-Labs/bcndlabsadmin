@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { cleanPagePath, findRegions, htmlTitle, pagePaths, regionBody, regionText, replaceRegion, type AdoptedPageFile, type SiteScan } from "../../shared/site-adopt.ts"
+import { cleanPagePath, findRegions, htmlTitle, pagePaths, regionBody, regionText, replaceRegion, stylesheetPaths, type AdoptedPageFile, type SiteScan } from "../../shared/site-adopt.ts"
 import {
   DEFAULT_SITE,
   MARK_START,
@@ -253,7 +253,13 @@ export async function readAdoptedPage(c: StoredConnection, rawPath: string): Pro
   const { repo } = repoFor(c)
   const html = await repo.read(path)
   if (html === null) throw new ProviderError("That page isn't in the repository", 404)
-  return { path, html, title: htmlTitle(html) || pageTitle(path), sha: fingerprint(html), regions: findRegions(html).map((r) => ({ name: r.name, text: regionText(r) })) }
+  // The page's own stylesheets (a few, small ones) so the preview can show the page as it looks.
+  const styles: Record<string, string> = {}
+  for (const css of stylesheetPaths(html, path).slice(0, 6)) {
+    const file = await repo.raw(css).catch(() => null)
+    if (file && file.body.length <= 300_000) styles[css] = file.body.toString("utf8")
+  }
+  return { path, html, title: htmlTitle(html) || pageTitle(path), sha: fingerprint(html), regions: findRegions(html).map((r) => ({ name: r.name, text: regionText(r) })), styles }
 }
 
 /**

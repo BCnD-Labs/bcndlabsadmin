@@ -66,7 +66,7 @@ export function AdoptedThumb({ site }: { site: Site }) {
   const { scan, error } = useScan(site)
   const home = scan?.pages.find((p) => p.path === "index.html") ?? scan?.pages[0]
   const { page } = useAdoptedPage(site, home?.path)
-  const html = useMemo(() => (page && scan ? adoptedPreview(page.html, scan.siteUrl, page.path) : ""), [page, scan])
+  const html = useMemo(() => (page && scan ? adoptedPreview(page.html, scan.siteUrl, page.path, page.styles) : ""), [page, scan])
   if (html) return <ScaledFrame html={html} title={`${site.name} home page`} />
   return <div className="grid aspect-[16/10] place-items-center bg-well px-3 text-center text-xs text-muted-foreground">{error ? "Couldn't read this site's repository" : "Reading the site…"}</div>
 }
@@ -113,7 +113,7 @@ export function AdoptedWorkspace({ site }: { site: Site }) {
   const { scan, error, loading, refresh } = useScan(site)
   const path = params.get("page") ?? scan?.pages.find((p) => p.path === "index.html")?.path ?? scan?.pages[0]?.path
   const { page, error: pageError, loading: pageLoading, reload, set } = useAdoptedPage(site, path)
-  const html = useMemo(() => (page && scan ? adoptedPreview(page.html, scan.siteUrl, page.path) : ""), [page, scan])
+  const html = useMemo(() => (page && scan ? adoptedPreview(page.html, scan.siteUrl, page.path, page.styles) : ""), [page, scan])
   const status = adoptedSummary(scan, error)
   return (
     <>

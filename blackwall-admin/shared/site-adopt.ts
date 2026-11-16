@@ -92,6 +92,8 @@ export interface AdoptedPageFile {
   /** Fingerprint of the file as read. Saving a region sends it back, and a changed file is refused. */
   sha: string
   regions: { name: string; text: string }[]
+  /** The page's own stylesheets from the repository, by repo path, so the preview can show them (the app's content policy won't load them from the site). */
+  styles: Record<string, string>
 }
 
 export function htmlTitle(html: string): string {
@@ -117,18 +119,57 @@ export function pagePaths(files: readonly string[], postsDir: string, limit = 20
   return { paths: all.slice(0, limit), more: Math.max(0, all.length - limit) }
 }
 
-const attr = (v: string) => v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;")
+const LINK = /<link\b[^>]*>/gi
+const isSheet = (tag: string) => /\brel=["']?[^"'>]*stylesheet/i.test(tag)
+const hrefOf = (tag: string) => /\bhref=(["'])([^"']*)\1/i.exec(tag)?.[2]
+
+/** Where a page's relative link points inside the repository, or null for an outside address. */
+export function repoPathOf(pagePath: string, href: string): string | null {
+  if (!href || /^([a-z][a-z0-9+.-]*:|\/\/|#)/i.test(href)) return null
+  const clean = href.split(/[?#]/)[0]
+  const parts = clean.startsWith("/") ? [] : pagePath.split("/").slice(0, -1)
+  for (const seg of clean.split("/")) {
+    if (!seg || seg === ".") continue
+    if (seg === "..") { if (!parts.length) return null; parts.pop() } else parts.push(seg)
+  }
+  return parts.length ? parts.join("/") : null
+}
+
+/** The repo paths of the stylesheets a page links to (its own, relative ones). */
+export function stylesheetPaths(html: string, pagePath: string): string[] {
+  const out = new Set<string>()
+  for (const tag of html.match(LINK) ?? []) {
+    const p = isSheet(tag) ? repoPathOf(pagePath, hrefOf(tag) ?? "") : null
+    if (p && /\.css$/i.test(p)) out.add(p)
+  }
+  return [...out]
+}
 
 /**
- * A hand-written page made safe to show in a preview frame: the site's own scripts are removed (the frame doesn't run them
- * anyway) and, when the site's address is known, relative stylesheets and pictures load from the live site.
+ * A hand-written page made safe to show in a preview frame. The site's scripts are removed (the frame doesn't run them anyway),
+ * its own stylesheets are put in the page as `<style>` (the app's content policy won't load them from the site), and when the
+ * site's address is known relative pictures and links point at the live site. (A `<base href>` would be simpler, but the
+ * policy forbids it.)
  */
-export function adoptedPreview(html: string, siteUrl: string, path: string): string {
+export function adoptedPreview(html: string, siteUrl: string, path: string, styles: Record<string, string> = {}): string {
   const dir = path.split("/").slice(0, -1).join("/")
   const base = siteUrl ? `${siteUrl.replace(/\/+$/, "")}/${dir ? `${dir}/` : ""}` : ""
-  const clean = html.replace(/<script\b[\s\S]*?<\/script\s*>/gi, "")
+  let clean = html.replace(/<script\b[\s\S]*?<\/script\s*>/gi, "")
+  clean = clean.replace(LINK, (tag) => {
+    const css = isSheet(tag) ? styles[repoPathOf(path, hrefOf(tag) ?? "") ?? ""] : undefined
+    return css === undefined ? tag : `<style>${css.replace(/<\/style/gi, "<\\/style")}</style>`
+  })
+  if (base) {
+    clean = clean.replace(/\b(href|src|poster)=(["'])([^"']*)\2/gi, (all, a: string, q: string, url: string) => {
+      if (!url || /^([a-z][a-z0-9+.-]*:|\/\/|#)/i.test(url)) return all
+      try {
+        return `${a}=${q}${new URL(url, base).href}${q}`
+      } catch {
+        return all
+      }
+    })
+  }
   const head = /<head\b[^>]*>/i.exec(clean)
-  // One <base> carries both the address links resolve against and "open in a new tab".
-  const extra = `<base${base ? ` href="${attr(base)}"` : ""} target="_blank">`
+  const extra = '<base target="_blank">'
   return head ? clean.slice(0, head.index + head[0].length) + extra + clean.slice(head.index + head[0].length) : extra + clean
 }

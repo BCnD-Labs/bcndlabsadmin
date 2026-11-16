@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
 import { HANDWRITTEN, startSiteLab } from "../server/site-lab.ts"
-import { adoptedPreview, cleanPagePath, findRegions, htmlTitle, pagePaths, regionBody, regionText, replaceRegion } from "../shared/site-adopt.ts"
+import { adoptedPreview, cleanPagePath, findRegions, htmlTitle, pagePaths, regionBody, regionText, repoPathOf, replaceRegion, stylesheetPaths } from "../shared/site-adopt.ts"
 import { updateIndexBlock, type SitePost } from "../shared/site.ts"
 import { emptyWorkspace, validWorkspace } from "../shared/workspace.ts"
 import { siteFromTemplate } from "../shared/sitebuilder.ts"
@@ -49,10 +49,27 @@ test("only real page files are listed: html, not hidden, not tooling, not the po
 })
 
 test("a preview drops the site's scripts and loads its stylesheets from the live site", () => {
-  const out = adoptedPreview('<html><head><title>x</title><script>alert(1)</script></head><body></body></html>', "https://example.com/", "about/index.html")
+  const out = adoptedPreview('<html><head><title>x</title><link rel="stylesheet" href="../css/style.css"><script>alert(1)</script></head><body><a href="/root.html">r</a><a href="#top">t</a><img src="p.png"><a href="https://other.test/">o</a></body></html>', "https://example.com/", "about/index.html")
   assert.ok(!out.includes("alert(1)"))
-  assert.match(out, /<head><base href="https:\/\/example\.com\/about\/" target="_blank">/)
+  assert.match(out, /href="https:\/\/example\.com\/css\/style\.css"/, "relative to the page's folder")
+  assert.match(out, /href="https:\/\/example\.com\/root\.html"/)
+  assert.match(out, /src="https:\/\/example\.com\/about\/p\.png"/)
+  assert.match(out, /href="#top"/)
+  assert.match(out, /href="https:\/\/other\.test\/"/)
+  assert.ok(!out.includes("<base href"), "a base href would be blocked by the app's content policy")
   assert.match(adoptedPreview("<p>x</p>", "", "a.html"), /^<base target="_blank"><p>x<\/p>$/)
+})
+
+test("a page's own stylesheets are found in the repo and put in the preview", () => {
+  assert.equal(repoPathOf("about/index.html", "../css/style.css?v=2"), "css/style.css")
+  assert.equal(repoPathOf("about/index.html", "/css/a.css"), "css/a.css")
+  assert.equal(repoPathOf("index.html", "../x.css"), null, "can't climb out of the repository")
+  assert.equal(repoPathOf("index.html", "https://cdn.test/a.css"), null)
+  const html = '<head><link rel="stylesheet" href="css/style.css"><link href="https://cdn.test/a.css" rel="stylesheet"><link rel="icon" href="x.ico"></head>'
+  assert.deepEqual(stylesheetPaths(html, "index.html"), ["css/style.css"])
+  const out = adoptedPreview(html, "https://example.com", "index.html", { "css/style.css": "body{color:red}</style><script>x" })
+  assert.match(out, /<style>body\{color:red\}<\\\/style><script>x<\/style>/, "the inlined sheet can't close its own tag")
+  assert.ok(out.includes('href="https://cdn.test/a.css"') && out.includes("x.ico"), "other links stay")
 })
 
 test("an older saved workspace still loads, and adopted must be a yes or no", () => {
@@ -79,6 +96,7 @@ test("scan, read and save a region: only that region changes, and a page changed
     assert.deepEqual(home.regions, [{ name: "intro", text: "      <p>We make small things by hand.</p>" }])
     const about = await get("page?path=about/index.html")
     assert.deepEqual(about.regions, [], "a page without markers has nothing Blackwall may edit")
+    assert.deepEqual(Object.keys(about.styles), ["css/style.css"], "its stylesheet is read from the repo for the preview")
     assert.equal((await fetch(`${lab.panel}/api/site/page?path=${encodeURIComponent("../secret.html")}`, { headers })).status, 400)
 
     const put = (body: object) => fetch(`${lab.panel}/api/site/region`, { method: "PUT", headers, body: JSON.stringify(body) })
