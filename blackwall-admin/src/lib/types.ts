@@ -230,6 +230,8 @@ export interface Site {
   domain: string
   /** Website-publishing connection (GitHub repo + branch) it publishes to. */
   connectionId?: string
+  /** A hand-written site Blackwall runs without rebuilding it: its files are read from the repo and only marked regions are written. Unset: a Pagesmith site. */
+  adopted?: boolean
   /** Folder in the repo the site is written to; "" = the repository root. */
   root: string
   starter: string

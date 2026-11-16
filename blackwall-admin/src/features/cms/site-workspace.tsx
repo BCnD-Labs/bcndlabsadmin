@@ -23,6 +23,7 @@ import { usePrefs } from "@/stores/prefs"
 import { safeLocalStorage } from "@/stores/storage"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
+import { AdoptedWorkspace } from "./adopted-site"
 import { FilesPanel } from "./files-panel"
 import { FormsPanel } from "./forms-panel"
 import { Inspector } from "./inspector"
@@ -73,8 +74,16 @@ function savedLayout(): Layout | undefined {
   try { return JSON.parse(safeLocalStorage.getItem(LAYOUT_KEY) as string) ?? undefined } catch { return undefined }
 }
 
-/** /cms/pages and /cms/pages/:id. Without a page in the address it opens the site's home page, keeping any ?panel=. */
+/** /cms/pages and /cms/pages/:id. A site run from its own files has its own, simpler workspace; every other site gets the editor. */
 export function SiteWorkspace() {
+  const { id } = useParams()
+  const current = useCurrentSite()
+  if (!id && current?.adopted) return <AdoptedWorkspace site={current} />
+  return <PagesmithWorkspace />
+}
+
+/** The Pagesmith editor. Without a page in the address it opens the site's home page, keeping any ?panel=. */
+function PagesmithWorkspace() {
   const { id } = useParams()
   const { search } = useLocation()
   const openForm = useUi((s) => s.openForm)

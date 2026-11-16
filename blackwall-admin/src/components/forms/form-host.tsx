@@ -2,7 +2,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { useUi } from "@/stores/ui"
 import { CourseForm } from "./course-form"
 import { ServiceForm } from "@/features/mikoshi/service-form"
-import { NewPageForm, NewSiteForm, PageFromTaskForm, SiteFormForm } from "@/features/cms/cms-forms"
+import { AdoptSiteForm, NewPageForm, NewSiteForm, PageFromTaskForm, SiteFormForm } from "@/features/cms/cms-forms"
 import { SocialAccountForm } from "@/features/social/social-ui"
 import { NoteForm } from "./note-form"
 import { ProjectForm } from "./project-form"
@@ -18,7 +18,7 @@ export function FormHost() {
 
   return (
     <Dialog open={!!form} modal={!mac} onOpenChange={(o) => !o && close()}>
-      <DialogContent showOverlay={!mac} onInteractOutside={event => { if (mac) event.preventDefault() }} className={`mac-record-editor ${form?.kind === "course" || form?.kind === "siteForm" || form?.kind === "site" ? "gap-0 p-0 sm:max-w-xl" : "gap-0 p-0 sm:max-w-lg"}`} aria-describedby={undefined}>
+      <DialogContent showOverlay={!mac} onInteractOutside={event => { if (mac) event.preventDefault() }} className={`mac-record-editor ${form?.kind === "course" || form?.kind === "siteForm" || form?.kind === "site" || form?.kind === "adoptSite" ? "gap-0 p-0 sm:max-w-xl" : "gap-0 p-0 sm:max-w-lg"}`} aria-describedby={undefined}>
         {form?.kind === "task" && <TaskForm key={key} id={form.id} defaults={form.defaults} onDone={close} />}
         {form?.kind === "note" && <NoteForm key={key} id={form.id} defaults={form.defaults} onDone={close} />}
         {form?.kind === "project" && <ProjectForm key={key} id={form.id} defaults={form.defaults} onDone={close} />}
@@ -26,6 +26,7 @@ export function FormHost() {
         {form?.kind === "course" && <CourseForm key={key} id={form.id} defaults={form.defaults} onDone={close} />}
         {form?.kind === "service" && <ServiceForm key={key} id={form.id} defaults={form.defaults} onDone={close} />}
         {form?.kind === "site" && <NewSiteForm key={key} onDone={close} />}
+        {form?.kind === "adoptSite" && <AdoptSiteForm key={key} onDone={close} />}
         {form?.kind === "sitePage" && <NewPageForm key={key} onDone={close} />}
         {form?.kind === "pageFromTask" && <PageFromTaskForm key={key} taskId={form.id} onDone={close} />}
         {form?.kind === "siteForm" && <SiteFormForm key={key} id={form.id} onDone={close} />}

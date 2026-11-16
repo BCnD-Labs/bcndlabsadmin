@@ -35,7 +35,16 @@ function memoryKV(): KV {
   }
 }
 
-export async function startSiteLab(opts: { panelPort?: number; sitePort?: number; formsPort?: number; deployMs?: number } = {}) {
+/** A plain hand-written site: HTML pages in folders, shared CSS, a blog index with the posts region, and one editable region. */
+export const HANDWRITTEN: Record<string, string> = {
+  "index.html": `<!doctype html>\n<html lang="en">\n<head>\n  <meta charset="utf-8">\n  <title>Example Studio</title>\n  <link rel="stylesheet" href="css/style.css">\n</head>\n<body>\n  <header><nav><a href="index.html">Home</a> <a href="about/index.html">About</a> <a href="blog/blog.html">Blog</a></nav></header>\n  <main>\n    <h1>Example Studio</h1>\n    <section class="intro">\n      <!-- blackwall:intro -->\n      <p>We make small things by hand.</p>\n      <!-- /blackwall:intro -->\n    </section>\n    <p class="mine">This paragraph is hand-written and must never change.</p>\n  </main>\n  <footer>Example Studio</footer>\n</body>\n</html>\n`,
+  "about/index.html": `<!doctype html>\n<html lang="en">\n<head>\n  <meta charset="utf-8">\n  <title>About - Example Studio</title>\n  <link rel="stylesheet" href="../css/style.css">\n</head>\n<body>\n  <main><h1>About</h1><p>Hand-written, no regions here.</p></main>\n</body>\n</html>\n`,
+  "blog/blog.html": `<!doctype html>\n<html lang="en">\n<head>\n  <meta charset="utf-8">\n  <title>Blog - Example Studio</title>\n  <link rel="stylesheet" href="../css/style.css">\n</head>\n<body>\n  <header><nav><a href="../index.html">Home</a></nav></header>\n  <main>\n    <h1>Blog</h1>\n    <div class="cards">\n      <!-- blackwall:posts -->\n      <!-- /blackwall:posts -->\n    </div>\n  </main>\n</body>\n</html>\n`,
+  "css/style.css": "body { font-family: sans-serif; margin: 2rem; }\n.mine { color: #333; }\n",
+  "js/app.js": "console.log('hand-written')\n",
+}
+
+export async function startSiteLab(opts: { panelPort?: number; sitePort?: number; formsPort?: number; deployMs?: number; /** Start with a hand-written site adopted as a card instead of a Pagesmith site. */ handwritten?: boolean } = {}) {
   const root = mkdtempSync(path.join(tmpdir(), "blackwall-site-lab-"))
   const store = new FileConnectionStore(root)
   const workspace = new FileWorkspaceStore(root)
@@ -60,6 +69,7 @@ export async function startSiteLab(opts: { panelPort?: number; sitePort?: number
     if (p.startsWith("/git/ref/heads/")) return Response.json({ object: { sha: branch.head } })
     if (p.startsWith("/git/commits/") && method === "GET") return Response.json({ tree: { sha: `base-${branch.head}` } })
     if (p === "/git/blobs") { const sha = nextId("b"); blobs.set(sha, Buffer.from(input.content, "base64")); return Response.json({ sha }, { status: 201 }) }
+    if (p.startsWith("/git/trees/") && method === "GET") return Response.json({ tree: [...branch.files.keys()].sort().map((f) => ({ path: f, type: "blob" })) })
     if (p === "/git/trees" && method === "POST") {
       const next = new Map(branch.files)
       for (const e of input.tree as { path: string; sha: string | null }[]) { if (e.sha) next.set(e.path, blobs.get(e.sha)!); else next.delete(e.path) }
@@ -136,15 +146,16 @@ export async function startSiteLab(opts: { panelPort?: number; sitePort?: number
   /* ---- a starting point: one site, its connections, a form and a sample picture */
   const now = new Date().toISOString()
   const t = siteFromTemplate("Lab site", "portal")
-  const website = await store.create({ provider: "website", label: "Lab repository", config: { repo: "lab/site", branch: "main", siteUrl: siteOrigin }, secrets: { token: "lab" } })
+  const website = await store.create({ provider: "website", label: "Lab repository", config: { repo: "lab/site", branch: "main", siteUrl: siteOrigin, ...(opts.handwritten ? { blogIndex: "blog/blog.html", postsDir: "blog/posts", imagesDir: "img" } : {}) }, secrets: { token: "lab" } })
+  if (opts.handwritten) for (const [f, text] of Object.entries(HANDWRITTEN)) { branch.files.set(f, Buffer.from(text)); live.files.set(f, Buffer.from(text)) }
   const nextcloud = await store.create({ provider: "nextcloud", label: "Lab cloud", config: { url: "https://cloud.lab.test", username: "lab" }, secrets: { appPassword: "lab" } })
   const forms = await store.create({ provider: "forms", label: "Lab forms", config: { url: formsOrigin }, secrets: { token: "lab" } })
   for (const c of [website, nextcloud, forms]) await store.setResult(c.id, { status: "ok" })
   const snapshot = await workspace.readWorkspace()
   await workspace.writeWorkspace(snapshot.id, snapshot.revision, {
     ...emptyWorkspace(),
-    sites: [{ ...t.site, id: "lab", domain: `127.0.0.1:${sitePort}`, formEndpoint: formsOrigin, comments: true, createdAt: now, updatedAt: now }],
-    pages: t.pages.map((p, i) => ({ ...p, id: `lab-p${i}`, siteId: "lab", createdAt: now, updatedAt: now })),
+    sites: [{ ...t.site, id: "lab", domain: `127.0.0.1:${sitePort}`, formEndpoint: formsOrigin, comments: true, createdAt: now, updatedAt: now, ...(opts.handwritten ? { name: "Example Studio", adopted: true, connectionId: website.id } : {}) }],
+    pages: opts.handwritten ? [] : t.pages.map((p, i) => ({ ...p, id: `lab-p${i}`, siteId: "lab", createdAt: now, updatedAt: now })),
     forms: [{ id: "lab-form", name: "Contact", submitLabel: "Send", successMessage: "Thanks!", fields: [{ id: "name", label: "Name", type: "text", required: true }, { id: "message", label: "Message", type: "textarea", required: true }], createdAt: now, updatedAt: now }],
     assets: [{ id: "lab-asset", name: "Lab photo", file: "lab-photo.png", folder: "/Blackwall/assets", mime: "image/png", alt: "A sample photo", width: 1, height: 1, bytes: PIXEL.length, createdAt: now, updatedAt: now }],
   })
@@ -167,7 +178,7 @@ export async function startSiteLab(opts: { panelPort?: number; sitePort?: number
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-  const lab = await startSiteLab()
+  const lab = await startSiteLab({ handwritten: process.argv.includes("--handwritten") })
   if (!existsSync(path.join(lab.dist, "index.html"))) console.log("Build the panel first: npm --prefix blackwall-admin run build")
   console.log(`\nPractice run is up. Nothing here touches your real data.\n\n  Blackwall:  ${lab.panel}/cms\n  Your site:  ${lab.site}/\n  What was published: ${lab.site}/__lab.json\n\nPress Ctrl+C to stop; it all disappears.\n`)
   process.on("SIGINT", () => void lab.close().then(() => process.exit(0)))

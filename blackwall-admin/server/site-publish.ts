@@ -39,6 +39,7 @@ async function pictureFiles(store: ConnectionStore, ws: Collections, siteId: str
 export async function publishSite(store: ConnectionStore, ws: Collections, siteId: string) {
   const site = ws.sites.find((s) => s.id === siteId)
   if (!site) throw new ProviderError("That site doesn't exist", 404)
+  if (site.adopted) throw new ProviderError("This site is run from its own files. Blackwall only changes the marked regions and the posts it publishes, so it doesn't rebuild or publish the whole site.", 409)
   const c = site.connectionId ? await store.get(site.connectionId) : await store.firstOk("website")
   if (!c || c.provider !== "website") throw new ProviderError("Choose a GitHub repository to publish to in Site settings.", 409)
   const { cfg, repo } = repoFor(c)

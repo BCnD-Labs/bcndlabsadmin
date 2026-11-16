@@ -1,4 +1,4 @@
-import { Eye, ExternalLink, LayoutTemplate, Monitor, Pencil, Plus, Rocket, Smartphone, Tablet } from "lucide-react"
+import { Eye, ExternalLink, FolderGit2, LayoutTemplate, Monitor, Pencil, Plus, Rocket, Smartphone, Tablet } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { imagePathsIn, imagePathsInPost } from "@shared/assets"
@@ -21,6 +21,7 @@ import { useSiteAnalytics } from "@/services/data"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
 import { STARTERS } from "@shared/sitebuilder"
+import { AdoptedThumb, adoptedSummary, useScan } from "./adopted-site"
 import { ScaledFrame, SitePreview } from "./site-preview"
 import { deployedAt, selectSite, useUnpublished } from "./use-cms"
 
@@ -51,6 +52,32 @@ function SiteVisits({ site }: { site: Site }) {
   if (traffic.state === "live") return <p className="text-[11px] text-ink-2 tabular-nums" data-testid="site-visits">{traffic.data.traffic.reduce((n, p) => n + p.visitors, 0).toLocaleString("en")} visits · last 30 days</p>
   if (traffic.state === "unmapped") return <p className="text-[11px] text-faint" data-testid="site-visits">No analytics source mapped</p>
   return traffic.state === "error" ? <p className="text-[11px] text-faint" data-testid="site-visits">Traffic unavailable</p> : null
+}
+
+/** A hand-written site run from its own files: its front page as it is, what the repository holds, and no Publish (Blackwall doesn't rebuild it). */
+function AdoptedCard({ site }: { site: Site }) {
+  const navigate = useNavigate()
+  const { scan, error } = useScan(site)
+  const summary = adoptedSummary(scan, error)
+  const edit = () => { selectSite(site.id); navigate(cmsPagesHref) }
+  return (
+    <li className="bw-panel group flex flex-col overflow-hidden" data-testid="site-card" data-adopted>
+      <button type="button" onClick={edit} className="relative block text-left" aria-label={`Open ${site.name}`}>
+        <AdoptedThumb site={site} />
+        <span className="absolute inset-0 grid place-items-center bg-black/0 text-sm font-semibold text-white opacity-0 transition group-hover:bg-black/45 group-hover:opacity-100"><span className="flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5"><Pencil className="size-3.5" /> Edit</span></span>
+      </button>
+      <div className="grid gap-1 px-3.5 pt-3">
+        <div className="flex items-center gap-2"><b className="min-w-0 flex-1 truncate text-[14px] text-ink">{site.name}</b><span className="flex shrink-0 items-center gap-1 rounded-full bg-ink-2/8 px-2 text-[10px] font-bold tracking-[0.03em] text-ink-2 uppercase"><FolderGit2 className="size-3" /> Own files</span></div>
+        <p className="truncate font-mono text-xs text-muted-foreground">{site.domain || scan?.siteUrl || "No domain yet"}</p>
+        <p className="flex items-center gap-1.5 text-xs text-ink-2"><StatusMarker tone={summary.tone} />{summary.text}</p>
+        {summary.detail && <p className="truncate text-[11px] text-faint" title={summary.detail}>{summary.detail}</p>}
+      </div>
+      <div className="mt-auto flex flex-wrap gap-1.5 px-3.5 py-3">
+        <Button size="sm" onClick={edit}><Pencil /> Edit</Button>
+        {(site.domain || scan?.siteUrl) && <Button size="sm" variant="quiet" asChild><a href={scan?.siteUrl || `https://${site.domain}`} target="_blank" rel="noreferrer" aria-label={`Open ${site.domain || scan?.siteUrl}`}><ExternalLink /></a></Button>}
+      </div>
+    </li>
+  )
 }
 
 function SiteCard({ site, onView }: { site: Site; onView: () => void }) {
@@ -139,20 +166,20 @@ export function CmsSitesPage() {
   const ordered = useMemo(() => [...sites].sort((a, b) => Number(!!a.template) - Number(!!b.template) || a.name.localeCompare(b.name)), [sites])
   return (
     <>
-      <PageHeader title="Websites" subtitle={sites.length ? `${sites.length} ${sites.length === 1 ? "site" : "sites"}` : undefined} actions={<Button onClick={() => openForm({ kind: "site" })}><Plus /> New site</Button>} />
+      <PageHeader title="Websites" subtitle={sites.length ? `${sites.length} ${sites.length === 1 ? "site" : "sites"}` : undefined} actions={<><Button variant="outline" onClick={() => openForm({ kind: "adoptSite" })}><FolderGit2 /> Adopt a site</Button><Button onClick={() => openForm({ kind: "site" })}><Plus /> New site</Button></>} />
       <WorkspaceGrid>
         <GridItem span="full">
           {sites.length ? (
             <ul className="grid gap-[var(--bw-grid-gap)] sm:grid-cols-2 xl:grid-cols-3" aria-label="Your sites">
-              {ordered.map((s) => <SiteCard key={s.id} site={s} onView={() => setViewing(s.id)} />)}
+              {ordered.map((s) => (s.adopted ? <AdoptedCard key={s.id} site={s} /> : <SiteCard key={s.id} site={s} onView={() => setViewing(s.id)} />))}
               <li>
                 <button type="button" onClick={() => openForm({ kind: "site" })} className="grid h-full min-h-56 w-full place-items-center rounded-[var(--bw-radius,12px)] border border-dashed border-line text-sm text-muted-foreground transition-colors hover:border-[var(--bw-red)] hover:text-ink"><span className="grid justify-items-center gap-1.5"><Plus className="size-5" /> New site</span></button>
               </li>
             </ul>
           ) : (
             <Panel category="website" title="Websites">
-              <EmptyState roomy icon={LayoutTemplate} title="Build and run your websites from here" action={<Button onClick={() => openForm({ kind: "site" })}><Plus /> New site</Button>}>
-                Start from a template or from one of your own, make it yours with ready-made sections, write posts, then get the finished files for your host. Every site you add shows up here, ready to view or edit.
+              <EmptyState roomy icon={LayoutTemplate} title="Build and run your websites from here" action={<span className="flex gap-2"><Button onClick={() => openForm({ kind: "site" })}><Plus /> New site</Button><Button variant="outline" onClick={() => openForm({ kind: "adoptSite" })}><FolderGit2 /> Adopt a site</Button></span>}>
+                Start from a template or from one of your own, make it yours with ready-made sections, write posts, then get the finished files for your host. Already have a hand-written site in a GitHub repository? Adopt it and run it from here without rebuilding it. Every site you add shows up here, ready to view or edit.
               </EmptyState>
             </Panel>
           )}

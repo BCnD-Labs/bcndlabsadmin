@@ -6,7 +6,7 @@ import { LoginLimiter, Sessions, verifyPassword } from "./auth.ts"
 import { ProviderError } from "./http.ts"
 import { analyticsReport } from "./providers/analytics.ts"
 import { githubOverview } from "./providers/github.ts"
-import { deleteImage, publishPost, siteChrome, siteMedia, siteOverview, siteRaw, unpublishPost, uploadImage } from "./providers/website.ts"
+import { deleteImage, publishPost, readAdoptedPage, saveRegion, scanSite, siteChrome, siteMedia, siteOverview, siteRaw, unpublishPost, uploadImage } from "./providers/website.ts"
 import { SLUG_RE, cleanPost, type ScheduledPost, type SitePost } from "../shared/site.ts"
 import { testConnection } from "./providers/index.ts"
 import { toPublic, type ConnectionStore } from "./store.ts"
@@ -115,6 +115,14 @@ async function feedConnection(store: ConnectionStore, provider: "github" | "anal
   return connection
 }
 
+/** The website connection a request is about: the one named in `?connection=`, else the first working one. Each site can have its own. */
+async function websiteConnection(store: ConnectionStore, id: string | null) {
+  if (!id) return store.firstOk("website")
+  const connection = await store.get(id)
+  if (!connection || connection.provider !== "website") throw new ProviderError("That website connection no longer exists. Choose another in the site's settings.", 409)
+  return connection
+}
+
 /** Recent backup files plus the backup job's last status file, if present. */
 function readBackups(dir: string) {
   if (!existsSync(dir)) return { configured: false as const }
@@ -167,10 +175,10 @@ export function createApi(opts: ApiOptions) {
       (s) => Date.parse(s.publishAt) <= Date.now() && (!s.triedAt || Date.now() - Date.parse(s.triedAt) > 10 * 60_000),
     )
     if (!due.length) return
-    const site = await opts.store.firstOk("website")
     for (const s of due) {
       try {
-        if (!site) throw new Error("Website publishing isn't connected")
+        const site = s.connectionId ? await opts.store.get(s.connectionId) : await opts.store.firstOk("website")
+        if (!site || site.provider !== "website") throw new Error("Website publishing isn't connected")
         await publishPost(site, { ...s.post, date: s.publishAt })
         await opts.store.deleteSchedule(s.post.slug)
         await notifier.siteCleared(s.post.slug)
@@ -409,12 +417,20 @@ export function createApi(opts: ApiOptions) {
 
     // --- website publishing (CMS) ----------------------------------------------
     if (parts[0] === "site") {
-      const site = await store.firstOk("website")
+      const site = await websiteConnection(store, url.searchParams.get("connection"))
       if (!site) return send(res, 409, { error: "Website publishing is not connected" })
       const what = parts[1]
       const slug = parts[2]
       if (what === "overview" && method === "GET") return send(res, 200, await siteOverview(site, await store.listSchedules()))
       if (what === "chrome" && method === "GET") return send(res, 200, await siteChrome(site))
+      // Adopted sites: GET /api/site/scan, GET /api/site/page?path=…, PUT /api/site/region { path, name, content, baseSha }.
+      if (what === "scan" && method === "GET") return send(res, 200, await scanSite(site))
+      if (what === "page" && method === "GET") return send(res, 200, await readAdoptedPage(site, url.searchParams.get("path") ?? ""))
+      if (what === "region" && method === "PUT") {
+        const body = await readJson<{ path?: string; name?: string; content?: string; baseSha?: string }>(req, 2 * 1024 * 1024)
+        if (typeof body.path !== "string" || typeof body.name !== "string" || typeof body.content !== "string" || typeof body.baseSha !== "string") throw new ProviderError("Send the page, the region, its new text and the version you edited", 400)
+        return send(res, 200, await saveRegion(site, body.path, body.name, body.content, body.baseSha))
+      }
       // PUT /api/site/posts/:slug  { post, previousSlug? }   DELETE /api/site/posts/:slug
       if (what === "posts" && slug && method === "PUT") {
         const body = await readJson<{ post?: Partial<SitePost>; previousSlug?: string }>(req, 2 * 1024 * 1024)
@@ -435,7 +451,7 @@ export function createApi(opts: ApiOptions) {
         const at = Date.parse(body.publishAt ?? "")
         if (!Number.isFinite(at)) throw new ProviderError("Pick a date and time to publish", 400)
         if (at < Date.now() - 60_000) throw new ProviderError("That time has already passed. Publish now instead.", 400)
-        const scheduled: ScheduledPost = { post: { ...post, date: new Date(at).toISOString() }, publishAt: new Date(at).toISOString(), createdAt: new Date().toISOString() }
+        const scheduled: ScheduledPost = { post: { ...post, date: new Date(at).toISOString() }, publishAt: new Date(at).toISOString(), createdAt: new Date().toISOString(), connectionId: url.searchParams.get("connection") ?? undefined }
         await store.putSchedule(scheduled)
         return send(res, 200, scheduled)
       }

@@ -65,7 +65,10 @@ function Editor({ draft }: { draft: Draft }) {
   const update = useWorkspace((s) => s.update)
   const remove = useWorkspace((s) => s.remove)
   const navigate = useNavigate()
-  const site = useSite()
+  const own = useWorkspace((s) => s.sites.find((x) => x.id === draft.siteId))
+  /** A site adopted from its own repository publishes through that site's connection, not the first one. */
+  const connectionId = own?.adopted ? own.connectionId : undefined
+  const site = useSite(connectionId)
   const live = site.status === "live" && !!site.overview
   const value = pick(draft)
   const [slugTouched, setSlugTouched] = useState(draft.slug !== slugify(draft.title) || !!draft.remoteSlug)
@@ -73,7 +76,7 @@ function Editor({ draft }: { draft: Draft }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
   /** A post on one of your Blackwall sites (Pagesmith) rather than the classic connected website. */
-  const pagesmith = useWorkspace((s) => s.sites.find((x) => x.id === draft.siteId))
+  const pagesmith = own && !own.adopted ? own : undefined
   const siteOfPost = draft.siteId
   useEffect(() => { if (siteOfPost) selectSite(siteOfPost) }, [siteOfPost])
 
@@ -207,7 +210,7 @@ function Editor({ draft }: { draft: Draft }) {
               className="min-h-[22rem] w-full max-w-[76ch] flex-1 resize-y bg-transparent px-4 py-3 font-mono text-[13px] leading-relaxed text-ink outline-none placeholder:text-faint"
             />
           ) : (
-            pagesmith ? <SitePostPreview draft={current} /> : <Preview draft={current} live={live} date={item?.state !== "draft" ? item?.date : undefined} />
+            pagesmith ? <SitePostPreview draft={current} /> : <Preview draft={current} live={live} connectionId={connectionId} date={item?.state !== "draft" ? item?.date : undefined} />
           )}
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-soft px-4 py-2 text-[11px] text-muted-foreground">
             <span>{words} {words === 1 ? "word" : "words"} · Markdown</span>
@@ -392,9 +395,9 @@ function TagInput({ id, value, onChange }: { id: string; value: string[]; onChan
 }
 
 /** The post rendered with the site's own header and styles, in a sandboxed frame (no scripts). */
-function Preview({ draft, live, date }: { draft: Draft; live: boolean; date?: string }) {
-  const site = useSite()
-  const chrome = useSiteChrome(live)
+function Preview({ draft, live, date, connectionId }: { draft: Draft; live: boolean; date?: string; connectionId?: string }) {
+  const site = useSite(connectionId)
+  const chrome = useSiteChrome(live, connectionId)
   const html = useMemo(() => buildPreview(draft, chrome, site.overview?.siteUrl, site.overview?.blogUrl, date), [draft, chrome, site.overview, date])
   return <iframe title="Post preview" srcDoc={html} sandbox="allow-same-origin" className="min-h-[65vh] w-full flex-1 border-0 bg-white" />
 }
