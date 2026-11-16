@@ -37,6 +37,7 @@ export function PageHeader({
     },
     [owner, store],
   )
-  if (!actions) return null
+  // Floating Mac windows already put these actions in their own toolbar, even when the outer app is narrow.
+  if (localStore || !actions) return null
   return <div className={cn("mb-3 flex flex-wrap items-center gap-2 md:hidden", className)}>{actions}</div>
 }

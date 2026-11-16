@@ -1,5 +1,5 @@
 import { format } from "date-fns"
-import { ChevronDown, Plus } from "lucide-react"
+import { CalendarDays, CalendarRange, ChevronDown, Clock3, Library, ListTodo, Plus } from "lucide-react"
 import { useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,6 +15,7 @@ import { parseKey, todayKey } from "@/lib/dates"
 import type { Course } from "@/lib/types"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
+import { MacToolNavigation } from "@/mac/tool-navigation"
 import { KindIcon } from "./coursework"
 import { TodayView } from "./today-view"
 import { WeekView } from "./week-view"
@@ -83,16 +84,23 @@ export function LearningPage() {
   // "courses" was this tab's old name; keep old links working.
   const view: LearningView = asked === "courses" ? "library" : asked === "week" || asked === "upcoming" || asked === "library" || asked === "term" || asked === "today" ? asked : courses.length ? "today" : "library"
   const today = todayKey()
+  const mac = document.documentElement.dataset.runtime === "mac-native"
   const choose = (next: LearningView) => setParams((p) => { const n = new URLSearchParams(p); n.set("view", next); return n }, { replace: true })
+  const content = view === "today" ? <TodayView today={today} /> : view === "week" ? <WeekView today={today} /> : view === "term" ? <TermView today={today} /> : view === "upcoming" ? <UpcomingView /> : <LibraryView />
   return (
     <>
       <PageHeader title="Learning" actions={<AddLearning />} />
-      {courses.length > 0 && (
+      {mac ? <MacToolNavigation label="Learning" value={view} onChange={choose} items={[
+        { value: "today", label: "Today", icon: <CalendarDays /> },
+        { value: "week", label: "Week", icon: <CalendarRange /> },
+        { value: "upcoming", label: "Upcoming", icon: <Clock3 /> },
+        { value: "library", label: "Library", icon: <Library /> },
+        { value: "term", label: "Term", icon: <ListTodo /> },
+      ]}>{content}</MacToolNavigation> : <>{courses.length > 0 && (
         <div className="mb-3">
           <SegmentedTabs<LearningView> label="Learning view" value={view} onChange={choose} className="max-w-full overflow-x-auto" tabs={[{ value: "today", label: "Today" }, { value: "week", label: "Week" }, { value: "upcoming", label: "Upcoming" }, { value: "library", label: "Library" }, { value: "term", label: "Term" }]} />
         </div>
-      )}
-      {view === "today" ? <TodayView today={today} /> : view === "week" ? <WeekView today={today} /> : view === "term" ? <TermView today={today} /> : view === "upcoming" ? <UpcomingView /> : <LibraryView />}
+      )}{content}</>}
     </>
   )
 }
