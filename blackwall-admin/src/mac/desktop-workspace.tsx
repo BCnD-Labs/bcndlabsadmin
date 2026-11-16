@@ -20,7 +20,7 @@ import { PlannerSidebar } from "./planner-sidebar"
 import { todayKey } from "@/lib/dates"
 import { useWorkspace } from "@/stores/workspace"
 import { windowSections } from "./window-sections"
-import { moveAroundLocked, overlaps, placeOutsideLocked, resizeAroundLocked, type WindowRect } from "./window-geometry"
+import { MAC_DESKTOP_TOP, fitWindowRect, moveAroundLocked, overlaps, placeOutsideLocked, resizeAroundLocked, type WindowRect } from "./window-geometry"
 import "./desktop-workspace.css"
 
 const APP = {
@@ -54,9 +54,10 @@ const RAIL_IDS: Id[] = ["home", "browser", "learning", "journal", "notes", "proj
 const KEY = "blackwall-mac-desktop-windows-v2"
 /** Width of the left rail with names shown; the icon-only rail is 43px. */
 const RAIL_WIDE = 172, RAIL_NARROW = 43
-/** How high a window may go: all the way to the top edge. */
-const TOP_MIN = 0
 const isWidget = (id: Id): id is "notes" => id === "notes"
+function fitWindow(value: WindowState, bounds: { width: number; height: number }, rail: number): WindowState {
+  return { ...value, ...fitWindowRect(value, bounds, rail, value.collapsed) }
+}
 function appForPath(path: string): AppId {
   if (path.startsWith("/journal")) return "journal"
   if (path.startsWith("/productivity/learning")) return "learning"
@@ -83,7 +84,7 @@ function initialWindows(): Windows {
     notes: { x: Math.max(80, Math.round(width * .12)), y: Math.min(height - 44, 680), width: Math.min(360, width - 95), height: 280, open: true, collapsed: true, expanded: false, pinned: false, z: 1 },
     ...Object.fromEntries(APP_IDS.map((id, listed) => [id, id === "browser" ? 2 : listed] as const).map(([id, index]) => [id, { x: Math.max(75, Math.round(width * .12) + index * 28), y: Math.max(60, Math.round(height * .08) + index * 22), width: Math.min(id === "website" ? 1320 : id === "planner_app" || id === "learning" ? 1000 : 820, width - 105), height: Math.min(id === "website" ? 820 : id === "planner_app" || id === "learning" ? 650 : 560, height - 90), open: false, collapsed: false, expanded: false, pinned: false, z: index + 3, path: APP[id].route }])),
   } as Windows
-  const fit = (id: Id) => { defaults[id] = { ...defaults[id], x: Math.max(75, Math.min(defaults[id].x, width - defaults[id].width - 10)), y: Math.max(TOP_MIN, Math.min(defaults[id].y, height - defaults[id].height - 10)) } }
+  const fit = (id: Id) => { defaults[id] = { ...defaults[id], x: Math.max(75, Math.min(defaults[id].x, width - defaults[id].width - 10)), y: Math.max(MAC_DESKTOP_TOP, Math.min(defaults[id].y, height - defaults[id].height - 10)) } }
   fit("website")
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) ?? localStorage.getItem("blackwall-mac-desktop-windows-v1") ?? "null") as Partial<Record<Id | "app", Partial<WindowState>>> | null
@@ -94,7 +95,7 @@ function initialWindows(): Windows {
       if (!value || [value.x, value.y, value.width, value.height].some(n => typeof n !== "number" || !Number.isFinite(n))) continue
       // The Website window used to open small; a size still at that old default isn't one anyone chose, so the editor gets its large one.
       const large = id === "website" && value.width === 820 && value.height === 560 ? { width: defaults[id].width, height: defaults[id].height } : {}
-      defaults[id] = { ...defaults[id], x: Math.max(45, Math.min(width - 100, value.x!)), y: Math.max(TOP_MIN, Math.min(height - 32, value.y!)), width: Math.max(280, Math.min(width - 50, value.width!)), height: Math.max(200, Math.min(height - 50, value.height!)), open: (isWidget(id) || usePrefs.getState().restoreWindows) && value.open !== false, collapsed: value.collapsed === true, pinned: isWidget(id) && value.pinned === true, expanded: false, path: !isWidget(id) && typeof value.path === "string" && value.path.startsWith("/") ? value.path : id === migratedApp && saved.app ? window.location.pathname + window.location.search : defaults[id].path, ...large }
+      defaults[id] = { ...defaults[id], x: Math.max(45, value.x!), y: Math.max(MAC_DESKTOP_TOP, value.y!), width: Math.max(280, value.width!), height: Math.max(200, value.height!), open: (isWidget(id) || usePrefs.getState().restoreWindows) && value.open !== false, collapsed: value.collapsed === true, pinned: isWidget(id) && value.pinned === true, expanded: false, path: !isWidget(id) && typeof value.path === "string" && value.path.startsWith("/") ? value.path : id === migratedApp && saved.app ? window.location.pathname + window.location.search : defaults[id].path, ...large }
       if ("width" in large) fit(id)
     }
   } catch { /* Use a fresh local layout when storage is unavailable. */ }
@@ -129,6 +130,7 @@ const AppPage = memo(function AppPage({ id, path, store }: { id: AppId; path: st
 
 export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
   const [windows, setWindows] = useState(initialWindows)
+  const [viewport, setViewport] = useState(() => ({ width: window.innerWidth, height: window.innerHeight }))
   const [plannerOpen, setPlannerOpen] = useState(false)
   const railLabels = usePrefs((state) => state.railLabels)
   const railHidden = usePrefs((state) => state.railHidden)
@@ -147,6 +149,13 @@ export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
   const setSearchOpen = useUi(s => s.setSearchOpen)
 
   useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(windows)) } catch { /* Layout remains usable this session. */ } }, [windows])
+  useEffect(() => {
+    const onResize = () => {
+      setViewport({ width: window.innerWidth, height: window.innerHeight })
+    }
+    window.addEventListener("resize", onResize)
+    return () => window.removeEventListener("resize", onResize)
+  }, [])
   useEffect(() => {
     const id = appForPath(pathname)
     const changed = priorPath.current !== pathname
@@ -190,7 +199,7 @@ export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
   })
   const expand = (id: Id) => update(id, value => {
     if (value.expanded && value.restore) return { ...value, ...value.restore, expanded: false, restore: undefined }
-    const next = { x: 51, y: 45, width: window.innerWidth - 60, height: window.innerHeight - 55 }
+    const next = fitWindow({ ...value, x: 51, y: MAC_DESKTOP_TOP, width: window.innerWidth - 60, height: window.innerHeight - MAC_DESKTOP_TOP - 8 }, viewport, railLabels ? RAIL_WIDE : RAIL_NARROW)
     const occupied = isWidget(id) ? value.pinned ? IDS.filter(other => isWidget(other) && other !== (id as Id) && windows[other].open).map(other => visibleRect(windows[other])) : locked(id) : []
     if (occupied.some(other => overlaps(next, other))) return value
     return { ...value, ...next, restore: value, expanded: true, collapsed: false }
@@ -198,7 +207,7 @@ export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
 
   const start = (event: PointerEvent<HTMLElement>, id: Id, edge?: Edge) => {
     if (event.button !== 0 || (!edge && (event.target as Element).closest("button, a"))) return
-    const value = windows[id]
+    const value = fitWindow(windows[id], viewport, railLabels ? RAIL_WIDE : RAIL_NARROW)
     if (value.pinned && (!edge || edge.includes("n") || edge.includes("w"))) return
     gesture.current = { id, pointer: event.pointerId, startX: event.clientX, startY: event.clientY, lastX: event.clientX, lastY: event.clientY, start: value, current: value, edge }
     event.currentTarget.setPointerCapture(event.pointerId)
@@ -223,9 +232,7 @@ export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
       if (height < minH) { if (g.edge.includes("n")) y -= minH - height; height = minH }
       next = resizeAroundLocked(g.current, { x, y, width, height }, blockers)
     }
-    const y = Math.max(TOP_MIN, Math.min(window.innerHeight - 30, next.y))
-    // The macOS window buttons sit at the top left: keep title bars clear of them.
-    next = { ...next, x: Math.max(y < 34 ? 80 : 44, Math.min(window.innerWidth - 100, next.x)), y }
+    next = fitWindow({ ...windows[g.id], ...next }, viewport, railLabels ? RAIL_WIDE : RAIL_NARROW)
     g.current = next
     g.lastX = event.clientX; g.lastY = event.clientY
     update(g.id, value => ({ ...value, ...next, expanded: false }))
@@ -238,11 +245,12 @@ export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
   const frame = (id: Id, title: ReactNode, icon: ReactNode, children: ReactNode) => {
     const value = windows[id]
     if (!value.open) return null
+    const fitted = fitWindow(value, viewport, railLabels ? RAIL_WIDE : RAIL_NARROW)
     const pinBlocked = isWidget(id) && !value.pinned && IDS.some(other => isWidget(other) && other !== (id as Id) && windows[other].open && overlaps(visibleRect(value), visibleRect(windows[other])))
     const widgetFront = windows.notes.z
     const appRank = APP_IDS.filter(app => windows[app].open).sort((a, b) => windows[a].z - windows[b].z).indexOf(id as AppId)
     return <section key={id} className="mac-dw-window" data-kind={isWidget(id) ? "widget" : "app"} data-tone={isWidget(id) ? "productivity" : APP[id].tone} data-collapsed={value.collapsed} aria-label={`${isWidget(id) ? id : APP[id].title} window`}
-      style={{ left: value.x + railExtra, top: value.y, width: railExtra ? Math.max(280, Math.min(value.width, window.innerWidth - value.x - railExtra - 10)) : value.width, height: value.collapsed ? 30 : value.height, zIndex: isWidget(id) ? value.z === widgetFront ? 11 : 10 : 20 + appRank }} onPointerDown={event => { if (!(event.target as Element).closest(".mac-dw-title, .mac-dw-edge")) focus(id) }}>
+      style={{ left: fitted.x + railExtra, top: fitted.y, width: fitted.width, height: fitted.collapsed ? 30 : fitted.height, zIndex: isWidget(id) ? value.z === widgetFront ? 11 : 10 : 20 + appRank }} onPointerDown={event => { if (!(event.target as Element).closest(".mac-dw-title, .mac-dw-edge")) focus(id) }}>
       <header className="mac-dw-title" onPointerDown={event => start(event, id)} onPointerMove={move} onPointerUp={end} onPointerCancel={end} onDoubleClick={event => { if (!(event.target as Element).closest("button")) update(id, current => ({ ...current, collapsed: !current.collapsed })) }}>
         <span className="mac-dw-icon">{icon}</span><strong>{title}</strong><span className="mac-dw-spacer" />
         {isWidget(id) && <button type="button" aria-label={value.pinned ? `Unlock ${id} position` : `Lock ${id} position`} title={pinBlocked ? "Move clear of other widgets to lock" : undefined} aria-pressed={value.pinned} disabled={pinBlocked} onClick={() => pin(id)}><Pin size={15} fill={value.pinned ? "currentColor" : "none"} /></button>}

@@ -9,6 +9,25 @@ import { CHECKS, CHECK_LABELS, EMPTY_CHECK_IN, SCALE_MAX, formWording, hasAnswer
 
 const MOODS = ["Great", "Okay", "Low", "Rough"]
 const ENERGY = ["High", "Medium", "Low"]
+const CHOICES_KEY = "blackwall-mac-checkin-choices-v1"
+type ChoiceOverrides = Partial<Record<Slot, Record<string, string[]>>>
+function readChoices(): ChoiceOverrides {
+  try {
+    const saved: unknown = JSON.parse(localStorage.getItem(CHOICES_KEY) ?? "{}")
+    if (!saved || typeof saved !== "object") return {}
+    const result: ChoiceOverrides = {}
+    for (const slot of ["morning", "afternoon", "evening"] as const) {
+      const fields = (saved as Record<string, unknown>)[slot]
+      if (!fields || typeof fields !== "object") continue
+      result[slot] = {}
+      for (const field of slotForm(slot)) {
+        const options = (fields as Record<string, unknown>)[field.id]
+        if (Array.isArray(options) && options.length > 0 && options.length <= 20 && options.every(value => typeof value === "string" && value.length <= 60 && !value.includes(","))) result[slot]![field.id] = options
+      }
+    }
+    return result
+  } catch { return {} }
+}
 
 function Chip({ on, children, onClick, multi }: { on: boolean; children: string; onClick: () => void; multi?: boolean }) {
   return <button type="button" role={multi ? "checkbox" : "radio"} aria-checked={on} onClick={onClick}
@@ -43,12 +62,38 @@ function SlotField({ field, value, onChange }: { field: FormField; value?: strin
  * text under the period's start day, in the same form the Android app writes, so each reads the other's.
  */
 export function CheckInDialog({ period, anchor, slot, todayTitles, onClose }: { period: Period; anchor: string; slot?: Slot; todayTitles: string[]; onClose: () => void }) {
+  const mac = document.documentElement.dataset.runtime === "mac-native"
   const key = reviewId(period, anchor, slot)
   const saved = useWorkspace((s) => s.journal.find((j) => j.id === anchor)?.entries?.find((i) => i.id === key))
   const saveItem = useWorkspace((s) => s.saveJournalItem)
   const words = formWording(period)
   const [answers, setAnswers] = useState<Answers>(() => (slot && saved ? readSlotCheckIn(slot, saved.text) : {}))
   const [form, setForm] = useState<CheckIn>(() => (!slot && saved ? readCheckIn(saved.text) : { ...EMPTY_CHECK_IN, checks: [] }))
+  const [choices, setChoices] = useState(readChoices)
+  const [editingChoices, setEditingChoices] = useState<string | null>(null)
+  const [choiceDraft, setChoiceDraft] = useState("")
+  const fields = slot ? slotForm(slot, todayTitles).map(field => ({ ...field, options: choices[slot]?.[field.id] ?? field.options })) : []
+  const editChoices = (field: FormField) => {
+    setEditingChoices(field.id)
+    setChoiceDraft((field.options ?? []).join("\n"))
+  }
+  const saveChoices = (field: FormField) => {
+    if (!slot) return
+    const options = [...new Set(choiceDraft.split("\n").map(value => value.trim()).filter(Boolean))]
+    if (!options.length || options.length > 20 || options.some(value => value.length > 60 || value.includes(","))) return toast.error("Use 1–20 choices, up to 60 characters each, without commas.")
+    const next = { ...choices, [slot]: { ...choices[slot], [field.id]: options } }
+    setChoices(next)
+    try { localStorage.setItem(CHOICES_KEY, JSON.stringify(next)) } catch { toast.error("Choices could not be saved on this Mac.") }
+    setEditingChoices(null)
+  }
+  const resetChoices = (field: FormField) => {
+    if (!slot) return
+    const next = { ...choices, [slot]: { ...choices[slot] } }
+    delete next[slot]![field.id]
+    setChoices(next)
+    try { localStorage.setItem(CHOICES_KEY, JSON.stringify(next)) } catch { toast.error("Choices could not be saved on this Mac.") }
+    setEditingChoices(null)
+  }
   const ok = slot ? hasAnswers(answers) : hasCheckIn(form)
   const save = () => {
     const now = new Date().toISOString()
@@ -59,12 +104,22 @@ export function CheckInDialog({ period, anchor, slot, todayTitles, onClose }: { 
   }
   const set = (patch: Partial<CheckIn>) => setForm((f) => ({ ...f, ...patch }))
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) onClose() }}>
-      <DialogContent className="max-w-xl" onOpenAutoFocus={(e) => e.preventDefault()}>
+    <Dialog open modal={!mac} onOpenChange={(o) => { if (!o) onClose() }}>
+      <DialogContent className="mac-checkin-dialog max-w-xl" showOverlay={!mac} onInteractOutside={event => { if (mac) event.preventDefault() }} onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogTitle>{slot ? `${slotLabel(slot)} check-in` : words.title}</DialogTitle>
         <DialogDescription>Every question is optional. {slot ? "Mostly taps." : "A few words is plenty."}</DialogDescription>
-        <div className="grid max-h-[60vh] gap-4 overflow-y-auto pr-1">
-          {slot ? slotForm(slot, todayTitles).map((f) => <SlotField key={f.id} field={f} value={answers[f.id]} onChange={(v) => setAnswers((a) => ({ ...a, [f.id]: v }))} />) : <>
+        <div className="mac-checkin-fields grid max-h-[60vh] gap-4 overflow-y-auto pr-1">
+          {slot ? fields.map((f) => <div key={f.id} className="grid gap-1.5">
+            <SlotField field={f} value={answers[f.id]} onChange={(v) => setAnswers((a) => ({ ...a, [f.id]: v }))} />
+            {mac && (f.kind === "pick" || f.kind === "tick") && !f.fromTasks && <>
+              <button type="button" className="justify-self-start text-[11px] text-muted-foreground hover:text-ink" onClick={() => editChoices(f)}>Edit choices</button>
+              {editingChoices === f.id && <div className="grid gap-2 rounded-md border border-line bg-well p-2">
+                <label className="text-[11px] text-muted-foreground" htmlFor={`choices-${f.id}`}>One choice per line · saved on this Mac</label>
+                <Textarea id={`choices-${f.id}`} rows={Math.min(6, Math.max(3, (f.options?.length ?? 0) + 1))} value={choiceDraft} onChange={event => setChoiceDraft(event.target.value)} />
+                <div className="flex justify-end gap-1"><Button size="xs" variant="ghost" onClick={() => resetChoices(f)}>Restore defaults</Button><Button size="xs" variant="ghost" onClick={() => setEditingChoices(null)}>Cancel</Button><Button size="xs" onClick={() => saveChoices(f)}>Save choices</Button></div>
+              </div>}
+            </>}
+          </div>) : <>
             <Question title={words.mood} hint="PICK ONE"><div className="flex flex-wrap gap-1.5">{MOODS.map((m) => <Chip key={m} on={form.mood === m} onClick={() => set({ mood: form.mood === m ? "" : m })}>{m}</Chip>)}</div></Question>
             <Question title={words.energy} hint="PICK ONE"><div className="flex flex-wrap gap-1.5">{ENERGY.map((m) => <Chip key={m} on={form.energy === m} onClick={() => set({ energy: form.energy === m ? "" : m })}>{m}</Chip>)}</div></Question>
             <Question title={words.checks} hint="PICK ANY"><div className="flex flex-wrap gap-1.5">{CHECKS.map((c) => <Chip key={c} multi on={form.checks.includes(c)} onClick={() => set({ checks: form.checks.includes(c) ? form.checks.filter((x) => x !== c) : [...form.checks, c] })}>{CHECK_LABELS[c]}</Chip>)}</div></Question>

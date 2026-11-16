@@ -404,7 +404,7 @@ export function startShell(options: ShellOptions = {}): ShellController | null {
       },
       quit: () => app.quit(),
     })
-    registerNativeWorkspace(tabSession, () => config.get().webAddress, updater, sourceUpdater, { openBrowser: () => newTab() })
+    registerNativeWorkspace(tabSession, () => config.get().webAddress, updater, sourceUpdater, { openBrowser: () => newTab(), openExternalBrowser: (url) => shell.openExternal(url) })
 
     // No page may embed a <webview> except the bundled workspace, which tabs.ts vets and locks down.
     app.on("web-contents-created", (_e, contents) => {

@@ -1,6 +1,13 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { moveAroundLocked, overlaps, placeOutsideLocked, resizeAroundLocked } from "../src/mac/window-geometry.ts"
+import { fitWindowRect, moveAroundLocked, overlaps, placeOutsideLocked, resizeAroundLocked } from "../src/mac/window-geometry.ts"
+
+test("saved desktop windows fit a smaller outer window without changing their stored size", () => {
+  const saved = { x: 500, y: 900, width: 900, height: 700 }
+  assert.deepEqual(fitWindowRect(saved, { width: 640, height: 420 }, 172), { x: 51, y: 66, width: 452, height: 346 })
+  assert.deepEqual(fitWindowRect(saved, { width: 640, height: 420 }, 172, true), { x: 51, y: 382, width: 452, height: 346 })
+  assert.deepEqual(saved, { x: 500, y: 900, width: 900, height: 700 })
+})
 
 const locked = { x: 200, y: 100, width: 100, height: 100 }
 const widget = { x: 100, y: 110, width: 80, height: 80 }

@@ -1,5 +1,17 @@
 export type WindowRect = { x: number; y: number; width: number; height: number }
 
+export const MAC_DESKTOP_TOP = 66
+const NARROW_RAIL = 43
+/** Fit a saved Mac window into the current outer window without changing the saved rect. */
+export function fitWindowRect(rect: WindowRect, bounds: { width: number; height: number }, rail: number, collapsed = false): WindowRect {
+  const railExtra = rail - NARROW_RAIL
+  const width = Math.min(rect.width, bounds.width - rail - 16)
+  const height = Math.min(rect.height, bounds.height - MAC_DESKTOP_TOP - 8)
+  return { width, height,
+    x: Math.max(NARROW_RAIL + 8, Math.min(rect.x, bounds.width - railExtra - width - 8)),
+    y: Math.max(MAC_DESKTOP_TOP, Math.min(rect.y, bounds.height - (collapsed ? 30 : height) - 8)) }
+}
+
 /** Touching edges are allowed; overlapping desktop widgets are not. */
 export function overlaps(a: WindowRect, b: WindowRect): boolean {
   return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y

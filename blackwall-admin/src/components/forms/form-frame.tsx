@@ -25,7 +25,7 @@ export function FormFrame({
     if (canSubmit) onSubmit()
   }
   return (
-    <form onSubmit={submit} className="flex max-h-[85dvh] flex-col">
+    <form onSubmit={submit} className="mac-record-form flex max-h-[85dvh] flex-col">
       <div className="border-b border-line py-3 pr-12 pl-4">
         <DialogTitle className="font-heading text-base font-bold">{title}</DialogTitle>
       </div>
