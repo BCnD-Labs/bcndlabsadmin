@@ -4,7 +4,7 @@ import { CalendarClock, Copy, ExternalLink, FileText, Globe, MoreHorizontal, Pen
 import { useMemo, useState } from "react"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
-import { MARK_END, MARK_START, joinUrl } from "@shared/site"
+import { MARK_END, MARK_START, draftFieldsFromPost, joinUrl } from "@shared/site"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { EmptyState } from "@/components/common/empty-state"
@@ -237,7 +237,7 @@ function PostCard({ item, siteUrl, postsBase }: { item: PostItem; siteUrl?: stri
     if (item.draft) return navigate(draftHref(item.draft.id))
     const src = item.remote ?? item.scheduled?.post
     if (!src) return
-    const d = create("drafts", { title: src.title, slug: src.slug, kind: "post", status: "ready", excerpt: src.excerpt, body: src.markdown, tags: src.tags, cover: src.cover, coverAlt: src.coverAlt, remoteSlug: src.slug })
+    const d = create("drafts", { ...draftFieldsFromPost(src), kind: "post", status: "ready" })
     navigate(draftHref(d.id))
   }
   const run = async (fn: () => Promise<void | PostPublish>, done: string) => {

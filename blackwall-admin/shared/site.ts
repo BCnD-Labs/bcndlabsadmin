@@ -297,6 +297,26 @@ export function renderCard(post: SitePost, href: string, template: string = DEFA
   return template.replace(TOKEN, (_all, k: string) => values[k] ?? "")
 }
 
+/**
+ * The draft fields for a post that exists only on the site (published or scheduled), so opening it to edit keeps everything it has:
+ * leaving out categories, Featured or the thumbnail would wipe them from the card the next time it is updated.
+ */
+export function draftFieldsFromPost(post: SitePost) {
+  return {
+    title: post.title,
+    slug: post.slug,
+    excerpt: post.excerpt,
+    body: post.markdown,
+    tags: post.tags,
+    cover: post.cover,
+    coverAlt: post.coverAlt,
+    ...(post.categories?.length ? { categories: post.categories } : {}),
+    ...(post.featured ? { featured: true } : {}),
+    ...(post.thumbnail ? { thumbnail: post.thumbnail, thumbnailAlt: post.thumbnailAlt } : {}),
+    remoteSlug: post.slug,
+  }
+}
+
 /** One card in the blog index, in the same markup as the site's hand-written cards unless the site chose its own. */
 export const postCard = renderCard
 

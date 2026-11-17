@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
 import { startSiteLab } from "../server/site-lab.ts"
-import { CARD_TOKENS, DEFAULT_CARD_TEMPLATE, cardIssues, categorySlug, cleanPost, parseManifest, renderCard, sortCards, updateIndexBlock, type SitePost } from "../shared/site.ts"
+import { CARD_TOKENS, DEFAULT_CARD_TEMPLATE, cardIssues, categorySlug, cleanPost, draftFieldsFromPost, parseManifest, renderCard, sortCards, updateIndexBlock, type SitePost } from "../shared/site.ts"
 import { emptyWorkspace, validWorkspace } from "../shared/workspace.ts"
 import { siteFromTemplate } from "../shared/sitebuilder.ts"
 
@@ -122,4 +122,29 @@ test("publishing to an adopted site uses its card template, changes only the fil
   } finally {
     await lab.close()
   }
+})
+
+test("a project site (served under a path) gets that path in front of root-relative pictures and links", async () => {
+  const { underSiteBase } = await import("../server/providers/website.ts")
+  const under = underSiteBase("https://example-owner.github.io/example-site")
+  assert.equal(under("/img/a.png"), "/example-site/img/a.png")
+  assert.equal(under("/example-site/img/a.png"), "/example-site/img/a.png", "already prefixed: unchanged")
+  assert.equal(under("https://cdn.example/a.png"), "https://cdn.example/a.png", "full addresses are left alone")
+  assert.equal(under("//cdn.example/a.png"), "//cdn.example/a.png")
+  assert.equal(under(undefined), undefined)
+  const top = underSiteBase("https://example.com")
+  assert.equal(top("/img/a.png"), "/img/a.png", "a site at the top of its domain: unchanged")
+  assert.equal(underSiteBase("")("/img/a.png"), "/img/a.png", "no site address: unchanged")
+})
+
+test("opening a post that is only on the site keeps its categories, Featured and thumbnail", () => {
+  const draft = draftFieldsFromPost(post({ categories: ["Case Study", "Web"], featured: true, thumbnail: "/img/a.png", thumbnailAlt: "A picture" }))
+  assert.deepEqual(draft.categories, ["Case Study", "Web"])
+  assert.equal(draft.featured, true)
+  assert.equal(draft.thumbnail, "/img/a.png")
+  assert.equal(draft.thumbnailAlt, "A picture")
+  assert.equal(draft.remoteSlug, "a")
+  // A post saved before these existed opens exactly as before: no new keys.
+  const old = draftFieldsFromPost(post())
+  assert.ok(!("categories" in old) && !("featured" in old) && !("thumbnail" in old))
 })

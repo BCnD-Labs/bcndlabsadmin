@@ -221,7 +221,7 @@ function Editor({ draft }: { draft: Draft }) {
 
         </GridItem>
         <GridItem><aside className="flex min-w-0 flex-col gap-3 self-start lg:sticky lg:top-[calc(var(--bw-header-h,92px)+0.25rem)]">
-          {value.kind === "post" && draft.siteId ? (
+          {value.kind === "post" && pagesmith ? (
             <SitePostPanel draft={draft} />
           ) : value.kind === "post" ? (
             <PublishPanel draft={current} item={item} site={site} onRemoteSlug={(remoteSlug) => update("drafts", draft.id, { ...value, slug: slugify(value.slug) || "untitled", remoteSlug })} />
@@ -416,8 +416,13 @@ function CoverField({ cover, siteUrl, canUpload, onUpload, onRemove }: { cover?:
 function TagInput({ id, value, onChange }: { id: string; value: string[]; onChange: (tags: string[]) => void }) {
   const [text, setText] = useState("")
   const add = () => {
-    const t = text.trim().replace(/,$/, "")
-    if (t && !value.includes(t) && value.length < 8) onChange([...value, t])
+    // Pasted "Case Study, Web" becomes two tags, not one tag with a comma in it.
+    const next = [...value]
+    for (const part of text.split(",")) {
+      const t = part.trim()
+      if (t && !next.includes(t) && next.length < 8) next.push(t)
+    }
+    if (next.length !== value.length) onChange(next)
     setText("")
   }
   const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
