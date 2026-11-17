@@ -44,12 +44,23 @@ export interface ScheduledPost {
   post: SitePost
   publishAt: string
   createdAt: string
+  /** What the schedule is filed under when two sites can use the same post address. Absent: the post's slug, as before. */
+  key?: string
+  /** A Pagesmith post: the site and the draft to publish (the whole site is published with it). */
+  siteId?: string
+  draftId?: string
+  /** "pr": open a pull request instead of committing to the live branch. */
+  mode?: "direct" | "pr"
+  /** It ran after its time because the server wasn't running then. */
+  late?: boolean
   /** The website connection it publishes to. Absent: the first one, as before sites could have their own. */
   connectionId?: string
   /** The last failed attempt, if publishing at the scheduled time didn't work. */
   error?: string
   triedAt?: string
 }
+
+export const scheduleKey = (s: Pick<ScheduledPost, "key" | "post">) => s.key ?? s.post.slug
 
 export interface SitePage {
   /** Repo path, e.g. `pages/about/about.html`. */

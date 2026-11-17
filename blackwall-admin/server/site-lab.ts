@@ -13,6 +13,7 @@ import { handle, type Env, type KV } from "../worker/forms/src/index.ts"
 import { siteFromTemplate } from "../shared/sitebuilder.ts"
 import { emptyWorkspace } from "../shared/workspace.ts"
 import { createApi } from "./app.ts"
+import { gitBlobSha } from "./publish-plan.ts"
 import { serveStatic } from "./static.ts"
 import { FileConnectionStore } from "./store.ts"
 import { FileWorkspaceStore } from "./workspace.ts"
@@ -53,7 +54,9 @@ export async function startSiteLab(opts: { panelPort?: number; sitePort?: number
   const branch = { head: "c0", files: new Map<string, Buffer>() }
   const live = { files: new Map<string, Buffer>() }
   const commits: { sha: string; message: string; added: string[]; changed: string[]; removed: string[]; at: string }[] = []
-  const blobs = new Map<string, Buffer>(), trees = new Map<string, Map<string, Buffer>>(), made = new Map<string, { message: string; tree: string }>()
+  const blobs = new Map<string, Buffer>(), trees = new Map<string, Map<string, Buffer>>(), made = new Map<string, { message: string; tree: string; parent: string }>()
+  const branches = new Map<string, { head: string; files: Map<string, Buffer> }>()
+  const pulls: { number: number; title: string; head: string; base: string; body: string }[] = []
   let n = 0
   const nextId = (p: string) => `${p}${++n}`
   const github = async (url: URL, method: string, raw: string, accept: string): Promise<Response> => {
@@ -69,15 +72,18 @@ export async function startSiteLab(opts: { panelPort?: number; sitePort?: number
     if (p.startsWith("/git/ref/heads/")) return Response.json({ object: { sha: branch.head } })
     if (p.startsWith("/git/commits/") && method === "GET") return Response.json({ tree: { sha: `base-${branch.head}` } })
     if (p === "/git/blobs") { const sha = nextId("b"); blobs.set(sha, Buffer.from(input.content, "base64")); return Response.json({ sha }, { status: 201 }) }
-    if (p.startsWith("/git/trees/") && method === "GET") return Response.json({ tree: [...branch.files.keys()].sort().map((f) => ({ path: f, type: "blob" })) })
+    if (p.startsWith("/git/trees/") && method === "GET") return Response.json({ tree: [...branch.files].sort(([a], [b]) => a.localeCompare(b)).map(([f, b]) => ({ path: f, type: "blob", sha: gitBlobSha(b) })) })
     if (p === "/git/trees" && method === "POST") {
       const next = new Map(branch.files)
       for (const e of input.tree as { path: string; sha: string | null }[]) { if (e.sha) next.set(e.path, blobs.get(e.sha)!); else next.delete(e.path) }
       const sha = nextId("t"); trees.set(sha, next); return Response.json({ sha }, { status: 201 })
     }
-    if (p === "/git/commits" && method === "POST") { const sha = nextId("c"); made.set(sha, { message: input.message, tree: input.tree }); return Response.json({ sha }, { status: 201 }) }
+    if (p === "/git/commits" && method === "POST") { const sha = nextId("c"); made.set(sha, { message: input.message, tree: input.tree, parent: input.parents?.[0] }); return Response.json({ sha }, { status: 201 }) }
+    if (p === "/git/refs" && method === "POST") { const name = String(input.ref).replace("refs/heads/", ""); const commit = made.get(input.sha)!; branches.set(name, { head: input.sha, files: trees.get(commit.tree)! }); return Response.json({ ref: input.ref }, { status: 201 }) }
+    if (p === "/pulls" && method === "POST") { const pr = { number: pulls.length + 1, title: input.title, head: input.head, base: input.base, body: input.body }; pulls.push(pr); return Response.json({ html_url: `https://github.com/lab/site/pull/${pr.number}`, number: pr.number }, { status: 201 }) }
     if (p.startsWith("/git/refs/heads/") && method === "PATCH") {
       const commit = made.get(input.sha)!, files = trees.get(commit.tree)!
+      if (commit.parent !== branch.head) return Response.json({ message: "Update is not a fast forward" }, { status: 422 })
       const same = (a?: Buffer, b?: Buffer) => !!a && !!b && a.equals(b)
       commits.push({ sha: input.sha, message: commit.message, at: new Date().toISOString(), added: [...files.keys()].filter((f) => !branch.files.has(f)).sort(), changed: [...files.keys()].filter((f) => branch.files.has(f) && !same(files.get(f), branch.files.get(f))).sort(), removed: [...branch.files.keys()].filter((f) => !files.has(f)).sort() })
       branch.head = input.sha; branch.files = files
@@ -168,7 +174,7 @@ export async function startSiteLab(opts: { panelPort?: number; sitePort?: number
   const panelPort = await listen(panel, opts.panelPort ?? 8790)
 
   return {
-    panel: `http://127.0.0.1:${panelPort}`, site: siteOrigin, forms: formsOrigin, dist, commits, branch, live,
+    panel: `http://127.0.0.1:${panelPort}`, site: siteOrigin, forms: formsOrigin, dist, commits, branch, live, branches, pulls, made, store, workspace, api,
     close: async () => {
       globalThis.fetch = realFetch
       for (const s of [panel, siteServer, formsServer]) { s.closeAllConnections(); s.close() }

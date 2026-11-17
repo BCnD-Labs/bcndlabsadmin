@@ -17,6 +17,7 @@ import { api } from "@/services/connector"
 import { forConnection } from "@/services/site"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
+import { ScheduledList } from "./scheduled-list"
 import { ScaledFrame } from "./site-preview"
 
 /* A site Blackwall adopted: hand-written pages in a repository. Blackwall reads them, shows them, and writes only the text
@@ -197,6 +198,7 @@ export function AdoptedWorkspace({ site }: { site: Site }) {
         </Panel>
 
         <div className="grid content-start gap-[var(--bw-grid-gap)]">
+          <ScheduledList pick={(s) => !s.siteId && s.connectionId === site.connectionId} />
           <CardTemplatePanel site={site} />
           {page && page.regions.length > 0 ? page.regions.map((r) => <RegionEditor key={r.name} site={site} page={page} region={r} onSaved={set} />) : (
             <Panel category="website" title="Editable regions" bodyClassName="grid gap-2 px-3.5 py-3 text-xs leading-relaxed text-muted-foreground">

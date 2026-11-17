@@ -22,6 +22,7 @@ import {
   type SitePost,
 } from "../../shared/site.ts"
 import { ProviderError, getJson, need } from "../http.ts"
+import { deliver, type DeliverOptions } from "../publish-plan.ts"
 import type { StoredConnection } from "../store.ts"
 import type { TestResult } from "./index.ts"
 
@@ -54,7 +55,7 @@ export function siteConfig(c: StoredConnection): SiteConfig {
   }
 }
 
-type Change = { path: string; content: string | Buffer } | { path: string; delete: true }
+export type Change = { path: string; content: string | Buffer } | { path: string; delete: true }
 /** A post page to (re)render from the updated post list before committing. */
 type PostChange = Change | { path: string; render: string }
 
@@ -121,10 +122,24 @@ export class Repo {
     return (t.tree ?? []).filter((e: any) => e.type === "blob").map((e: any) => e.path as string)
   }
 
-  /** Writes and deletes several files as one commit on the branch. Retries once if the branch moved meanwhile. */
-  async commit(message: string, changes: Change[], attempt = 1): Promise<string> {
-    const ref = await this.call<any>(`/git/ref/heads/${encodeURIComponent(this.branch)}`)
-    const head: string = ref.object.sha
+  /** The commit the branch points at now. */
+  async head(): Promise<string> {
+    return (await this.call<any>(`/git/ref/heads/${encodeURIComponent(this.branch)}`)).object.sha
+  }
+
+  /** Every file in the branch with its git blob fingerprint, to tell what a publish would really change without reading each file. */
+  async blobs(): Promise<Map<string, string>> {
+    const t = await this.call<any>(`/git/trees/${encodeURIComponent(this.branch)}?recursive=1`)
+    return new Map<string, string>((t.tree ?? []).filter((e: any) => e.type === "blob").map((e: any) => [e.path as string, e.sha as string]))
+  }
+
+  /**
+   * Writes and deletes several files as one commit. By default it lands on the branch. With `expectedHead` it is refused if the branch
+   * has moved since the changes were reviewed; with `branch` it goes to a new branch instead, leaving the live one alone.
+   */
+  async commitTo(message: string, changes: Change[], opts: { expectedHead?: string; branch?: string } = {}, attempt = 1): Promise<{ sha: string; branch: string }> {
+    const head = await this.head()
+    if (opts.expectedHead && head !== opts.expectedHead) throw new ProviderError("The branch changed since you reviewed these changes (someone pushed). Nothing was written; review them again.", 409)
     const base = await this.call<any>(`/git/commits/${head}`)
     const tree = []
     for (const c of changes) {
@@ -138,13 +153,31 @@ export class Repo {
     }
     const newTree = await this.call<any>("/git/trees", "POST", { base_tree: base.tree.sha, tree })
     const commit = await this.call<any>("/git/commits", "POST", { message, tree: newTree.sha, parents: [head] })
+    if (opts.branch) {
+      await this.call("/git/refs", "POST", { ref: `refs/heads/${opts.branch}`, sha: commit.sha })
+      return { sha: commit.sha, branch: opts.branch }
+    }
     try {
       await this.call(`/git/refs/heads/${encodeURIComponent(this.branch)}`, "PATCH", { sha: commit.sha })
     } catch (e) {
-      if (attempt < 2 && /HTTP 422/.test((e as Error).message)) return this.commit(message, changes, attempt + 1)
+      if (/HTTP 422/.test((e as Error).message)) {
+        if (opts.expectedHead) throw new ProviderError("The branch changed while publishing (someone pushed). Nothing was published; review the changes again.", 409)
+        if (attempt < 2) return this.commitTo(message, changes, opts, attempt + 1)
+      }
       throw e
     }
-    return commit.sha
+    return { sha: commit.sha, branch: this.branch }
+  }
+
+  /** Writes and deletes several files as one commit on the branch. Retries once if the branch moved meanwhile. */
+  async commit(message: string, changes: Change[]): Promise<string> {
+    return (await this.commitTo(message, changes)).sha
+  }
+
+  /** A pull request from `head` into this repository's branch. */
+  async createPullRequest(title: string, head: string, body: string): Promise<{ url: string; number: number }> {
+    const pr = await this.call<any>("/pulls", "POST", { title, head, base: this.branch, body })
+    return { url: pr.html_url, number: pr.number }
   }
 }
 
@@ -297,11 +330,12 @@ export async function siteRaw(c: StoredConnection, path: string) {
 
 // --- writing -------------------------------------------------------------------
 
-async function writePosts(c: StoredConnection, message: string, mutate: (posts: SitePost[]) => { posts: SitePost[]; changes: PostChange[] }, template?: string) {
+async function writePosts(c: StoredConnection, message: string, mutate: (posts: SitePost[]) => { posts: SitePost[]; changes: PostChange[] }, template?: string, opts: DeliverOptions = {}) {
   const { cfg, repo } = repoFor(c)
   const manifestPath = `${cfg.postsDir}/index.json`
   const [manifestText, index, chrome] = await Promise.all([repo.read(manifestPath), repo.read(cfg.blogIndex), siteChrome(c)])
-  const { posts, changes } = mutate(parseManifest(manifestText).posts)
+  const before = parseManifest(manifestText).posts
+  const { posts, changes } = mutate(before)
   const blogHref = `/${cfg.blogIndex}`
   const all: Change[] = changes.map((ch) => {
     if (!("render" in ch)) return ch
@@ -309,16 +343,20 @@ async function writePosts(c: StoredConnection, message: string, mutate: (posts: 
     return { path: ch.path, content: renderPostPage(post, chrome, blogHref) }
   })
   all.push({ path: manifestPath, content: `${JSON.stringify({ version: 1, posts: sortPosts(posts) }, null, 2)}\n` })
+  let region = false
   if (index) {
     const next = updateIndexBlock(index, posts, (p) => relativePath(cfg.blogIndex, postPath(cfg.postsDir, p.slug)), template)
+    region = next !== null
     if (next !== null && next !== index) all.push({ path: cfg.blogIndex, content: next })
   }
-  await repo.commit(message, all)
-  return { posts: sortPosts(posts) }
+  // What Blackwall owns here: its list of posts, the post pages it made, and (only the text inside its region of) the blog index.
+  const owned = new Map<string, string>([[manifestPath, ""], ...before.map((p) => [postPath(cfg.postsDir, p.slug), ""] as [string, string]), ...(region ? [[cfg.blogIndex, ""] as [string, string]] : [])])
+  const done = await deliver(repo, message, all, owned, opts, { title: message, body: "Made with Blackwall." })
+  return { posts: sortPosts(posts), plan: done.plan, committed: done.committed }
 }
 
 /** Publishes or updates a post. `previousSlug` renames it: the old page is removed in the same commit. */
-export async function publishPost(c: StoredConnection, input: Partial<SitePost>, previousSlug?: string, template?: string) {
+export async function publishPost(c: StoredConnection, input: Partial<SitePost>, previousSlug?: string, template?: string, opts: DeliverOptions = {}) {
   let post: SitePost
   try {
     post = cleanPost(input)
@@ -339,19 +377,19 @@ export async function publishPost(c: StoredConnection, input: Partial<SitePost>,
     const changes: PostChange[] = [{ path: postPath(cfg.postsDir, post.slug), render: post.slug }]
     if (old && old.slug !== post.slug) changes.push({ path: postPath(cfg.postsDir, old.slug), delete: true })
     return { posts: [...posts.filter((p) => p !== old), post], changes }
-  }, template)
+  }, template, opts)
   return { ...result, post, url: cfg.siteUrl ? joinUrl(cfg.siteUrl, postPath(cfg.postsDir, post.slug)) : "" }
 }
 
 /** Takes a post off the site: its page, its manifest entry and its card in the blog index. */
-export async function unpublishPost(c: StoredConnection, slug: string, template?: string) {
+export async function unpublishPost(c: StoredConnection, slug: string, template?: string, opts: DeliverOptions = {}) {
   if (!SLUG_RE.test(slug)) throw new ProviderError("Bad slug", 400)
   const { cfg } = repoFor(c)
   return writePosts(c, `Remove post: ${slug} (via Blackwall)`, (posts) => {
     const old = posts.find((p) => p.slug === slug)
     if (!old) throw new ProviderError("That post isn't published", 404)
     return { posts: posts.filter((p) => p !== old), changes: [{ path: postPath(cfg.postsDir, slug), delete: true }] }
-  }, template)
+  }, template, opts)
 }
 
 const IMAGE_TYPES: Record<string, string> = { png: "png", jpg: "jpg", jpeg: "jpg", gif: "gif", webp: "webp", avif: "avif", svg: "svg" }

@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { AssetFlowHost } from "@/features/assets/asset-flow"
 import { DocsOpenHost } from "@/features/documents/docs-open-host"
 import { FormHost } from "@/components/forms/form-host"
+import { PublishReviewHost } from "@/features/cms/publish-review"
 import { CommandSearch } from "@/components/layout/command-search"
 import { useConnections, useSession } from "@/services/connector"
 import { WorkspaceStatus } from "./workspace-status"
@@ -125,7 +126,7 @@ export function AppShell() {
         </main>
       </div>
       {mobileView && <MobileTabBar />}
-      {workspaceReady && <><FormHost /><DocsOpenHost /><AssetFlowHost /><SettingsModal /><CommandSearch /></>}
+      {workspaceReady && <><FormHost /><PublishReviewHost /><DocsOpenHost /><AssetFlowHost /><SettingsModal /><CommandSearch /></>}
       <Toaster position="bottom-right" />
     </TooltipProvider>
   )
