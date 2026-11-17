@@ -16,9 +16,72 @@ import { cmsPagesHref, sitePageHref } from "@/lib/routes"
 import type { SiteForm, SiteFormField } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useWorkspace } from "@/stores/workspace"
-import { createSite, createSiteFromSite, useCurrentSite } from "./use-cms"
+import { api, useConnections } from "@/services/connector"
+import { forConnection } from "@/services/site"
+import type { SiteScan } from "@shared/site-adopt"
+import { useUi } from "@/stores/ui"
+import { createAdoptedSite, createSite, createSiteFromSite, useCurrentSite } from "./use-cms"
 
 export { slugify }
+
+/** Adopt a site that already exists as hand-written files in a GitHub repository. Reads the repository (nothing is written), then adds it as a card. */
+export function AdoptSiteForm({ onDone }: { onDone: () => void }) {
+  const navigate = useNavigate()
+  const sites = useWorkspace((s) => s.sites)
+  const connections = useConnections((s) => s.list).filter((c) => c.provider === "website")
+  const taken = new Set(sites.filter((s) => s.adopted).map((s) => s.connectionId))
+  const free = connections.filter((c) => !taken.has(c.id))
+  const [connectionId, setConnectionId] = useState(free[0]?.id ?? "")
+  const chosen = connections.find((c) => c.id === connectionId)
+  const [name, setName] = useState("")
+  const [domain, setDomain] = useState("")
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState("")
+  const fromUrl = (chosen?.config.siteUrl ?? "").replace(/^https?:\/\//, "").replace(/\/+$/, "")
+  if (!free.length) {
+    return (
+      <FormFrame title="Adopt an existing site" submitLabel="Add a connection" onSubmit={() => { onDone(); useUi.getState().openSettings("connections", "website") }}>
+        <p className="text-sm text-muted-foreground">
+          {connections.length ? "Every Website connection already has a site. " : ""}Each site has its own connection: a GitHub repository and a token (any account), chosen per site. Add one for the site you want to bring in.
+        </p>
+      </FormFrame>
+    )
+  }
+  return (
+    <FormFrame
+      title="Adopt an existing site"
+      submitLabel={busy ? "Reading…" : "Read the site and add it"}
+      canSubmit={!!chosen && !busy}
+      onSubmit={async () => {
+        setBusy(true)
+        setError("")
+        try {
+          const scan = await api<SiteScan>(forConnection("site/scan", connectionId))
+          const label = name.trim() || chosen!.label
+          createAdoptedSite(label, connectionId, domain.trim().replace(/^https?:\/\//, "").replace(/\/+$/, "") || fromUrl)
+          toast.success(`${label} added`, { description: `${scan.pages.length} page${scan.pages.length === 1 ? "" : "s"} found. Nothing in the repository was changed.` })
+          onDone()
+          navigate(cmsPagesHref)
+        } catch (e) {
+          setError((e as Error).message)
+        } finally {
+          setBusy(false)
+        }
+      }}
+    >
+      <p className="text-xs leading-relaxed text-muted-foreground">Blackwall reads the repository and shows its pages. It never rewrites a file of yours: it only changes text between <code className="font-mono">{"<!-- blackwall:NAME -->"}</code> markers you add, and the posts it publishes itself.</p>
+      <Field label="Connection" htmlFor="adopt-connection" hint="The GitHub repository and token this site publishes through.">
+        <OptionSelect id="adopt-connection" value={connectionId} onChange={(v) => { setConnectionId(v); setName(""); setDomain("") }} options={free.map((c) => ({ value: c.id, label: `${c.label} · ${c.config.repo ?? ""}` }))} />
+      </Field>
+      <div className="grid gap-x-4 gap-y-3.5 sm:grid-cols-2">
+        <Field label="Site name" htmlFor="adopt-name"><Input id="adopt-name" value={name} onChange={(e) => setName(e.target.value)} placeholder={chosen?.label ?? ""} /></Field>
+        <Field label="Domain" htmlFor="adopt-domain" hint="Taken from the connection's site address."><Input id="adopt-domain" value={domain} onChange={(e) => setDomain(e.target.value)} placeholder={fromUrl || "example.com"} /></Field>
+      </div>
+      {error && <p role="alert" className="text-sm text-red-text">{error}</p>}
+      <Button type="button" variant="quiet" size="sm" className="justify-self-start" onClick={() => { onDone(); useUi.getState().openSettings("connections", "website") }}><Plus /> Another connection</Button>
+    </FormFrame>
+  )
+}
 
 /** New site: a name, a domain and a starting point (one of Pagesmith's templates, or a site you kept as a template). */
 export function NewSiteForm({ onDone }: { onDone: () => void }) {

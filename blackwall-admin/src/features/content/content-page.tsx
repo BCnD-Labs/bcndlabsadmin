@@ -15,6 +15,7 @@ import { StatStrip } from "@/components/common/stat-strip"
 import { StatusMarker } from "@/components/common/tags"
 import { timeAgo, timeFmt } from "@/lib/dates"
 import { draftHref } from "@/lib/routes"
+import type { Site } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { useAnalytics } from "@/services/data"
 import { mergePosts, useSite, useSiteStore, type PostItem, type PostState } from "@/services/site"
@@ -29,9 +30,10 @@ type Show = "all" | PostState
 const SHOW_LABEL: Record<Show, string> = { all: "All", published: "Published", scheduled: "Scheduled", draft: "Drafts" }
 
 /** CMS → Posts & pages: everything on the site and in progress, as cards with their cover or a live preview. */
-export function ContentPage() {
-  const site = useSite()
-  const drafts = useWorkspace((s) => s.drafts)
+export function ContentPage({ adopted }: { adopted?: Site } = {}) {
+  const site = useSite(adopted?.connectionId)
+  const allDrafts = useWorkspace((s) => s.drafts)
+  const drafts = useMemo(() => (adopted ? allDrafts.filter((d) => d.siteId === adopted.id) : allDrafts), [allDrafts, adopted])
   const createDraft = useCreateDraft()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
@@ -56,7 +58,7 @@ export function ContentPage() {
     }
     setParams(next, { replace: true })
   }
-  const newPost = () => navigate(draftHref(createDraft().id))
+  const newPost = () => navigate(draftHref(createDraft(adopted ? { siteId: adopted.id } : undefined).id))
   const visitors = traffic.data?.traffic.reduce((a, p) => a + p.visitors, 0)
   const host = site.overview?.siteUrl.replace(/^https?:\/\//, "")
 

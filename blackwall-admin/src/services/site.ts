@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { create } from "zustand"
 import { FALLBACK_CHROME, type ScheduledPost, type SiteChrome, type SiteMediaItem, type SiteOverview, type SitePost } from "@shared/site"
 import type { Draft } from "@/lib/types"
-import { api, useConnectionFor, useSession } from "./connector"
+import { api, useConnectionFor, useConnections, useSession } from "./connector"
 import type { SourceStatus } from "./types"
 
 /**
@@ -22,6 +22,9 @@ interface SiteState {
   unpublish: (slug: string) => Promise<void>
 }
 
+/** Adds the website connection to a request, so each site talks to its own repository. */
+export const forConnection = (path: string, connId?: string) => (connId ? `${path}${path.includes("?") ? "&" : "?"}connection=${encodeURIComponent(connId)}` : path)
+
 export const useSiteStore = create<SiteState>()((set, get) => {
   const reload = () => {
     const id = get().loadedFor
@@ -33,28 +36,28 @@ export const useSiteStore = create<SiteState>()((set, get) => {
       if (!force && get().loadedFor === connId && (get().overview || get().loading)) return
       set({ loading: true, loadedFor: connId })
       try {
-        set({ overview: await api<SiteOverview>("site/overview"), error: undefined, loading: false })
+        set({ overview: await api<SiteOverview>(forConnection("site/overview", connId)), error: undefined, loading: false })
       } catch (e) {
         set({ error: (e as Error).message, loading: false })
       }
     },
     publish: async (post, previousSlug) => {
-      const r = await api<{ url: string }>(`site/posts/${post.slug}`, { method: "PUT", body: JSON.stringify({ post, previousSlug }) })
-      if (previousSlug && previousSlug !== post.slug) await api(`site/schedule/${previousSlug}`, { method: "DELETE" }).catch(() => {})
+      const r = await api<{ url: string }>(forConnection(`site/posts/${post.slug}`, get().loadedFor), { method: "PUT", body: JSON.stringify({ post, previousSlug }) })
+      if (previousSlug && previousSlug !== post.slug) await api(forConnection(`site/schedule/${previousSlug}`, get().loadedFor), { method: "DELETE" }).catch(() => {})
       await reload()
       return r
     },
     schedule: async (post, publishAt) => {
-      const r = await api<ScheduledPost>(`site/schedule/${post.slug}`, { method: "PUT", body: JSON.stringify({ post, publishAt }) })
+      const r = await api<ScheduledPost>(forConnection(`site/schedule/${post.slug}`, get().loadedFor), { method: "PUT", body: JSON.stringify({ post, publishAt }) })
       await reload()
       return r
     },
     unschedule: async (slug) => {
-      await api(`site/schedule/${slug}`, { method: "DELETE" })
+      await api(forConnection(`site/schedule/${slug}`, get().loadedFor), { method: "DELETE" })
       await reload()
     },
     unpublish: async (slug) => {
-      await api(`site/posts/${slug}`, { method: "DELETE" })
+      await api(forConnection(`site/posts/${slug}`, get().loadedFor), { method: "DELETE" })
       await reload()
     },
   }
@@ -67,9 +70,11 @@ export interface SiteFeed {
   refresh: () => void
 }
 
-/** Loads the site overview once the website connection is known. */
-export function useSite(): SiteFeed {
-  const conn = useConnectionFor("website")
+/** Loads the site overview once the website connection is known. Pass a connection to use that site's own repository instead of the first one. */
+export function useSite(connectionId?: string): SiteFeed {
+  const first = useConnectionFor("website")
+  const named = useConnections((s) => s.list.find((c) => c.id === connectionId && c.provider === "website"))
+  const conn = connectionId ? named : first
   const session = useSession((s) => s.state)
   const { overview, error, loading, load, loadedFor } = useSiteStore()
   const usable = !!conn && conn.status === "ok"
@@ -85,22 +90,27 @@ export function useSite(): SiteFeed {
   return { status: "live", overview, error, refresh }
 }
 
-let chromePromise: Promise<SiteChrome> | null = null
-/** The site's header and stylesheets, for previews that look like the real thing. */
-export function useSiteChrome(enabled: boolean): SiteChrome {
+const chromePromises = new Map<string, Promise<SiteChrome>>()
+/** The site's header and stylesheets, for previews that look like the real thing. Each site's own repository when a connection is given. */
+export function useSiteChrome(enabled: boolean, connectionId?: string): SiteChrome {
   const [chrome, setChrome] = useState<SiteChrome>(FALLBACK_CHROME)
   useEffect(() => {
     if (!enabled) return
-    chromePromise ??= api<SiteChrome>("site/chrome").catch((e) => {
-      chromePromise = null
-      throw e
-    })
+    const key = connectionId ?? ""
+    let promise = chromePromises.get(key)
+    if (!promise) {
+      promise = api<SiteChrome>(forConnection("site/chrome", connectionId)).catch((e) => {
+        chromePromises.delete(key)
+        throw e
+      })
+      chromePromises.set(key, promise)
+    }
     let live = true
-    chromePromise.then((c) => live && setChrome(c)).catch(() => {})
+    promise.then((c) => live && setChrome(c)).catch(() => {})
     return () => {
       live = false
     }
-  }, [enabled])
+  }, [enabled, connectionId])
   return chrome
 }
 

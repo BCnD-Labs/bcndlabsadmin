@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto"
+import { cleanPagePath, findRegions, htmlTitle, pagePaths, regionBody, regionText, replaceRegion, stylesheetPaths, type AdoptedPageFile, type SiteScan } from "../../shared/site-adopt.ts"
 import {
   DEFAULT_SITE,
   MARK_START,
@@ -216,6 +218,64 @@ export async function siteOverview(c: StoredConnection, scheduled: ScheduledPost
     pages,
     indexMarkers: !!index?.includes(MARK_START),
   }
+}
+
+/**
+ * Reads an adopted site's repository without writing anything: which pages it has (by file name, so one request
+ * covers any number of pages), whether its blog index has the posts region, and how many posts Blackwall published.
+ */
+export async function scanSite(c: StoredConnection): Promise<SiteScan> {
+  const { cfg, repo } = repoFor(c)
+  const [manifestText, files, index] = await Promise.all([repo.read(`${cfg.postsDir}/index.json`), repo.tree(), repo.read(cfg.blogIndex)])
+  const { paths, more } = pagePaths(files, cfg.postsDir)
+  return {
+    repo: cfg.repo,
+    branch: cfg.branch,
+    siteUrl: cfg.siteUrl,
+    pages: paths.map((p) => ({ path: p, title: pageTitle(p), url: cfg.siteUrl ? joinUrl(cfg.siteUrl, p) : "" })),
+    morePages: more,
+    postsDir: cfg.postsDir,
+    imagesDir: cfg.imagesDir,
+    blogIndex: cfg.blogIndex,
+    blogIndexFound: index !== null,
+    indexMarkers: !!findRegions(index ?? "").some((r) => r.name === "posts"),
+    posts: parseManifest(manifestText).posts.length,
+  }
+}
+
+/** The fingerprint a client must send back to change a file: it proves they saw the file as it is now. */
+export const fingerprint = (text: string) => createHash("sha256").update(text).digest("hex").slice(0, 24)
+
+/** One hand-written page, as it is in the repository now, with its marked regions. */
+export async function readAdoptedPage(c: StoredConnection, rawPath: string): Promise<AdoptedPageFile> {
+  const path = cleanPagePath(rawPath)
+  if (!path) throw new ProviderError("That isn't a page of the site", 400)
+  const { repo } = repoFor(c)
+  const html = await repo.read(path)
+  if (html === null) throw new ProviderError("That page isn't in the repository", 404)
+  // The page's own stylesheets (a few, small ones) so the preview can show the page as it looks.
+  const styles: Record<string, string> = {}
+  for (const css of stylesheetPaths(html, path).slice(0, 6)) {
+    const file = await repo.raw(css).catch(() => null)
+    if (file && file.body.length <= 300_000) styles[css] = file.body.toString("utf8")
+  }
+  return { path, html, title: htmlTitle(html) || pageTitle(path), sha: fingerprint(html), regions: findRegions(html).map((r) => ({ name: r.name, text: regionText(r) })), styles }
+}
+
+/**
+ * Changes the text inside one marked region of one page, and nothing else. The file is read again first:
+ * if it is no longer what the editor showed (the owner pushed from somewhere else), nothing is written.
+ */
+export async function saveRegion(c: StoredConnection, rawPath: string, name: string, content: string, baseSha: string) {
+  const page = await readAdoptedPage(c, rawPath)
+  if (page.sha !== baseSha) throw new ProviderError("This page was changed somewhere else since you opened it. Reload it to see the new version; nothing was saved.", 409)
+  const region = findRegions(page.html).find((r) => r.name === name)
+  if (!region) throw new ProviderError(`This page has no “${name}” region any more, so nothing was saved.`, 409)
+  const next = replaceRegion(page.html, name, regionBody(region, content))
+  if (next === null || next === page.html) return { ...page, changed: false as const }
+  const { repo } = repoFor(c)
+  const sha = await repo.commit(`Edit “${name}” on ${page.path} (via Blackwall)`, [{ path: page.path, content: next }])
+  return { ...(await readAdoptedPage(c, page.path)), changed: true as const, commit: sha }
 }
 
 export async function siteMedia(c: StoredConnection): Promise<SiteMediaItem[]> {

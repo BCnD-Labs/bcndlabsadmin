@@ -27,6 +27,15 @@ export function createSite(name: string, template: string, domain = "") {
   return site
 }
 
+/** A hand-written site added as a card: a site record that points at its repository's connection. No pages are made; they are read from the repository. */
+export function createAdoptedSite(name: string, connectionId: string, domain = "") {
+  const { create } = useWorkspace.getState()
+  const t = siteFromTemplate(name, "simple")
+  const site = create("sites", { ...t.site, name, domain, connectionId, adopted: true })
+  selectSite(site.id)
+  return site
+}
+
 /** A new site that starts as a copy of one you kept as a template (its look and its pages). */
 export function createSiteFromSite(name: string, sourceId: string, domain = "") {
   const { create, sites, pages } = useWorkspace.getState()

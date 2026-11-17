@@ -12,6 +12,7 @@
  *    `blackwall:posts` marker comments, and leaves the file alone without them.
  */
 import { Marked } from "marked"
+import { findRegions } from "./site-adopt.ts"
 
 export interface SitePost {
   slug: string
@@ -36,6 +37,8 @@ export interface ScheduledPost {
   post: SitePost
   publishAt: string
   createdAt: string
+  /** The website connection it publishes to. Absent: the first one, as before sites could have their own. */
+  connectionId?: string
   /** The last failed attempt, if publishing at the scheduled time didn't work. */
   error?: string
   triedAt?: string
@@ -228,13 +231,12 @@ export const sortPosts = (posts: SitePost[]) => [...posts].sort((a, b) => b.date
 
 /** Replaces the block between the markers. Returns null when the page has no markers (leave it alone). */
 export function updateIndexBlock(html: string, posts: SitePost[], hrefFor: (p: SitePost) => string): string | null {
-  const start = html.indexOf(MARK_START)
-  const end = html.indexOf(MARK_END, start + MARK_START.length)
-  if (start < 0 || end < 0) return null
-  const indent = /([ \t]*)$/.exec(html.slice(0, start))?.[1] ?? ""
+  const region = findRegions(html).find((r) => r.name === "posts")
+  if (!region) return null
+  const indent = /([ \t]*)$/.exec(html.slice(0, region.at))?.[1] ?? ""
   const cards = sortPosts(posts).map((p) => `${indent}${postCard(p, hrefFor(p))}`)
   const body = cards.length ? `\n${cards.join("\n")}\n${indent}` : `\n${indent}`
-  return html.slice(0, start + MARK_START.length) + body + html.slice(end)
+  return html.slice(0, region.from) + body + html.slice(region.to)
 }
 
 export function parseManifest(text: string | null): SiteManifest {

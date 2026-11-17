@@ -19,6 +19,8 @@ export function CmsPostsRoute() {
   const site = useCurrentSite()
   const { search } = useLocation()
   if (!site) return <ContentPage />
+  // A site run from its own files keeps the classic Posts page, now pointed at that site's repository.
+  if (site.adopted) return <ContentPage adopted={site} />
   const q = new URLSearchParams(search)
   q.set("panel", "posts")
   return <Navigate to={`${cmsPagesHref}?${q}`} replace />
