@@ -12,6 +12,7 @@ import { AssetField } from "@/features/assets/asset-field"
 import { chooseAsset } from "@/features/assets/asset-flow"
 import { usePreviewPictures } from "@/features/assets/use-assets"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
 import { EmptyState } from "@/components/common/empty-state"
 import { PageHeader } from "@/components/common/page-header"
@@ -58,8 +59,8 @@ export function PostEditor() {
   )
 }
 
-type Editable = Pick<Draft, "title" | "slug" | "kind" | "excerpt" | "body" | "projectId" | "tags" | "cover" | "coverAlt" | "siteId" | "week" | "course" | "due">
-const pick = (d: Draft): Editable => ({ title: d.title, slug: d.slug, kind: d.kind, excerpt: d.excerpt, body: d.body, projectId: d.projectId, tags: d.tags ?? [], cover: d.cover, coverAlt: d.coverAlt, siteId: d.siteId, week: d.week, course: d.course, due: d.due })
+type Editable = Pick<Draft, "title" | "slug" | "kind" | "excerpt" | "body" | "projectId" | "tags" | "cover" | "coverAlt" | "categories" | "featured" | "thumbnail" | "thumbnailAlt" | "siteId" | "week" | "course" | "due">
+const pick = (d: Draft): Editable => ({ title: d.title, slug: d.slug, kind: d.kind, excerpt: d.excerpt, body: d.body, projectId: d.projectId, tags: d.tags ?? [], cover: d.cover, coverAlt: d.coverAlt, categories: d.categories, featured: d.featured, thumbnail: d.thumbnail, thumbnailAlt: d.thumbnailAlt, siteId: d.siteId, week: d.week, course: d.course, due: d.due })
 
 function Editor({ draft }: { draft: Draft }) {
   const update = useWorkspace((s) => s.update)
@@ -244,6 +245,18 @@ function Editor({ draft }: { draft: Draft }) {
                 <TagInput id="post-tags" value={value.tags ?? []} onChange={(tags) => set({ tags })} />
               </Field>
             )}
+            {value.kind === "post" && !pagesmith && (
+              <>
+                <Field label="Categories" htmlFor="post-categories" hint="Groups for the blog list. A post can be in several; your site's own script can filter by them.">
+                  <TagInput id="post-categories" value={value.categories ?? []} onChange={(categories) => set({ categories: categories.length ? categories : undefined })} />
+                </Field>
+                <div className="flex items-center justify-between gap-3">
+                  <label htmlFor="post-featured" className="grid gap-0.5 text-[13px] font-medium text-ink">Featured<span className="text-[11px] font-normal text-muted-foreground">Listed before the other posts.</span></label>
+                  <Switch id="post-featured" checked={!!value.featured} onCheckedChange={(featured) => set({ featured: featured || undefined })} />
+                </div>
+                <ThumbnailField value={value.thumbnail} alt={value.thumbnailAlt} canUpload={live} onChange={(thumbnail, thumbnailAlt) => set({ thumbnail, thumbnailAlt })} />
+              </>
+            )}
             {value.kind === "post" && value.cover && (
               <Field label="Cover description" htmlFor="post-cover-alt" hint="For screen readers and when the image can't load.">
                 <Input id="post-cover-alt" value={value.coverAlt ?? ""} onChange={(e) => set({ coverAlt: e.target.value })} />
@@ -275,6 +288,40 @@ function Editor({ draft }: { draft: Draft }) {
         </aside></GridItem>
       </WorkspaceGrid>
     </>
+  )
+}
+
+/** A small picture for the post's card in the blog list: uploaded to the site's images folder, with a description. */
+function ThumbnailField({ value, alt, canUpload, onChange }: { value?: string; alt?: string; canUpload: boolean; onChange: (thumbnail: string | undefined, alt: string | undefined) => void }) {
+  const ref = useRef<HTMLInputElement>(null)
+  const [busy, setBusy] = useState(false)
+  const take = async (file?: File) => {
+    if (!file) return
+    setBusy(true)
+    try {
+      const img = await uploadSiteImage(file)
+      onChange(img.path, alt)
+      toast.success("Thumbnail uploaded. Update the post to show it in the blog list.")
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <Field label="Thumbnail" htmlFor="post-thumbnail" hint="A small picture for this post's card in the blog list. Optional.">
+      <div className="grid gap-2">
+        <div className="flex items-center gap-2">
+          <Button id="post-thumbnail" type="button" variant="outline" size="sm" disabled={!canUpload || busy} title={canUpload ? "Upload a picture to the site" : "Connect your website to upload pictures"} onClick={() => ref.current?.click()}>
+            {busy ? <Loader2 className="animate-spin" /> : <ImagePlus />} {value ? "Replace" : "Choose picture"}
+          </Button>
+          {value && <Button type="button" variant="quiet" size="sm" onClick={() => onChange(undefined, undefined)}>Remove</Button>}
+          <span className="min-w-0 truncate font-mono text-[11px] text-muted-foreground">{value ?? ""}</span>
+        </div>
+        {value && <Input aria-label="Thumbnail description" value={alt ?? ""} onChange={(e) => onChange(value, e.target.value)} placeholder="What's in the picture" className="h-8 text-xs" />}
+        <input ref={ref} type="file" accept="image/*" hidden onChange={(e) => { void take(e.target.files?.[0]); e.target.value = "" }} />
+      </div>
+    </Field>
   )
 }
 

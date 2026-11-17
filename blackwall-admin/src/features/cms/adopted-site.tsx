@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { adoptedPreview, type AdoptedPageFile, type SiteScan } from "@shared/site-adopt"
+import { CARD_TOKENS, DEFAULT_CARD_TEMPLATE, cardIssues, renderCard, type SitePost } from "@shared/site"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { EmptyState } from "@/components/common/empty-state"
@@ -15,6 +16,7 @@ import { cn } from "@/lib/utils"
 import { api } from "@/services/connector"
 import { forConnection } from "@/services/site"
 import { useUi } from "@/stores/ui"
+import { useWorkspace } from "@/stores/workspace"
 import { ScaledFrame } from "./site-preview"
 
 /* A site Blackwall adopted: hand-written pages in a repository. Blackwall reads them, shows them, and writes only the text
@@ -107,6 +109,35 @@ function RegionEditor({ site, page, region, onSaved }: { site: Site; page: Adopt
   )
 }
 
+/** Labeled sample posts, so the card template can be tried without touching real posts. */
+const SAMPLES: SitePost[] = [
+  { slug: "sample-featured", title: "A featured sample post", excerpt: "Featured posts are listed first.", tags: ["Week 1"], categories: ["Case Study", "Web"], featured: true, date: "2026-01-02T00:00:00.000Z", markdown: "" },
+  { slug: "sample-plain", title: "A plain sample post", excerpt: "", tags: [], date: "2026-01-01T00:00:00.000Z", markdown: "" },
+]
+
+/** The markup of one blog card for this site, with {{tokens}}. Saved on the site; used the next time a post is published or removed. */
+function CardTemplatePanel({ site }: { site: Site }) {
+  const update = useWorkspace((s) => s.update)
+  const saved = site.cardTemplate ?? DEFAULT_CARD_TEMPLATE
+  const [text, setText] = useState(saved)
+  useEffect(() => setText(saved), [saved])
+  const issues = cardIssues(text)
+  const preview = useMemo(() => (issues.length ? "" : `<style>body{font:14px system-ui;margin:12px}.card{border:1px solid #8884;border-radius:8px;padding:10px;margin:0 0 10px}.chips{display:flex;gap:4px;list-style:none;padding:0;margin:0 0 6px}.chip{background:#8882;border-radius:99px;padding:1px 8px;font-size:11px}.post-thumb{max-width:100%}h3{margin:.2em 0}</style>${SAMPLES.map((p) => renderCard(p, "#", text)).join("\n")}`), [text, issues.length])
+  const dirty = text !== saved
+  return (
+    <Panel category="website" title="Post cards" meta="Blog list" actions={<><Button variant="quiet" size="xs" disabled={text === DEFAULT_CARD_TEMPLATE} onClick={() => setText(DEFAULT_CARD_TEMPLATE)}>Reset</Button><Button size="xs" disabled={!dirty || issues.length > 0} onClick={() => { update("sites", site.id, { cardTemplate: text === DEFAULT_CARD_TEMPLATE ? undefined : text }); toast.success("Card template saved", { description: "It is used the next time a post is published or removed." }) }}><Save /> Save</Button></>} bodyClassName="grid gap-2 px-3 py-2.5">
+      <Textarea aria-label="Blog card template" value={text} onChange={(e) => setText(e.target.value)} spellCheck={false} rows={8} className="font-mono text-xs" />
+      {issues.length > 0 && <ul role="alert" className="grid gap-0.5 text-[11px] text-red-text">{issues.map((i) => <li key={i}>{i}</li>)}</ul>}
+      <details className="text-[11px] text-muted-foreground">
+        <summary className="cursor-pointer text-ink-2">Tokens</summary>
+        <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">{CARD_TOKENS.map((t) => <><dt key={t.token} className="font-mono text-ink-2">{`{{${t.token}}}`}</dt><dd key={`${t.token}-d`}>{t.about}</dd></>)}</dl>
+      </details>
+      {preview ? <iframe title="Card preview" srcDoc={preview} sandbox="" className="h-44 w-full rounded-md border border-line-soft bg-white" /> : null}
+      <p className="text-[11px] text-faint">The preview uses two made-up sample posts. Blackwall only writes the markup and the data-category and data-featured attributes; filtering is up to your site's own script.</p>
+    </Panel>
+  )
+}
+
 /** The workspace for an adopted site: its pages, the page as visitors see it, and the regions Blackwall may edit. */
 export function AdoptedWorkspace({ site }: { site: Site }) {
   const [params, setParams] = useSearchParams()
@@ -166,6 +197,7 @@ export function AdoptedWorkspace({ site }: { site: Site }) {
         </Panel>
 
         <div className="grid content-start gap-[var(--bw-grid-gap)]">
+          <CardTemplatePanel site={site} />
           {page && page.regions.length > 0 ? page.regions.map((r) => <RegionEditor key={r.name} site={site} page={page} region={r} onSaved={set} />) : (
             <Panel category="website" title="Editable regions" bodyClassName="grid gap-2 px-3.5 py-3 text-xs leading-relaxed text-muted-foreground">
               <p>{page ? "This page is yours: Blackwall shows it but doesn't change it." : "Choose a page to see which parts Blackwall may edit."}</p>
