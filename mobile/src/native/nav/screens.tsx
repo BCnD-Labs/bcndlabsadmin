@@ -1,5 +1,6 @@
 import type { ComponentType } from "react"
 import { DevScreen } from "../screens/DevScreen.tsx"
+import { FilesScreen } from "../screens/FilesScreen.tsx"
 import { HomeScreen } from "../screens/HomeScreen.tsx"
 import { InsightsScreen } from "../screens/InsightsScreen.tsx"
 import { LearningScreen } from "../screens/LearningScreen.tsx"
@@ -26,5 +27,6 @@ export const SCREENS: Record<ScreenKey, ComponentType<ScreenProps>> = {
   website: WebsiteScreen,
   social: SocialScreen,
   mikoshi: MikoshiScreen,
+  files: FilesScreen,
 }
 

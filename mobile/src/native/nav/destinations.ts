@@ -9,7 +9,7 @@ import type { IconName } from "../ui.tsx"
 export const NAV_CLEARANCE = 140
 
 /** Screens the shell can show. "settings" is an action (opens native Settings), not a screen. */
-export type ScreenKey = "home" | "planner" | "journal" | "learning" | "dev" | "notes" | "insights" | "website" | "social" | "mikoshi"
+export type ScreenKey = "home" | "planner" | "journal" | "learning" | "dev" | "notes" | "insights" | "website" | "social" | "mikoshi" | "files"
 export type DestinationKey = ScreenKey | "settings"
 export type GroupName = "Daily" | "Build" | "Homelab" | "App"
 
@@ -38,6 +38,7 @@ export const DESTINATIONS: readonly Destination[] = [
   { key: "website", label: "Website", icon: "globe-outline", activeIcon: "globe", group: "Build" },
   { key: "social", label: "Social", icon: "megaphone-outline", activeIcon: "megaphone", group: "Build" },
   { key: "mikoshi", label: "Mikoshi", icon: "server-outline", activeIcon: "server", group: "Homelab" },
+  { key: "files", label: "Files", icon: "folder-open-outline", activeIcon: "folder-open", group: "Homelab" },
   { key: "settings", label: "Settings", icon: "settings-outline", activeIcon: "settings", group: "App" },
 ]
 

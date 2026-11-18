@@ -1,4 +1,5 @@
 import type { StoredConnection } from "../store.ts"
+import type { StorageEntry } from "../../shared/storage.ts"
 import { ProviderError, fmtCount, need } from "../http.ts"
 import type { TestResult } from "./index.ts"
 
@@ -7,18 +8,7 @@ import type { TestResult } from "./index.ts"
  * (Personal settings → Security → Devices & sessions). Paths are always relative
  * to the user's root and are normalised so they can't climb out of it.
  */
-export interface StorageEntry {
-  name: string
-  /** "/Documents/notes.md" (directories end without a slash). */
-  path: string
-  type: "file" | "dir"
-  size: number
-  modified: string
-  mime?: string
-  etag?: string
-  /** Nextcloud's file id, for the /f/<id> link that opens it in Nextcloud. */
-  fileId?: string
-}
+export type { StorageEntry }
 
 export function cleanPath(raw: unknown): string {
   if (typeof raw !== "string") throw new ProviderError("Missing path", 400)
