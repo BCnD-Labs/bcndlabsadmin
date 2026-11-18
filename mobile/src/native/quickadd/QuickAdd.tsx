@@ -127,7 +127,7 @@ const s = StyleSheet.create({
   menuScroll: { flexGrow: 0 }, group: { color: c.muted, fontSize: 10, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.6, paddingHorizontal: 8, paddingTop: 7, paddingBottom: 3 },
   row: { minHeight: 36, flexDirection: "row", alignItems: "center", gap: 9, paddingHorizontal: 8, borderRadius: 9 }, pressed: { backgroundColor: c.selected },
   rowIcon: { width: 20, alignItems: "center", justifyContent: "center" }, rowText: { flex: 1, minWidth: 0 }, rowLabel: { color: c.text, fontSize: 12.5 }, rowHint: { color: c.muted, fontSize: 11 },
-  notice: { color: "#ffa8a8", fontSize: 12, padding: 8 },
+  notice: { color: c.errorText, fontSize: 12, padding: 8 },
   backdrop: { flex: 1, justifyContent: "center", padding: 16, backgroundColor: "rgba(0,0,0,0.55)" }, dialog: { maxHeight: "86%", padding: 14, borderRadius: shape.dialog, backgroundColor: c.raised, gap: 10 }, head: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }, dialogTitle: { color: c.text, fontSize: 16, fontWeight: "700" },
   search: { flexDirection: "row", alignItems: "center", gap: 8, minHeight: 38, borderRadius: 20, backgroundColor: c.panel, paddingHorizontal: 12, borderWidth: 1, borderColor: c.line }, searchInput: { flex: 1, color: c.text, fontSize: 13, paddingVertical: 5 },
   list: { flexGrow: 0 }, target: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 4, paddingVertical: 4, borderBottomWidth: 1, borderBottomColor: c.line }, targetBody: { flex: 1, minWidth: 0 }, targetTitle: { color: c.text, fontSize: 13.5, fontWeight: "600" }, empty: { color: c.muted, fontSize: 12, paddingVertical: 12 },

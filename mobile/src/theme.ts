@@ -12,7 +12,7 @@ export const color = {
   border: p.border,
   red: "#c92a2a",
   redPressed: "#b52424",
-  errorText: "#ffa8a8",
+  errorText: p.errorText,
   text: p.text,
   text2: p.text2,
   muted: p.muted,

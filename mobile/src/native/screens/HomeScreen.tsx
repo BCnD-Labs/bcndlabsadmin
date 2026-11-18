@@ -219,7 +219,7 @@ const s = StyleSheet.create({
   emptyText: { color: c.muted, fontSize: 11, paddingVertical: 8, paddingHorizontal: 9 },
   empty: { gap: 8, paddingVertical: 16 },
   title: { color: c.text, fontSize: 15, fontWeight: "700" },
-  error: { color: "#ffa8a8", fontSize: 12 },
+  error: { color: c.errorText, fontSize: 12 },
   miniAction: { minHeight: 32, alignSelf: "flex-start", justifyContent: "center", paddingHorizontal: 9 },
   actionText: { color: c.accent, fontSize: 11, fontWeight: "600" },
 })

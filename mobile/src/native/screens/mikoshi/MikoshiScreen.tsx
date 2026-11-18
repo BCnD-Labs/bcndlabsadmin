@@ -8,6 +8,7 @@ import { selectedItem } from "../../selected-item.ts"
 import type { ScreenProps } from "../../nav/screens.tsx"
 import { WorkspacePage, WorkspaceSection } from "../../WorkspacePage.tsx"
 import { Icon, type IconName } from "../../ui.tsx"
+import { PropChip } from "../../kit/PropChip.tsx"
 import { addressLabel, closeTool, groupServices, noTools, openTool, pruneTools, showList, statusSummary, toolTarget, type Tools } from "./mikoshi-rules.ts"
 import { ToolWebView, type ToolHandle } from "./ToolWebView.tsx"
 import { ServiceEditor } from "./ServiceEditor.tsx"
@@ -116,9 +117,9 @@ function ToolRow({ name, description, url, status, isOpen, selected, onPress, on
           <Text style={s.rowTitle} numberOfLines={1}>{name}</Text>
           <Text style={s.meta} numberOfLines={1}>{[description, addressLabel(url)].filter(Boolean).join(" · ")}</Text>
         </View>
-        {isOpen ? <Text style={s.tagOn}>open</Text> : null}
-        {target.kind !== "app" ? <Text style={s.tag}>http</Text> : null}
-        <View style={[s.dot, { backgroundColor: !status ? c.muted : status.up ? c.green : "#ff8787" }]} />
+        {isOpen ? <PropChip kind="tag" value="Open" /> : null}
+        {target.kind !== "app" ? <PropChip kind="neutral" value="http" /> : null}
+        <View style={[s.dot, { backgroundColor: !status ? c.muted : status.up ? c.green : c.danger }]} />
       </Pressable><Pressable onPress={onEdit} style={s.edit} accessibilityRole="button" accessibilityLabel={`Edit ${name}`}><Icon name="create-outline" size={15} tint={c.muted} /></Pressable></View>
       {selected ? (
         <View style={selectedItem.preview}>
@@ -154,10 +155,9 @@ function ToolBar({ tools, active, onSwitch, onBack, onReload, onClose, onList }:
 const s = StyleSheet.create({
   fill: { flex: 1, backgroundColor: c.ground }, hidden: { display: "none" },
   add: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: c.panel, borderWidth: 1, borderColor: c.line },
-  empty: { gap: 8, paddingVertical: 16 }, title: { color: c.text, fontSize: 15, fontWeight: "700" }, meta: { color: c.muted, fontSize: 11, lineHeight: 16 }, error: { color: "#ffa8a8", fontSize: 12 },
+  empty: { gap: 8, paddingVertical: 16 }, title: { color: c.text, fontSize: 15, fontWeight: "700" }, meta: { color: c.muted, fontSize: 11, lineHeight: 16 }, error: { color: c.errorText, fontSize: 12 },
   rowWrap: { flexDirection: "row", alignItems: "center" }, row: { flex: 1, minHeight: 46, flexDirection: "row", alignItems: "center", gap: 9, paddingVertical: 4 }, edit: { width: 32, height: 32, alignItems: "center", justifyContent: "center" }, rowBody: { flex: 1, minWidth: 0 }, rowTitle: { color: c.text, fontSize: 14, fontWeight: "600" },
   badge: { width: 28, height: 28, borderRadius: 8, backgroundColor: c.raised, borderWidth: 1, borderColor: c.line, alignItems: "center", justifyContent: "center" }, badgeText: { color: c.accent, fontSize: 13, fontWeight: "700" },
-  tag: { color: c.dateText, fontSize: 10, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8, backgroundColor: c.dateFill }, tagOn: { color: c.accent, fontSize: 10, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8, backgroundColor: c.tagFill },
   dot: { width: 9, height: 9, borderRadius: 5, marginRight: 4 },
   detail: { color: c.text2, fontSize: 12, lineHeight: 17 },
   bar: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingTop: 8, paddingBottom: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.line },

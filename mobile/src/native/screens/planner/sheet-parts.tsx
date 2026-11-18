@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
 import { Pressable, StyleSheet, Switch, Text, View } from "react-native"
 import { plannerColor as c } from "../../planner-theme.ts"
-const color = { ...c, edge: c.line, well: c.ground, faint: c.muted, red: c.accent, errorText: "#ffa8a8" }
+const color = { ...c, edge: c.line, well: c.ground, faint: c.muted, red: c.accent, errorText: c.errorText }
 import { Icon, tone } from "../../ui.tsx"
 
 /** Small building blocks shared by the task editor's sections (plain React Native, theme tokens only). */

@@ -87,5 +87,5 @@ const s = StyleSheet.create({
   list: { flexGrow: 0 }, listContent: { paddingVertical: 6 }, note: { color: c.muted, fontSize: 12, lineHeight: 17, paddingHorizontal: 12, paddingVertical: 6 },
   planRow: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 50, paddingHorizontal: 6, borderTopWidth: 1, borderColor: c.line }, when: { color: c.text2, fontSize: 12, fontWeight: "600" },
   actions: { flexDirection: "row", justifyContent: "flex-end", gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderTopWidth: 1, borderColor: c.line },
-  apply: { minHeight: 32, paddingHorizontal: 13, borderRadius: shape.card, justifyContent: "center", backgroundColor: c.action }, disabled: { opacity: 0.45 }, applyText: { color: "#fff", fontSize: 12, fontWeight: "600" }, error: { color: "#ff8787", fontSize: 12, padding: 12 },
+  apply: { minHeight: 32, paddingHorizontal: 13, borderRadius: shape.card, justifyContent: "center", backgroundColor: c.action }, disabled: { opacity: 0.45 }, applyText: { color: "#fff", fontSize: 12, fontWeight: "600" }, error: { color: c.danger, fontSize: 12, padding: 12 },
 })
