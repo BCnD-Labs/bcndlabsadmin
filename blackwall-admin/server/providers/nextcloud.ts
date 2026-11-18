@@ -119,3 +119,101 @@ export async function testNextcloud(c: StoredConnection): Promise<TestResult> {
     ],
   }
 }
+
+// --- Office editing (Nextcloud "direct editing", served by Collabora through Nextcloud's Office app) ---------------
+
+/** The office formats the Docs editor offers, by the MIME type Nextcloud lists for its editors. */
+const OFFICE_MIME: Record<string, string> = {
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx",
+  "application/vnd.oasis.opendocument.text": "odt",
+  "application/vnd.oasis.opendocument.spreadsheet": "ods",
+  "application/vnd.oasis.opendocument.presentation": "odp",
+  "application/msword": "doc",
+  "application/vnd.ms-excel": "xls",
+  "application/vnd.ms-powerpoint": "ppt",
+  "application/rtf": "rtf",
+}
+const CREATABLE = new Set(["docx", "xlsx", "pptx", "odt", "ods", "odp"])
+
+export interface EditingCreator { id: string; editor: string; name: string; extension: string }
+export interface EditingInfo {
+  /** True when Nextcloud has an office editor installed and configured (Collabora). */
+  available: boolean
+  /** File extensions that open in it. */
+  extensions: string[]
+  /** Blank documents Nextcloud can create. */
+  creators: EditingCreator[]
+}
+
+const isRecord = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v)
+
+/** Reads Nextcloud's directEditing listing (`ocs.data.editors` and `ocs.data.creators`) into what Blackwall needs. Unknown shapes mean "not available". */
+export function parseEditing(body: unknown): EditingInfo {
+  const data = isRecord(body) && isRecord(body.ocs) && isRecord(body.ocs.data) ? body.ocs.data : {}
+  const extensions = new Set<string>()
+  const editorIds = new Set<string>()
+  for (const editor of Object.values(isRecord(data.editors) ? data.editors : {})) {
+    if (!isRecord(editor) || typeof editor.id !== "string") continue
+    const mimes = [...(Array.isArray(editor.mimetypes) ? editor.mimetypes : []), ...(Array.isArray(editor.optionalMimetypes) ? editor.optionalMimetypes : [])]
+    const found = mimes.map((m) => (typeof m === "string" ? OFFICE_MIME[m] : undefined)).filter((e): e is string => !!e)
+    if (!found.length) continue
+    editorIds.add(editor.id)
+    for (const e of found) extensions.add(e)
+  }
+  const creators: EditingCreator[] = []
+  for (const creator of Object.values(isRecord(data.creators) ? data.creators : {})) {
+    if (!isRecord(creator) || typeof creator.id !== "string" || typeof creator.editor !== "string" || typeof creator.name !== "string" || typeof creator.extension !== "string") continue
+    const extension = creator.extension.replace(/^\./, "").toLowerCase()
+    if (editorIds.has(creator.editor) && CREATABLE.has(extension)) creators.push({ id: creator.id, editor: creator.editor, name: creator.name, extension })
+  }
+  return { available: extensions.size > 0, extensions: [...extensions].sort(), creators }
+}
+
+/** The one-time editor address in a directEditing open/create answer. Only web addresses are passed on. */
+export function parseEditingUrl(body: unknown): string {
+  const url = isRecord(body) && isRecord(body.ocs) && isRecord(body.ocs.data) ? body.ocs.data.url : undefined
+  if (typeof url !== "string" || !/^https?:\/\//i.test(url)) throw new ProviderError("Nextcloud didn't return an editor address.", 502)
+  return url
+}
+
+async function directEditing(c: StoredConnection, method: "GET" | "POST", sub: string, params: Record<string, string> = {}): Promise<unknown> {
+  const b = davBase(c)
+  const query = new URLSearchParams({ format: "json", ...params })
+  let res: Response
+  try {
+    res = await fetch(`${b.url}/ocs/v2.php/apps/files/api/v1/directEditing${sub}?${query}`, { method, headers: { Authorization: b.auth, "OCS-APIRequest": "true", Accept: "application/json" }, signal: AbortSignal.timeout(30_000) })
+  } catch (e) {
+    throw new ProviderError(`Nextcloud isn't reachable: ${(e as Error).message}`)
+  }
+  if (res.status === 401) throw new ProviderError("Nextcloud rejected the app password. Create a new one in Personal settings → Security.", 401)
+  if (res.status === 500) throw new ProviderError("Editing isn't set up in Nextcloud yet. Install the Nextcloud Office app and connect it to Collabora (see docs/mikoshi/COLLABORA.md).", 409)
+  if (res.status === 403) throw new ProviderError("Nextcloud wouldn't open that file for editing.", 403)
+  if (!res.ok) throw new ProviderError(`Nextcloud answered HTTP ${res.status}`, res.status >= 500 ? 502 : res.status)
+  try {
+    return await res.json()
+  } catch {
+    throw new ProviderError("Nextcloud sent an answer Blackwall couldn't read.", 502)
+  }
+}
+
+/** What Nextcloud can edit. An older Nextcloud, or one without the Office app, answers with nothing usable: not available. */
+export async function editingInfo(c: StoredConnection): Promise<EditingInfo> {
+  try {
+    return parseEditing(await directEditing(c, "GET", ""))
+  } catch (e) {
+    if (e instanceof ProviderError && e.status === 409) return { available: false, extensions: [], creators: [] }
+    throw e
+  }
+}
+
+/** A one-time address that shows the file in Nextcloud's office editor. It works without signing in, and only once, so ask just before showing it. */
+export async function openForEditing(c: StoredConnection, path: string): Promise<string> {
+  return parseEditingUrl(await directEditing(c, "POST", "/open", { path }))
+}
+
+/** Creates a blank document and returns the same kind of address as `openForEditing`. */
+export async function createForEditing(c: StoredConnection, path: string, creator: EditingCreator): Promise<string> {
+  return parseEditingUrl(await directEditing(c, "POST", "/create", { path, editorId: creator.editor, creatorId: creator.id }))
+}

@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { Readable } from "node:stream"
 import { ProviderError } from "./http.ts"
-import { cleanPath, dav, davBase, listFolder } from "./providers/nextcloud.ts"
+import { cleanPath, createForEditing, dav, davBase, editingInfo, listFolder, openForEditing } from "./providers/nextcloud.ts"
 import type { ConnectionStore } from "./store.ts"
 
 /** Files that open in the built-in editor: text, up to 2 MB. Everything else downloads or opens in Nextcloud. */
@@ -25,6 +25,22 @@ export async function handleStorage(store: ConnectionStore, req: IncomingMessage
   }
   if (!c) throw new ProviderError("Nextcloud isn't connected. Add it in Settings → Connections.", 409)
   const path = () => cleanPath(url.searchParams.get("path") ?? "/")
+
+  // Office editing: Nextcloud's Collabora editor, shown inside the Docs app (see docs/mikoshi/COLLABORA.md).
+  if (sub === "edit/info" && method === "GET") return json(200, await editingInfo(c))
+  if (sub === "edit/open" && method === "POST") {
+    const p = cleanPath((await readBody<{ path?: string }>()).path)
+    if (p === "/") throw new ProviderError("Pick a document to edit", 400)
+    return json(200, { url: await openForEditing(c, p) })
+  }
+  if (sub === "edit/create" && method === "POST") {
+    const body = await readBody<{ path?: string; extension?: string }>()
+    const p = cleanPath(body.path)
+    const creator = (await editingInfo(c)).creators.find((x) => x.extension === body.extension)
+    if (!creator) throw new ProviderError("Nextcloud can't create that kind of document. Set up editing first.", 409)
+    if (!p.toLowerCase().endsWith("." + creator.extension)) throw new ProviderError(`The name must end in .${creator.extension}`, 400)
+    return json(200, { path: p, url: await createForEditing(c, p, creator) })
+  }
 
   if (sub === "list" && method === "GET") return json(200, await listFolder(c, path()))
 

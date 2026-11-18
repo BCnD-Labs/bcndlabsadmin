@@ -31,3 +31,39 @@ test("a PROPFIND multistatus becomes folders and files with quota", () => {
   const file = entries.find((e) => e.name === "notes.md")!
   assert.deepEqual([file.type, file.size, file.mime, file.etag, file.fileId], ["file", 12, "text/markdown", "abc", "77"])
 })
+
+import { parseEditing, parseEditingUrl } from "../server/providers/nextcloud.ts"
+
+const DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+const listing = {
+  ocs: { data: {
+    editors: {
+      text: { id: "text", name: "Text", mimetypes: ["text/markdown"], optionalMimetypes: ["text/plain"] },
+      richdocuments: { id: "richdocuments", name: "Nextcloud Office", mimetypes: [DOCX, "application/vnd.oasis.opendocument.spreadsheet"], optionalMimetypes: ["application/msword"] },
+    },
+    creators: {
+      textdocument: { id: "textdocument", editor: "text", name: "Text file", extension: ".md" },
+      document: { id: "document", editor: "richdocuments", name: "Document", extension: ".docx" },
+      sheet: { id: "sheet", editor: "richdocuments", name: "Spreadsheet", extension: ".ods" },
+    },
+  } },
+}
+
+test("the direct-editing listing says which office files open and which blanks can be made", () => {
+  const info = parseEditing(listing)
+  assert.equal(info.available, true)
+  assert.deepEqual(info.extensions, ["doc", "docx", "ods"])
+  assert.deepEqual(info.creators.map((c) => c.id), ["document", "sheet"])
+})
+
+test("no office editor, or an unreadable listing, means editing is not available", () => {
+  assert.deepEqual(parseEditing({ ocs: { data: { editors: { text: { id: "text", mimetypes: ["text/markdown"] } }, creators: {} } } }), { available: false, extensions: [], creators: [] })
+  assert.equal(parseEditing("nope").available, false)
+  assert.equal(parseEditing(null).available, false)
+})
+
+test("only a web address from Nextcloud is accepted as the editor address", () => {
+  assert.equal(parseEditingUrl({ ocs: { data: { url: "https://cloud.example/index.php/apps/files/directEditing/abc" } } }), "https://cloud.example/index.php/apps/files/directEditing/abc")
+  assert.throws(() => parseEditingUrl({ ocs: { data: { url: "javascript:alert(1)" } } }), /editor address/)
+  assert.throws(() => parseEditingUrl({}), /editor address/)
+})

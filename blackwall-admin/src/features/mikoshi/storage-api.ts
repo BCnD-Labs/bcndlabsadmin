@@ -28,6 +28,13 @@ export interface FolderListing {
   self?: StorageEntry
 }
 
+/** What Nextcloud's office editor (Collabora) can open and create. `available` is false until it is set up (docs/mikoshi/COLLABORA.md). */
+export interface EditingInfo {
+  available: boolean
+  extensions: string[]
+  creators: { id: string; editor: string; name: string; extension: string }[]
+}
+
 const q = (path: string) => `path=${encodeURIComponent(path)}`
 
 export const storage = {
@@ -36,6 +43,10 @@ export const storage = {
   readText: (path: string) => api<{ path: string; text: string; etag: string }>(`storage/text?${q(path)}`),
   writeText: (path: string, text: string, opts: { etag?: string; create?: boolean } = {}) =>
     api<{ path: string; etag: string }>("storage/text", { method: "PUT", body: JSON.stringify({ path, text, ...opts }) }),
+  editInfo: () => api<EditingInfo>("storage/edit/info"),
+  /** A one-time address for the editor page; ask just before showing it. */
+  editOpen: (path: string) => api<{ url: string }>("storage/edit/open", { method: "POST", body: JSON.stringify({ path }) }),
+  editCreate: (path: string, extension: string) => api<{ path: string; url: string }>("storage/edit/create", { method: "POST", body: JSON.stringify({ path, extension }) }),
   mkdir: (path: string) => api<{ path: string }>("storage/folder", { method: "POST", body: JSON.stringify({ path }) }),
   move: (from: string, to: string) => api<{ path: string }>("storage/move", { method: "POST", body: JSON.stringify({ from, to }) }),
   remove: (path: string) => api<{ path: string }>(`storage?${q(path)}`, { method: "DELETE" }),
