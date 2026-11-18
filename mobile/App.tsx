@@ -3,6 +3,7 @@ import { StatusBar } from "expo-status-bar"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { StyleSheet, View, type LayoutRectangle } from "react-native"
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context"
+import { CrashGuard } from "./src/components/CrashGuard.tsx"
 import { SettingsHandle } from "./src/components/SettingsHandle.tsx"
 import { clearAddress, loadAddress, loadViewMode, saveAddress, saveViewMode } from "./src/lib/storage.ts"
 import { sanitizeViewMode, type ViewMode } from "./src/lib/view-mode.ts"
@@ -45,6 +46,11 @@ export default function App() {
     setBoot({ status: "ready", address: url, viewMode: sanitizeViewMode(await loadViewMode(), NativeHome != null) })
   }
 
+  const useWeb = useCallback(() => {
+    void saveViewMode("web")
+    setBoot((b) => (b.status === "ready" ? { ...b, viewMode: "web" } : b))
+  }, [])
+
   let body = null
   if (boot.status === "setup") {
     body = <SetupScreen onSaved={onSaved} />
@@ -53,7 +59,7 @@ export default function App() {
     body = (
       <SafeAreaView style={styles.flex} edges={["top", "bottom", "left", "right"]}>
         <View style={styles.flex} onLayout={(e) => setArea(e.nativeEvent.layout)}>
-          {Native ? <Native address={boot.address} onOpenSettings={openSettings} /> : <WebScreen ref={web} startUrl={boot.address} onOpenSettings={openSettings} />}
+          {Native ? <CrashGuard scope="app" onUseWeb={useWeb} onOpenSettings={openSettings}><Native address={boot.address} onOpenSettings={openSettings} onUseWeb={useWeb} /></CrashGuard> : <WebScreen ref={web} startUrl={boot.address} onOpenSettings={openSettings} />}
           <SettingsHandle area={area} onOpen={openSettings} badge={updateAvailable} reserveBottom={Native ? 96 : 0} />
         </View>
         <SettingsScreen
