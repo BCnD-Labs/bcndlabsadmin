@@ -1,4 +1,6 @@
 import { useState } from "react"
+import { WebViewLink } from "../kit/WebViewLink.tsx"
+import type { ScreenProps } from "../nav/screens.tsx"
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native"
 import { A11Y_KINDS, auditSite } from "../../../../blackwall-admin/shared/site-a11y.ts"
 import { siteOrigin } from "../../../../blackwall-admin/shared/sitebuilder.ts"
@@ -18,7 +20,7 @@ type Site = Collections["sites"][number]
 type Draft = Collections["drafts"][number]
 
 /** A live CMS overview; pages and drafts come from the same workspace as the web view. */
-export function WebsiteScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
+export function WebsiteScreen({ onOpenSettings, onUseWeb }: ScreenProps) {
   const { data, address, status, message, pending, mutate, refreshing, refresh } = useWorkspace()
   const [open, setOpen] = useState<string | null>(null)
   const [pageOpen, setPageOpen] = useState<string | null>(null)
@@ -69,7 +71,7 @@ export function WebsiteScreen({ onOpenSettings }: { onOpenSettings: () => void }
               <View style={s.summary}><Text style={s.meta}>{site.publishedAt ? "Published " + site.publishedAt.slice(0, 10) : "Not published yet"}{published[site.id] ? ` · ${published[site.id].files} files committed` : ""}</Text>{url && site.publishedAt ? <Pressable onPress={() => void Linking.openURL(url)} accessibilityRole="link" style={selectedItem.action}><Text style={selectedItem.actionText}>Open site</Text><Icon name="open-outline" size={13} tint={c.accent} /></Pressable> : null}</View>
               <Text style={s.groupTitle}>Pages</Text>
               {pages.map(page => <Pressable key={page.id} onPress={() => setPageOpen(page.id)} style={s.subrow} accessibilityRole="button" accessibilityLabel={`Edit ${page.title}`}><Icon name="document-outline" size={15} tint={kit.hue.website} /><Text style={s.subTitle} numberOfLines={1}>{page.title}</Text><Text style={s.meta}>/{page.slug}</Text></Pressable>)}
-              {!pages.length ? <Text style={s.empty}>No pages yet. Create one in Web view.</Text> : null}
+              {!pages.length ? <WebViewLink text="No pages yet." action="Create in Web view" path="/cms/pages" onUseWeb={onUseWeb} /> : null}
               <Text style={s.groupTitle}>Posts</Text>
               {drafts.map(draft => <Pressable key={draft.id} onPress={() => edit(draft)} style={s.subrow} accessibilityRole="button" accessibilityLabel={`Edit ${draft.title}`}><Icon name="create-outline" size={15} tint={c.amber} /><Text style={s.subTitle} numberOfLines={1}>{draft.title}</Text><Text style={s.meta}>{draft.status}</Text></Pressable>)}
               {!drafts.length ? <Text style={s.empty}>No posts for this site yet.</Text> : null}
@@ -86,10 +88,10 @@ export function WebsiteScreen({ onOpenSettings }: { onOpenSettings: () => void }
         {!data.sites.length ? <Pressable onPress={() => editSite("new")} style={selectedItem.action} accessibilityRole="button"><Text style={selectedItem.actionText}>+ Create a site</Text></Pressable> : null}
       </WorkspaceSection>
       <WorkspaceSection title="Other website tools" icon="grid-outline">
-        <View style={s.toolRow}><Text style={s.subTitle}>Forms</Text><Text style={s.meta}>{data.forms.length} saved</Text></View>
-        <View style={s.toolRow}><Text style={s.subTitle}>Media</Text><Text style={s.meta}>Web view</Text></View>
-        <View style={s.toolRow}><Text style={s.subTitle}>Traffic</Text><Text style={s.meta}>Web view</Text></View>
-        <Text style={s.meta}>Form inbox, media uploads and traffic are available in Web view.</Text>
+        <View style={s.toolRow}><Text style={s.subTitle}>Forms</Text><WebViewLink text={`${data.forms.length} saved ·`} action="Inbox" path="/cms/pages?panel=forms" onUseWeb={onUseWeb} /></View>
+        <View style={s.toolRow}><Text style={s.subTitle}>Media</Text><WebViewLink action="Open" path="/cms/pages?panel=files" onUseWeb={onUseWeb} /></View>
+        <View style={s.toolRow}><Text style={s.subTitle}>Traffic</Text><WebViewLink action="Open" path="/analytics" onUseWeb={onUseWeb} /></View>
+        <Text style={s.meta}>These open in Web view.</Text>
       </WorkspaceSection>
       {data.drafts.filter(d => !d.siteId || !data.sites.some(site => site.id === d.siteId)).length ? <WorkspaceSection title="Unassigned drafts" icon="create-outline" tint={c.amber}>{data.drafts.filter(d => !d.siteId || !data.sites.some(site => site.id === d.siteId)).map(d => <Pressable key={d.id} onPress={() => edit(d)} style={s.subrow} accessibilityRole="button" accessibilityLabel={`Edit ${d.title}`}><Icon name="create-outline" size={15} tint={c.amber} /><Text style={s.subTitle} numberOfLines={1}>{d.title}</Text><Text style={s.meta}>{d.status}</Text></Pressable>)}</WorkspaceSection> : null}
     </> : <Text style={s.empty}>{status === "signed-out" ? "Sign in under Settings to see your sites." : message ?? "Loading your workspace…"}</Text>}
