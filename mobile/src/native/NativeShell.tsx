@@ -34,8 +34,8 @@ export function NativeShell({ address, onOpenSettings, onUseWeb }: NativeHomePro
       <QuickAddProvider>
       <View style={styles.root}>
         <View style={styles.page} accessibilityElementsHidden={moreOpen} importantForAccessibility={moreOpen ? "no-hide-descendants" : "auto"}>
-          {KEEP_ALIVE.includes(current) ? null : <CrashGuard key={current} scope="screen" label={findDestination(current).label} onUseWeb={onUseWeb} onOpenSettings={onOpenSettings}><Current onOpenSettings={onOpenSettings} onNavigate={setCurrent} /></CrashGuard>}
-          {kept.map((k) => { const Kept = SCREENS[k]; return <View key={k} style={k === current ? styles.page : styles.hidden}><CrashGuard scope="screen" label={findDestination(k).label} onUseWeb={onUseWeb} onOpenSettings={onOpenSettings}><Kept onOpenSettings={onOpenSettings} onNavigate={setCurrent} focused={k === current} /></CrashGuard></View> })}
+          {KEEP_ALIVE.includes(current) ? null : <CrashGuard key={current} scope="screen" label={findDestination(current).label} onUseWeb={onUseWeb} onOpenSettings={onOpenSettings}><Current onOpenSettings={onOpenSettings} onNavigate={setCurrent} onUseWeb={onUseWeb} /></CrashGuard>}
+          {kept.map((k) => { const Kept = SCREENS[k]; return <View key={k} style={k === current ? styles.page : styles.hidden}><CrashGuard scope="screen" label={findDestination(k).label} onUseWeb={onUseWeb} onOpenSettings={onOpenSettings}><Kept onOpenSettings={onOpenSettings} onNavigate={setCurrent} onUseWeb={onUseWeb} focused={k === current} /></CrashGuard></View> })}
           <SnackHost />
         </View>
         <PillNav current={current} moreOpen={moreOpen} onMoreOpen={setMoreOpen} onSelect={setCurrent} onOpenSettings={onOpenSettings} />

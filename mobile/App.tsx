@@ -6,7 +6,7 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context"
 import { CrashGuard } from "./src/components/CrashGuard.tsx"
 import { SettingsHandle } from "./src/components/SettingsHandle.tsx"
 import { clearAddress, loadAddress, loadViewMode, saveAddress, saveViewMode } from "./src/lib/storage.ts"
-import { sanitizeViewMode, type ViewMode } from "./src/lib/view-mode.ts"
+import { sanitizeViewMode, webStart, type ViewMode } from "./src/lib/view-mode.ts"
 import { useUpdateCheck } from "./src/lib/use-update-check.ts"
 import { NativeHome } from "./src/native/index.ts"
 import { SettingsScreen } from "./src/screens/SettingsScreen.tsx"
@@ -46,7 +46,10 @@ export default function App() {
     setBoot({ status: "ready", address: url, viewMode: sanitizeViewMode(await loadViewMode(), NativeHome != null) })
   }
 
-  const useWeb = useCallback(() => {
+  // A native screen can send you to a specific web page (path); the crash fallback and Settings start at home.
+  const [webPath, setWebPath] = useState<string | undefined>(undefined)
+  const useWeb = useCallback((path?: string) => {
+    setWebPath(typeof path === "string" ? path : undefined)
     void saveViewMode("web")
     setBoot((b) => (b.status === "ready" ? { ...b, viewMode: "web" } : b))
   }, [])
@@ -59,7 +62,7 @@ export default function App() {
     body = (
       <SafeAreaView style={styles.flex} edges={["top", "bottom", "left", "right"]}>
         <View style={styles.flex} onLayout={(e) => setArea(e.nativeEvent.layout)}>
-          {Native ? <CrashGuard scope="app" onUseWeb={useWeb} onOpenSettings={openSettings}><Native address={boot.address} onOpenSettings={openSettings} onUseWeb={useWeb} /></CrashGuard> : <WebScreen ref={web} startUrl={boot.address} onOpenSettings={openSettings} />}
+          {Native ? <CrashGuard scope="app" onUseWeb={useWeb} onOpenSettings={openSettings}><Native address={boot.address} onOpenSettings={openSettings} onUseWeb={useWeb} /></CrashGuard> : <WebScreen ref={web} startUrl={webStart(boot.address, webPath)} onOpenSettings={openSettings} />}
           <SettingsHandle area={area} onOpen={openSettings} badge={updateAvailable} reserveBottom={Native ? 96 : 0} />
         </View>
         <SettingsScreen
@@ -78,6 +81,7 @@ export default function App() {
           }}
           onViewMode={(mode) => {
             const next = sanitizeViewMode(mode, NativeHome != null)
+            setWebPath(undefined)
             void saveViewMode(next)
             setBoot({ ...boot, viewMode: next })
           }}

@@ -1,4 +1,6 @@
 import { useState } from "react"
+import { WebViewLink } from "../kit/WebViewLink.tsx"
+import type { ScreenProps } from "../nav/screens.tsx"
 import { Pressable, StyleSheet, Text, View } from "react-native"
 import { postAccounts, postState, type Collections, type PostState } from "../../lib/shared.ts"
 import { useWorkspace } from "../data/WorkspaceProvider.tsx"
@@ -13,7 +15,7 @@ const label: Record<PostState, string> = { idea: "Idea", draft: "Draft", schedul
 const ink: Record<PostState, string> = { idea: c.muted, draft: c.text2, scheduled: c.accent, due: c.amber, partial: c.amber, posted: c.green }
 
 /** Read-only native queue. Creation, editing and posting remain in the existing Web view. */
-export function SocialScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
+export function SocialScreen({ onOpenSettings, onUseWeb }: ScreenProps) {
   const { data, status, message, refreshing, refresh } = useWorkspace()
   const posts = data?.socialPosts ?? []
   const accounts = data?.socialAccounts ?? []
@@ -23,7 +25,7 @@ export function SocialScreen({ onOpenSettings }: { onOpenSettings: () => void })
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
   return <WorkspacePage page="Social" onOpenSettings={onOpenSettings} onRefresh={() => void refresh()} refreshing={refreshing}>
     {data ? <>
-      <Text style={s.hint}>{posts.length} posts · {accounts.length} accounts. Create and edit posts in Web view.</Text>
+      <WebViewLink text={`${posts.length} posts · ${accounts.length} accounts. Create and edit posts in`} path="/social" onUseWeb={onUseWeb} />
       <WorkspaceSection title="Queue" icon="megaphone-outline" count={String(pending.length)}>
         {pending.map(post => <PostRow key={post.id} post={post} accounts={accounts} />)}
         {!pending.length ? <Text style={s.empty}>No posts waiting. Ideas and scheduled posts will appear here.</Text> : null}
@@ -33,7 +35,7 @@ export function SocialScreen({ onOpenSettings }: { onOpenSettings: () => void })
       </WorkspaceSection> : null}
       <WorkspaceSection title="Accounts" icon="people-outline" count={String(accounts.length)}>
         {accounts.map(account => <View key={account.id} style={s.account}><Icon name="at-outline" size={16} tint={c.accent} /><View style={s.flex}><Text style={s.title} numberOfLines={1}>{account.name}</Text><Text style={s.meta} numberOfLines={1}>{account.brand} · {account.platform}</Text></View></View>)}
-        {!accounts.length ? <Text style={s.empty}>No social accounts saved. Add them in Web view.</Text> : null}
+        {!accounts.length ? <WebViewLink text="No social accounts saved." action="Add in Web view" path="/social" onUseWeb={onUseWeb} /> : null}
       </WorkspaceSection>
     </> : <Text style={s.empty}>{status === "signed-out" ? "Sign in under Settings to see Social." : message ?? "Loading your workspace…"}</Text>}
   </WorkspacePage>
@@ -61,7 +63,6 @@ function PostRow({ post, accounts }: { post: Post; accounts: Account[] }) {
 }
 
 const s = StyleSheet.create({
-  hint: { color: c.muted, fontSize: 12, lineHeight: 17 },
   empty: { color: c.muted, fontSize: 12, lineHeight: 17, paddingVertical: 9 },
   flex: { flex: 1, minWidth: 0 },
   row: { flexDirection: "row", alignItems: "center", gap: 8, minHeight: 44, paddingVertical: 5 },

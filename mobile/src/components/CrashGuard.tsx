@@ -46,7 +46,7 @@ export class CrashGuard extends Component<Props, { error: unknown; hasError: boo
           <Text style={s.detail} selectable numberOfLines={3}>{crashDetail(this.state.error)}</Text>
           <View style={s.actions}>
             <Action label="Try again" primary onPress={this.retry} />
-            <Action label="Switch to Web view" onPress={onUseWeb} />
+            <Action label="Switch to Web view" onPress={() => onUseWeb()} />
             <Action label="Settings" onPress={onOpenSettings} />
           </View>
         </View>
