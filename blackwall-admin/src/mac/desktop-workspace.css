@@ -281,3 +281,6 @@ html[data-runtime="mac-native"] .mac-journal-side > .bw-panel:last-child { flex:
 @container mac-tool (max-width: 680px) {
   html[data-runtime="mac-native"] .mac-journal-day { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* A window that sizes itself to its content still needs a floor so a short page does not shrink it to a sliver. */
+html[data-runtime="mac-native"] .mac-dw-window[data-fit="true"] { min-height: 230px; }
