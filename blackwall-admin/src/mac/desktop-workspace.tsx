@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useRoutes } from "react-router-dom"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import { createStore, useStore, type StoreApi } from "zustand"
-import { BookOpen, Minimize2, Minus, PanelLeftClose, PanelLeftOpen, ChevronDown, CalendarDays, FileText, Folder, FolderOpen, Globe, GraduationCap, Home, LayoutDashboard, Maximize2, Pin, Search, Server, Settings2, X } from "lucide-react"
+import { BarChart3, ClipboardList, Image as ImageIcon, LayoutGrid, Newspaper, SlidersHorizontal, BookOpen, Minimize2, Minus, PanelLeftClose, PanelLeftOpen, ChevronDown, CalendarDays, FileText, Folder, FolderOpen, Globe, GraduationCap, Home, LayoutDashboard, Maximize2, Pin, Search, Server, Settings2, X } from "lucide-react"
 import { blackwallPages } from "@/app-routes"
 import { useNav } from "@/components/layout/nav-config"
 import { QuickCreate } from "@/components/layout/quick-create"
@@ -20,6 +20,7 @@ import { PlannerSidebar } from "./planner-sidebar"
 import { todayKey } from "@/lib/dates"
 import { useWorkspace } from "@/stores/workspace"
 import { windowSections } from "./window-sections"
+import { MacLinkNavigation } from "./tool-navigation"
 import { MAC_DESKTOP_TOP, fitWindowRect, moveAroundLocked, overlaps, placeOutsideLocked, resizeAroundLocked, type WindowRect } from "./window-geometry"
 import "./desktop-workspace.css"
 
@@ -29,7 +30,7 @@ const APP = {
   journal: { title: "Journal", route: "/journal", icon: BookOpen, tone: "journal" },
   learning: { title: "Learning", route: "/productivity/learning", icon: GraduationCap, tone: "learning" },
   projects: { title: "Projects", route: "/productivity/projects", icon: Folder, tone: "projects" },
-  website: { title: "Publish", route: "/cms", icon: Globe, tone: "website" },
+  website: { title: "CMS", route: "/cms", icon: Globe, tone: "website" },
   files: { title: "Files", route: "/files", icon: FolderOpen, tone: "neutral" },
   mikoshi: { title: "Mikoshi", route: "/mikoshi", icon: Server, tone: "neutral" },
   /** Not a page: its window holds the browser (browser-window.tsx), so the route is never navigated to. */
@@ -124,11 +125,16 @@ function WindowTitle({ store, fallback }: { store: StoreApi<PageHead>; fallback:
   return <>{title ?? fallback}</>
 }
 
+/** Windows whose section pages sit in a left sidebar (like Journal and Learning) instead of tabs, with each page's icon. */
+const SIDEBAR_ICONS: Partial<Record<AppId, Record<string, ReactNode>>> = {
+  website: { "All sites": <LayoutGrid />, Pages: <FileText />, Posts: <Newspaper />, Forms: <ClipboardList />, "Repo images": <ImageIcon />, Traffic: <BarChart3 />, "Site settings": <SlidersHorizontal /> },
+}
+
 /** The sub-pages the classic sidebar lists under this window's section, as tabs (Mikoshi: Launcher, Status, Storage). */
 function WindowSections({ id, path }: { id: AppId; path: string }) {
   const nav = useNav(true)
   const sections = windowSections(nav, appForPath, id, path)
-  if (!sections) return null
+  if (!sections || SIDEBAR_ICONS[id]) return null
   return <nav className="mac-dw-sections" aria-label={`${sections.label} sections`}>{sections.children.map((child) => <Link key={child.to} to={child.to} aria-current={sections.current === child ? "page" : undefined}>{child.label}</Link>)}</nav>
 }
 
@@ -159,11 +165,20 @@ function Autofit({ id, report }: { id: Id; report: (id: Id, height: number) => v
   return <span ref={mark} hidden />
 }
 
+/** The page, beside its section's sidebar in a sidebar window (CMS while on Websites; Social has no sub-pages, so no sidebar). */
+function SectionSidebar({ id, path, children }: { id: AppId; path: string; children: ReactNode }) {
+  const nav = useNav(true)
+  const icons = SIDEBAR_ICONS[id]
+  const sections = icons ? windowSections(nav, appForPath, id, path) : null
+  if (!icons || !sections) return <>{children}</>
+  return <MacLinkNavigation label={sections.label} current={sections.current?.to} items={sections.children.map((child) => ({ to: child.to, label: child.label, icon: icons[child.label] ?? <FileText /> }))}>{children}</MacLinkNavigation>
+}
+
 const AppPage = memo(function AppPage({ id, path, store }: { id: AppId; path: string; store: StoreApi<PageHead> }) {
   const page = useRoutes(blackwallPages, path)
   return <PageHeadStoreContext.Provider value={store}>
     <AppToolbar store={store} id={id} path={path} />
-    <main className="mac-dw-app-main" tabIndex={-1}>{page}</main>
+    <main className="mac-dw-app-main" tabIndex={-1}><SectionSidebar id={id} path={path}>{page}</SectionSidebar></main>
   </PageHeadStoreContext.Provider>
 })
 

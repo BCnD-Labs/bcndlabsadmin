@@ -2,16 +2,21 @@ html[data-runtime="mac-native"] .mac-dw-app-main { container: mac-tool / inline-
 html[data-runtime="mac-native"] .mac-tool-layout { display: grid; grid-template-columns: 148px minmax(0, 1fr); min-height: 100%; border: 1px solid var(--bw-line); border-radius: 6px; overflow: hidden; background: var(--bw-ground); }
 html[data-runtime="mac-native"] .mac-tool-navigation { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 9px 5px; border-right: 1px solid var(--bw-line); background: var(--bw-titlebar); }
 html[data-runtime="mac-native"] .mac-tool-navigation-label { padding: 3px 8px 7px; color: var(--bw-muted); font: 10px var(--font-mono); letter-spacing: .07em; text-transform: uppercase; }
-html[data-runtime="mac-native"] .mac-tool-navigation button { display: flex; align-items: center; gap: 8px; min-height: 29px; padding: 3px 8px; border-radius: 4px; color: var(--bw-text-2); text-align: left; font-size: 12px; white-space: nowrap; }
-html[data-runtime="mac-native"] .mac-tool-navigation button:hover { background: var(--bw-raised); color: var(--bw-text); }
-html[data-runtime="mac-native"] .mac-tool-navigation button[aria-current="page"] { background: var(--bw-selected); box-shadow: inset 2px 0 0 var(--bw-blue); color: var(--bw-text); }
-html[data-runtime="mac-native"] .mac-tool-navigation button svg { width: 14px; height: 14px; }
+html[data-runtime="mac-native"] .mac-tool-navigation :is(button, a) { display: flex; align-items: center; gap: 8px; min-height: 29px; padding: 3px 8px; border-radius: 4px; color: var(--bw-text-2); text-align: left; font-size: 12px; white-space: nowrap; }
+html[data-runtime="mac-native"] .mac-tool-navigation :is(button, a):hover { background: var(--bw-raised); color: var(--bw-text); }
+html[data-runtime="mac-native"] .mac-tool-navigation :is(button, a)[aria-current="page"] { background: var(--bw-selected); box-shadow: inset 2px 0 0 var(--bw-blue); color: var(--bw-text); }
+html[data-runtime="mac-native"] .mac-tool-navigation :is(button, a) svg { width: 14px; height: 14px; }
 html[data-runtime="mac-native"] .mac-tool-view { min-width: 0; padding: 10px; }
+
+/* The site editor (CMS Pages) fills the space beside the sidebar instead of scrolling with it. */
+html[data-runtime="mac-native"] .mac-dw-app-main:has(> .mac-tool-layout > .mac-tool-view > .bw-site-workspace) { display: flex; flex-direction: column; min-height: 0; padding: 0; overflow: hidden; }
+html[data-runtime="mac-native"] .mac-tool-layout:has(> .mac-tool-view > .bw-site-workspace) { flex: 1; min-height: 0; border: 0; border-radius: 0; }
+html[data-runtime="mac-native"] .mac-tool-view:has(> .bw-site-workspace) { display: flex; flex-direction: column; min-height: 0; padding: 0; overflow: hidden; }
 
 @container mac-tool (max-width: 680px) {
   html[data-runtime="mac-native"] .mac-tool-layout { display: block; }
   html[data-runtime="mac-native"] .mac-tool-navigation { flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--bw-line); padding: 4px; scrollbar-width: none; }
   html[data-runtime="mac-native"] .mac-tool-navigation-label { display: none; }
-  html[data-runtime="mac-native"] .mac-tool-navigation button { flex: none; }
+  html[data-runtime="mac-native"] .mac-tool-navigation :is(button, a) { flex: none; }
   html[data-runtime="mac-native"] .mac-tool-navigation button[aria-current="page"] { box-shadow: inset 0 -2px 0 var(--bw-blue); }
 }
