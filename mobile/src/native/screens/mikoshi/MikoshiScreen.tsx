@@ -12,6 +12,7 @@ import { PropChip } from "../../kit/PropChip.tsx"
 import { addressLabel, closeTool, groupServices, noTools, openTool, pruneTools, showList, statusSummary, toolTarget, type Tools } from "./mikoshi-rules.ts"
 import { ToolWebView, type ToolHandle } from "./ToolWebView.tsx"
 import { ServiceEditor } from "./ServiceEditor.tsx"
+import { ServiceLogo } from "./ServiceLogo.tsx"
 import { useServiceStatus } from "./useServiceStatus.ts"
 
 /** Room kept under an open tool for the floating nav pill, so it never covers the page. */
@@ -73,7 +74,7 @@ export function MikoshiScreen({ onOpenSettings, focused = true }: ScreenProps) {
           {live.error ? <Text style={s.error}>{live.error}</Text> : null}
           {groupServices(services).map(({ group, items }) => (
             <WorkspaceSection key={group} title={group} icon={GROUP_ICON[group] ?? "apps-outline"} count={`${items.length}`}>
-              {items.map((svc) => <ToolRow key={svc.id} name={svc.name} description={svc.description} url={svc.url} status={live.byUrl.get(svc.url)} isOpen={tools.open.includes(svc.id)} selected={sel === svc.id} onPress={() => act(svc.id)} onEdit={() => setEditor(svc)} />)}
+              {items.map((svc) => <ToolRow key={svc.id} address={address} logo={svc.logo} customLogo={svc.customLogo} name={svc.name} description={svc.description} url={svc.url} status={live.byUrl.get(svc.url)} isOpen={tools.open.includes(svc.id)} selected={sel === svc.id} onPress={() => act(svc.id)} onEdit={() => setEditor(svc)} />)}
             </WorkspaceSection>
           ))}
         </WorkspacePage>
@@ -106,13 +107,13 @@ function summaryText(x: { up: number; down: number; unchecked: number }, checked
   return `${x.up} up · ${x.down} down${x.unchecked ? ` · ${x.unchecked} unchecked` : ""}${time}`
 }
 
-function ToolRow({ name, description, url, status, isOpen, selected, onPress, onEdit }: { name: string; description: string; url: string; status?: ServiceStatus; isOpen: boolean; selected: boolean; onPress: () => void; onEdit: () => void }) {
+function ToolRow({ address, logo, customLogo, name, description, url, status, isOpen, selected, onPress, onEdit }: { address: string | null; logo?: string; customLogo?: string; name: string; description: string; url: string; status?: ServiceStatus; isOpen: boolean; selected: boolean; onPress: () => void; onEdit: () => void }) {
   const target = toolTarget(url)
   const label = !status ? "not checked yet" : status.up ? `up${status.ms != null ? `, ${status.ms} milliseconds` : ""}` : "down"
   return (
     <View style={[selectedItem.item, selected && selectedItem.itemOn]}>
       <View style={s.rowWrap}><Pressable onPress={onPress} style={s.row} accessibilityRole="button" accessibilityLabel={`${name}, ${label}${isOpen ? ", open" : ""}${target.kind === "app" ? "" : ", opens in the browser"}`}>
-        <View style={s.badge}><Text style={s.badgeText}>{name.trim().charAt(0).toUpperCase() || "?"}</Text></View>
+        <ServiceLogo address={address} name={name} logo={logo} customLogo={customLogo} />
         <View style={s.rowBody}>
           <Text style={s.rowTitle} numberOfLines={1}>{name}</Text>
           <Text style={s.meta} numberOfLines={1}>{[description, addressLabel(url)].filter(Boolean).join(" · ")}</Text>
@@ -157,7 +158,6 @@ const s = StyleSheet.create({
   add: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: c.panel, borderWidth: 1, borderColor: c.line },
   empty: { gap: 8, paddingVertical: 16 }, title: { color: c.text, fontSize: 15, fontWeight: "700" }, meta: { color: c.muted, fontSize: 11, lineHeight: 16 }, error: { color: c.errorText, fontSize: 12 },
   rowWrap: { flexDirection: "row", alignItems: "center" }, row: { flex: 1, minHeight: 46, flexDirection: "row", alignItems: "center", gap: 9, paddingVertical: 4 }, edit: { width: 32, height: 32, alignItems: "center", justifyContent: "center" }, rowBody: { flex: 1, minWidth: 0 }, rowTitle: { color: c.text, fontSize: 14, fontWeight: "600" },
-  badge: { width: 28, height: 28, borderRadius: 8, backgroundColor: c.raised, borderWidth: 1, borderColor: c.line, alignItems: "center", justifyContent: "center" }, badgeText: { color: c.accent, fontSize: 13, fontWeight: "700" },
   dot: { width: 9, height: 9, borderRadius: 5, marginRight: 4 },
   detail: { color: c.text2, fontSize: 12, lineHeight: 17 },
   bar: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingTop: 8, paddingBottom: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.line },
