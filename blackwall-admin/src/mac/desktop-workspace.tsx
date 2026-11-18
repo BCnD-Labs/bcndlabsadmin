@@ -203,7 +203,7 @@ export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
     const path = pathname + search
     setWindows(all => ({ ...all, [id]: { ...all[id], path, open: true, z: ++layer.current } }))
   }, [pathname, search, routeKey])
-  useEffect(() => { document.documentElement.style.setProperty("--bw-header-h", "42px") }, [])
+  useEffect(() => { document.documentElement.style.setProperty("--bw-header-h", "var(--mac-dw-below-top)") }, [])
   useEffect(() => { if (!plannerOpen) return; const close = (event: KeyboardEvent) => { if (event.key === "Escape") setPlannerOpen(false) }; document.addEventListener("keydown", close); return () => document.removeEventListener("keydown", close) }, [plannerOpen])
 
   const update = (id: Id, fn: (value: WindowState) => WindowState) => setWindows(all => ({ ...all, [id]: fn(all[id]) }))
