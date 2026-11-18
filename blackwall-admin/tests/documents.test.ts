@@ -60,3 +60,15 @@ test("opening a document twice keeps one tab; closing the showing tab shows its 
   assert.deepEqual(afterClose([a, b], "/a.pptx", "/Class/b.docx"), { docs: [a], active: "/a.pptx" })
   assert.deepEqual(afterClose([a], "/a.pptx", "/a.pptx"), { docs: [], active: null })
 })
+
+import { canEditFile, extensionOf } from "../src/features/documents/editing.ts"
+
+test("Edit shows only when the office editor is set up and knows the file's format", () => {
+  const info = { available: true, extensions: ["docx", "odt"] }
+  assert.equal(extensionOf("Essay.DOCX"), "docx")
+  assert.equal(extensionOf("README"), "")
+  assert.equal(canEditFile(info, "Essay.DOCX"), true)
+  assert.equal(canEditFile(info, "budget.xlsx"), false)
+  assert.equal(canEditFile({ available: false, extensions: ["docx"] }, "a.docx"), false)
+  assert.equal(canEditFile(null, "a.docx"), false)
+})
