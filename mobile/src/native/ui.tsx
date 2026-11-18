@@ -3,13 +3,14 @@ import { Ionicons } from "@expo/vector-icons"
 import type { ComponentProps, ReactNode } from "react"
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native"
 import { color } from "../theme.ts"
+import { plannerColor } from "./planner-theme.ts"
 import { NAV_CLEARANCE } from "./nav/destinations.ts"
 
 export { NAV_CLEARANCE }
 
 /** Shared building blocks for the native skeleton screens. Plain React Native, no extra packages. */
 
-export const tone = { blue: "#74a7ff", amber: "#f2b84b", green: "#6fcf97", red: "#ff8787", grey: "#aab1bc" } as const
+export const tone = { blue: "#74a7ff", amber: "#f2b84b", green: "#6fcf97", red: plannerColor.danger, grey: "#aab1bc" } as const
 
 export type IconName = ComponentProps<typeof Ionicons>["name"]
 

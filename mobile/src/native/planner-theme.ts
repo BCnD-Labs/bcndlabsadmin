@@ -6,4 +6,6 @@ export const plannerColor = {
   action: "#1565c0", actionPressed: "#0d47a1",
   dateFill: "#38393c", dateText: "#ffb74d", tagFill: "#223e56", tagText: "#64b5f6",
   blue: "#2196f3", amber: "#ffa726", green: "#66bb6a",
+  /** Error and warning text, and the "down / heavy / failed" mark (status dots, load). */
+  errorText: "#ffa8a8", danger: "#ff8787",
 } as const

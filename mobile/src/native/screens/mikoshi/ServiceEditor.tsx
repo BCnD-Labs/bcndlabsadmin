@@ -96,8 +96,8 @@ const s = StyleSheet.create({
   input: { minHeight: 33, borderRadius: 13, backgroundColor: c.ground, borderWidth: 1, borderColor: c.line, color: c.text, paddingHorizontal: 10, paddingVertical: 5, fontSize: 13 },
   more: { minHeight: 32, alignSelf: "flex-start", justifyContent: "center", paddingHorizontal: 4 }, moreText: { color: c.accent, fontSize: 12 },
   choices: { flexDirection: "row", flexWrap: "wrap", gap: 5 }, pin: { minHeight: 34, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, pinText: { color: c.text2, fontSize: 12 },
-  error: { color: "#ffa8a8", fontSize: 12 }, actions: { flexDirection: "row", alignItems: "center", gap: 7, padding: 8, borderTopWidth: 1, borderColor: c.line }, spacer: { flex: 1 },
+  error: { color: c.errorText, fontSize: 12 }, actions: { flexDirection: "row", alignItems: "center", gap: 7, padding: 8, borderTopWidth: 1, borderColor: c.line }, spacer: { flex: 1 },
   action: { minHeight: 32, borderRadius: 15, paddingHorizontal: 12, justifyContent: "center", backgroundColor: c.raised }, save: { backgroundColor: c.action }, disabled: { opacity: 0.5 },
-  actionText: { color: c.text2, fontSize: 12 }, saveText: { color: "#fff", fontSize: 12, fontWeight: "600" }, remove: { minHeight: 32, paddingHorizontal: 8, justifyContent: "center" }, removeText: { color: "#ff8787", fontSize: 12 },
+  actionText: { color: c.text2, fontSize: 12 }, saveText: { color: "#fff", fontSize: 12, fontWeight: "600" }, remove: { minHeight: 32, paddingHorizontal: 8, justifyContent: "center" }, removeText: { color: c.danger, fontSize: 12 },
 })
 

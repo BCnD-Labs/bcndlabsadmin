@@ -148,7 +148,7 @@ export function TopicsList({ course, data, blocked, onError }: { course: Course;
   </>
 }
 
-const LOAD_TONE = { light: c.muted, busy: c.amber, heavy: "#ff8787" } as const
+const LOAD_TONE = { light: c.muted, busy: c.amber, heavy: c.danger } as const
 const LOAD_LABEL = { light: "Light", busy: "Busy", heavy: "Heavy" } as const
 
 /** The week at a glance: how heavy each day is, with what is due, planned and in class. */
@@ -163,7 +163,7 @@ export function WeekView({ data, today, onOpen, onPlan }: { data: Collections; t
     {days.map(d => <View key={d.date} style={[s.day, d.date === today && s.dayToday]} accessible accessibilityLabel={`${WEEKDAY_LABELS[weekdayOfKey(d.date)]} ${shortDay(d.date)}, ${LOAD_LABEL[d.load]}`}>
       <View style={s.dayHead}><Text style={s.dayName}>{WEEKDAY_LABELS[weekdayOfKey(d.date)]} {shortDay(d.date)}</Text><Text style={[s.load, { color: LOAD_TONE[d.load] }]}>{LOAD_LABEL[d.load].toUpperCase()}</Text></View>
       {d.classes ? <Text style={s.sub}>{d.classes} class{d.classes === 1 ? "" : "es"} · {(d.classMinutes / 60).toFixed(d.classMinutes % 60 ? 1 : 0)}h</Text> : null}
-      {d.due.map(t => <Pressable key={t.id} onPress={() => onOpen(t.id)} style={s.item} accessibilityRole="button" accessibilityLabel={`Due: ${t.title}`}><Icon name="flag-outline" size={13} tint={t.learningType === "exam" ? "#ff8787" : c.amber} /><Text style={s.itemText} numberOfLines={2}>{t.title}</Text></Pressable>)}
+      {d.due.map(t => <Pressable key={t.id} onPress={() => onOpen(t.id)} style={s.item} accessibilityRole="button" accessibilityLabel={`Due: ${t.title}`}><Icon name="flag-outline" size={13} tint={t.learningType === "exam" ? c.danger : c.amber} /><Text style={s.itemText} numberOfLines={2}>{t.title}</Text></Pressable>)}
       {d.focus.filter(t => t.due !== d.date).map(t => <Pressable key={t.id} onPress={() => onOpen(t.id)} style={[s.item, s.dashed]} accessibilityRole="button"><Text style={s.itemText} numberOfLines={2}>Work on: {t.title}</Text></Pressable>)}
       {d.steps.map(({ task, step }) => <Pressable key={step.id} onPress={() => onOpen(task.id)} style={[s.item, s.dashed]} accessibilityRole="button"><Text style={s.itemText} numberOfLines={2}>Step: {step.title}</Text></Pressable>)}
       {!d.classes && !d.due.length && !d.focus.length && !d.steps.length ? <Text style={s.sub}>Free</Text> : null}
@@ -178,7 +178,7 @@ const s = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.55)" }, sheet: { width: "92%", maxWidth: 520, maxHeight: "80%", borderRadius: shape.dialog, backgroundColor: c.panel, borderWidth: 1, borderColor: c.border, overflow: "hidden" },
   head: { minHeight: 38, paddingHorizontal: 12, flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8, borderBottomWidth: 1, borderColor: c.line }, heading: { color: c.text, fontSize: 15, fontWeight: "600", flex: 1 },
   list: { flexGrow: 0 }, listContent: { paddingVertical: 6 }, note: { color: c.muted, fontSize: 12, lineHeight: 17, paddingHorizontal: 12, paddingVertical: 6 }, plan: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 46, paddingHorizontal: 6, borderTopWidth: 1, borderColor: c.line }, when: { color: c.text2, fontSize: 12, fontWeight: "600" },
-  actions: { flexDirection: "row", justifyContent: "flex-end", gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderTopWidth: 1, borderColor: c.line }, apply: { minHeight: 32, paddingHorizontal: 13, borderRadius: shape.card, justifyContent: "center", backgroundColor: c.action }, off: { opacity: 0.45 }, applyText: { color: "#fff", fontSize: 12, fontWeight: "600" }, error: { color: "#ff8787", fontSize: 12, padding: 12 },
+  actions: { flexDirection: "row", justifyContent: "flex-end", gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderTopWidth: 1, borderColor: c.line }, apply: { minHeight: 32, paddingHorizontal: 13, borderRadius: shape.card, justifyContent: "center", backgroundColor: c.action }, off: { opacity: 0.45 }, applyText: { color: "#fff", fontSize: 12, fontWeight: "600" }, error: { color: c.danger, fontSize: 12, padding: 12 },
   weekHead: { gap: 6 }, weekTitle: { color: c.text, fontSize: 14, fontWeight: "700" }, weekNav: { flexDirection: "row", gap: 6 },
   day: { gap: 5, padding: 10, borderRadius: shape.card, backgroundColor: c.panel, borderWidth: 1, borderColor: c.line }, dayToday: { borderColor: c.selectedBorder }, dayHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }, dayName: { color: c.text, fontSize: 13, fontWeight: "700" }, load: { fontSize: 10, fontWeight: "700", letterSpacing: 0.6 },
   item: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 30, paddingHorizontal: 8, borderRadius: 8, backgroundColor: c.raised }, dashed: { backgroundColor: "transparent", borderWidth: 1, borderStyle: "dashed", borderColor: c.line }, itemText: { color: c.text2, fontSize: 12, flex: 1 },
