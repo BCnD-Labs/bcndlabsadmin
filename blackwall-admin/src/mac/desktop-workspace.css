@@ -9,7 +9,7 @@ html[data-runtime="mac-native"] .mac-dw-desktop::before {
   content: "";
   position: absolute;
   inset: 0;
-  opacity: .025;
+  opacity: .015;
   pointer-events: none;
   background-image: linear-gradient(#b4b8c0 1px, transparent 1px), linear-gradient(90deg, #b4b8c0 1px, transparent 1px);
   background-size: 24px 24px;
@@ -37,6 +37,8 @@ html[data-runtime="mac-native"] .mac-dw-rail button:not(.mac-dw-rail-close)[data
 html[data-runtime="mac-native"] .mac-dw-window[data-tone="productivity"] { --dw-hue: #64b5f6; }
 html[data-runtime="mac-native"] .mac-dw-rail button:not(.mac-dw-rail-close)[data-tone="learning"],
 html[data-runtime="mac-native"] .mac-dw-window[data-tone="learning"] { --dw-hue: #b39ddb; }
+html[data-runtime="mac-native"] .mac-dw-rail button:not(.mac-dw-rail-close)[data-tone="journal"],
+html[data-runtime="mac-native"] .mac-dw-window[data-tone="journal"] { --dw-hue: #ffb74d; }
 html[data-runtime="mac-native"] .mac-dw-rail button:not(.mac-dw-rail-close)[data-tone="projects"],
 html[data-runtime="mac-native"] .mac-dw-window[data-tone="projects"] { --dw-hue: #f2649f; }
 html[data-runtime="mac-native"] .mac-dw-rail button:not(.mac-dw-rail-close)[data-tone="insights"],
@@ -58,8 +60,8 @@ html[data-runtime="mac-native"] .mac-dw-top > button,
 html[data-runtime="mac-native"] .mac-dw-top > time { display: flex; align-items: center; justify-content: center; gap: 4px; height: 27px; min-width: 27px; padding: 0 7px; border: 1px solid var(--bw-line); border-radius: 5px; background: var(--bw-panel); color: var(--bw-text-2); font-size: 12px; font-weight: 550; white-space: nowrap; }
 html[data-runtime="mac-native"] .mac-dw-top > button:hover { border-color: var(--bw-blue); color: var(--bw-text); }
 html[data-runtime="mac-native"] .mac-dw-top > time { min-width: 68px; padding: 0 9px; }
-html[data-runtime="mac-native"] .mac-dw-window { position: absolute; display: flex; flex-direction: column; min-width: 230px; border: 1px solid var(--bw-border); border-radius: 6px; overflow: hidden; background: var(--bw-panel); box-shadow: 0 12px 30px #0008, 0 1px 0 #ffffff12 inset; }
-html[data-runtime="mac-native"] .mac-dw-title { display: flex; align-items: center; gap: 7px; flex: none; height: 30px; padding: 0 5px 0 7px; border-bottom: 1px solid var(--bw-line); background: var(--bw-titlebar); color: var(--bw-text); cursor: grab; user-select: none; touch-action: none; }
+html[data-runtime="mac-native"] .mac-dw-window { position: absolute; display: flex; flex-direction: column; min-width: 230px; border: 1px solid var(--bw-border); border-radius: 10px; overflow: hidden; background: var(--bw-panel); box-shadow: 0 6px 18px #0006, 0 1px 0 #ffffff10 inset; transition: box-shadow .14s ease-out, border-color .14s ease-out; }
+html[data-runtime="mac-native"] .mac-dw-title { display: flex; align-items: center; gap: 7px; flex: none; height: 30px; padding: 0 5px 0 7px; border-bottom: 1px solid var(--bw-line); background: linear-gradient(#ffffff0b, #ffffff00 70%), var(--bw-titlebar); color: var(--bw-text); cursor: grab; user-select: none; touch-action: none; }
 html[data-runtime="mac-native"] .mac-dw-title:active { cursor: grabbing; }
 html[data-runtime="mac-native"] .mac-dw-title strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 650; }
 html[data-runtime="mac-native"] .mac-dw-icon { display: grid; place-items: center; flex: none; width: 22px; height: 22px; border: 1px solid color-mix(in srgb, var(--dw-hue) 38%, transparent); border-radius: 6px; background: color-mix(in srgb, var(--dw-hue) 15%, transparent); color: var(--dw-hue); }
@@ -136,6 +138,7 @@ html[data-runtime="mac-native"] .mac-dw-rail-toggle { margin-top: -6px; margin-b
 /* Light theme: the window and rail hues are deepened so they stay readable on white. */
 html[data-runtime="mac-native"][data-theme="light"] .mac-dw-rail button:not(.mac-dw-rail-close)[data-tone="productivity"], html[data-runtime="mac-native"][data-theme="light"] .mac-dw-window[data-tone="productivity"] { --dw-hue: #1e6fc4; }
 html[data-runtime="mac-native"][data-theme="light"] .mac-dw-rail button:not(.mac-dw-rail-close)[data-tone="learning"], html[data-runtime="mac-native"][data-theme="light"] .mac-dw-window[data-tone="learning"] { --dw-hue: #6b46c1; }
+html[data-runtime="mac-native"][data-theme="light"] .mac-dw-rail button:not(.mac-dw-rail-close)[data-tone="journal"], html[data-runtime="mac-native"][data-theme="light"] .mac-dw-window[data-tone="journal"] { --dw-hue: #b26a00; }
 html[data-runtime="mac-native"][data-theme="light"] .mac-dw-rail button:not(.mac-dw-rail-close)[data-tone="projects"], html[data-runtime="mac-native"][data-theme="light"] .mac-dw-window[data-tone="projects"] { --dw-hue: #c2185b; }
 html[data-runtime="mac-native"][data-theme="light"] .mac-dw-rail button:not(.mac-dw-rail-close)[data-tone="insights"], html[data-runtime="mac-native"][data-theme="light"] .mac-dw-window[data-tone="insights"] { --dw-hue: #2e7d32; }
 html[data-runtime="mac-native"][data-theme="light"] .mac-dw-rail button:not(.mac-dw-rail-close)[data-tone="github"], html[data-runtime="mac-native"][data-theme="light"] .mac-dw-window[data-tone="github"] { --dw-hue: #00838f; }
@@ -187,3 +190,97 @@ html[data-runtime="mac-native"] webview.mac-br-page[data-active="false"] { visib
 html[data-runtime="mac-native"] .mac-br-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 16px; color: var(--bw-muted); text-align: center; }
 html[data-runtime="mac-native"] .mac-br-empty p { color: var(--bw-text-2); font-size: 13px; }
 html[data-runtime="mac-native"] .mac-br-empty small { font-size: 11px; }
+
+/* ---- Window polish: front and back windows, calmer labels, a touch more room to read ---- */
+
+/* The window you used last is raised and lit; the others sit back. A minimized title bar keeps its normal look. */
+html[data-runtime="mac-native"] .mac-dw-window[data-front="true"] { box-shadow: 0 22px 50px #000b, 0 0 0 1px #0007, 0 1px 0 #ffffff14 inset; }
+html[data-runtime="mac-native"] .mac-dw-window[data-front="false"]:not([data-collapsed="true"]) .mac-dw-title strong { color: var(--bw-muted); font-weight: 600; }
+html[data-runtime="mac-native"] .mac-dw-window[data-front="false"]:not([data-collapsed="true"]) .mac-dw-title { background: var(--bw-titlebar); }
+html[data-runtime="mac-native"] .mac-dw-window[data-front="false"]:not([data-collapsed="true"]) .mac-dw-icon { opacity: .72; }
+html[data-runtime="mac-native"] .mac-dw-title button[aria-label^="Close"]:hover { background: color-mix(in srgb, #ef5350 28%, var(--bw-raised)); border-color: color-mix(in srgb, #ef5350 45%, var(--bw-border)); color: #fff; }
+
+/* Dark themes: secondary text a step brighter inside windows (light theme keeps its own). */
+html[data-runtime="mac-native"]:not([data-theme="light"]) .mac-dw-window { --bw-muted: #bcc1c9; --bw-faint: #a8afba; }
+
+/* Panel titles read as titles: sans, sentence case, a size up. Micro labels keep their small caps but in the interface font. */
+html[data-runtime="mac-native"] .mac-dw-window[data-kind="app"] .bw-panel-title { font: 650 13.5px/1.2 var(--font-sans); letter-spacing: 0; text-transform: none; }
+html[data-runtime="mac-native"] .mac-dw-sidebar-body h2 { font: 650 13px/1 var(--font-sans); letter-spacing: 0; text-transform: none; }
+html[data-runtime="mac-native"] .mac-dw-window[data-kind="app"] .bw-panel-heading { background: color-mix(in srgb, var(--bw-titlebar) 45%, var(--bw-panel)); }
+html[data-runtime="mac-native"] .mac-dw-window [class*="font-mono"][class*="uppercase"] { font-family: var(--font-sans); letter-spacing: .06em; }
+html[data-runtime="mac-native"] .mac-dw-window .bw-label { font-size: 11px; }
+
+/* A readable floor: the smallest sizes in the pages (10 to 11.5px) go up by one pixel. Row heights stay exactly as they were. */
+html[data-runtime="mac-native"] .mac-dw-window :is([class*="text-[10px]"], [class*="text-[10.5px]"]) { font-size: 11px; }
+html[data-runtime="mac-native"] .mac-dw-window :is([class*="text-[11px]"], [class*="text-[11.5px]"]) { font-size: 12px; }
+html[data-runtime="mac-native"] .mac-dw-app-toolbar { font-size: 12px; }
+html[data-runtime="mac-native"] .mac-dw-sections > a { padding: 4px 10px; font-size: 12px; }
+html[data-runtime="mac-native"] .mac-dw-window[data-kind="app"] .mac-dw-app-main { padding: 12px 14px 20px; }
+
+/* The rail groups follow the Android launcher; a thin line separates them. */
+html[data-runtime="mac-native"] .mac-dw-rail-group { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; }
+html[data-runtime="mac-native"] .mac-dw-rail-group:not([data-first="true"]) { padding-top: 6px; border-top: 1px solid var(--bw-line); }
+html[data-runtime="mac-native"] .mac-dw-rail[data-labels="true"] .mac-dw-rail-group { align-items: stretch; }
+
+/* ---- Fewer frames: surfaces are told apart by fill, and only the lines that mean something stay ---- */
+/* A window used to hold a frame (the tool layout) that held a panel that held a group that held an input. Now the window is the one frame. */
+html[data-runtime="mac-native"] .mac-dw-app-toolbar { border-bottom-color: transparent; }
+html[data-runtime="mac-native"] .mac-dw-window[data-kind="app"] .bw-panel { border-color: color-mix(in srgb, var(--bw-line) 45%, transparent); }
+html[data-runtime="mac-native"] .mac-dw-window[data-kind="app"] .bw-panel-heading { border-bottom-color: transparent; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-log-group { border-color: transparent; background: var(--bw-well); }
+html[data-runtime="mac-native"] .mac-dw-window .mac-log-group-head { background: transparent; }
+/* Learning, Journal and the other tool windows: the section list is a real sidebar from the title bar to the bottom edge, with one line beside it. */
+html[data-runtime="mac-native"] .mac-dw-window[data-kind="app"] .mac-dw-app-main:has(.mac-tool-layout) { padding: 0; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-tool-layout { border: 0; border-radius: 0; background: transparent; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-tool-view { padding: 12px 14px 20px; }
+
+/* ---- Tighter: the same dense look with the empty space taken out ---- */
+/* Panels sit closer, titles are shorter, buttons are only as wide as their words. */
+html[data-runtime="mac-native"] .mac-dw-window { --bw-grid-gap: .5rem; --bw-panel-pad: .625rem; --bw-panel-header-h: 1.625rem; }
+html[data-runtime="mac-native"] .mac-dw-window .bw-panel-heading { gap: 7px; padding-block: 2px; padding-inline: 5px 10px; }
+html[data-runtime="mac-native"] .mac-dw-window .bw-panel-heading .bw-category-icon { width: 20px; height: 20px; border-radius: 5px; }
+html[data-runtime="mac-native"] .mac-dw-window .bw-panel-heading .bw-category-icon svg { width: 12px; height: 12px; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-log-tool { padding-bottom: 2px; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-checkin-chips { gap: 4px; margin: 5px 6px 3px; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-checkin-chip { flex: none; min-height: 24px; padding: 0 11px; border-radius: 12px; font-size: 12px; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-log-groups { gap: 2px; margin: 3px 6px 4px; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-log-group-head { min-height: 26px; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-log-group-body { gap: 3px; padding: 3px 6px 6px; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-log-group-body textarea { min-height: 42px; padding: 5px 7px; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-log-item-text { padding: 4px 2px; }
+
+/* The strip under the title bar and the section list. */
+html[data-runtime="mac-native"] .mac-dw-app-toolbar { gap: 7px; min-height: 28px; padding: 2px 8px; }
+html[data-runtime="mac-native"] .mac-dw-sections > a { padding: 3px 9px; }
+html[data-runtime="mac-native"] .mac-dw-window[data-kind="app"] .mac-dw-app-main { padding: 8px 10px 12px; }
+html[data-runtime="mac-native"] .mac-dw-window[data-kind="app"] .mac-dw-app-main:has(.mac-tool-layout) { padding: 0; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-tool-layout { grid-template-columns: 132px minmax(0, 1fr); }
+html[data-runtime="mac-native"] .mac-dw-window .mac-tool-navigation { gap: 1px; padding: 6px 4px; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-tool-navigation-label { padding: 2px 8px 5px; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-tool-navigation button { min-height: 26px; gap: 7px; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-tool-view { padding: 8px 10px 12px; }
+
+/* An app's own tabs (Websites | Social) and the page's section links (All sites, Pages, Posts…) sit in one strip; a thin line tells them apart. */
+html[data-runtime="mac-native"] .mac-dw-sections + .mac-dw-sections { margin-left: 4px; padding-left: 10px; border-left: 1px solid var(--bw-line); }
+
+/* The row under a panel title (counts, filters) and panel bodies are shorter; a chart or list no longer floats in a tall box. */
+html[data-runtime="mac-native"] .mac-dw-window .bw-panel-toolbar { min-height: 1.625rem; padding: 2px 10px; }
+html[data-runtime="mac-native"] .mac-dw-window .bw-panel > [class~="py-3"] { padding-block: 8px; }
+html[data-runtime="mac-native"] .mac-dw-window .bw-panel > [class~="px-3.5"] { padding-inline: 11px; }
+
+/* Buttons in the strip under the title bar (Add learning, Today, Post) are one line tall instead of two. */
+html[data-runtime="mac-native"] .mac-dw-actions { gap: 4px; }
+html[data-runtime="mac-native"] .mac-dw-actions :is(button, a) { min-height: 24px; height: 24px; padding-block: 0; font-size: 12px; }
+html[data-runtime="mac-native"] .mac-dw-actions :is(button, a):not(:has(svg:only-child)) { padding-inline: 10px; }
+html[data-runtime="mac-native"] .mac-dw-actions :is(button, a):has(svg:only-child) { width: 24px; padding-inline: 0; }
+
+/* Journal, Daily: the log is a tall column on the left; This day and Recent entries stack on its right and both columns end together. */
+html[data-runtime="mac-native"] .mac-journal-day { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: var(--bw-grid-gap); align-items: stretch; }
+html[data-runtime="mac-native"] .mac-journal-side { display: flex; flex-direction: column; gap: var(--bw-grid-gap); min-width: 0; }
+html[data-runtime="mac-native"] .mac-journal-side > .bw-panel:last-child { flex: 1 1 auto; }
+@container mac-tool (max-width: 680px) {
+  html[data-runtime="mac-native"] .mac-journal-day { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* A window that sizes itself to its content still needs a floor so a short page does not shrink it to a sliver. */
+html[data-runtime="mac-native"] .mac-dw-window[data-fit="true"] { min-height: 230px; }

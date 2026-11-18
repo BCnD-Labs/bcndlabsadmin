@@ -1,9 +1,9 @@
-import { memo, useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react"
+import { memo, useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react"
 import { Link, useLocation, useNavigate, useRoutes } from "react-router-dom"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import { createStore, useStore, type StoreApi } from "zustand"
-import { BarChart3, BookOpen, Images, Minimize2, Minus, PanelLeftClose, PanelLeftOpen, ChevronDown, CalendarDays, Code2, FileText, Folder, FolderOpen, Globe, GraduationCap, Home, LayoutDashboard, Maximize2, Pin, Search, Server, Settings2, Share2, X } from "lucide-react"
+import { BookOpen, Minimize2, Minus, PanelLeftClose, PanelLeftOpen, ChevronDown, CalendarDays, FileText, Folder, FolderOpen, Globe, GraduationCap, Home, LayoutDashboard, Maximize2, Pin, Search, Server, Settings2, X } from "lucide-react"
 import { blackwallPages } from "@/app-routes"
 import { useNav } from "@/components/layout/nav-config"
 import { QuickCreate } from "@/components/layout/quick-create"
@@ -26,31 +26,41 @@ import "./desktop-workspace.css"
 const APP = {
   home: { title: "Home", route: "/", icon: Home, tone: "neutral" },
   planner_app: { title: "Planner", route: "/productivity", icon: CalendarDays, tone: "productivity" },
-  journal: { title: "Journal", route: "/journal", icon: BookOpen, tone: "learning" },
+  journal: { title: "Journal", route: "/journal", icon: BookOpen, tone: "journal" },
   learning: { title: "Learning", route: "/productivity/learning", icon: GraduationCap, tone: "learning" },
   projects: { title: "Projects", route: "/productivity/projects", icon: Folder, tone: "projects" },
-  insights: { title: "Insights", route: "/productivity/insights", icon: BarChart3, tone: "insights" },
-  development: { title: "GitHub activity", route: "/development", icon: Code2, tone: "github" },
-  website: { title: "Websites", route: "/cms", icon: Globe, tone: "website" },
-  assets: { title: "Assets", route: "/assets", icon: Images, tone: "website" },
+  website: { title: "Publish", route: "/cms", icon: Globe, tone: "website" },
   files: { title: "Files", route: "/files", icon: FolderOpen, tone: "neutral" },
-  docs: { title: "Docs", route: "/docs", icon: FileText, tone: "neutral" },
-  social: { title: "Social", route: "/social", icon: Share2, tone: "neutral" },
   mikoshi: { title: "Mikoshi", route: "/mikoshi", icon: Server, tone: "neutral" },
   /** Not a page: its window holds the browser (browser-window.tsx), so the route is never navigated to. */
   browser: { title: "Browser", route: "/browser", icon: Globe, tone: "neutral" },
   settings: { title: "Settings", route: "/settings", icon: Settings2, tone: "neutral" },
 } as const
 type AppId = keyof typeof APP
+/** Apps that hold several pages as tabs: one window and one sidebar icon each. A tab is current when the window's path starts with its `match`; a path none of them match shows the first tab as current. */
+const APP_TABS: Partial<Record<AppId, readonly { label: string; to: string; match: string }[]>> = {
+  home: [{ label: "Home", to: "/", match: "/" }, { label: "Insights", to: "/productivity/insights", match: "/productivity/insights" }],
+  website: [{ label: "Websites", to: "/cms", match: "/cms" }, { label: "Social", to: "/social", match: "/social" }],
+  projects: [{ label: "Projects", to: "/productivity/projects", match: "/productivity/projects" }, { label: "GitHub activity", to: "/development", match: "/development" }],
+  files: [{ label: "Files", to: "/files", match: "/files" }, { label: "Docs", to: "/docs", match: "/docs" }, { label: "Assets", to: "/assets", match: "/assets" }],
+}
 type Id = "notes" | AppId
 type Edge = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw"
-type WindowState = WindowRect & { open: boolean; collapsed: boolean; expanded: boolean; pinned: boolean; z: number; path?: string; restore?: WindowRect }
+type WindowState = WindowRect & { open: boolean; collapsed: boolean; expanded: boolean; pinned: boolean; z: number; path?: string; restore?: WindowRect; /** Set once you drag a window's edge: until then a FIT window is as tall as its content. Closing the window clears it. */ sized?: boolean }
 type Windows = Record<Id, WindowState>
 type Gesture = { id: Id; pointer: number; startX: number; startY: number; lastX: number; lastY: number; start: WindowRect; current: WindowRect; edge?: Edge }
 const EDGES: Edge[] = ["n", "s", "e", "w", "ne", "nw", "se", "sw"]
 const APP_IDS = Object.keys(APP) as AppId[]
 const IDS: Id[] = ["notes", ...APP_IDS]
-const RAIL_IDS: Id[] = ["home", "browser", "learning", "journal", "notes", "projects", "insights", "development", "website", "assets", "files", "docs", "social", "mikoshi"]
+/** The rail follows the Android launcher's groups (Daily, Build, Homelab); Assets, Files, Docs and the Browser are the Mac's own group. */
+const RAIL_GROUPS: Id[][] = [
+  ["home", "learning", "journal", "notes"],
+  ["projects", "website"],
+  ["files", "browser"],
+  ["mikoshi"],
+]
+/** Windows made of panels and lists: they open as tall as their content (up to the screen) until you resize them. Editors, the browser and file views fill their window instead. */
+const FIT = new Set<Id>(["home", "journal", "learning", "projects", "mikoshi"])
 const KEY = "blackwall-mac-desktop-windows-v2"
 /** Width of the left rail with names shown; the icon-only rail is 43px. */
 const RAIL_WIDE = 172, RAIL_NARROW = 43
@@ -63,14 +73,14 @@ function appForPath(path: string): AppId {
   if (path.startsWith("/productivity/learning")) return "learning"
   if (path.startsWith("/productivity/projects")) return "projects"
   if (path.startsWith("/work/projects")) return "projects"
-  if (path.startsWith("/productivity/insights") || path === "/analytics") return "insights"
+  if (path.startsWith("/productivity/insights") || path === "/analytics") return "home"
   if (path.startsWith("/productivity") || path.startsWith("/work") || path.startsWith("/notes") || path.startsWith("/knowledge")) return "planner_app"
-  if (path.startsWith("/development")) return "development"
-  if (path.startsWith("/assets")) return "assets"
+  if (path.startsWith("/development")) return "projects"
+  if (path.startsWith("/assets")) return "files"
   if (path.startsWith("/files")) return "files"
-  if (path.startsWith("/docs")) return "docs"
+  if (path.startsWith("/docs")) return "files"
   if (path.startsWith("/cms") || path.startsWith("/content")) return "website"
-  if (path.startsWith("/social")) return "social"
+  if (path.startsWith("/social")) return "website"
   if (path.startsWith("/mikoshi")) return "mikoshi"
   if (path.startsWith("/settings")) return "settings"
   return "home"
@@ -78,11 +88,18 @@ function appForPath(path: string): AppId {
 const visibleRect = (value: WindowState): WindowRect => ({ x: value.x, y: value.y, width: value.width, height: value.collapsed ? 30 : value.height })
 const LiveNotes = memo(NotesTool)
 
+/** The size a window opens at: the same whenever it is opened after being closed. */
+function defaultSize(id: AppId): { width: number; height: number } {
+  const width = window.innerWidth, height = window.innerHeight
+  const big = id === "planner_app" || id === "learning" || id === "files"
+  return { width: Math.min(id === "website" ? 1320 : big ? 1000 : 820, width - 105), height: Math.min(id === "website" ? 820 : big ? 650 : 560, height - 90) }
+}
+
 function initialWindows(): Windows {
   const width = window.innerWidth, height = window.innerHeight
   const defaults = {
     notes: { x: Math.max(80, Math.round(width * .12)), y: Math.min(height - 44, 680), width: Math.min(360, width - 95), height: 280, open: true, collapsed: true, expanded: false, pinned: false, z: 1 },
-    ...Object.fromEntries(APP_IDS.map((id, listed) => [id, id === "browser" ? 2 : listed] as const).map(([id, index]) => [id, { x: Math.max(75, Math.round(width * .12) + index * 28), y: Math.max(60, Math.round(height * .08) + index * 22), width: Math.min(id === "website" ? 1320 : id === "planner_app" || id === "learning" ? 1000 : 820, width - 105), height: Math.min(id === "website" ? 820 : id === "planner_app" || id === "learning" ? 650 : 560, height - 90), open: false, collapsed: false, expanded: false, pinned: false, z: index + 3, path: APP[id].route }])),
+    ...Object.fromEntries(APP_IDS.map((id, listed) => [id, id === "browser" ? 2 : listed] as const).map(([id, index]) => [id, { x: Math.max(75, Math.round(width * .12) + index * 28), y: Math.max(60, Math.round(height * .08) + index * 22), ...defaultSize(id), open: false, collapsed: false, expanded: false, pinned: false, z: index + 3, path: APP[id].route }])),
   } as Windows
   const fit = (id: Id) => { defaults[id] = { ...defaults[id], x: Math.max(75, Math.min(defaults[id].x, width - defaults[id].width - 10)), y: Math.max(MAC_DESKTOP_TOP, Math.min(defaults[id].y, height - defaults[id].height - 10)) } }
   fit("website")
@@ -95,7 +112,7 @@ function initialWindows(): Windows {
       if (!value || [value.x, value.y, value.width, value.height].some(n => typeof n !== "number" || !Number.isFinite(n))) continue
       // The Website window used to open small; a size still at that old default isn't one anyone chose, so the editor gets its large one.
       const large = id === "website" && value.width === 820 && value.height === 560 ? { width: defaults[id].width, height: defaults[id].height } : {}
-      defaults[id] = { ...defaults[id], x: Math.max(45, value.x!), y: Math.max(MAC_DESKTOP_TOP, value.y!), width: Math.max(280, value.width!), height: Math.max(200, value.height!), open: (isWidget(id) || usePrefs.getState().restoreWindows) && value.open !== false, collapsed: value.collapsed === true, pinned: isWidget(id) && value.pinned === true, expanded: false, path: !isWidget(id) && typeof value.path === "string" && value.path.startsWith("/") ? value.path : id === migratedApp && saved.app ? window.location.pathname + window.location.search : defaults[id].path, ...large }
+      defaults[id] = { ...defaults[id], x: Math.max(45, value.x!), y: Math.max(MAC_DESKTOP_TOP, value.y!), width: Math.max(280, value.width!), height: Math.max(200, value.height!), open: (isWidget(id) || usePrefs.getState().restoreWindows) && value.open !== false, collapsed: value.collapsed === true, pinned: isWidget(id) && value.pinned === true, sized: FIT.has(id) && value.sized === true, expanded: false, path: !isWidget(id) && typeof value.path === "string" && value.path.startsWith("/") ? value.path : id === migratedApp && saved.app ? window.location.pathname + window.location.search : defaults[id].path, ...large }
       if ("width" in large) fit(id)
     }
   } catch { /* Use a fresh local layout when storage is unavailable. */ }
@@ -115,9 +132,31 @@ function WindowSections({ id, path }: { id: AppId; path: string }) {
   return <nav className="mac-dw-sections" aria-label={`${sections.label} sections`}>{sections.children.map((child) => <Link key={child.to} to={child.to} aria-current={sections.current === child ? "page" : undefined}>{child.label}</Link>)}</nav>
 }
 
+/** The pages of a merged app (Projects: Projects | GitHub activity; Files: Files | Docs | Assets). */
+function AppTabs({ id, path }: { id: AppId; path: string }) {
+  const tabs = APP_TABS[id]
+  if (!tabs) return null
+  const pathname = path.split("?")[0]
+  const current = [...tabs].sort((a, b) => b.match.length - a.match.length).find((tab) => pathname === tab.match || pathname.startsWith(tab.match + "/")) ?? tabs[0]
+  return <nav className="mac-dw-sections" aria-label={`${APP[id].title} sections`}>{tabs.map((tab) => <Link key={tab.to} to={tab.to} aria-current={tab === current ? "page" : undefined}>{tab.label}</Link>)}</nav>
+}
+
 function AppToolbar({ store, id, path }: { store: StoreApi<PageHead>; id: AppId; path: string }) {
   const head = useStore(store)
-  return <div className="mac-dw-app-toolbar"><WindowSections id={id} path={path} />{head.back && <Link to={head.back.to}>← {head.back.label}</Link>}{head.subtitle && <span>{head.subtitle}</span>}{head.actions && <div className="mac-dw-actions">{head.actions}</div>}</div>
+  return <div className="mac-dw-app-toolbar"><AppTabs id={id} path={path} /><WindowSections id={id} path={path} />{head.back && <Link to={head.back.to}>← {head.back.label}</Link>}{head.subtitle && <span>{head.subtitle}</span>}{head.actions && <div className="mac-dw-actions">{head.actions}</div>}</div>
+}
+
+/** Reports the height its window has while the window sizes itself to its content, so moving it keeps it on screen. */
+function Autofit({ id, report }: { id: Id; report: (id: Id, height: number) => void }) {
+  const mark = useRef<HTMLSpanElement>(null)
+  useEffect(() => {
+    const frame = mark.current?.parentElement
+    if (!frame) return
+    const watch = new ResizeObserver(() => report(id, Math.round(frame.getBoundingClientRect().height)))
+    watch.observe(frame)
+    return () => watch.disconnect()
+  }, [id, report])
+  return <span ref={mark} hidden />
 }
 
 const AppPage = memo(function AppPage({ id, path, store }: { id: AppId; path: string; store: StoreApi<PageHead> }) {
@@ -168,6 +207,9 @@ export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
   useEffect(() => { if (!plannerOpen) return; const close = (event: KeyboardEvent) => { if (event.key === "Escape") setPlannerOpen(false) }; document.addEventListener("keydown", close); return () => document.removeEventListener("keydown", close) }, [plannerOpen])
 
   const update = (id: Id, fn: (value: WindowState) => WindowState) => setWindows(all => ({ ...all, [id]: fn(all[id]) }))
+  const report = useCallback((id: Id, height: number) => setWindows(all => Math.abs(all[id].height - height) < 2 ? all : { ...all, [id]: { ...all[id], height } }), [])
+  /** Closing puts an app window back to the size it first opens at (and to fitting its content). Minimizing keeps whatever size you made it. */
+  const close = (id: Id) => update(id, current => isWidget(id) ? { ...current, open: false } : { ...current, open: false, sized: false, expanded: false, restore: undefined, ...defaultSize(id) })
   const focus = (id: Id) => { const z = ++layer.current; update(id, value => ({ ...value, z })) }
   const open = (id: Id) => {
     const value = windows[id]
@@ -207,7 +249,8 @@ export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
 
   const start = (event: PointerEvent<HTMLElement>, id: Id, edge?: Edge) => {
     if (event.button !== 0 || (!edge && (event.target as Element).closest("button, a"))) return
-    const value = fitWindow(windows[id], viewport, railLabels ? RAIL_WIDE : RAIL_NARROW)
+    const measured = edge && fitsContent(id) ? (event.currentTarget as HTMLElement).closest(".mac-dw-window")?.getBoundingClientRect().height : undefined
+    const value = fitWindow(measured ? { ...windows[id], height: Math.round(measured) } : windows[id], viewport, railLabels ? RAIL_WIDE : RAIL_NARROW)
     if (value.pinned && (!edge || edge.includes("n") || edge.includes("w"))) return
     gesture.current = { id, pointer: event.pointerId, startX: event.clientX, startY: event.clientY, lastX: event.clientX, lastY: event.clientY, start: value, current: value, edge }
     event.currentTarget.setPointerCapture(event.pointerId)
@@ -235,13 +278,17 @@ export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
     next = fitWindow({ ...windows[g.id], ...next }, viewport, railLabels ? RAIL_WIDE : RAIL_NARROW)
     g.current = next
     g.lastX = event.clientX; g.lastY = event.clientY
-    update(g.id, value => ({ ...value, ...next, expanded: false }))
+    update(g.id, value => ({ ...value, ...next, expanded: false, sized: value.sized || (!!g.edge && FIT.has(g.id)) }))
   }
   const end = (event: PointerEvent<HTMLElement>) => {
     if (gesture.current?.pointer === event.pointerId) gesture.current = null
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
   }
 
+  /** The window you used last. It gets the full title bar and shadow; the others sit back so it is clear which one has focus. */
+  const frontId = IDS.filter(other => windows[other].open && !windows[other].collapsed).sort((a, b) => windows[b].z - windows[a].z)[0]
+  /** A FIT window is as tall as its content until you drag its edge; minimized or enlarged windows have their own height. */
+  const fitsContent = (id: Id) => FIT.has(id) && !windows[id].sized && !windows[id].collapsed && !windows[id].expanded
   const frame = (id: Id, title: ReactNode, icon: ReactNode, children: ReactNode) => {
     const value = windows[id]
     if (!value.open) return null
@@ -249,16 +296,17 @@ export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
     const pinBlocked = isWidget(id) && !value.pinned && IDS.some(other => isWidget(other) && other !== (id as Id) && windows[other].open && overlaps(visibleRect(value), visibleRect(windows[other])))
     const widgetFront = windows.notes.z
     const appRank = APP_IDS.filter(app => windows[app].open).sort((a, b) => windows[a].z - windows[b].z).indexOf(id as AppId)
-    return <section key={id} className="mac-dw-window" data-kind={isWidget(id) ? "widget" : "app"} data-tone={isWidget(id) ? "productivity" : APP[id].tone} data-collapsed={value.collapsed} aria-label={`${isWidget(id) ? id : APP[id].title} window`}
-      style={{ left: fitted.x + railExtra, top: fitted.y, width: fitted.width, height: fitted.collapsed ? 30 : fitted.height, zIndex: isWidget(id) ? value.z === widgetFront ? 11 : 10 : 20 + appRank }} onPointerDown={event => { if (!(event.target as Element).closest(".mac-dw-title, .mac-dw-edge")) focus(id) }}>
+    return <section key={id} className="mac-dw-window" data-kind={isWidget(id) ? "widget" : "app"} data-tone={isWidget(id) ? "productivity" : APP[id].tone} data-collapsed={value.collapsed} data-front={id === frontId} data-fit={fitsContent(id)} aria-label={`${isWidget(id) ? id : APP[id].title} window`}
+      style={{ left: fitted.x + railExtra, top: fitted.y, width: fitted.width, height: fitted.collapsed ? 30 : fitsContent(id) ? "auto" : fitted.height, maxHeight: fitsContent(id) ? `calc(100vh - ${fitted.y}px - 8px)` : undefined, zIndex: isWidget(id) ? value.z === widgetFront ? 11 : 10 : 20 + appRank }} onPointerDown={event => { if (!(event.target as Element).closest(".mac-dw-title, .mac-dw-edge")) focus(id) }}>
       <header className="mac-dw-title" onPointerDown={event => start(event, id)} onPointerMove={move} onPointerUp={end} onPointerCancel={end} onDoubleClick={event => { if (!(event.target as Element).closest("button")) update(id, current => ({ ...current, collapsed: !current.collapsed })) }}>
         <span className="mac-dw-icon">{icon}</span><strong>{title}</strong><span className="mac-dw-spacer" />
         {isWidget(id) && <button type="button" aria-label={value.pinned ? `Unlock ${id} position` : `Lock ${id} position`} title={pinBlocked ? "Move clear of other widgets to lock" : undefined} aria-pressed={value.pinned} disabled={pinBlocked} onClick={() => pin(id)}><Pin size={15} fill={value.pinned ? "currentColor" : "none"} /></button>}
         <button type="button" aria-label={value.collapsed ? `Show ${id} window` : `Minimize ${id} window`} title={value.collapsed ? "Show window" : "Minimize to title bar"} onClick={() => update(id, current => ({ ...current, collapsed: !current.collapsed }))}>{value.collapsed ? <ChevronDown size={16} /> : <Minus size={16} />}</button>
         {!value.collapsed && <button type="button" aria-label={value.expanded ? `Restore ${id} window` : `Expand ${id} window`} title={value.expanded ? "Make smaller" : "Make bigger"} onClick={() => expand(id)}>{value.expanded ? <Minimize2 size={15} /> : <Maximize2 size={15} />}</button>}
-        <button type="button" aria-label={`Close ${id} window`} title="Close" onClick={() => update(id, current => ({ ...current, open: false }))}><X size={17} /></button>
+        <button type="button" aria-label={`Close ${id} window`} title="Close" onClick={() => close(id)}><X size={17} /></button>
       </header>
       <div className="mac-dw-content" hidden={value.collapsed}>{children}</div>
+      {fitsContent(id) && <Autofit id={id} report={report} />}
       {!value.collapsed && EDGES.map(edge => <span key={edge} className={`mac-dw-edge edge-${edge}`} onPointerDown={event => start(event, id, edge)} onPointerMove={move} onPointerUp={end} onPointerCancel={end} />)}
     </section>
   }
@@ -269,16 +317,18 @@ export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
     <nav className="mac-dw-rail" aria-label="Blackwall apps and tools" data-labels={railLabels} style={{ "--dw-rail-w": `${RAIL_WIDE}px` } as CSSProperties}>
       <span className="mac-dw-mark">BW</span>
       <button className="mac-dw-rail-toggle" title={railLabels ? "Hide names" : "Show names"} aria-label={railLabels ? "Hide sidebar names" : "Show sidebar names"} aria-expanded={railLabels} onClick={() => setPrefs({ railLabels: !railLabels })}>{railLabels ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}{railLabels && <span className="mac-dw-rail-label">Collapse</span>}</button>
-      {RAIL_IDS.filter(id => !railHidden.includes(id)).map(id => {
-        const widget = isWidget(id)
-        const label = widget ? "Notes" : APP[id].title
-        const Icon = widget ? FileText : APP[id].icon
-        const shown = windows[id].open
-        return <div key={id} className="mac-dw-rail-item" data-open={shown}>
-          <button data-tone={widget ? "productivity" : APP[id].tone} title={label} aria-label={`Open ${widget ? "Notes widget" : label}`} aria-pressed={shown} onClick={() => widget ? open(id) : launch(id)}><Icon size={16} />{railLabels && <span className="mac-dw-rail-label">{label}</span>}</button>
-          {shown && <button className="mac-dw-rail-close" title={`Close ${label}`} aria-label={`Close ${widget ? "Notes widget" : label} window`} onClick={() => update(id, current => ({ ...current, open: false }))}><X size={11} /></button>}
-        </div>
-      })}
+      {RAIL_GROUPS.map(group => group.filter(id => !railHidden.includes(id))).filter(group => group.length).map((group, index) => <div key={group[0]} className="mac-dw-rail-group" role="group" data-first={index === 0}>
+        {group.map(id => {
+          const widget = isWidget(id)
+          const label = widget ? "Notes" : APP[id].title
+          const Icon = widget ? FileText : APP[id].icon
+          const shown = windows[id].open
+          return <div key={id} className="mac-dw-rail-item" data-open={shown}>
+            <button data-tone={widget ? "productivity" : APP[id].tone} title={label} aria-label={`Open ${widget ? "Notes widget" : label}`} aria-pressed={shown} onClick={() => widget ? open(id) : launch(id)}><Icon size={16} />{railLabels && <span className="mac-dw-rail-label">{label}</span>}</button>
+            {shown && <button className="mac-dw-rail-close" title={`Close ${label}`} aria-label={`Close ${widget ? "Notes widget" : label} window`} onClick={() => close(id)}><X size={11} /></button>}
+          </div>
+        })}
+      </div>)}
       <span className="mac-dw-flex" />
       <button title="Classic workspace (⌥⌘D)" aria-label="Open classic workspace" onClick={onClassic}><LayoutDashboard size={16} />{railLabels && <span className="mac-dw-rail-label">Classic view</span>}</button>
       <SyncStatus expanded={railLabels} />
@@ -295,7 +345,7 @@ export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
       {APP_IDS.map(id => {
         const Icon = APP[id].icon
         if (id === "browser") return frame(id, <BrowserTitle />, <Icon size={16} />, <BrowserApp onFocus={() => focus("browser")} />)
-        return frame(id, <WindowTitle store={appStores[id]} fallback={APP[id].title} />, <Icon size={16} />, <AppPage id={id} path={windows[id].path ?? APP[id].route} store={appStores[id]} />)
+        return frame(id, APP_TABS[id] ? APP[id].title : <WindowTitle store={appStores[id]} fallback={APP[id].title} />, <Icon size={16} />, <AppPage id={id} path={windows[id].path ?? APP[id].route} store={appStores[id]} />)
       })}
     </>}
     {ready && plannerOpen && <PlannerSidebar overdue={overdue} onClose={() => setPlannerOpen(false)} onExpand={() => { setPlannerOpen(false); launch("planner_app") }} />}

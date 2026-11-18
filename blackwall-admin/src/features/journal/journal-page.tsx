@@ -153,7 +153,25 @@ export function JournalPage() {
   const choose = (next: View) => setParams((p) => { const n = new URLSearchParams(p); n.set("view", next); return n }, { replace: true })
   const firstLine = (j: (typeof journal)[number]) => (j.text.trim() || j.entries?.find((i) => !i.courseId && !i.taskId)?.text || "").split("\n").map((l) => l.replace(/^#+\s*/, "").trim()).find(Boolean) ?? "Saved"
 
-  const content = view === "reflections" ? <Reflections /> : (
+  const logPanel = (
+    <Panel category="journal" title="Log" tool="journal" command="log" bodyClassName="p-0">
+      {IS_MAC ? <LogTool hideNav /> : <p className="px-3.5 py-3 text-sm text-muted-foreground">The daily log opens in the Planner: <Link className="underline" to={logHref(day)}>open this day</Link>.</p>}
+    </Panel>
+  )
+  const dayPanels = (
+    <>
+      <Panel category="journal" title="This day" tool="journal" command="day" bodyClassName="grid gap-2 p-3">
+        <DayWork day={day} />
+        <Button variant="outline" size="sm" asChild><Link to={logHref(day)}>See this day in the Planner</Link></Button>
+      </Panel>
+      <RecentEntries today={today} onOpenDay={setDay} />
+    </>
+  )
+
+  /** On the Mac the day is two columns that end together: the log on the left, This day and Recent entries stacked on the right. */
+  const content = view === "reflections" ? <Reflections /> : IS_MAC && view === "daily" ? (
+    <div className="mac-journal-day">{logPanel}<div className="mac-journal-side">{dayPanels}</div></div>
+  ) : (
         <WorkspaceGrid>
           {view !== "daily" && <GridItem span={2}>
             <Panel category="journal" title={formWording(period).title} tool="journal" command="check-in" bodyClassName="grid gap-2 p-3">
@@ -162,20 +180,8 @@ export function JournalPage() {
           </GridItem>}
           {view === "daily" ? (
             <>
-            <GridItem span={2}>
-              <Panel category="journal" title="Log" tool="journal" command="log" bodyClassName="p-0">
-                {IS_MAC ? <LogTool hideNav /> : <p className="px-3.5 py-3 text-sm text-muted-foreground">The daily log opens in the Planner: <Link className="underline" to={logHref(day)}>open this day</Link>.</p>}
-              </Panel>
-            </GridItem>
-            <GridItem>
-              <div className="grid gap-3">
-                <Panel category="journal" title="This day" tool="journal" command="day" bodyClassName="grid gap-2 p-3">
-                  <DayWork day={day} />
-                  <Button variant="outline" size="sm" asChild><Link to={logHref(day)}>See this day in the Planner</Link></Button>
-                </Panel>
-                <RecentEntries today={today} onOpenDay={setDay} />
-              </div>
-            </GridItem>
+            <GridItem span={2}>{logPanel}</GridItem>
+            <GridItem><div className="grid gap-3">{dayPanels}</div></GridItem>
             </>
           ) : (
             <GridItem span={2}>
