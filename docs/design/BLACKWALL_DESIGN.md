@@ -209,9 +209,11 @@ Settings → Dashboard chooses explicit GitHub/analytics sources for this browse
 
 The Mac workspace's windows keep the compact density and the Graphite theme; this pass only helps reading and makes them behave like app windows.
 
-- **Front and back.** The window used last (`data-front`) has the full title bar, a tinted edge and a deep shadow; the others have a flat title bar, muted title and a light shadow. A minimized window keeps its normal look. Window corners are 10px, matching the panels inside.
+- **Front and back.** The window used last (`data-front`) has the full title bar and a deep shadow (no tinted edge); the others have a flat title bar, muted title and a light shadow. A minimized window keeps its normal look. Window corners are 10px, matching the panels inside.
 - **Titles and labels.** Panel titles inside windows are sans, sentence case, 13.5px/650 (not mono capitals). Micro labels keep small caps but use the interface font.
 - **Reading floor.** Inside windows text from 10 to 11.5px goes up by one pixel (to 11 and 12px); secondary and faint text are a step brighter in dark themes. Row heights, gaps and the 30px title bar are unchanged.
 - **Sidebar.** The rail follows the Android launcher's groups with a thin line between them: Daily (Home, Learning, Journal, Notes, Insights), Build (Projects, GitHub activity, Websites, Social), the Mac-only files group (Assets, Files, Docs, Browser) and Homelab (Mikoshi). Journal uses the same amber as on Android; Learning keeps violet.
+
+- **Fewer frames.** A window is the one frame. Inside it, tool windows (Learning, Journal) show their section list as a sidebar running edge to edge with one line beside it; panels sit on the window by fill with only a soft edge; groups inside panels and panel header bands have no line of their own. From a text box to the window edge that is three visible borders (text box, panel, window) instead of five.
 
 Open parity gaps with the Android screens (content, not styling): Home, Insights and Projects show different panels than Android's; Social has no "Posted" list.

@@ -194,7 +194,7 @@ html[data-runtime="mac-native"] .mac-br-empty small { font-size: 11px; }
 /* ---- Window polish: front and back windows, calmer labels, a touch more room to read ---- */
 
 /* The window you used last is raised and lit; the others sit back. A minimized title bar keeps its normal look. */
-html[data-runtime="mac-native"] .mac-dw-window[data-front="true"] { border-color: color-mix(in srgb, var(--dw-hue, var(--bw-blue)) 22%, var(--bw-border)); box-shadow: 0 22px 50px #000b, 0 0 0 1px #0007, 0 1px 0 #ffffff14 inset; }
+html[data-runtime="mac-native"] .mac-dw-window[data-front="true"] { box-shadow: 0 22px 50px #000b, 0 0 0 1px #0007, 0 1px 0 #ffffff14 inset; }
 html[data-runtime="mac-native"] .mac-dw-window[data-front="false"]:not([data-collapsed="true"]) .mac-dw-title strong { color: var(--bw-muted); font-weight: 600; }
 html[data-runtime="mac-native"] .mac-dw-window[data-front="false"]:not([data-collapsed="true"]) .mac-dw-title { background: var(--bw-titlebar); }
 html[data-runtime="mac-native"] .mac-dw-window[data-front="false"]:not([data-collapsed="true"]) .mac-dw-icon { opacity: .72; }
@@ -221,3 +221,15 @@ html[data-runtime="mac-native"] .mac-dw-window[data-kind="app"] .mac-dw-app-main
 html[data-runtime="mac-native"] .mac-dw-rail-group { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; }
 html[data-runtime="mac-native"] .mac-dw-rail-group:not([data-first="true"]) { padding-top: 6px; border-top: 1px solid var(--bw-line); }
 html[data-runtime="mac-native"] .mac-dw-rail[data-labels="true"] .mac-dw-rail-group { align-items: stretch; }
+
+/* ---- Fewer frames: surfaces are told apart by fill, and only the lines that mean something stay ---- */
+/* A window used to hold a frame (the tool layout) that held a panel that held a group that held an input. Now the window is the one frame. */
+html[data-runtime="mac-native"] .mac-dw-app-toolbar { border-bottom-color: transparent; }
+html[data-runtime="mac-native"] .mac-dw-window[data-kind="app"] .bw-panel { border-color: color-mix(in srgb, var(--bw-line) 45%, transparent); }
+html[data-runtime="mac-native"] .mac-dw-window[data-kind="app"] .bw-panel-heading { border-bottom-color: transparent; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-log-group { border-color: transparent; background: var(--bw-well); }
+html[data-runtime="mac-native"] .mac-dw-window .mac-log-group-head { background: transparent; }
+/* Learning, Journal and the other tool windows: the section list is a real sidebar from the title bar to the bottom edge, with one line beside it. */
+html[data-runtime="mac-native"] .mac-dw-window[data-kind="app"] .mac-dw-app-main:has(.mac-tool-layout) { padding: 0; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-tool-layout { border: 0; border-radius: 0; background: transparent; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-tool-view { padding: 12px 14px 20px; }
