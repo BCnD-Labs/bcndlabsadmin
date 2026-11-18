@@ -1,5 +1,5 @@
 import type { StoredConnection } from "../store.ts"
-import type { StorageEntry } from "../../shared/storage.ts"
+import type { EditingCreator, EditingInfo, StorageEntry } from "../../shared/storage.ts"
 import { ProviderError, fmtCount, need } from "../http.ts"
 import type { TestResult } from "./index.ts"
 
@@ -127,15 +127,7 @@ const OFFICE_MIME: Record<string, string> = {
 }
 const CREATABLE = new Set(["docx", "xlsx", "pptx", "odt", "ods", "odp"])
 
-export interface EditingCreator { id: string; editor: string; name: string; extension: string }
-export interface EditingInfo {
-  /** True when Nextcloud has an office editor installed and configured (Collabora). */
-  available: boolean
-  /** File extensions that open in it. */
-  extensions: string[]
-  /** Blank documents Nextcloud can create. */
-  creators: EditingCreator[]
-}
+export type { EditingCreator, EditingInfo }
 
 const isRecord = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v)
 

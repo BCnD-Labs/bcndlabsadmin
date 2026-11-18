@@ -24,7 +24,8 @@ const LOAD_TIMEOUT_MS = 30_000
  * only that origin loads here; other web links open in the browser; app links ask first; everything else is
  * blocked. No file access, no mixed content, no geolocation. It stays mounted (hidden) while you use another tool.
  */
-export const ToolWebView = forwardRef<ToolHandle, { url: string; name: string; visible: boolean }>(function ToolWebView({ url, name, visible }, ref) {
+/** `onRetry`: used instead of reloading the same address, for one-time addresses (the document editor) that need a fresh one. */
+export const ToolWebView = forwardRef<ToolHandle, { url: string; name: string; visible: boolean; onRetry?: () => void }>(function ToolWebView({ url, name, visible, onRetry }, ref) {
   const origin = originOf(url) ?? ""
   const web = useRef<WebView>(null)
   const [instance, setInstance] = useState(0)
@@ -38,17 +39,18 @@ export const ToolWebView = forwardRef<ToolHandle, { url: string; name: string; v
 
   const retry = useCallback(() => {
     stop()
+    if (onRetry) return onRetry()
     setError(null)
     setLoaded(false)
     canBack.current = false
     setInstance((n) => n + 1)
-  }, [])
+  }, [onRetry])
   const fail = useCallback((title: string, detail: string) => { stop(); setError({ title, detail }) }, [])
 
   useImperativeHandle(ref, () => ({
     goBack: () => { if (error || !canBack.current) return false; web.current?.goBack(); return true },
-    reload: () => (error ? retry() : web.current?.reload()),
-  }), [error, retry])
+    reload: () => (error || onRetry ? retry() : web.current?.reload()),
+  }), [error, retry, onRetry])
 
   const route = useCallback((target: string): boolean => {
     switch (classifyLink(target, origin)) {

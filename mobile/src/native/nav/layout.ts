@@ -5,6 +5,9 @@ export const FAB_EDGE = 12
 const GAP = 8
 const NAV_MAX = 300
 
+/** Room kept under a full-height page (an open Mikoshi tool, the document editor) for the floating nav pill, so it never covers the page. */
+export const PILL_RESERVE = 66
+
 /**
  * The pill sits to the left of the quick-add button instead of centred, so the two never overlap.
  * On a wide phone the pill keeps a little air on both sides of itself; on a narrow one it takes all the room left.
