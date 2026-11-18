@@ -1,4 +1,4 @@
-import { Check, Copy, ImageIcon, Pencil, Trash2 } from "lucide-react"
+import { Check, Copy, FolderOpen, ImageIcon, Pencil, Trash2 } from "lucide-react"
 import { useMemo, useState, type DragEvent } from "react"
 import { Link } from "react-router-dom"
 import { toast } from "sonner"
@@ -12,7 +12,7 @@ import { OptionSelect } from "@/components/forms/fields"
 import { PageHeader } from "@/components/common/page-header"
 import { Panel } from "@/components/common/panel"
 import { GridItem, WorkspaceGrid } from "@/components/common/workspace-grid"
-import { draftHref, sitePageHref } from "@/lib/routes"
+import { draftHref, filesHref, sitePageHref } from "@/lib/routes"
 import type { Asset } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { storage } from "@/features/mikoshi/storage-api"
@@ -160,7 +160,7 @@ export function AssetsPage() {
 
   return (
     <>
-      <PageHeader title="Assets" subtitle="Pictures for all your sites" />
+      <PageHeader title="Assets" subtitle="Pictures for your sites and social posts" actions={<Button variant="outline" asChild><Link to={`${filesHref}?path=${encodeURIComponent(folder)}`} title="The same pictures as plain files in your Nextcloud"><FolderOpen /> Open in Files</Link></Button>} />
       <datalist id="asset-collections">{collections.map((c) => <option key={c.name} value={c.name} />)}</datalist>
       <WorkspaceGrid>
         {info && !connected && (
