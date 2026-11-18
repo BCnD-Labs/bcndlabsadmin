@@ -2,7 +2,7 @@ import pg from "pg"
 import { randomUUID } from "node:crypto"
 import { emptyWorkspace, type Collections, type WorkspaceSnapshot } from "../shared/workspace.ts"
 import { seal, unseal } from "./crypto.ts"
-import type { ScheduledPost } from "../shared/site.ts"
+import { scheduleKey, type ScheduledPost } from "../shared/site.ts"
 import { ConnectionStore, type StoredConnection } from "./store.ts"
 
 /**
@@ -166,7 +166,7 @@ export class PostgresConnectionStore extends ConnectionStore {
     await this.pool.query(
       `INSERT INTO scheduled_posts (slug, publish_at, data) VALUES ($1, $2, $3)
        ON CONFLICT (slug) DO UPDATE SET publish_at = EXCLUDED.publish_at, data = EXCLUDED.data`,
-      [s.post.slug, s.publishAt, JSON.stringify(s)],
+      [scheduleKey(s), s.publishAt, JSON.stringify(s)],
     )
   }
 

@@ -26,6 +26,13 @@ export interface SitePost {
   date: string
   updated?: string
   markdown: string
+  /** Groups the site's own script can filter by. A post may have several. Optional: older posts have none. */
+  categories?: string[]
+  /** Shown before other posts in the blog list. */
+  featured?: boolean
+  /** A small picture for list cards (site-root path), apart from the cover on the post itself. */
+  thumbnail?: string
+  thumbnailAlt?: string
 }
 
 export interface SiteManifest {
@@ -37,12 +44,23 @@ export interface ScheduledPost {
   post: SitePost
   publishAt: string
   createdAt: string
+  /** What the schedule is filed under when two sites can use the same post address. Absent: the post's slug, as before. */
+  key?: string
+  /** A Pagesmith post: the site and the draft to publish (the whole site is published with it). */
+  siteId?: string
+  draftId?: string
+  /** "pr": open a pull request instead of committing to the live branch. */
+  mode?: "direct" | "pr"
+  /** It ran after its time because the server wasn't running then. */
+  late?: boolean
   /** The website connection it publishes to. Absent: the first one, as before sites could have their own. */
   connectionId?: string
   /** The last failed attempt, if publishing at the scheduled time didn't work. */
   error?: string
   triedAt?: string
 }
+
+export const scheduleKey = (s: Pick<ScheduledPost, "key" | "post">) => s.key ?? s.post.slug
 
 export interface SitePage {
   /** Repo path, e.g. `pages/about/about.html`. */
@@ -215,26 +233,105 @@ ${renderMarkdown(post.markdown)}
 `
 }
 
-/** One card in the blog index, in the same markup as the site's hand-written cards. */
-export function postCard(post: SitePost, href: string): string {
-  const tags = post.tags.filter(Boolean)
-  return `<article class="card card--mini" id="post-${escapeHtml(post.slug)}">
-                ${tags.length ? `<ul class="chips">${tags.map((t) => `<li class="chip">${escapeHtml(t)}</li>`).join("")}</ul>` : ""}
-                <h3>${escapeHtml(post.title)}</h3>
-                ${post.excerpt ? `<p>${escapeHtml(post.excerpt)}</p>` : ""}
-                <div class="card-links"><a href="${escapeHtml(href)}">Read post ↗</a></div>
+/** The kebab-case form of a category, safe in an attribute and easy for a site's own script to match: "Case Study" → "case-study". */
+export const categorySlug = (name: string) => name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
+
+const clean = (list: unknown, max = 40) => [...new Set((Array.isArray(list) ? list : []).map((t) => String(t).trim().slice(0, max)).filter(Boolean))]
+
+/** What a card template may contain, with one plain line for each, shown beside the editor. */
+export const CARD_TOKENS: { token: string; about: string }[] = [
+  { token: "title", about: "The post's title, as text." },
+  { token: "excerpt", about: "The one-line summary, as text." },
+  { token: "excerptP", about: "The summary as a paragraph, or nothing when there is none." },
+  { token: "thumb", about: "The thumbnail picture, or nothing when there is none." },
+  { token: "chips", about: "A list of chips: categories first, then tags. Nothing when there are none." },
+  { token: "href", about: "The address of the post page." },
+  { token: "slug", about: "The post's address name." },
+  { token: "date", about: "The publish date and time (ISO)." },
+  { token: "categories", about: "The categories as space-separated names (\"case-study web\"), for a data-category attribute." },
+  { token: "featured", about: "\"true\" or \"false\"." },
+  { token: "attrs", about: "Ready-made attributes for the card's outer tag: data-category and data-featured, only when the post has them." },
+]
+
+/** The card Blackwall has always made. A site that has not chosen a template gets exactly this. */
+export const DEFAULT_CARD_TEMPLATE = `<article class="card card--mini" id="post-{{slug}}"{{attrs}}>
+                {{thumb}}{{chips}}
+                <h3>{{title}}</h3>
+                {{excerptP}}
+                <div class="card-links"><a href="{{href}}">Read post ↗</a></div>
               </article>`
+
+const TOKEN = /\{\{\s*([A-Za-z]+)\s*\}\}/g
+
+/** Problems with a card template, in plain words. An empty list means it can be used. */
+export function cardIssues(template: string): string[] {
+  const out: string[] = []
+  if (!template.trim()) return ["The template is empty."]
+  if (template.length > 4000) out.push("The template is longer than 4000 characters.")
+  const unknown = [...new Set([...template.matchAll(TOKEN)].map((m) => m[1]).filter((k) => !CARD_TOKENS.some((t) => t.token === k)))]
+  if (unknown.length) out.push(`Unknown ${unknown.length === 1 ? "token" : "tokens"}: ${unknown.map((k) => `{{${k}}}`).join(", ")}.`)
+  if (!/\{\{\s*href\s*\}\}/.test(template)) out.push("Add {{href}} so the card links to the post.")
+  if (/<\s*(script|iframe|object|embed)\b/i.test(template) || /\son[a-z]+\s*=/i.test(template)) out.push("Scripts and event handlers aren't allowed in a card.")
+  return out
 }
+
+/** One card in the blog list, from the site's template (or the default one). Every value is escaped. */
+export function renderCard(post: SitePost, href: string, template: string = DEFAULT_CARD_TEMPLATE): string {
+  const tags = clean(post.tags)
+  const categories = clean(post.categories)
+  const names = categories.map(categorySlug).filter(Boolean)
+  const chips = [...categories.map((c) => `<li class="chip chip--category">${escapeHtml(c)}</li>`), ...tags.map((t) => `<li class="chip">${escapeHtml(t)}</li>`)]
+  const values: Record<string, string> = {
+    title: escapeHtml(post.title),
+    excerpt: escapeHtml(post.excerpt),
+    excerptP: post.excerpt ? `<p>${escapeHtml(post.excerpt)}</p>` : "",
+    thumb: post.thumbnail ? `<img class="post-thumb" src="${escapeHtml(post.thumbnail)}" alt="${escapeHtml(post.thumbnailAlt ?? "")}" loading="lazy">` : "",
+    chips: chips.length ? `<ul class="chips">${chips.join("")}</ul>` : "",
+    href: escapeHtml(href),
+    slug: escapeHtml(post.slug),
+    date: escapeHtml(post.date),
+    categories: escapeHtml(names.join(" ")),
+    featured: post.featured ? "true" : "false",
+    attrs: `${names.length ? ` data-category="${escapeHtml(names.join(" "))}"` : ""}${post.featured ? ' data-featured="true"' : ""}`,
+  }
+  return template.replace(TOKEN, (_all, k: string) => values[k] ?? "")
+}
+
+/**
+ * The draft fields for a post that exists only on the site (published or scheduled), so opening it to edit keeps everything it has:
+ * leaving out categories, Featured or the thumbnail would wipe them from the card the next time it is updated.
+ */
+export function draftFieldsFromPost(post: SitePost) {
+  return {
+    title: post.title,
+    slug: post.slug,
+    excerpt: post.excerpt,
+    body: post.markdown,
+    tags: post.tags,
+    cover: post.cover,
+    coverAlt: post.coverAlt,
+    ...(post.categories?.length ? { categories: post.categories } : {}),
+    ...(post.featured ? { featured: true } : {}),
+    ...(post.thumbnail ? { thumbnail: post.thumbnail, thumbnailAlt: post.thumbnailAlt } : {}),
+    remoteSlug: post.slug,
+  }
+}
+
+/** One card in the blog index, in the same markup as the site's hand-written cards unless the site chose its own. */
+export const postCard = renderCard
 
 /** Newest first. */
 export const sortPosts = (posts: SitePost[]) => [...posts].sort((a, b) => b.date.localeCompare(a.date))
 
+/** The order of the blog list: featured posts first, then newest first. */
+export const sortCards = (posts: SitePost[]) => [...posts].sort((a, b) => Number(!!b.featured) - Number(!!a.featured) || b.date.localeCompare(a.date))
+
 /** Replaces the block between the markers. Returns null when the page has no markers (leave it alone). */
-export function updateIndexBlock(html: string, posts: SitePost[], hrefFor: (p: SitePost) => string): string | null {
+export function updateIndexBlock(html: string, posts: SitePost[], hrefFor: (p: SitePost) => string, template?: string): string | null {
   const region = findRegions(html).find((r) => r.name === "posts")
   if (!region) return null
   const indent = /([ \t]*)$/.exec(html.slice(0, region.at))?.[1] ?? ""
-  const cards = sortPosts(posts).map((p) => `${indent}${postCard(p, hrefFor(p))}`)
+  const cards = sortCards(posts).map((p) => `${indent}${renderCard(p, hrefFor(p), template)}`)
   const body = cards.length ? `\n${cards.join("\n")}\n${indent}` : `\n${indent}`
   return html.slice(0, region.from) + body + html.slice(region.to)
 }
@@ -244,7 +341,7 @@ export function parseManifest(text: string | null): SiteManifest {
   try {
     const m = JSON.parse(text) as Partial<SiteManifest>
     const posts = Array.isArray(m.posts) ? m.posts.filter((p): p is SitePost => !!p && typeof p.slug === "string" && SLUG_RE.test(p.slug)) : []
-    return { version: 1, posts: posts.map((p) => ({ ...p, tags: Array.isArray(p.tags) ? p.tags : [], markdown: p.markdown ?? "", excerpt: p.excerpt ?? "" })) }
+    return { version: 1, posts: posts.map((p) => ({ ...p, tags: Array.isArray(p.tags) ? p.tags : [], markdown: p.markdown ?? "", excerpt: p.excerpt ?? "", ...(p.categories !== undefined ? { categories: clean(p.categories) } : {}) })) }
   } catch {
     return { version: 1, posts: [] }
   }
@@ -258,6 +355,9 @@ export function cleanPost(input: Partial<SitePost>): SitePost {
   if (!title) throw new Error("A title is required")
   const cover = input.cover ? String(input.cover) : undefined
   if (cover && !/^\/[\w./-]+$/.test(cover)) throw new Error("The cover image must be a file on the site")
+  const thumbnail = input.thumbnail ? String(input.thumbnail) : undefined
+  if (thumbnail && !/^\/[\w./-]+$/.test(thumbnail)) throw new Error("The thumbnail must be a file on the site")
+  const categories = clean(input.categories).slice(0, 6)
   const date = input.date && !Number.isNaN(Date.parse(input.date)) ? new Date(input.date).toISOString() : new Date().toISOString()
   return {
     slug,
@@ -269,5 +369,8 @@ export function cleanPost(input: Partial<SitePost>): SitePost {
     date,
     updated: input.updated,
     markdown: String(input.markdown ?? ""),
+    ...(categories.length ? { categories } : {}),
+    ...(input.featured ? { featured: true } : {}),
+    ...(thumbnail ? { thumbnail, thumbnailAlt: input.thumbnailAlt ? String(input.thumbnailAlt).slice(0, 200) : undefined } : {}),
   }
 }

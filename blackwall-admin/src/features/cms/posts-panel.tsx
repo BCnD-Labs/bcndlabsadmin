@@ -10,6 +10,7 @@ import { cmsPagesHref, draftHref } from "@/lib/routes"
 import type { Draft, Site } from "@/lib/types"
 import { useWorkspace } from "@/stores/workspace"
 import { StateChip } from "./publish-bar"
+import { ScheduledList } from "./scheduled-list"
 import { useCurrentSite } from "./use-cms"
 
 const postState = (d: Draft, site: Site) => (!d.publishedAt ? "draft" : !site.publishedAt || d.updatedAt > site.publishedAt || d.publishedAt > site.publishedAt ? "changed" : "published")
@@ -70,6 +71,7 @@ export function PostsPanel({ site }: { site: Site }) {
           </EmptyState>
         )}
       </Panel>
+      <ScheduledList pick={(s) => s.siteId === site.id} />
       {loose.length > 0 && (
         <Panel category="website" title="Other drafts" meta={loose.length} bodyClassName="py-1">
           <ul>
