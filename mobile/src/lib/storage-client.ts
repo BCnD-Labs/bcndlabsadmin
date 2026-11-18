@@ -1,39 +1,52 @@
-import { isTextFile, TEXT_LIMIT, type FolderListing, type StorageEntry, type StorageInfo } from "./shared.ts"
+import { extensionOf, isTextFile, joinPath, TEXT_LIMIT, type EditingCreator, type EditingInfo, type FolderListing, type StorageEntry, type StorageInfo } from "./shared.ts"
 
 /**
  * Nextcloud files through your Blackwall server (blackwall-admin/server/storage.ts): `GET /api/storage/info`,
- * `/list?path=` and `/text?path=`. Same rules as workspace-http: `X-Blackwall: 1`, the shared sign-in cookie,
+ * `/list?path=` and `/text?path=`, and office editing: `GET /edit/info`, `POST /edit/open {path}` and
+ * `POST /edit/create {path, extension}`, which answer with a one-time Collabora editor address. Same rules as workspace-http: `X-Blackwall: 1`, the shared sign-in cookie,
  * a timeout, and fixed short messages (nothing from the response is copied into them). Pure apart from the
  * injected fetch, so it runs under node --test. The phone never talks to Nextcloud itself.
  */
 export const STORAGE_TIMEOUT_MS = 15_000
 
-export type StorageResult<T> = { ok: true; value: T } | { ok: false; kind: "signed-out" | "not-connected" | "error"; message: string }
+export type StorageResult<T> = { ok: true; value: T } | { ok: false; kind: "signed-out" | "not-connected" | "not-set-up" | "error"; message: string }
 
 const MESSAGES = {
   unreachable: "Couldn't reach the server. Check the connection (is Tailscale on?) and pull down to try again.",
   signedOut: "Sign in under Settings to see your files.",
   notConnected: "Nextcloud isn't connected. Connect it in Web view under Settings → Connections.",
+  notSetUp: "Editing isn't set up yet. Nextcloud needs its Office app connected to Collabora.",
+  refused: "Nextcloud wouldn't open that file for editing.",
+  badName: "That name can't be used.",
   tooBig: "That file is too big to show here (over 2 MB).",
   missing: "That file or folder isn't there any more.",
   shape: "The server's answer wasn't in a form the app understands.",
 }
 
-export const storageUrl = (address: string, sub: "info" | "list" | "text", path?: string): string =>
+type Sub = "info" | "list" | "text" | "edit/info" | "edit/open" | "edit/create"
+export const storageUrl = (address: string, sub: Sub, path?: string): string =>
   `${address.replace(/\/+$/, "")}/api/storage/${sub}${path === undefined ? "" : `?path=${encodeURIComponent(path)}`}`
 
-async function getJson(url: string, fetchImpl: typeof fetch): Promise<StorageResult<unknown>> {
+/** One request. On the edit routes a 409 means editing isn't set up (Files checks the connection first). */
+async function getJson(url: string, fetchImpl: typeof fetch, post?: unknown): Promise<StorageResult<unknown>> {
+  const editing = /\/api\/storage\/edit\//.test(url)
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), STORAGE_TIMEOUT_MS)
   try {
     let res: Response
     try {
-      res = await fetchImpl(url, { method: "GET", signal: controller.signal, credentials: "include", headers: { Accept: "application/json", "X-Blackwall": "1" } })
+      res = await fetchImpl(url, {
+        method: post === undefined ? "GET" : "POST", signal: controller.signal, credentials: "include",
+        headers: { Accept: "application/json", "X-Blackwall": "1", ...(post === undefined ? {} : { "Content-Type": "application/json" }) },
+        ...(post === undefined ? {} : { body: JSON.stringify(post) }),
+      })
     } catch {
       return { ok: false, kind: "error", message: MESSAGES.unreachable }
     }
     if (res.status === 401) return { ok: false, kind: "signed-out", message: MESSAGES.signedOut }
-    if (res.status === 409) return { ok: false, kind: "not-connected", message: MESSAGES.notConnected }
+    if (res.status === 409) return editing ? { ok: false, kind: "not-set-up", message: MESSAGES.notSetUp } : { ok: false, kind: "not-connected", message: MESSAGES.notConnected }
+    if (res.status === 403 && editing) return { ok: false, kind: "error", message: MESSAGES.refused }
+    if (res.status === 400 && editing) return { ok: false, kind: "error", message: MESSAGES.badName }
     if (res.status === 413) return { ok: false, kind: "error", message: MESSAGES.tooBig }
     if (res.status === 404) return { ok: false, kind: "error", message: MESSAGES.missing }
     if (!res.ok) return { ok: false, kind: "error", message: `The server answered ${res.status}.` }
@@ -118,3 +131,35 @@ export function quotaLine(quota: FolderListing["quota"], format: (n: number) => 
   if (!quota) return null
   return quota.free >= 0 ? `Used ${format(quota.used)} of ${format(quota.used + quota.free)}` : `Used ${format(quota.used)}`
 }
+
+// --- Office editing (Collabora through Nextcloud) ---------------------------------------------------------------
+
+export function parseEditingInfo(v: unknown): EditingInfo | null {
+  if (!isRecord(v) || typeof v.available !== "boolean" || !Array.isArray(v.extensions) || !Array.isArray(v.creators)) return null
+  const creators: EditingCreator[] = v.creators.filter((c): c is EditingCreator => isRecord(c) && typeof c.id === "string" && typeof c.editor === "string" && typeof c.name === "string" && typeof c.extension === "string")
+  return { available: v.available, extensions: v.extensions.filter((e): e is string => typeof e === "string"), creators }
+}
+
+/** The one-time editor address. Only web addresses are accepted. */
+const editorUrl = (v: unknown): string | null => (isRecord(v) && typeof v.url === "string" && /^https?:\/\//i.test(v.url) ? v.url : null)
+
+export const fetchEditingInfo = async (address: string, fetchImpl: typeof fetch = fetch) => shaped(await getJson(storageUrl(address, "edit/info"), fetchImpl), parseEditingInfo)
+export const openForEditing = async (address: string, path: string, fetchImpl: typeof fetch = fetch) => shaped(await getJson(storageUrl(address, "edit/open"), fetchImpl, { path }), editorUrl)
+export const createForEditing = async (address: string, path: string, extension: string, fetchImpl: typeof fetch = fetch) =>
+  shaped(await getJson(storageUrl(address, "edit/create"), fetchImpl, { path, extension }), (v) => {
+    const url = editorUrl(v)
+    return url && isRecord(v) && typeof v.path === "string" ? { url, path: v.path } : null
+  })
+
+/**
+ * The path for a new document in `dir`: the typed name, trimmed, with the creator's extension added when it is missing.
+ * Null for a name that is empty, only dots, or contains a slash (it would go somewhere else).
+ */
+export function newDocumentPath(dir: string, rawName: string, extension: string): string | null {
+  const name = rawName.trim()
+  if (!name || /[/\\]/.test(name) || /^\.+$/.test(name)) return null
+  return joinPath(dir, extensionOf(name) === extension.toLowerCase() ? name : `${name}.${extension}`)
+}
+
+/** Where an editor address opens: inside the app for https, in the browser for plain http (the app doesn't load http pages). */
+export const editorTarget = (url: string): "app" | "browser" => (/^https:\/\//i.test(url) ? "app" : "browser")

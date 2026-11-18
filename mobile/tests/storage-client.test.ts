@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { formatSize } from "../src/lib/shared.ts"
-import { crumbs, fetchFolder, fetchStorageInfo, fetchText, fileAction, nextcloudLink, quotaLine, storageUrl, viewText, VIEW_LIMIT } from "../src/lib/storage-client.ts"
+import { canEditFile, formatSize } from "../src/lib/shared.ts"
+import { createForEditing, crumbs, editorTarget, fetchEditingInfo, fetchFolder, fetchStorageInfo, fetchText, fileAction, newDocumentPath, nextcloudLink, openForEditing, parseEditingInfo, quotaLine, storageUrl, viewText, VIEW_LIMIT } from "../src/lib/storage-client.ts"
 
 const A = "https://blackwall.example.ts.net/"
 const reply = (status: number, body: unknown) => async () => new Response(typeof body === "string" ? body : JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } })
@@ -69,4 +69,48 @@ test("crumbs, quota and the text viewer cut", () => {
   const long = viewText("y".repeat(VIEW_LIMIT + 5))
   assert.equal(long.cut, true)
   assert.equal(long.text.length, VIEW_LIMIT)
+})
+
+test("editing: open and create POST to the edit routes and accept only web editor addresses", async () => {
+  let seen: { url: string; init?: RequestInit } | undefined
+  const r = await openForEditing(A, "/Docs/Essay.docx", async (url, init) => { seen = { url: String(url), init }; return new Response(JSON.stringify({ url: "https://cloud.example.ts.net/apps/files/directEditing/abc" })) })
+  assert.deepEqual(r, { ok: true, value: "https://cloud.example.ts.net/apps/files/directEditing/abc" })
+  assert.equal(seen?.url, "https://blackwall.example.ts.net/api/storage/edit/open")
+  assert.equal(seen?.init?.method, "POST")
+  assert.equal(seen?.init?.body, JSON.stringify({ path: "/Docs/Essay.docx" }))
+  const sneaky = await openForEditing(A, "/x.docx", reply(200, { url: "javascript:alert(1)" }))
+  assert.ok(!sneaky.ok)
+  const made = await createForEditing(A, "/Docs/Plan.xlsx", "xlsx", reply(200, { path: "/Docs/Plan.xlsx", url: "https://cloud.example.ts.net/e/1" }))
+  assert.deepEqual(made, { ok: true, value: { path: "/Docs/Plan.xlsx", url: "https://cloud.example.ts.net/e/1" } })
+})
+
+test("editing: a 409 says editing isn't set up (not 'not connected'); 403 and 400 are plain too", async () => {
+  const off = await openForEditing(A, "/x.docx", reply(409, { error: "Editing isn't set up in Nextcloud yet. https://x" }))
+  assert.ok(!off.ok && off.kind === "not-set-up" && off.message.startsWith("Editing isn't set up yet") && !off.message.includes("https"))
+  const no = await openForEditing(A, "/x.docx", reply(403, {}))
+  assert.ok(!no.ok && no.message === "Nextcloud wouldn't open that file for editing.")
+  const bad = await createForEditing(A, "/x", "docx", reply(400, {}))
+  assert.ok(!bad.ok && bad.message === "That name can't be used.")
+})
+
+test("editing info is checked; unknown creators are dropped", async () => {
+  const r = await fetchEditingInfo(A, reply(200, { available: true, extensions: ["docx", 3], creators: [{ id: "c", editor: "e", name: "New document", extension: "docx" }, { id: 1 }] }))
+  assert.ok(r.ok)
+  assert.deepEqual(r.value.extensions, ["docx"])
+  assert.equal(r.value.creators.length, 1)
+  assert.equal(parseEditingInfo({ available: "yes" }), null)
+  assert.equal(canEditFile(r.value, "Essay.DOCX"), true)
+  assert.equal(canEditFile({ available: false, extensions: ["docx"] }, "Essay.docx"), false)
+})
+
+test("a new document's path: extension added once, slashes and dot names refused", () => {
+  assert.equal(newDocumentPath("/", " Plan ", "docx"), "/Plan.docx")
+  assert.equal(newDocumentPath("/Docs", "Plan.DOCX", "docx"), "/Docs/Plan.DOCX")
+  assert.equal(newDocumentPath("/Docs", "Plan.txt", "docx"), "/Docs/Plan.txt.docx")
+  assert.equal(newDocumentPath("/Docs", "", "docx"), null)
+  assert.equal(newDocumentPath("/Docs", "../up", "docx"), null)
+  assert.equal(newDocumentPath("/Docs", "a\\b", "docx"), null)
+  assert.equal(newDocumentPath("/Docs", "..", "docx"), null)
+  assert.equal(editorTarget("https://cloud.example.ts.net/x"), "app")
+  assert.equal(editorTarget("http://10.0.0.2/x"), "browser")
 })
