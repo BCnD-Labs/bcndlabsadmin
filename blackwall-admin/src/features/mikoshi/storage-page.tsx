@@ -11,6 +11,7 @@ import {
   Folder,
   FolderInput,
   FolderPlus,
+  ImageIcon,
   Eye,
   Minimize2,
   HardDrive,
@@ -22,7 +23,7 @@ import {
   Upload,
 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState, type DragEvent } from "react"
-import { useSearchParams } from "react-router-dom"
+import { Link, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
@@ -38,6 +39,8 @@ import { Panel } from "@/components/common/panel"
 import { StatStrip } from "@/components/common/stat-strip"
 import { GridItem, WorkspaceGrid } from "@/components/common/workspace-grid"
 import { timeFmt } from "@/lib/dates"
+import { assetsHref } from "@/lib/routes"
+import { usePrefs } from "@/stores/prefs"
 import { cn } from "@/lib/utils"
 import { useUi } from "@/stores/ui"
 import { downloadFile, fetchFile, formatSize, isImage, isOffice, isTextFile, joinPath, parentOf, storage, uploadFile, type FolderListing, type StorageEntry, type StorageInfo } from "./storage-api"
@@ -234,6 +237,8 @@ export function FilesPage() {
   const [params, setParams] = useSearchParams()
   const dir = params.get("path") || "/"
   const go = useCallback((p: string) => setParams(p === "/" ? {} : { path: p }), [setParams])
+  const assetsFolder = usePrefs((s) => s.assetsFolder)
+  const inAssets = dir === assetsFolder || dir.startsWith(`${assetsFolder}/`)
   const [info, setInfo] = useState<StorageInfo | null>(null)
   const [listing, setListing] = useState<FolderListing | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -386,6 +391,7 @@ export function FilesPage() {
         title="Mikoshi"
         actions={info?.connected ? (
           <>
+            {inAssets && <Button variant="outline" asChild><Link to={assetsHref} title="This folder is the Assets library: tags, alt text and where each picture is used"><ImageIcon /> Manage in Assets</Link></Button>}
             <Button variant="ghost" onClick={() => setAsk({ kind: "folder" })}><FolderPlus /> New folder</Button>
             <Button onClick={() => fileInput.current?.click()}><Upload /> Upload</Button>
           </>
