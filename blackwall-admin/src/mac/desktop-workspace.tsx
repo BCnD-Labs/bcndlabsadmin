@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useRoutes } from "react-router-dom"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import { createStore, useStore, type StoreApi } from "zustand"
-import { BarChart3, BookOpen, Images, Minimize2, Minus, PanelLeftClose, PanelLeftOpen, ChevronDown, CalendarDays, Code2, FileText, Folder, FolderOpen, Globe, GraduationCap, Home, LayoutDashboard, Maximize2, Pin, Search, Server, Settings2, Share2, X } from "lucide-react"
+import { BarChart3, BookOpen, Minimize2, Minus, PanelLeftClose, PanelLeftOpen, ChevronDown, CalendarDays, FileText, Folder, FolderOpen, Globe, GraduationCap, Home, LayoutDashboard, Maximize2, Pin, Search, Server, Settings2, Share2, X } from "lucide-react"
 import { blackwallPages } from "@/app-routes"
 import { useNav } from "@/components/layout/nav-config"
 import { QuickCreate } from "@/components/layout/quick-create"
@@ -30,11 +30,8 @@ const APP = {
   learning: { title: "Learning", route: "/productivity/learning", icon: GraduationCap, tone: "learning" },
   projects: { title: "Projects", route: "/productivity/projects", icon: Folder, tone: "projects" },
   insights: { title: "Insights", route: "/productivity/insights", icon: BarChart3, tone: "insights" },
-  development: { title: "GitHub activity", route: "/development", icon: Code2, tone: "github" },
   website: { title: "Websites", route: "/cms", icon: Globe, tone: "website" },
-  assets: { title: "Assets", route: "/assets", icon: Images, tone: "website" },
   files: { title: "Files", route: "/files", icon: FolderOpen, tone: "neutral" },
-  docs: { title: "Docs", route: "/docs", icon: FileText, tone: "neutral" },
   social: { title: "Social", route: "/social", icon: Share2, tone: "neutral" },
   mikoshi: { title: "Mikoshi", route: "/mikoshi", icon: Server, tone: "neutral" },
   /** Not a page: its window holds the browser (browser-window.tsx), so the route is never navigated to. */
@@ -42,6 +39,11 @@ const APP = {
   settings: { title: "Settings", route: "/settings", icon: Settings2, tone: "neutral" },
 } as const
 type AppId = keyof typeof APP
+/** Apps that hold several pages as tabs: one window and one sidebar icon each. A tab is current when the window's path starts with its `match`. */
+const APP_TABS: Partial<Record<AppId, readonly { label: string; to: string; match: string }[]>> = {
+  projects: [{ label: "Projects", to: "/productivity/projects", match: "/productivity/projects" }, { label: "GitHub activity", to: "/development", match: "/development" }],
+  files: [{ label: "Files", to: "/files", match: "/files" }, { label: "Docs", to: "/docs", match: "/docs" }, { label: "Assets", to: "/assets", match: "/assets" }],
+}
 type Id = "notes" | AppId
 type Edge = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw"
 type WindowState = WindowRect & { open: boolean; collapsed: boolean; expanded: boolean; pinned: boolean; z: number; path?: string; restore?: WindowRect }
@@ -53,8 +55,8 @@ const IDS: Id[] = ["notes", ...APP_IDS]
 /** The rail follows the Android launcher's groups (Daily, Build, Homelab); Assets, Files, Docs and the Browser are the Mac's own group. */
 const RAIL_GROUPS: Id[][] = [
   ["home", "learning", "journal", "notes", "insights"],
-  ["projects", "development", "website", "social"],
-  ["assets", "files", "docs", "browser"],
+  ["projects", "website", "social"],
+  ["files", "browser"],
   ["mikoshi"],
 ]
 const KEY = "blackwall-mac-desktop-windows-v2"
@@ -71,10 +73,10 @@ function appForPath(path: string): AppId {
   if (path.startsWith("/work/projects")) return "projects"
   if (path.startsWith("/productivity/insights") || path === "/analytics") return "insights"
   if (path.startsWith("/productivity") || path.startsWith("/work") || path.startsWith("/notes") || path.startsWith("/knowledge")) return "planner_app"
-  if (path.startsWith("/development")) return "development"
-  if (path.startsWith("/assets")) return "assets"
+  if (path.startsWith("/development")) return "projects"
+  if (path.startsWith("/assets")) return "files"
   if (path.startsWith("/files")) return "files"
-  if (path.startsWith("/docs")) return "docs"
+  if (path.startsWith("/docs")) return "files"
   if (path.startsWith("/cms") || path.startsWith("/content")) return "website"
   if (path.startsWith("/social")) return "social"
   if (path.startsWith("/mikoshi")) return "mikoshi"
@@ -88,7 +90,7 @@ function initialWindows(): Windows {
   const width = window.innerWidth, height = window.innerHeight
   const defaults = {
     notes: { x: Math.max(80, Math.round(width * .12)), y: Math.min(height - 44, 680), width: Math.min(360, width - 95), height: 280, open: true, collapsed: true, expanded: false, pinned: false, z: 1 },
-    ...Object.fromEntries(APP_IDS.map((id, listed) => [id, id === "browser" ? 2 : listed] as const).map(([id, index]) => [id, { x: Math.max(75, Math.round(width * .12) + index * 28), y: Math.max(60, Math.round(height * .08) + index * 22), width: Math.min(id === "website" ? 1320 : id === "planner_app" || id === "learning" ? 1000 : 820, width - 105), height: Math.min(id === "website" ? 820 : id === "planner_app" || id === "learning" ? 650 : 560, height - 90), open: false, collapsed: false, expanded: false, pinned: false, z: index + 3, path: APP[id].route }])),
+    ...Object.fromEntries(APP_IDS.map((id, listed) => [id, id === "browser" ? 2 : listed] as const).map(([id, index]) => [id, { x: Math.max(75, Math.round(width * .12) + index * 28), y: Math.max(60, Math.round(height * .08) + index * 22), width: Math.min(id === "website" ? 1320 : id === "planner_app" || id === "learning" || id === "files" ? 1000 : 820, width - 105), height: Math.min(id === "website" ? 820 : id === "planner_app" || id === "learning" || id === "files" ? 650 : 560, height - 90), open: false, collapsed: false, expanded: false, pinned: false, z: index + 3, path: APP[id].route }])),
   } as Windows
   const fit = (id: Id) => { defaults[id] = { ...defaults[id], x: Math.max(75, Math.min(defaults[id].x, width - defaults[id].width - 10)), y: Math.max(MAC_DESKTOP_TOP, Math.min(defaults[id].y, height - defaults[id].height - 10)) } }
   fit("website")
@@ -121,9 +123,18 @@ function WindowSections({ id, path }: { id: AppId; path: string }) {
   return <nav className="mac-dw-sections" aria-label={`${sections.label} sections`}>{sections.children.map((child) => <Link key={child.to} to={child.to} aria-current={sections.current === child ? "page" : undefined}>{child.label}</Link>)}</nav>
 }
 
+/** The pages of a merged app (Projects: Projects | GitHub activity; Files: Files | Docs | Assets). */
+function AppTabs({ id, path }: { id: AppId; path: string }) {
+  const tabs = APP_TABS[id]
+  if (!tabs) return null
+  const pathname = path.split("?")[0]
+  const current = [...tabs].sort((a, b) => b.match.length - a.match.length).find((tab) => pathname === tab.match || pathname.startsWith(tab.match + "/"))
+  return <nav className="mac-dw-sections" aria-label={`${APP[id].title} sections`}>{tabs.map((tab) => <Link key={tab.to} to={tab.to} aria-current={tab === current ? "page" : undefined}>{tab.label}</Link>)}</nav>
+}
+
 function AppToolbar({ store, id, path }: { store: StoreApi<PageHead>; id: AppId; path: string }) {
   const head = useStore(store)
-  return <div className="mac-dw-app-toolbar"><WindowSections id={id} path={path} />{head.back && <Link to={head.back.to}>← {head.back.label}</Link>}{head.subtitle && <span>{head.subtitle}</span>}{head.actions && <div className="mac-dw-actions">{head.actions}</div>}</div>
+  return <div className="mac-dw-app-toolbar"><AppTabs id={id} path={path} /><WindowSections id={id} path={path} />{head.back && <Link to={head.back.to}>← {head.back.label}</Link>}{head.subtitle && <span>{head.subtitle}</span>}{head.actions && <div className="mac-dw-actions">{head.actions}</div>}</div>
 }
 
 const AppPage = memo(function AppPage({ id, path, store }: { id: AppId; path: string; store: StoreApi<PageHead> }) {
@@ -305,7 +316,7 @@ export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
       {APP_IDS.map(id => {
         const Icon = APP[id].icon
         if (id === "browser") return frame(id, <BrowserTitle />, <Icon size={16} />, <BrowserApp onFocus={() => focus("browser")} />)
-        return frame(id, <WindowTitle store={appStores[id]} fallback={APP[id].title} />, <Icon size={16} />, <AppPage id={id} path={windows[id].path ?? APP[id].route} store={appStores[id]} />)
+        return frame(id, APP_TABS[id] ? APP[id].title : <WindowTitle store={appStores[id]} fallback={APP[id].title} />, <Icon size={16} />, <AppPage id={id} path={windows[id].path ?? APP[id].route} store={appStores[id]} />)
       })}
     </>}
     {ready && plannerOpen && <PlannerSidebar overdue={overdue} onClose={() => setPlannerOpen(false)} onExpand={() => { setPlannerOpen(false); launch("planner_app") }} />}
