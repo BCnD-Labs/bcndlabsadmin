@@ -204,3 +204,14 @@ Provider setup uses Prepare → Details & test → Result, with focus moved to e
 
 Settings → Dashboard chooses explicit GitHub/analytics sources for this browser, or Automatic. Explicit missing/failed choices must show an actionable error and Choose data source, never silently select a different account or substitute sample data. Requests include the chosen connection ID, checked server-side for provider and usable status. Publishing and schedules retain their existing installation-wide source behavior. All layout/appearance/source choices remain per browser, separate from shared workspace records.
 
+
+## Mac windows (Nov 2026 polish)
+
+The Mac workspace's windows keep the compact density and the Graphite theme; this pass only helps reading and makes them behave like app windows.
+
+- **Front and back.** The window used last (`data-front`) has the full title bar, a tinted edge and a deep shadow; the others have a flat title bar, muted title and a light shadow. A minimized window keeps its normal look. Window corners are 10px, matching the panels inside.
+- **Titles and labels.** Panel titles inside windows are sans, sentence case, 13.5px/650 (not mono capitals). Micro labels keep small caps but use the interface font.
+- **Reading floor.** Inside windows text from 10 to 11.5px goes up by one pixel (to 11 and 12px); secondary and faint text are a step brighter in dark themes. Row heights, gaps and the 30px title bar are unchanged.
+- **Sidebar.** The rail follows the Android launcher's groups with a thin line between them: Daily (Home, Learning, Journal, Notes, Insights), Build (Projects, GitHub activity, Websites, Social), the Mac-only files group (Assets, Files, Docs, Browser) and Homelab (Mikoshi). Journal uses the same amber as on Android; Learning keeps violet.
+
+Open parity gaps with the Android screens (content, not styling): Home, Insights and Projects show different panels than Android's; Social has no "Posted" list.

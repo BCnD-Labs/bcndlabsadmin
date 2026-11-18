@@ -26,7 +26,7 @@ import "./desktop-workspace.css"
 const APP = {
   home: { title: "Home", route: "/", icon: Home, tone: "neutral" },
   planner_app: { title: "Planner", route: "/productivity", icon: CalendarDays, tone: "productivity" },
-  journal: { title: "Journal", route: "/journal", icon: BookOpen, tone: "learning" },
+  journal: { title: "Journal", route: "/journal", icon: BookOpen, tone: "journal" },
   learning: { title: "Learning", route: "/productivity/learning", icon: GraduationCap, tone: "learning" },
   projects: { title: "Projects", route: "/productivity/projects", icon: Folder, tone: "projects" },
   insights: { title: "Insights", route: "/productivity/insights", icon: BarChart3, tone: "insights" },
@@ -50,7 +50,13 @@ type Gesture = { id: Id; pointer: number; startX: number; startY: number; lastX:
 const EDGES: Edge[] = ["n", "s", "e", "w", "ne", "nw", "se", "sw"]
 const APP_IDS = Object.keys(APP) as AppId[]
 const IDS: Id[] = ["notes", ...APP_IDS]
-const RAIL_IDS: Id[] = ["home", "browser", "learning", "journal", "notes", "projects", "insights", "development", "website", "assets", "files", "docs", "social", "mikoshi"]
+/** The rail follows the Android launcher's groups (Daily, Build, Homelab); Assets, Files, Docs and the Browser are the Mac's own group. */
+const RAIL_GROUPS: Id[][] = [
+  ["home", "learning", "journal", "notes", "insights"],
+  ["projects", "development", "website", "social"],
+  ["assets", "files", "docs", "browser"],
+  ["mikoshi"],
+]
 const KEY = "blackwall-mac-desktop-windows-v2"
 /** Width of the left rail with names shown; the icon-only rail is 43px. */
 const RAIL_WIDE = 172, RAIL_NARROW = 43
@@ -242,6 +248,8 @@ export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
   }
 
+  /** The window you used last. It gets the full title bar and shadow; the others sit back so it is clear which one has focus. */
+  const frontId = IDS.filter(other => windows[other].open && !windows[other].collapsed).sort((a, b) => windows[b].z - windows[a].z)[0]
   const frame = (id: Id, title: ReactNode, icon: ReactNode, children: ReactNode) => {
     const value = windows[id]
     if (!value.open) return null
@@ -249,7 +257,7 @@ export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
     const pinBlocked = isWidget(id) && !value.pinned && IDS.some(other => isWidget(other) && other !== (id as Id) && windows[other].open && overlaps(visibleRect(value), visibleRect(windows[other])))
     const widgetFront = windows.notes.z
     const appRank = APP_IDS.filter(app => windows[app].open).sort((a, b) => windows[a].z - windows[b].z).indexOf(id as AppId)
-    return <section key={id} className="mac-dw-window" data-kind={isWidget(id) ? "widget" : "app"} data-tone={isWidget(id) ? "productivity" : APP[id].tone} data-collapsed={value.collapsed} aria-label={`${isWidget(id) ? id : APP[id].title} window`}
+    return <section key={id} className="mac-dw-window" data-kind={isWidget(id) ? "widget" : "app"} data-tone={isWidget(id) ? "productivity" : APP[id].tone} data-collapsed={value.collapsed} data-front={id === frontId} aria-label={`${isWidget(id) ? id : APP[id].title} window`}
       style={{ left: fitted.x + railExtra, top: fitted.y, width: fitted.width, height: fitted.collapsed ? 30 : fitted.height, zIndex: isWidget(id) ? value.z === widgetFront ? 11 : 10 : 20 + appRank }} onPointerDown={event => { if (!(event.target as Element).closest(".mac-dw-title, .mac-dw-edge")) focus(id) }}>
       <header className="mac-dw-title" onPointerDown={event => start(event, id)} onPointerMove={move} onPointerUp={end} onPointerCancel={end} onDoubleClick={event => { if (!(event.target as Element).closest("button")) update(id, current => ({ ...current, collapsed: !current.collapsed })) }}>
         <span className="mac-dw-icon">{icon}</span><strong>{title}</strong><span className="mac-dw-spacer" />
@@ -269,16 +277,18 @@ export function DesktopWorkspace({ onClassic }: { onClassic: () => void }) {
     <nav className="mac-dw-rail" aria-label="Blackwall apps and tools" data-labels={railLabels} style={{ "--dw-rail-w": `${RAIL_WIDE}px` } as CSSProperties}>
       <span className="mac-dw-mark">BW</span>
       <button className="mac-dw-rail-toggle" title={railLabels ? "Hide names" : "Show names"} aria-label={railLabels ? "Hide sidebar names" : "Show sidebar names"} aria-expanded={railLabels} onClick={() => setPrefs({ railLabels: !railLabels })}>{railLabels ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}{railLabels && <span className="mac-dw-rail-label">Collapse</span>}</button>
-      {RAIL_IDS.filter(id => !railHidden.includes(id)).map(id => {
-        const widget = isWidget(id)
-        const label = widget ? "Notes" : APP[id].title
-        const Icon = widget ? FileText : APP[id].icon
-        const shown = windows[id].open
-        return <div key={id} className="mac-dw-rail-item" data-open={shown}>
-          <button data-tone={widget ? "productivity" : APP[id].tone} title={label} aria-label={`Open ${widget ? "Notes widget" : label}`} aria-pressed={shown} onClick={() => widget ? open(id) : launch(id)}><Icon size={16} />{railLabels && <span className="mac-dw-rail-label">{label}</span>}</button>
-          {shown && <button className="mac-dw-rail-close" title={`Close ${label}`} aria-label={`Close ${widget ? "Notes widget" : label} window`} onClick={() => update(id, current => ({ ...current, open: false }))}><X size={11} /></button>}
-        </div>
-      })}
+      {RAIL_GROUPS.map(group => group.filter(id => !railHidden.includes(id))).filter(group => group.length).map((group, index) => <div key={group[0]} className="mac-dw-rail-group" role="group" data-first={index === 0}>
+        {group.map(id => {
+          const widget = isWidget(id)
+          const label = widget ? "Notes" : APP[id].title
+          const Icon = widget ? FileText : APP[id].icon
+          const shown = windows[id].open
+          return <div key={id} className="mac-dw-rail-item" data-open={shown}>
+            <button data-tone={widget ? "productivity" : APP[id].tone} title={label} aria-label={`Open ${widget ? "Notes widget" : label}`} aria-pressed={shown} onClick={() => widget ? open(id) : launch(id)}><Icon size={16} />{railLabels && <span className="mac-dw-rail-label">{label}</span>}</button>
+            {shown && <button className="mac-dw-rail-close" title={`Close ${label}`} aria-label={`Close ${widget ? "Notes widget" : label} window`} onClick={() => update(id, current => ({ ...current, open: false }))}><X size={11} /></button>}
+          </div>
+        })}
+      </div>)}
       <span className="mac-dw-flex" />
       <button title="Classic workspace (⌥⌘D)" aria-label="Open classic workspace" onClick={onClassic}><LayoutDashboard size={16} />{railLabels && <span className="mac-dw-rail-label">Classic view</span>}</button>
       <SyncStatus expanded={railLabels} />

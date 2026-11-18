@@ -465,9 +465,12 @@ export function DesktopSettings() {
   )
 }
 
+/** Same order and grouping as the sidebar itself (src/mac/desktop-workspace.tsx). */
 const RAIL_APPS = [
-  { id: "home", label: "Home" }, { id: "browser", label: "Browser" }, { id: "learning", label: "Learning" }, { id: "journal", label: "Journal" }, { id: "notes", label: "Notes" }, { id: "projects", label: "Projects" },
-  { id: "insights", label: "Insights" }, { id: "development", label: "GitHub activity" }, { id: "website", label: "Websites" }, { id: "assets", label: "Assets" }, { id: "files", label: "Files" }, { id: "docs", label: "Docs" }, { id: "social", label: "Social" }, { id: "mikoshi", label: "Mikoshi" },
+  { id: "home", label: "Home" }, { id: "learning", label: "Learning" }, { id: "journal", label: "Journal" }, { id: "notes", label: "Notes" }, { id: "insights", label: "Insights" },
+  { id: "projects", label: "Projects" }, { id: "development", label: "GitHub activity" }, { id: "website", label: "Websites" }, { id: "social", label: "Social" },
+  { id: "assets", label: "Assets" }, { id: "files", label: "Files" }, { id: "docs", label: "Docs" }, { id: "browser", label: "Browser" },
+  { id: "mikoshi", label: "Mikoshi" },
 ]
 
 /** How the Learning planner spreads work. The Android app uses its own copy of these choices. */
