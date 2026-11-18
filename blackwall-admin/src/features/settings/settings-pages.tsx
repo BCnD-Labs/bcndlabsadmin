@@ -467,8 +467,8 @@ export function DesktopSettings() {
 
 /** Same order and grouping as the sidebar itself (src/mac/desktop-workspace.tsx). */
 const RAIL_APPS = [
-  { id: "home", label: "Home" }, { id: "learning", label: "Learning" }, { id: "journal", label: "Journal" }, { id: "notes", label: "Notes" }, { id: "insights", label: "Insights" },
-  { id: "projects", label: "Projects (with GitHub activity)" }, { id: "website", label: "Websites" }, { id: "social", label: "Social" },
+  { id: "home", label: "Home (with Insights)" }, { id: "learning", label: "Learning" }, { id: "journal", label: "Journal" }, { id: "notes", label: "Notes" },
+  { id: "projects", label: "Projects (with GitHub activity)" }, { id: "website", label: "Publish (Websites and Social)" },
   { id: "files", label: "Files (with Docs and Assets)" }, { id: "browser", label: "Browser" },
   { id: "mikoshi", label: "Mikoshi" },
 ]

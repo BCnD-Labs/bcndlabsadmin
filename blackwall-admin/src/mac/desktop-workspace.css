@@ -233,3 +233,43 @@ html[data-runtime="mac-native"] .mac-dw-window .mac-log-group-head { background:
 html[data-runtime="mac-native"] .mac-dw-window[data-kind="app"] .mac-dw-app-main:has(.mac-tool-layout) { padding: 0; }
 html[data-runtime="mac-native"] .mac-dw-window .mac-tool-layout { border: 0; border-radius: 0; background: transparent; }
 html[data-runtime="mac-native"] .mac-dw-window .mac-tool-view { padding: 12px 14px 20px; }
+
+/* ---- Tighter: the same dense look with the empty space taken out ---- */
+/* Panels sit closer, titles are shorter, buttons are only as wide as their words. */
+html[data-runtime="mac-native"] .mac-dw-window { --bw-grid-gap: .5rem; --bw-panel-pad: .625rem; --bw-panel-header-h: 1.625rem; }
+html[data-runtime="mac-native"] .mac-dw-window .bw-panel-heading { gap: 7px; padding-block: 2px; padding-inline: 5px 10px; }
+html[data-runtime="mac-native"] .mac-dw-window .bw-panel-heading .bw-category-icon { width: 20px; height: 20px; border-radius: 5px; }
+html[data-runtime="mac-native"] .mac-dw-window .bw-panel-heading .bw-category-icon svg { width: 12px; height: 12px; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-log-tool { padding-bottom: 2px; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-checkin-chips { gap: 4px; margin: 5px 6px 3px; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-checkin-chip { flex: none; min-height: 24px; padding: 0 11px; border-radius: 12px; font-size: 12px; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-log-groups { gap: 2px; margin: 3px 6px 4px; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-log-group-head { min-height: 26px; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-log-group-body { gap: 3px; padding: 3px 6px 6px; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-log-group-body textarea { min-height: 42px; padding: 5px 7px; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-log-item-text { padding: 4px 2px; }
+
+/* The strip under the title bar and the section list. */
+html[data-runtime="mac-native"] .mac-dw-app-toolbar { gap: 7px; min-height: 28px; padding: 2px 8px; }
+html[data-runtime="mac-native"] .mac-dw-sections > a { padding: 3px 9px; }
+html[data-runtime="mac-native"] .mac-dw-window[data-kind="app"] .mac-dw-app-main { padding: 8px 10px 12px; }
+html[data-runtime="mac-native"] .mac-dw-window[data-kind="app"] .mac-dw-app-main:has(.mac-tool-layout) { padding: 0; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-tool-layout { grid-template-columns: 132px minmax(0, 1fr); }
+html[data-runtime="mac-native"] .mac-dw-window .mac-tool-navigation { gap: 1px; padding: 6px 4px; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-tool-navigation-label { padding: 2px 8px 5px; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-tool-navigation button { min-height: 26px; gap: 7px; }
+html[data-runtime="mac-native"] .mac-dw-window .mac-tool-view { padding: 8px 10px 12px; }
+
+/* An app's own tabs (Websites | Social) and the page's section links (All sites, Pages, Posts…) sit in one strip; a thin line tells them apart. */
+html[data-runtime="mac-native"] .mac-dw-sections + .mac-dw-sections { margin-left: 4px; padding-left: 10px; border-left: 1px solid var(--bw-line); }
+
+/* The row under a panel title (counts, filters) and panel bodies are shorter; a chart or list no longer floats in a tall box. */
+html[data-runtime="mac-native"] .mac-dw-window .bw-panel-toolbar { min-height: 1.625rem; padding: 2px 10px; }
+html[data-runtime="mac-native"] .mac-dw-window .bw-panel > [class~="py-3"] { padding-block: 8px; }
+html[data-runtime="mac-native"] .mac-dw-window .bw-panel > [class~="px-3.5"] { padding-inline: 11px; }
+
+/* Buttons in the strip under the title bar (Add learning, Today, Post) are one line tall instead of two. */
+html[data-runtime="mac-native"] .mac-dw-actions { gap: 4px; }
+html[data-runtime="mac-native"] .mac-dw-actions :is(button, a) { min-height: 24px; height: 24px; padding-block: 0; font-size: 12px; }
+html[data-runtime="mac-native"] .mac-dw-actions :is(button, a):not(:has(svg:only-child)) { padding-inline: 10px; }
+html[data-runtime="mac-native"] .mac-dw-actions :is(button, a):has(svg:only-child) { width: 24px; padding-inline: 0; }

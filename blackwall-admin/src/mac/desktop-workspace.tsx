@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useRoutes } from "react-router-dom"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import { createStore, useStore, type StoreApi } from "zustand"
-import { BarChart3, BookOpen, Minimize2, Minus, PanelLeftClose, PanelLeftOpen, ChevronDown, CalendarDays, FileText, Folder, FolderOpen, Globe, GraduationCap, Home, LayoutDashboard, Maximize2, Pin, Search, Server, Settings2, Share2, X } from "lucide-react"
+import { BookOpen, Minimize2, Minus, PanelLeftClose, PanelLeftOpen, ChevronDown, CalendarDays, FileText, Folder, FolderOpen, Globe, GraduationCap, Home, LayoutDashboard, Maximize2, Pin, Search, Server, Settings2, X } from "lucide-react"
 import { blackwallPages } from "@/app-routes"
 import { useNav } from "@/components/layout/nav-config"
 import { QuickCreate } from "@/components/layout/quick-create"
@@ -29,18 +29,18 @@ const APP = {
   journal: { title: "Journal", route: "/journal", icon: BookOpen, tone: "journal" },
   learning: { title: "Learning", route: "/productivity/learning", icon: GraduationCap, tone: "learning" },
   projects: { title: "Projects", route: "/productivity/projects", icon: Folder, tone: "projects" },
-  insights: { title: "Insights", route: "/productivity/insights", icon: BarChart3, tone: "insights" },
-  website: { title: "Websites", route: "/cms", icon: Globe, tone: "website" },
+  website: { title: "Publish", route: "/cms", icon: Globe, tone: "website" },
   files: { title: "Files", route: "/files", icon: FolderOpen, tone: "neutral" },
-  social: { title: "Social", route: "/social", icon: Share2, tone: "neutral" },
   mikoshi: { title: "Mikoshi", route: "/mikoshi", icon: Server, tone: "neutral" },
   /** Not a page: its window holds the browser (browser-window.tsx), so the route is never navigated to. */
   browser: { title: "Browser", route: "/browser", icon: Globe, tone: "neutral" },
   settings: { title: "Settings", route: "/settings", icon: Settings2, tone: "neutral" },
 } as const
 type AppId = keyof typeof APP
-/** Apps that hold several pages as tabs: one window and one sidebar icon each. A tab is current when the window's path starts with its `match`. */
+/** Apps that hold several pages as tabs: one window and one sidebar icon each. A tab is current when the window's path starts with its `match`; a path none of them match shows the first tab as current. */
 const APP_TABS: Partial<Record<AppId, readonly { label: string; to: string; match: string }[]>> = {
+  home: [{ label: "Home", to: "/", match: "/" }, { label: "Insights", to: "/productivity/insights", match: "/productivity/insights" }],
+  website: [{ label: "Websites", to: "/cms", match: "/cms" }, { label: "Social", to: "/social", match: "/social" }],
   projects: [{ label: "Projects", to: "/productivity/projects", match: "/productivity/projects" }, { label: "GitHub activity", to: "/development", match: "/development" }],
   files: [{ label: "Files", to: "/files", match: "/files" }, { label: "Docs", to: "/docs", match: "/docs" }, { label: "Assets", to: "/assets", match: "/assets" }],
 }
@@ -54,8 +54,8 @@ const APP_IDS = Object.keys(APP) as AppId[]
 const IDS: Id[] = ["notes", ...APP_IDS]
 /** The rail follows the Android launcher's groups (Daily, Build, Homelab); Assets, Files, Docs and the Browser are the Mac's own group. */
 const RAIL_GROUPS: Id[][] = [
-  ["home", "learning", "journal", "notes", "insights"],
-  ["projects", "website", "social"],
+  ["home", "learning", "journal", "notes"],
+  ["projects", "website"],
   ["files", "browser"],
   ["mikoshi"],
 ]
@@ -71,14 +71,14 @@ function appForPath(path: string): AppId {
   if (path.startsWith("/productivity/learning")) return "learning"
   if (path.startsWith("/productivity/projects")) return "projects"
   if (path.startsWith("/work/projects")) return "projects"
-  if (path.startsWith("/productivity/insights") || path === "/analytics") return "insights"
+  if (path.startsWith("/productivity/insights") || path === "/analytics") return "home"
   if (path.startsWith("/productivity") || path.startsWith("/work") || path.startsWith("/notes") || path.startsWith("/knowledge")) return "planner_app"
   if (path.startsWith("/development")) return "projects"
   if (path.startsWith("/assets")) return "files"
   if (path.startsWith("/files")) return "files"
   if (path.startsWith("/docs")) return "files"
   if (path.startsWith("/cms") || path.startsWith("/content")) return "website"
-  if (path.startsWith("/social")) return "social"
+  if (path.startsWith("/social")) return "website"
   if (path.startsWith("/mikoshi")) return "mikoshi"
   if (path.startsWith("/settings")) return "settings"
   return "home"
@@ -128,7 +128,7 @@ function AppTabs({ id, path }: { id: AppId; path: string }) {
   const tabs = APP_TABS[id]
   if (!tabs) return null
   const pathname = path.split("?")[0]
-  const current = [...tabs].sort((a, b) => b.match.length - a.match.length).find((tab) => pathname === tab.match || pathname.startsWith(tab.match + "/"))
+  const current = [...tabs].sort((a, b) => b.match.length - a.match.length).find((tab) => pathname === tab.match || pathname.startsWith(tab.match + "/")) ?? tabs[0]
   return <nav className="mac-dw-sections" aria-label={`${APP[id].title} sections`}>{tabs.map((tab) => <Link key={tab.to} to={tab.to} aria-current={tab === current ? "page" : undefined}>{tab.label}</Link>)}</nav>
 }
 
