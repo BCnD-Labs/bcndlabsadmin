@@ -5,6 +5,7 @@ import { useWorkspace } from "../../data/WorkspaceProvider.tsx"
 import type { Collections } from "../../../lib/shared.ts"
 import { plannerColor as c } from "../../planner-theme.ts"
 import { selectedItem } from "../../selected-item.ts"
+import { PILL_RESERVE } from "../../nav/layout.ts"
 import type { ScreenProps } from "../../nav/screens.tsx"
 import { WorkspacePage, WorkspaceSection } from "../../WorkspacePage.tsx"
 import { Icon, type IconName } from "../../ui.tsx"
@@ -15,8 +16,6 @@ import { ServiceEditor } from "./ServiceEditor.tsx"
 import { ServiceLogo } from "./ServiceLogo.tsx"
 import { useServiceStatus } from "./useServiceStatus.ts"
 
-/** Room kept under an open tool for the floating nav pill, so it never covers the page. */
-const PILL_RESERVE = 66
 const GROUP_ICON: Record<string, IconName> = { Infrastructure: "server-outline", AI: "sparkles-outline", Media: "film-outline" }
 type Service = Collections["services"][number]
 

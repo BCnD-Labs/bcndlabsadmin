@@ -1,15 +1,8 @@
 import { api, ConnectorError } from "@/services/connector"
 
-import type { FolderListing, StorageEntry, StorageInfo } from "@shared/storage"
-export type { FolderListing, StorageEntry, StorageInfo }
+import type { EditingInfo, FolderListing, StorageEntry, StorageInfo } from "@shared/storage"
+export type { EditingInfo, FolderListing, StorageEntry, StorageInfo }
 export { formatSize, isOffice, isTextFile, joinPath, parentOf } from "@shared/storage"
-
-/** What Nextcloud's office editor (Collabora) can open and create. `available` is false until it is set up (docs/mikoshi/COLLABORA.md). */
-export interface EditingInfo {
-  available: boolean
-  extensions: string[]
-  creators: { id: string; editor: string; name: string; extension: string }[]
-}
 
 const q = (path: string) => `path=${encodeURIComponent(path)}`
 

@@ -55,3 +55,19 @@ export function formatSize(bytes: number) {
   }
   return `${n < 10 ? n.toFixed(1) : Math.round(n)} ${units[i]}`
 }
+
+/** A blank document Nextcloud's office editor can create. */
+export interface EditingCreator { id: string; editor: string; name: string; extension: string }
+
+/** What Nextcloud's office editor (Collabora) can open and create. `available` is false until it is set up (docs/mikoshi/COLLABORA.md). */
+export interface EditingInfo {
+  available: boolean
+  /** File extensions that open in it. */
+  extensions: string[]
+  creators: EditingCreator[]
+}
+
+export const extensionOf = (name: string) => /\.([a-z0-9]+)$/i.exec(name.trim())?.[1]?.toLowerCase() ?? ""
+
+/** Whether Nextcloud's office editor (Collabora) is set up and can open this file. */
+export const canEditFile = (info: Pick<EditingInfo, "available" | "extensions"> | null, name: string) => !!info?.available && info.extensions.includes(extensionOf(name))

@@ -17,6 +17,6 @@ export type { ClassMeeting, CourseTopic, Subtask, StudyProposal, TopicUse, DayLo
 export { stepProgress, openSteps, stepsDueBy, stepsOn, hasPlannedSteps } from "../../../blackwall-admin/shared/steps.ts"
 export type { StepRef } from "../../../blackwall-admin/shared/steps.ts"
 export { MAX_RECORD_LINKS as MAX_LINKS, hasLink, modulesOf, noteTitle as noteLinkTitle, notesOfTask, setNoteTaskLinks, tasksLinkingTask, tasksOfNote, withLink } from "../../../blackwall-admin/shared/links.ts"
-export { formatSize, isOffice, isTextFile, joinPath, parentOf, TEXT_LIMIT } from "../../../blackwall-admin/shared/storage.ts"
-export type { FolderListing, StorageEntry, StorageInfo } from "../../../blackwall-admin/shared/storage.ts"
+export { canEditFile, extensionOf, formatSize, isOffice, isTextFile, joinPath, parentOf, TEXT_LIMIT } from "../../../blackwall-admin/shared/storage.ts"
+export type { EditingCreator, EditingInfo, FolderListing, StorageEntry, StorageInfo } from "../../../blackwall-admin/shared/storage.ts"
 export { ICON_SLUG } from "../../../blackwall-admin/shared/icons.ts"
