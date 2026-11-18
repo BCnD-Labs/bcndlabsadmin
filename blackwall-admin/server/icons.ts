@@ -1,11 +1,12 @@
 import type { ConnectionStore } from "./store.ts"
+import { ICON_SLUG } from "../shared/icons.ts"
 
 /**
  * Service logos for the Mikoshi launcher, from dashboard-icons (homarr-labs, Apache-2.0),
  * the set Homarr and Homepage use. Fetched once, then served from the store so tiles
  * keep their logos when the CDN (or the internet) isn't reachable.
  */
-export const ICON_SLUG = /^[a-z0-9][a-z0-9-]{0,63}$/
+export { ICON_SLUG }
 const SOURCE = (slug: string) => `https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/${slug}.svg`
 const MAX_BYTES = 256 * 1024
 
