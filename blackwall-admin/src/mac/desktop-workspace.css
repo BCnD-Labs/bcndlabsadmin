@@ -273,3 +273,11 @@ html[data-runtime="mac-native"] .mac-dw-actions { gap: 4px; }
 html[data-runtime="mac-native"] .mac-dw-actions :is(button, a) { min-height: 24px; height: 24px; padding-block: 0; font-size: 12px; }
 html[data-runtime="mac-native"] .mac-dw-actions :is(button, a):not(:has(svg:only-child)) { padding-inline: 10px; }
 html[data-runtime="mac-native"] .mac-dw-actions :is(button, a):has(svg:only-child) { width: 24px; padding-inline: 0; }
+
+/* Journal, Daily: the log is a tall column on the left; This day and Recent entries stack on its right and both columns end together. */
+html[data-runtime="mac-native"] .mac-journal-day { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: var(--bw-grid-gap); align-items: stretch; }
+html[data-runtime="mac-native"] .mac-journal-side { display: flex; flex-direction: column; gap: var(--bw-grid-gap); min-width: 0; }
+html[data-runtime="mac-native"] .mac-journal-side > .bw-panel:last-child { flex: 1 1 auto; }
+@container mac-tool (max-width: 680px) {
+  html[data-runtime="mac-native"] .mac-journal-day { grid-template-columns: minmax(0, 1fr); }
+}
