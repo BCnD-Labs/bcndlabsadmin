@@ -72,3 +72,15 @@ test("Edit shows only when the office editor is set up and knows the file's form
   assert.equal(canEditFile({ available: false, extensions: ["docx"] }, "a.docx"), false)
   assert.equal(canEditFile(null, "a.docx"), false)
 })
+
+import { newDocumentPath } from "../src/features/documents/editing.ts"
+
+test("a new document's path is cleaned and always ends in its format's extension", () => {
+  assert.equal(newDocumentPath("/", "Essay", "docx"), "/Essay.docx")
+  assert.equal(newDocumentPath("/School/Term 2", "  Week  3 ", "pptx"), "/School/Term 2/Week 3.pptx")
+  assert.equal(newDocumentPath("/School/", "notes.DOCX", "docx"), "/School/notes.docx")
+  assert.equal(newDocumentPath("/", "a/b\\c", "xlsx"), "/a b c.xlsx")
+  assert.equal(newDocumentPath("/", "..hidden", "docx"), "/hidden.docx")
+  assert.equal(newDocumentPath("/", "   ", "docx"), null)
+  assert.equal(newDocumentPath("/", ".docx", "docx"), null)
+})
