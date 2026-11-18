@@ -218,6 +218,6 @@ html[data-runtime="mac-native"] .mac-dw-sections > a { padding: 4px 10px; font-s
 html[data-runtime="mac-native"] .mac-dw-window[data-kind="app"] .mac-dw-app-main { padding: 12px 14px 20px; }
 
 /* The rail groups follow the Android launcher; a thin line separates them. */
-html[data-runtime="mac-native"] .mac-dw-rail-group { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; }
-html[data-runtime="mac-native"] .mac-dw-rail-group:not([data-first="true"]) { margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--bw-line); }
+html[data-runtime="mac-native"] .mac-dw-rail-group { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; }
+html[data-runtime="mac-native"] .mac-dw-rail-group:not([data-first="true"]) { padding-top: 6px; border-top: 1px solid var(--bw-line); }
 html[data-runtime="mac-native"] .mac-dw-rail[data-labels="true"] .mac-dw-rail-group { align-items: stretch; }
