@@ -113,7 +113,7 @@ const s = StyleSheet.create({
   row: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
   form: { gap: 10 },
   input: { minHeight: 40, borderRadius: shape.card, borderWidth: 1, borderColor: c.line, backgroundColor: c.ground, color: c.text, paddingHorizontal: 10, fontSize: 14 },
-  error: { color: "#ffa8a8", fontSize: 12 },
+  error: { color: c.errorText, fontSize: 12 },
   primary: { minHeight: 32, justifyContent: "center", paddingHorizontal: 14, borderRadius: 16, backgroundColor: c.action }, primaryText: { color: "#fff", fontSize: 12, fontWeight: "600" },
   disabled: { opacity: 0.45 },
 })

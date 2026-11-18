@@ -161,7 +161,7 @@ const s = StyleSheet.create({
   crumb: { minHeight: 32, justifyContent: "center", paddingHorizontal: 8, borderRadius: 16, maxWidth: 160 }, crumbOn: { backgroundColor: c.panel },
   crumbText: { color: c.muted, fontSize: 12, fontWeight: "500" }, crumbTextOn: { color: c.text, fontWeight: "600" },
   empty: { gap: 6, paddingVertical: 12 }, title: { color: c.text, fontSize: 15, fontWeight: "700" },
-  meta: { color: c.muted, fontSize: 11, lineHeight: 16 }, error: { color: "#ffa8a8", fontSize: 12 }, pad: { padding: 10 },
+  meta: { color: c.muted, fontSize: 11, lineHeight: 16 }, error: { color: c.errorText, fontSize: 12 }, pad: { padding: 10 },
   row: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 10, paddingVertical: 4 },
   rowBody: { flex: 1, minWidth: 0 }, rowTitle: { color: c.text, fontSize: 14, fontWeight: "500" },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
