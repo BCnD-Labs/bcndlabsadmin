@@ -1,4 +1,4 @@
-import { Check, Download, ExternalLink, FileText, FolderOpen, Pencil, X } from "lucide-react"
+import { Check, Download, ExternalLink, FileText, FolderOpen, Pencil, Plus, X } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { toast } from "sonner"
@@ -12,11 +12,12 @@ import { DocumentPane } from "./document-viewer"
 import { KIND_LABEL, documentKind } from "./document-kind"
 import { useDocs, type OpenDoc } from "./docs-store"
 import { EditorPane } from "./editor-pane"
+import { NewDocumentDialog } from "./new-document-dialog"
 import { canEditFile } from "./editing"
 
 function ActiveDocument({ doc, saved }: { doc: OpenDoc; saved: number }) {
-  // `saved` changes after editing, so the viewer fetches the file again and shows what was just saved.
-  const load = useCallback(() => fetchFile(doc.path) , [doc.path, saved])
+  // `saved` is part of the key, so after editing the viewer remounts and fetches the file again, showing what was just saved.
+  const load = useCallback(() => fetchFile(doc.path), [doc.path])
   return <DocumentPane key={`${doc.path}:${saved}`} name={doc.name} load={load} />
 }
 
@@ -36,6 +37,7 @@ export function DocsPage() {
   const stopEdit = useDocs((s) => s.stopEdit)
   const [info, setInfo] = useState<StorageInfo | null>(null)
   const [edit, setEdit] = useState<EditingInfo | null>(null)
+  const [creating, setCreating] = useState(false)
   useEffect(() => {
     storage.info().then(setInfo).catch(() => undefined)
     storage.editInfo().then(setEdit).catch(() => undefined)
@@ -50,7 +52,11 @@ export function DocsPage() {
   const subtitle = doc ? (showingEditor ? "Editing in Nextcloud Office" : kind ? `${KIND_LABEL[kind]} · read-only` : undefined) : undefined
   return (
     <div className="bw-docs-workspace flex h-full min-h-[24rem] flex-col gap-2">
-      <PageHeader title="Docs" subtitle={subtitle} actions={<Button variant="outline" size="sm" asChild><Link to={filesHref}><FolderOpen /> Files</Link></Button>} />
+      <PageHeader title="Docs" subtitle={subtitle} actions={<>
+        {!!edit?.creators.length && <Button variant="outline" size="sm" onClick={() => setCreating(true)}><Plus /> New</Button>}
+        <Button variant="outline" size="sm" asChild><Link to={filesHref}><FolderOpen /> Files</Link></Button>
+      </>} />
+      {creating && edit && <NewDocumentDialog creators={edit.creators} onClose={() => setCreating(false)} />}
       {docs.length === 0 ? (
         <div className="grid min-h-0 flex-1 place-items-center rounded-lg border border-line-soft bg-panel">
           <EmptyState icon={FileText} title="No document open" action={<Button variant="outline" asChild><Link to={filesHref}><FolderOpen /> Browse Files</Link></Button>}>
