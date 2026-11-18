@@ -1,32 +1,8 @@
 import { api, ConnectorError } from "@/services/connector"
 
-/** One file or folder from Nextcloud (see server/providers/nextcloud.ts). */
-export interface StorageEntry {
-  name: string
-  path: string
-  type: "file" | "dir"
-  size: number
-  modified: string
-  mime?: string
-  etag?: string
-  fileId?: string
-}
-
-export interface StorageInfo {
-  connected: boolean
-  status?: string
-  message?: string
-  /** Nextcloud's address, for "Open in Nextcloud". */
-  url?: string
-  user?: string
-}
-
-export interface FolderListing {
-  path: string
-  entries: StorageEntry[]
-  quota?: { used: number; free: number }
-  self?: StorageEntry
-}
+import type { FolderListing, StorageEntry, StorageInfo } from "@shared/storage"
+export type { FolderListing, StorageEntry, StorageInfo }
+export { formatSize, isOffice, isTextFile, joinPath, parentOf } from "@shared/storage"
 
 /** What Nextcloud's office editor (Collabora) can open and create. `available` is false until it is set up (docs/mikoshi/COLLABORA.md). */
 export interface EditingInfo {
@@ -100,24 +76,4 @@ export async function downloadFile(entry: StorageEntry) {
   setTimeout(() => URL.revokeObjectURL(url), 30_000)
 }
 
-export const parentOf = (path: string) => path.split("/").slice(0, -1).join("/") || "/"
-export const joinPath = (dir: string, name: string) => `${dir === "/" ? "" : dir}/${name}`
-
-export function formatSize(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`
-  const units = ["KB", "MB", "GB", "TB"]
-  let n = bytes / 1024
-  let i = 0
-  while (n >= 1024 && i < units.length - 1) {
-    n /= 1024
-    i++
-  }
-  return `${n < 10 ? n.toFixed(1) : Math.round(n)} ${units[i]}`
-}
-
-/** Same rule as the server: text files up to 2 MB open in the editor. */
-export const isTextFile = (e: Pick<StorageEntry, "name" | "mime">) =>
-  /^text\//.test(e.mime ?? "") || /\.(md|markdown|txt|json|ya?ml|toml|ini|conf|cfg|env|csv|tsv|log|xml|html?|css|js|mjs|ts|tsx|jsx|py|sh|bash|zsh|rb|go|rs|java|c|h|cpp|sql|svg|caddyfile)$/i.test(e.name) || /^(dockerfile|caddyfile|makefile|readme)$/i.test(e.name)
 export const isImage = (e: Pick<StorageEntry, "name" | "mime">) => /^image\/(png|jpe?g|gif|webp|avif|bmp)$/.test(e.mime ?? "") || /\.(png|jpe?g|gif|webp|avif|bmp)$/i.test(e.name)
-/** Word, Excel, PowerPoint and OpenDocument files open in Nextcloud's office app. */
-export const isOffice = (e: Pick<StorageEntry, "name">) => /\.(docx?|xlsx?|pptx?|odt|ods|odp|rtf)$/i.test(e.name)

@@ -3,12 +3,10 @@ import { Readable } from "node:stream"
 import { ProviderError } from "./http.ts"
 import { cleanPath, createForEditing, dav, davBase, editingInfo, listFolder, openForEditing } from "./providers/nextcloud.ts"
 import type { ConnectionStore } from "./store.ts"
+import { TEXT_LIMIT } from "../shared/storage.ts"
 
-/** Files that open in the built-in editor: text, up to 2 MB. Everything else downloads or opens in Nextcloud. */
-export const TEXT_LIMIT = 2 * 1024 * 1024
+export { TEXT_LIMIT }
 const UPLOAD_LIMIT = 1024 * 1024 * 1024
-export const isTextFile = (name: string, mime?: string) =>
-  /^text\//.test(mime ?? "") || /\.(md|markdown|txt|json|ya?ml|toml|ini|conf|cfg|env|csv|tsv|log|xml|html?|css|js|mjs|ts|tsx|jsx|py|sh|bash|zsh|rb|go|rs|java|c|h|cpp|sql|svg|caddyfile)$/i.test(name) || /^(dockerfile|caddyfile|makefile|readme)$/i.test(name)
 
 type Json = (status: number, body: unknown) => void
 
