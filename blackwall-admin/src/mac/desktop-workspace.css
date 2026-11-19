@@ -55,6 +55,8 @@ html[data-runtime="mac-native"] .mac-dw-rail button:not(.mac-dw-rail-close):hove
 html[data-runtime="mac-native"] .mac-dw-rail [data-testid="workspace-status"]:hover { color: var(--bw-text); background: var(--bw-raised); }
 html[data-runtime="mac-native"] .mac-dw-rail button:not(.mac-dw-rail-close)[aria-pressed="true"] { color: var(--dw-hue); background: color-mix(in srgb, var(--dw-hue) 16%, var(--bw-titlebar)); border-color: color-mix(in srgb, var(--dw-hue) 38%, var(--bw-line)); }
 html[data-runtime="mac-native"] .mac-dw-flex { flex: 1; min-height: 12px; }
+/* Panels opened from the top bar (Planner, Notifications) start just below it: its top (34px) + button height (27px) + a 6px gap. */
+html[data-runtime="mac-native"] { --mac-dw-below-top: 67px; }
 html[data-runtime="mac-native"] .mac-dw-top { position: absolute; z-index: 15; top: 34px; right: 10px; display: flex; align-items: center; gap: 5px; -webkit-app-region: no-drag; }
 html[data-runtime="mac-native"] .mac-dw-top > button,
 html[data-runtime="mac-native"] .mac-dw-top > time { display: flex; align-items: center; justify-content: center; gap: 4px; height: 27px; min-width: 27px; padding: 0 7px; border: 1px solid var(--bw-line); border-radius: 5px; background: var(--bw-panel); color: var(--bw-text-2); font-size: 12px; font-weight: 550; white-space: nowrap; }
@@ -109,7 +111,7 @@ html[data-runtime="mac-native"][data-theme="graphite"][data-accent="blue"]:not([
 html[data-runtime="mac-native"] .mac-dw-top > .mac-dw-date { position: relative; }
 html[data-runtime="mac-native"] .mac-dw-top > .mac-dw-date[aria-expanded="true"] { border-color: var(--bw-blue); color: var(--bw-text); }
 html[data-runtime="mac-native"] .mac-dw-overdue-dot { position: absolute; top: -3px; right: -3px; width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--bw-ground); background: #ef5350; }
-html[data-runtime="mac-native"] .mac-dw-sidebar { position: absolute; z-index: 60; top: 42px; right: 10px; bottom: 10px; display: flex; flex-direction: column; width: 360px; max-width: calc(100vw - 70px); border: 1px solid var(--bw-border); border-radius: 6px; overflow: hidden; background: var(--bw-ground); box-shadow: 0 12px 30px #0009; animation: mac-dw-slide .16s ease-out; }
+html[data-runtime="mac-native"] .mac-dw-sidebar { position: absolute; z-index: 60; top: var(--mac-dw-below-top); right: 10px; bottom: 10px; display: flex; flex-direction: column; width: 360px; max-width: calc(100vw - 70px); border: 1px solid var(--bw-border); border-radius: 6px; overflow: hidden; background: var(--bw-ground); box-shadow: 0 12px 30px #0009; animation: mac-dw-slide .16s ease-out; }
 @keyframes mac-dw-slide { from { transform: translateX(24px); } to { transform: none; } }
 html[data-runtime="mac-native"] .mac-dw-sidebar-head { display: flex; align-items: center; gap: 7px; flex: none; height: 30px; padding: 0 5px 0 7px; border-bottom: 1px solid var(--bw-line); background: var(--bw-titlebar); color: var(--bw-text); }
 html[data-runtime="mac-native"] .mac-dw-sidebar-head strong { font-size: 13px; font-weight: 650; }
