@@ -41,9 +41,9 @@ type AppId = keyof typeof APP
 /** Apps that hold several pages as tabs: one window and one sidebar icon each. A tab is current when the window's path starts with its `match`; a path none of them match shows the first tab as current. */
 const APP_TABS: Partial<Record<AppId, readonly { label: string; to: string; match: string }[]>> = {
   home: [{ label: "Home", to: "/", match: "/" }, { label: "Insights", to: "/productivity/insights", match: "/productivity/insights" }],
-  website: [{ label: "Websites", to: "/cms", match: "/cms" }, { label: "Social", to: "/social", match: "/social" }],
+  website: [{ label: "Websites", to: "/cms", match: "/cms" }, { label: "Social", to: "/social", match: "/social" }, { label: "Assets", to: "/assets", match: "/assets" }],
   projects: [{ label: "Projects", to: "/productivity/projects", match: "/productivity/projects" }, { label: "GitHub activity", to: "/development", match: "/development" }],
-  files: [{ label: "Files", to: "/files", match: "/files" }, { label: "Docs", to: "/docs", match: "/docs" }, { label: "Assets", to: "/assets", match: "/assets" }],
+  files: [{ label: "Files", to: "/files", match: "/files" }, { label: "Docs", to: "/docs", match: "/docs" }],
 }
 type Id = "notes" | AppId
 type Edge = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw"
@@ -53,7 +53,7 @@ type Gesture = { id: Id; pointer: number; startX: number; startY: number; lastX:
 const EDGES: Edge[] = ["n", "s", "e", "w", "ne", "nw", "se", "sw"]
 const APP_IDS = Object.keys(APP) as AppId[]
 const IDS: Id[] = ["notes", ...APP_IDS]
-/** The rail follows the Android launcher's groups (Daily, Build, Homelab); Assets, Files, Docs and the Browser are the Mac's own group. */
+/** The rail follows the Android launcher's groups (Daily, Build, Homelab); Files (with Docs) and the Browser are the Mac's own group; Assets is a tab of the CMS window, beside Websites and Social, the two places its pictures are used. */
 const RAIL_GROUPS: Id[][] = [
   ["home", "learning", "journal", "notes"],
   ["projects", "website"],
@@ -77,7 +77,7 @@ function appForPath(path: string): AppId {
   if (path.startsWith("/productivity/insights") || path === "/analytics") return "home"
   if (path.startsWith("/productivity") || path.startsWith("/work") || path.startsWith("/notes") || path.startsWith("/knowledge")) return "planner_app"
   if (path.startsWith("/development")) return "projects"
-  if (path.startsWith("/assets")) return "files"
+  if (path.startsWith("/assets")) return "website"
   if (path.startsWith("/files")) return "files"
   if (path.startsWith("/docs")) return "files"
   if (path.startsWith("/cms") || path.startsWith("/content")) return "website"
@@ -138,7 +138,7 @@ function WindowSections({ id, path }: { id: AppId; path: string }) {
   return <nav className="mac-dw-sections" aria-label={`${sections.label} sections`}>{sections.children.map((child) => <Link key={child.to} to={child.to} aria-current={sections.current === child ? "page" : undefined}>{child.label}</Link>)}</nav>
 }
 
-/** The pages of a merged app (Projects: Projects | GitHub activity; Files: Files | Docs | Assets). */
+/** The pages of a merged app (Projects: Projects | GitHub activity; Files: Files | Docs; CMS: Websites | Social | Assets). */
 function AppTabs({ id, path }: { id: AppId; path: string }) {
   const tabs = APP_TABS[id]
   if (!tabs) return null

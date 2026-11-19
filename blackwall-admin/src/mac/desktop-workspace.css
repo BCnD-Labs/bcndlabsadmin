@@ -273,8 +273,9 @@ html[data-runtime="mac-native"] .mac-dw-window .bw-panel > [class~="px-3.5"] { p
 /* Buttons in the strip under the title bar (Add learning, Today, Post) are one line tall instead of two. */
 html[data-runtime="mac-native"] .mac-dw-actions { gap: 4px; }
 html[data-runtime="mac-native"] .mac-dw-actions :is(button, a) { min-height: 24px; height: 24px; padding-block: 0; font-size: 12px; }
-html[data-runtime="mac-native"] .mac-dw-actions :is(button, a):not(:has(svg:only-child)) { padding-inline: 10px; }
-html[data-runtime="mac-native"] .mac-dw-actions :is(button, a):has(svg:only-child) { width: 24px; padding-inline: 0; }
+/* Only icon buttons are squared: CSS can't see a label's text, so ":has(svg:only-child)" also squeezed "↻ Refresh" to 24px and labels ran over each other. */
+html[data-runtime="mac-native"] .mac-dw-actions :is(button, a):not([data-size^="icon"]) { padding-inline: 10px; }
+html[data-runtime="mac-native"] .mac-dw-actions :is(button, a)[data-size^="icon"] { width: 24px; padding-inline: 0; }
 
 /* Journal, Daily: the log is a tall column on the left; This day and Recent entries stack on its right and both columns end together. */
 html[data-runtime="mac-native"] .mac-journal-day { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: var(--bw-grid-gap); align-items: stretch; }
