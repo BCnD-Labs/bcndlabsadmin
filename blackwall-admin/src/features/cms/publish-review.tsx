@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronRight, GitBranch, GitPullRequest, Globe, Rocket, TriangleAlert, UserRound } from "lucide-react"
 import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { lineDiff, type PlanFile } from "@shared/publish-plan"
+import { lineDiff, type PlanFile, type PlanOptions } from "@shared/publish-plan"
 import { closeReview as close, useReview } from "@/services/publish-review"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -53,8 +53,9 @@ export function PublishReviewHost() {
   const [mode, setMode] = useState<"direct" | "pr">("direct")
   const [step, setStep] = useState<1 | 2>(1)
   const [typed, setTyped] = useState<{ message?: string; prTitle?: string; prBody?: string; branch?: string }>({})
+  const [fixes, setFixes] = useState<PlanOptions>({})
   // A new review starts from the top; the owner's own wording is kept while they go back and forth or re-review.
-  useEffect(() => { setAgreed(new Set()); setMode("direct"); setStep(1); setTyped({}) }, [req])
+  useEffect(() => { setAgreed(new Set()); setMode("direct"); setStep(1); setTyped({}); setFixes({}) }, [req])
   const message = typed.message ?? plan?.suggested.message ?? ""
   const prTitle = typed.prTitle ?? (typed.message !== undefined ? typed.message.split("\n")[0] : plan?.suggested.prTitle) ?? ""
   const prBody = typed.prBody ?? plan?.suggested.prBody ?? ""
@@ -63,20 +64,21 @@ export function PublishReviewHost() {
   const where = target ? `${target.repo}@${target.branch}` : "the repository"
   const conflicts = plan?.files.filter((f) => f.conflict) ?? []
   const changes = !!plan && plan.files.length > 0
-  const stepOne = changes && conflicts.every((f) => agreed.has(f.path)) && message.trim().length > 0
+  const blocked = plan?.warnings.some((w) => w.blocking) ?? false
+  const stepOne = changes && !blocked && conflicts.every((f) => agreed.has(f.path)) && message.trim().length > 0
   const ready = stepOne && (mode === "direct" || (branchName.trim().length > 0 && prTitle.trim().length > 0))
   const counts = plan ? (["added", "changed", "removed"] as const).map((s) => [s, plan.files.filter((f) => f.status === s).length] as const).filter(([, n]) => n) : []
-  const replan = () => {
+  const replan = (options: PlanOptions = fixes) => {
     if (!req) return
     useReview.setState({ plan: undefined, error: undefined })
     setStep(1)
-    req.plan().then((p) => useReview.setState({ plan: p }), (e: Error) => useReview.setState({ error: e.message }))
+    req.plan(options).then((p) => useReview.setState({ plan: p }), (e: Error) => useReview.setState({ error: e.message }))
   }
   const go = async () => {
     if (!req || !plan) return
     useReview.setState({ busy: true, error: undefined })
     try {
-      close(await req.run({ mode, expectedHead: plan.head, token: plan.token, acknowledge: [...agreed], message: message.trim(), ...(plan.stamp ? { stamp: plan.stamp } : {}), ...(mode === "pr" ? { prTitle: prTitle.trim(), prBody, branch: branchName.trim() } : {}) }))
+      close(await req.run({ mode, expectedHead: plan.head, token: plan.token, acknowledge: [...agreed], message: message.trim(), ...fixes, ...(plan.stamp ? { stamp: plan.stamp } : {}), ...(mode === "pr" ? { prTitle: prTitle.trim(), prBody, branch: branchName.trim() } : {}) }))
     } catch (e) {
       useReview.setState({ busy: false, error: (e as Error).message })
     }
@@ -101,7 +103,16 @@ export function PublishReviewHost() {
             <p className="py-6 text-center text-sm text-muted-foreground" data-testid="review-empty">Nothing would change: the repository already matches. {plan.unchanged ? `${plan.unchanged} files are identical.` : ""}</p>
           ) : step === 1 ? (
             <>
-              {plan.warnings.map((w) => <p key={w.code} className="flex items-start gap-1.5 text-[12px] text-amber" role="status"><TriangleAlert className="mt-0.5 size-3.5 shrink-0" />{w.message}</p>)}
+              {plan.warnings.map((w) => (
+                <div key={w.code} className="grid gap-1.5" role="status">
+                  <p className={cn("flex items-start gap-1.5 text-[12px]", w.blocking ? "text-red-text" : "text-amber")}><TriangleAlert className="mt-0.5 size-3.5 shrink-0" />{w.message}</p>
+                  {w.fixes && (
+                    <div className="flex flex-wrap gap-1.5 pl-5">
+                      {w.fixes.map((f) => <Button key={f.option} variant="outline" size="xs" onClick={() => { const next = { ...fixes, [f.option]: true }; setFixes(next); replan(next) }}>{f.label}</Button>)}
+                    </div>
+                  )}
+                </div>
+              ))}
               <p className="text-[13px] text-ink" data-testid="review-summary">{plan.files.length} {plan.files.length === 1 ? "file" : "files"}: {counts.map(([s, n]) => `${n} ${s}`).join(", ")}{plan.unchanged ? ` · ${plan.unchanged} unchanged` : ""}</p>
               {req?.preview && <img src={req.preview.src} alt={req.preview.alt} className="max-h-40 w-fit rounded-md border border-line-soft object-contain" />}
               <ul className="overflow-hidden rounded-[8px] border border-line-soft" aria-label="Files that would change">
@@ -137,7 +148,7 @@ export function PublishReviewHost() {
             </>
           )}
           {error && <p role="alert" className="text-[12.5px] text-red-text">{error}</p>}
-          {stale && <div><Button variant="outline" size="sm" onClick={replan}>Review the changes again</Button></div>}
+          {stale && <div><Button variant="outline" size="sm" onClick={() => replan()}>Review the changes again</Button></div>}
         </div>
         <div className="flex justify-end gap-2 border-t border-line px-4 py-3">
           <Button variant="outline" disabled={busy} onClick={() => close()}>Cancel</Button>

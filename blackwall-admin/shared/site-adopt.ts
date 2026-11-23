@@ -1,9 +1,10 @@
 /**
  * Adopting an existing, hand-written site. Blackwall never rewrites a file it did not create, except for the
- * text inside marked regions the owner put there:
+ * contents of regions the owner marked: an element carrying `data-region="NAME"`,
  *
- *   <!-- blackwall:NAME -->  ...  <!-- /blackwall:NAME -->
+ *   <div class="cards" data-region="posts"> ... </div>
  *
+ * (older pages may mark one with a pair of comments instead, `<!-- blackwall:NAME --> ... <!-- /blackwall:NAME -->`, which still works).
  * Everything outside a region is the owner's and is shown read-only. The posts list is just a region named
  * `posts` (see shared/site.ts), so the blog index keeps working as before.
  */
@@ -13,6 +14,8 @@ export const REGION_NAME = /^[a-z][a-z0-9-]{0,39}$/
 const START = /<!--\s*blackwall:([a-z][a-z0-9-]{0,39})\s*-->/g
 
 export interface Region {
+  /** An element carrying data-region, or the older pair of comments. */
+  kind?: "attribute" | "comment"
   name: string
   /** Offset of the opening marker. */
   at: number
@@ -22,11 +25,48 @@ export interface Region {
   content: string
 }
 
-export const regionStart = (name: string) => `<!-- blackwall:${name} -->`
-export const regionEnd = (name: string) => `<!-- /blackwall:${name} -->`
 
-/** Every complete region in the page, in order. A region without its closing marker is ignored, and so is a repeated name. */
+const VOID = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"])
+const OPEN_REGION = /<([a-zA-Z][a-zA-Z0-9-]*)\b[^>]*?\sdata-region=(["'])([a-z][a-z0-9-]{0,39})\2[^>]*>/g
+
+/** The page with comments, scripts and styles blanked out (same length), so tags inside them are never mistaken for the page's own. */
+function masked(html: string): string {
+  return html.replace(/<!--[\s\S]*?-->|<(script|style)\b[\s\S]*?<\/\1\s*>/gi, (m) => m.replace(/[^\n]/g, " "))
+}
+
+/** Where an element's contents end: the matching closing tag of the same name, counting nested ones. Null when it never closes. */
+function closeOf(text: string, tag: string, from: number): number | null {
+  const tags = new RegExp(`<(/?)${tag}\\b[^>]*>`, "gi")
+  tags.lastIndex = from
+  let depth = 1
+  for (let m = tags.exec(text); m; m = tags.exec(text)) {
+    if (m[1]) depth--
+    else if (!m[0].endsWith("/>")) depth++
+    if (depth === 0) return m.index
+  }
+  return null
+}
+
+function attributeRegions(html: string): Region[] {
+  const text = masked(html)
+  const out: Region[] = []
+  for (const m of text.matchAll(OPEN_REGION)) {
+    const tag = m[1].toLowerCase()
+    if (VOID.has(tag) || m[0].endsWith("/>")) continue
+    const from = m.index + m[0].length
+    const to = closeOf(text, tag, from)
+    if (to !== null) out.push({ kind: "attribute", name: m[3], at: m.index, from, to, content: html.slice(from, to) })
+  }
+  return out
+}
+
+/** Every complete region in the page, in order. A region that never closes is ignored, and so is a repeated name. */
 export function findRegions(html: string): Region[] {
+  const all = [...commentRegions(html), ...attributeRegions(html)].sort((a, b) => a.at - b.at)
+  return all.filter((r, i) => all.findIndex((x) => x.name === r.name) === i)
+}
+
+function commentRegions(html: string): Region[] {
   const out: Region[] = []
   for (const m of html.matchAll(START)) {
     const name = m[1]
@@ -36,7 +76,7 @@ export function findRegions(html: string): Region[] {
     end.lastIndex = from
     const close = end.exec(html)
     if (!close) continue
-    out.push({ name, at: m.index, from, to: close.index, content: html.slice(from, close.index) })
+    out.push({ kind: "comment", name, at: m.index, from, to: close.index, content: html.slice(from, close.index) })
   }
   return out
 }
@@ -173,3 +213,61 @@ export function adoptedPreview(html: string, siteUrl: string, path: string, styl
   const extra = '<base target="_blank">'
   return head ? clean.slice(0, head.index + head[0].length) + extra + clean.slice(head.index + head[0].length) : extra + clean
 }
+
+/**
+ * The blog page with an empty posts list added: one new element before the end of `<main>` (or the page), and nothing else touched.
+ * Whatever the owner already has on the page stays exactly as written. Returns null when the page already has a posts region.
+ */
+export function addPostsRegion(html: string): string | null {
+  if (findRegions(html).some((r) => r.name === "posts")) return null
+  const text = masked(html)
+  const close = /<\/main\s*>/i.exec(text) ?? /<\/body\s*>/i.exec(text)
+  const element = '<div data-region="posts"></div>'
+  if (!close) return `${html}${html.endsWith("\n") || !html ? "" : "\n"}${element}\n`
+  const lineStart = html.lastIndexOf("\n", close.index) + 1
+  const lead = html.slice(lineStart, close.index)
+  if (/\S/.test(lead)) return `${html.slice(0, close.index)}${element}${html.slice(close.index)}`
+  return `${html.slice(0, lineStart)}${lead}  ${element}\n${html.slice(lineStart)}`
+}
+
+/** The open elements around a position, innermost last, found by walking the page's tags. */
+function openAround(text: string, at: number): { tag: string; start: number; end: number }[] {
+  const stack: { tag: string; start: number; end: number }[] = []
+  for (const m of text.slice(0, at).matchAll(/<(\/?)([a-zA-Z][a-zA-Z0-9-]*)\b[^>]*>/g)) {
+    const tag = m[2].toLowerCase()
+    if (VOID.has(tag) || m[0].endsWith("/>")) continue
+    if (m[1]) { const i = stack.map((x) => x.tag).lastIndexOf(tag); if (i >= 0) stack.length = i } else stack.push({ tag, start: m.index, end: m.index + m[0].length })
+  }
+  return stack
+}
+
+/**
+ * Replaces one pair of older comment markers by the same region as an attribute on the element that holds it, when that element holds
+ * nothing but the region. Everything else on the page is byte-for-byte as it was. Returns null when the page has no such pair or
+ * the markers share their element with other content (those are left alone rather than guessed at).
+ */
+export function migrateMarkers(html: string, name: string): string | null {
+  const region = commentRegions(html).find((r) => r.name === name)
+  if (!region || attributeRegions(html).some((r) => r.name === name)) return null
+  const text = masked(html)
+  const parent = openAround(text, region.at).at(-1)
+  if (!parent) return null
+  const closeMarker = new RegExp(`<!--\\s*/blackwall:${name}\\s*-->`).exec(html.slice(region.to))
+  if (!closeMarker) return null
+  const afterMarker = region.to + closeMarker[0].length
+  const closeTag = closeOf(text, parent.tag, parent.end)
+  if (closeTag === null || /\S/.test(text.slice(parent.end, region.at)) || /\S/.test(text.slice(afterMarker, closeTag))) return null
+  const open = html.slice(parent.start, parent.end)
+  const marked = open.replace(/\s*(\/?)>$/, ` data-region="${name}"$1>`)
+  const lineStart = html.lastIndexOf("\n", region.at - 1) + 1
+  const openFrom = /^[ \t]*$/.test(html.slice(lineStart, region.at)) ? lineStart : region.at
+  const afterOpener = /^[ \t]*\r?\n/.exec(html.slice(region.from))?.[0].length ?? 0
+  const closeAt = region.to
+  const closeLineStart = html.lastIndexOf("\n", closeAt - 1) + 1
+  const closeFrom = /^[ \t]*$/.test(html.slice(closeLineStart, closeAt)) ? closeLineStart : closeAt
+  const closeTo = afterMarker + (/^[ \t]*\r?\n/.exec(html.slice(afterMarker))?.[0].length ?? 0)
+  return html.slice(0, parent.start) + marked + html.slice(parent.end, openFrom) + html.slice(region.from + afterOpener, closeFrom) + html.slice(closeTo)
+}
+
+/** Names of regions still marked with the older comments. */
+export const legacyRegions = (html: string) => commentRegions(html).filter((r) => !attributeRegions(html).some((a) => a.name === r.name)).map((r) => r.name)

@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto"
-import { cleanPagePath, findRegions, htmlTitle, pagePaths, regionBody, regionText, replaceRegion, stylesheetPaths, type AdoptedPageFile, type SiteScan } from "../../shared/site-adopt.ts"
+import type { PlanWarning } from "../../shared/publish-plan.ts"
+import { addPostsRegion, cleanPagePath, findRegions, htmlTitle, legacyRegions, migrateMarkers, pagePaths, regionBody, regionText, replaceRegion, stylesheetPaths, type AdoptedPageFile, type SiteScan } from "../../shared/site-adopt.ts"
 import {
   DEFAULT_SITE,
-  MARK_START,
   SLUG_RE,
   cleanPost,
   extractChrome,
+  imageNotes,
   joinUrl,
   parseManifest,
   POST_CSS,
@@ -249,7 +250,7 @@ export async function testWebsite(c: StoredConnection): Promise<TestResult> {
     { label: "Published posts", value: String(manifest.posts.length) },
     {
       label: "Blog index",
-      value: index === null ? `${cfg.blogIndex} not found` : index.includes(MARK_START) ? `${cfg.blogIndex}: lists your posts` : `${cfg.blogIndex}: add the marker comments to list posts there`,
+      value: index === null ? `${cfg.blogIndex} not found` : findRegions(index).some((r) => r.name === "posts") ? `${cfg.blogIndex}: lists your posts` : `${cfg.blogIndex}: has no posts list yet (publishing a post offers to add one)`,
     },
   ]
   if (!canPush) return { status: "error", account: info.full_name, message: "This token can read the repository but not write to it. Give it Contents: Read and write.", summary }
@@ -297,7 +298,7 @@ export async function siteOverview(c: StoredConnection, scheduled: ScheduledPost
     posts: sortPosts(parseManifest(manifestText).posts),
     scheduled,
     pages,
-    indexMarkers: !!index?.includes(MARK_START),
+    indexMarkers: !!findRegions(index ?? "").some((r) => r.name === "posts"),
   }
 }
 
@@ -399,15 +400,35 @@ async function writePosts(c: StoredConnection, message: string, mutate: (posts: 
   const stylePath = `${cfg.postsDir}/post.css`
   if (changes.some((c) => "render" in c) && (await repo.read(stylePath)) === null) all.push({ path: stylePath, content: POST_CSS })
   all.push({ path: manifestPath, content: `${JSON.stringify({ version: 1, posts: sortPosts(posts) }, null, 2)}\n` })
+  // The blog page: the list is only written inside its posts region. A page without one is never quietly bypassed: the owner is asked,
+  // and any change to their page (adding the list, or replacing older comment markers) is shown in the review like every other change.
+  const notes: PlanWarning[] = []
   let region = false
-  if (index) {
-    const next = updateIndexBlock(index, posts.map(shown), (p) => relativePath(cfg.blogIndex, postPath(cfg.postsDir, p.slug)), template)
+  let page = index
+  if (index === null) {
+    if (!opts.unlisted) notes.push({ code: "no-blog-index", blocking: true, message: `The blog page (${cfg.blogIndex}) wasn't found, so these posts would appear in no list.`, fixes: [{ option: "unlisted", label: "Publish without listing it" }] })
+  } else if (!findRegions(index).some((r) => r.name === "posts")) {
+    if (opts.addRegion) {
+      page = addPostsRegion(index) ?? index
+      notes.push({ code: "posts-list-added", message: `A posts list is added to ${cfg.blogIndex} (one new element; the rest of the page is untouched).` })
+    } else if (!opts.unlisted) {
+      notes.push({ code: "no-posts-region", blocking: true, message: `${cfg.blogIndex} has no posts list, so this post would be published but listed nowhere.`, fixes: [{ option: "addRegion", label: "Add a posts list to the blog page" }, { option: "unlisted", label: "Publish without listing it" }] })
+    }
+  } else if (legacyRegions(index).includes("posts")) {
+    if (opts.migrateMarkers) {
+      page = migrateMarkers(index, "posts") ?? index
+      if (page === index) notes.push({ code: "legacy-markers-kept", message: "The comment markers share their element with other content, so they were left as they are." })
+    } else notes.push({ code: "legacy-markers", message: `${cfg.blogIndex} marks its posts list with HTML comments. They can be replaced by an attribute so the page keeps no comments.`, fixes: [{ option: "migrateMarkers", label: "Replace the comment markers" }] })
+  }
+  if (page !== null && findRegions(page).some((r) => r.name === "posts")) {
+    const next = updateIndexBlock(page, posts.map(shown), (p) => relativePath(cfg.blogIndex, postPath(cfg.postsDir, p.slug)), template)
     region = next !== null
     if (next !== null && next !== index) all.push({ path: cfg.blogIndex, content: next })
-  }
+  } else if (page !== null && page !== index) all.push({ path: cfg.blogIndex, content: page })
+  for (const ch of changes) if ("render" in ch) for (const note of imageNotes(posts.find((p) => p.slug === ch.render)!)) notes.push({ code: "image-alt", message: note })
   // What Blackwall owns here: its list of posts, the post pages it made, and (only the text inside its region of) the blog index.
   const owned = new Map<string, string>([[manifestPath, ""], ...before.map((p) => [postPath(cfg.postsDir, p.slug), ""] as [string, string]), ...(region ? [[cfg.blogIndex, ""] as [string, string]] : [])])
-  const done = await deliver(repo, { message }, all, owned, delivery)
+  const done = await deliver(repo, { message }, all, owned, { ...delivery, warnings: [...(delivery.warnings ?? []), ...notes] })
   return { posts: sortPosts(posts), plan: done.plan, committed: done.committed }
 }
 

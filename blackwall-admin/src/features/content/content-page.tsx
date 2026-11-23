@@ -4,7 +4,7 @@ import { CalendarClock, Copy, ExternalLink, FileText, Globe, MoreHorizontal, Pen
 import { useMemo, useState } from "react"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
-import { MARK_END, MARK_START, draftFieldsFromPost, joinUrl } from "@shared/site"
+import { POSTS_REGION, draftFieldsFromPost, joinUrl } from "@shared/site"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { EmptyState } from "@/components/common/empty-state"
@@ -188,12 +188,12 @@ function SiteNotice({ site }: { site: ReturnType<typeof useSite> }) {
       ))}
       {!site.overview.indexMarkers && (
         <Notice tone="warn">
-          Published posts get their own pages, but your blog page won't list them until you add these two lines where the cards should go:{" "}
-          <code className="rounded bg-well px-1 font-mono text-[11px]">{MARK_START}</code> <code className="rounded bg-well px-1 font-mono text-[11px]">{MARK_END}</code>
+          Published posts get their own pages, but your blog page has no posts list yet. The next publish offers to add one (you see the change first), or you can add this element where the cards should go:{" "}
+          <code className="rounded bg-well px-1 font-mono text-[11px]">{POSTS_REGION}</code>
           <button
             type="button"
             className="ml-2 inline-flex items-center gap-1 underline"
-            onClick={() => navigator.clipboard.writeText(`${MARK_START}\n${MARK_END}`).then(() => toast.success("Copied"))}
+            onClick={() => navigator.clipboard.writeText(POSTS_REGION).then(() => toast.success("Copied"))}
           >
             <Copy className="size-3" /> Copy
           </button>

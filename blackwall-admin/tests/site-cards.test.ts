@@ -8,26 +8,28 @@ import { siteFromTemplate } from "../shared/sitebuilder.ts"
 
 const post = (over: Partial<SitePost> = {}): SitePost => ({ slug: "a", title: "A", excerpt: "e", tags: ["T"], date: "2026-01-01T00:00:00.000Z", markdown: "", ...over })
 
-test("a post saved before categories existed renders exactly the card it always did", () => {
+test("a post saved before categories existed renders the same card markup (classes, order and content), neatly indented", () => {
   assert.equal(
     renderCard(post(), "posts/a.html"),
     `<article class="card card--mini" id="post-a">
-                <ul class="chips"><li class="chip">T</li></ul>
-                <h3>A</h3>
-                <p>e</p>
-                <div class="card-links"><a href="posts/a.html">Read post ↗</a></div>
-              </article>`,
+  <ul class="chips"><li class="chip">T</li></ul>
+  <h3>A</h3>
+  <p>e</p>
+  <div class="card-links"><a href="posts/a.html">Read post ↗</a></div>
+</article>`,
   )
   assert.equal(
     renderCard(post({ tags: [], excerpt: "" }), "x.html"),
     `<article class="card card--mini" id="post-a">
-                
-                <h3>A</h3>
-                
-                <div class="card-links"><a href="x.html">Read post ↗</a></div>
-              </article>`,
-    "with nothing optional the empty lines are the ones the old card left",
+  
+  <h3>A</h3>
+  
+  <div class="card-links"><a href="x.html">Read post ↗</a></div>
+</article>`,
+    "with nothing optional the template leaves empty lines",
   )
+  const placed = updateIndexBlock(`<div data-region="posts"></div>`, [post({ tags: [], excerpt: "" })], () => "x.html")!
+  assert.equal(placed, `<div data-region="posts">\n  <article class="card card--mini" id="post-a">\n    <h3>A</h3>\n    <div class="card-links"><a href="x.html">Read post ↗</a></div>\n  </article>\n</div>`, "in the page those lines are dropped and the card is indented with its neighbours")
 })
 
 test("categories, featured and thumbnail reach the card as attributes, chips and a picture; every value is escaped", () => {

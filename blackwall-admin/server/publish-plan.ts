@@ -19,6 +19,10 @@ export interface DeliverOptions {
   branch?: string
   /** The time the reviewed plan was built with. Plans report it; a write sends it back (see `PublishPlan.stamp`). */
   stamp?: string
+  /** Choices the owner made in the review for things that needed one (see `PlanWarning.fixes`). */
+  addRegion?: boolean
+  unlisted?: boolean
+  migrateMarkers?: boolean
   /** Files the owner agreed to replace (see `conflict`). */
   acknowledge?: string[]
   /** The site record's own address, from the app's workspace (never from a request), so it can be checked against the repository. */
@@ -129,6 +133,8 @@ export async function deliver(repo: Repo, text: { message: string; prTitle?: str
     const names = need.slice(0, 5).map((f) => `${f.path} (${f.conflict === "edited-elsewhere" ? "edited since Blackwall wrote it" : "not made by Blackwall"})`).join(", ")
     throw new ProviderError(`Publishing would replace ${need.length} file${need.length === 1 ? "" : "s"} that ${need.length === 1 ? "isn't" : "aren't"} Blackwall's to replace: ${names}${need.length > 5 ? ", …" : ""}. Nothing was written; review the changes and agree to replace them, or change them in the repository.`, 409)
   }
+  const blocked = plan.warnings.find((w) => w.blocking)
+  if (blocked) throw new ProviderError(`${blocked.message} Nothing was written; choose how to handle it in the review.`, 409)
   if (!plan.files.length) return { plan }
   const message = (opts.message ?? "").trim() || (opts.internal ? plan.suggested.message : "")
   if (!message) throw new ProviderError("Write a commit message before publishing.", 400)

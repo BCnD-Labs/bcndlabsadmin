@@ -1,4 +1,5 @@
 import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
+import { describeImage } from "@/services/describe-image"
 import { saveState } from "@/services/draft-status"
 import { flushWorkspace, useWorkspaceSync } from "@/services/workspace-sync"
 import { format } from "date-fns"
@@ -102,10 +103,12 @@ function Editor({ draft }: { draft: Draft }) {
 
   const insertImage = async (file: File) => {
     try {
+      const alt = await describeImage(file)
+      if (alt === undefined) return
       const img = await uploadSiteImage(file, site.connectionId)
       if (!img) return
       const el = bodyRef.current
-      const md = `![${file.name.replace(/\.[^.]+$/, "")}](${img.path})`
+      const md = `![${alt.replace(/[\]\[\n]/g, " ")}](${img.path})`
       const at = el ? el.selectionStart : value.body.length
       set({ body: `${value.body.slice(0, at)}${at && !value.body.slice(0, at).endsWith("\n") ? "\n\n" : ""}${md}\n${value.body.slice(at)}` })
       toast.success("Image added to the site and the post")
@@ -154,9 +157,11 @@ function Editor({ draft }: { draft: Draft }) {
               canUpload={live}
               onUpload={async (file) => {
                 try {
+                  const alt = await describeImage(file)
+                  if (alt === undefined) return
                   const img = await uploadSiteImage(file, site.connectionId)
                   if (!img) return
-                  set({ cover: img.path })
+                  set({ cover: img.path, coverAlt: alt || undefined })
                   toast.success(item?.state === "published" ? "Cover uploaded. Update the post to show it on the site." : "Cover uploaded")
                 } catch (e) {
                   toast.error((e as Error).message)
@@ -308,9 +313,11 @@ function ThumbnailField({ value, alt, canUpload, connectionId, onChange }: { val
     if (!file) return
     setBusy(true)
     try {
+      const described = await describeImage(file)
+      if (described === undefined) return
       const img = await uploadSiteImage(file, connectionId)
       if (!img) return
-      onChange(img.path, alt)
+      onChange(img.path, described)
       toast.success("Thumbnail uploaded. Update the post to show it in the blog list.")
     } catch (e) {
       toast.error((e as Error).message)

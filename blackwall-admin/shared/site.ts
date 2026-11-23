@@ -102,8 +102,8 @@ export interface SiteChrome {
   siteName: string
 }
 
-export const MARK_START = "<!-- blackwall:posts -->"
-export const MARK_END = "<!-- /blackwall:posts -->"
+/** What a blog page needs for posts to be listed on it: an element Blackwall may fill with the post cards. */
+export const POSTS_REGION = '<div data-region="posts"></div>'
 export const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 export const DEFAULT_SITE = {
@@ -337,6 +337,24 @@ export function renderPostPage(post: SitePost, chrome: SiteChrome, blogHref: str
   return `${lines.join("\n")}\n`
 }
 
+const FILENAME_ALT = /\.(png|jpe?g|gif|webp|avif|svg)$|^(img|image|photo|picture|pic|thumb|thumbnail|screenshot|dsc|untitled)[-_ ]?\d*$/i
+
+/**
+ * Pictures in a post whose description is missing or just a file name, in plain words. Empty is allowed for decoration, so this only
+ * asks; the owner decides. A cover with no description is listed too; a thumbnail may be decorative and is not.
+ */
+export function imageNotes(post: Pick<SitePost, "markdown" | "cover" | "coverAlt">): string[] {
+  const notes: string[] = []
+  for (const m of post.markdown.matchAll(/!\[([^\]]*)\]\(([^)\s]+)/g)) {
+    const alt = m[1].trim()
+    const file = m[2].split("/").pop() ?? m[2]
+    if (!alt) notes.push(`The picture ${file} has no description. That is fine if it is only decoration; otherwise describe it for people who can't see it.`)
+    else if (FILENAME_ALT.test(alt) || alt.toLowerCase() === file.replace(/\.[^.]+$/, "").toLowerCase()) notes.push(`The picture ${file} is described as “${alt}”, which looks like a file name. Describe what it shows.`)
+  }
+  if (post.cover && !post.coverAlt?.trim()) notes.push("The cover picture has no description. Add one unless it is only decoration.")
+  return notes
+}
+
 /** The kebab-case form of a category, safe in an attribute and easy for a site's own script to match: "Case Study" → "case-study". */
 export const categorySlug = (name: string) => name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
 
@@ -359,11 +377,11 @@ export const CARD_TOKENS: { token: string; about: string }[] = [
 
 /** The card Blackwall has always made. A site that has not chosen a template gets exactly this. */
 export const DEFAULT_CARD_TEMPLATE = `<article class="card card--mini" id="post-{{slug}}"{{attrs}}>
-                {{thumb}}{{chips}}
-                <h3>{{title}}</h3>
-                {{excerptP}}
-                <div class="card-links"><a href="{{href}}">Read post ↗</a></div>
-              </article>`
+  {{thumb}}{{chips}}
+  <h3>{{title}}</h3>
+  {{excerptP}}
+  <div class="card-links"><a href="{{href}}">Read post ↗</a></div>
+</article>`
 
 const TOKEN = /\{\{\s*([A-Za-z]+)\s*\}\}/g
 
@@ -430,13 +448,23 @@ export const sortPosts = (posts: SitePost[]) => [...posts].sort((a, b) => b.date
 /** The order of the blog list: featured posts first, then newest first. */
 export const sortCards = (posts: SitePost[]) => [...posts].sort((a, b) => Number(!!b.featured) - Number(!!a.featured) || b.date.localeCompare(a.date))
 
+/** A rendered card set at `indent`: continuation lines keep their layout relative to each other, empty lines (a token with nothing in it) are dropped. */
+function reindent(card: string, indent: string): string {
+  const [first, ...rest] = card.split("\n").filter((l, i) => i === 0 || l.trim())
+  const depth = Math.min(...rest.map((l) => /^[ \t]*/.exec(l)![0].length), Infinity)
+  return [first, ...rest.map((l) => l.slice(Number.isFinite(depth) ? depth : 0))].map((l, i) => (i === 0 ? `${indent}${l}` : `${indent}${l}`)).join("\n")
+}
+
 /** Replaces the block between the markers. Returns null when the page has no markers (leave it alone). */
 export function updateIndexBlock(html: string, posts: SitePost[], hrefFor: (p: SitePost) => string, template?: string): string | null {
   const region = findRegions(html).find((r) => r.name === "posts")
   if (!region) return null
-  const indent = /([ \t]*)$/.exec(html.slice(0, region.at))?.[1] ?? ""
-  const cards = sortCards(posts).map((p) => `${indent}${renderCard(p, hrefFor(p), template)}`)
-  const body = cards.length ? `\n${cards.join("\n")}\n${indent}` : `\n${indent}`
+  // Cards sit one level inside the element that holds them, and its closing tag stays where it was; between two comments they line up with the comments.
+  const lead = /(?:^|\n)([ \t]*)[^\n]*$/.exec(html.slice(0, region.at))?.[1] ?? ""
+  const indent = region.kind === "attribute" ? `${lead}  ` : /([ \t]*)$/.exec(html.slice(0, region.at))?.[1] ?? ""
+  const close = region.kind === "attribute" ? lead : indent
+  const cards = sortCards(posts).map((p) => reindent(renderCard(p, hrefFor(p), template), indent))
+  const body = cards.length ? `\n${cards.join("\n")}\n${close}` : `\n${close}`
   return html.slice(0, region.from) + body + html.slice(region.to)
 }
 
