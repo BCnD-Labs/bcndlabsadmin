@@ -24,6 +24,9 @@ export interface PublishTarget {
 export interface PlanWarning {
   code: string
   message: string
+  /** The publish can't go ahead until one of the `fixes` is chosen (the review re-plans with it, so the change is shown first). */
+  blocking?: boolean
+  fixes?: { option: "addRegion" | "unlisted" | "migrateMarkers"; label: string }[]
 }
 
 /** The wording Blackwall suggests for the commit and, in pull request mode, for the branch and pull request. The owner edits all of it. */
@@ -64,7 +67,14 @@ export interface PublishChoice {
   prBody?: string
   branch?: string
   stamp?: string
+  /** Fixes the owner picked for warnings that needed one. */
+  addRegion?: boolean
+  unlisted?: boolean
+  migrateMarkers?: boolean
 }
+
+/** The fixes chosen so far in a review; the plan is made again with them so the change they cause is shown before anything is written. */
+export type PlanOptions = Partial<Pick<PublishChoice, "addRegion" | "unlisted" | "migrateMarkers">>
 
 export type DiffRow = { kind: "same" | "add" | "del"; text: string } | { kind: "gap"; hidden: number }
 

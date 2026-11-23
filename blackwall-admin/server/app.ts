@@ -140,7 +140,7 @@ async function domainFor(workspace: WorkspaceStore, connectionId: string): Promi
   return data?.sites.find((s) => s.connectionId === connectionId)?.domain || undefined
 }
 
-type DeliverBody = { mode?: string; plan?: boolean; expectedHead?: string; acknowledge?: unknown; token?: unknown; message?: unknown; prTitle?: unknown; prBody?: unknown; branch?: unknown; stamp?: unknown }
+type DeliverBody = { mode?: string; plan?: boolean; expectedHead?: string; acknowledge?: unknown; token?: unknown; message?: unknown; prTitle?: unknown; prBody?: unknown; branch?: unknown; stamp?: unknown; addRegion?: unknown; unlisted?: unknown; migrateMarkers?: unknown }
 const text = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : undefined)
 
 /** What a publish request may ask for. Anything else is ignored; `internal` and `siteDomain` can never come from a request. */
@@ -155,6 +155,9 @@ function deliverOptions(body: DeliverBody | undefined, siteDomain?: string): Del
     prBody: text(body?.prBody, 20_000),
     branch: text(body?.branch, 100),
     stamp: text(body?.stamp, 40),
+    addRegion: body?.addRegion === true,
+    unlisted: body?.unlisted === true,
+    migrateMarkers: body?.migrateMarkers === true,
     acknowledge: Array.isArray(body?.acknowledge) ? body.acknowledge.filter((p): p is string => typeof p === "string").slice(0, 500) : [],
     siteDomain,
   }

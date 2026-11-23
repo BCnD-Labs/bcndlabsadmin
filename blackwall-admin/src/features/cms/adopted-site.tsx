@@ -84,7 +84,7 @@ export function adoptedSummary(scan: SiteScan | undefined, error: string | undef
   return { tone: "ok" as const, text: "Run from its own files", detail: `${pages} · ${scan.posts} ${scan.posts === 1 ? "post" : "posts"} · ${scan.repo}@${scan.branch}` }
 }
 
-const SNIPPET = (name: string) => `<!-- blackwall:${name} -->\n  …what Blackwall may change…\n<!-- /blackwall:${name} -->`
+const SNIPPET = (name: string) => `<div data-region="${name}">\n  …the part that can be edited here…\n</div>`
 
 /** One marked region: its text, and a Save that writes only this region. */
 function RegionEditor({ site, page, region, onSaved }: { site: Site; page: AdoptedPageFile; region: { name: string; text: string }; onSaved: (page: AdoptedPageFile) => void }) {
@@ -215,7 +215,7 @@ export function AdoptedWorkspace({ site }: { site: Site }) {
               <p>{page ? "This page is yours: Blackwall shows it but doesn't change it." : "Choose a page to see which parts Blackwall may edit."}</p>
               {page && (
                 <>
-                  <p>To let Blackwall edit one part, wrap it in two comments in your own file. Only the text between them is ever changed:</p>
+                  <p>To edit one part here, put it in an element with a data-region name in your own file. Only what is inside that element is ever changed:</p>
                   <pre className="overflow-x-auto rounded-md bg-well p-2 font-mono text-[11px] text-ink-2">{SNIPPET("intro")}</pre>
                 </>
               )}

@@ -50,7 +50,7 @@ export const useSiteStore = create<SiteState>()((set, get) => {
     publish: async (post, previousSlug) => {
       const conn = get().loadedFor
       const send = (body: object) => api<PostResult>(forConnection(`site/posts/${post.slug}`, conn), { method: "PUT", body: JSON.stringify({ post, previousSlug, ...body }) })
-      const r = await reviewPublish({ title: `Publish “${post.title}”`, plan: async () => (await send({ plan: true })).plan, run: (choice: PublishChoice) => send(choice) })
+      const r = await reviewPublish({ title: `Publish “${post.title}”`, plan: async (options) => (await send({ plan: true, ...options })).plan, run: (choice: PublishChoice) => send(choice) })
       if (!r) return { url: "", cancelled: true }
       if (previousSlug && previousSlug !== post.slug && !r.committed?.pr) await api(forConnection(`site/schedule/${previousSlug}`, conn), { method: "DELETE" }).catch(() => {})
       await reload()
