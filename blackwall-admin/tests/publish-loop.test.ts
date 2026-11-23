@@ -3,6 +3,7 @@ import { test } from "node:test"
 import { mk, section } from "../shared/sitebuilder.ts"
 import { liveConfirmed, type LiveReport } from "../shared/site-live.ts"
 import { startSiteLab } from "../server/site-lab.ts"
+import { confirmed } from "./lab-review.ts"
 
 /** The whole loop against the practice run: create, publish, confirm; edit, publish, confirm; remove, publish, confirm. */
 test("create, edit, remove and blog: each publish reaches the site and the live check tells the truth", async () => {
@@ -10,7 +11,7 @@ test("create, edit, remove and blog: each publish reaches the site and the live 
   const headers = { "X-Blackwall": "1", "Content-Type": "application/json" }
   const read = async () => (await (await fetch(`${lab.panel}/api/workspace`, { headers })).json())
   const save = async (change: (d: any) => void) => { const w = await read(); change(w.data); const r = await fetch(`${lab.panel}/api/workspace`, { method: "PUT", headers, body: JSON.stringify(w) }); assert.equal(r.status, 200) } // eslint-disable-line @typescript-eslint/no-explicit-any
-  const publish = async () => { const r = await fetch(`${lab.panel}/api/sites/lab/publish`, { method: "POST", headers }); assert.equal(r.status, 200, await r.clone().text()); return r.json() }
+  const publish = async () => { const r = await confirmed((b) => fetch(`${lab.panel}/api/sites/lab/publish`, { method: "POST", headers, body: JSON.stringify(b) })); assert.equal(r.status, 200, await r.clone().text()); return r.json() }
   const live = async (removed: string[] = []) => (await (await fetch(`${lab.panel}/api/sites/lab/live`, { method: "POST", headers, body: JSON.stringify({ removed }) })).json()) as LiveReport
   const visit = (p: string) => fetch(lab.site + p)
   const deployed = () => new Promise((r) => setTimeout(r, 300))
@@ -71,7 +72,7 @@ test("a picture that can't be read stops the publish instead of putting a broken
     w.data.assets[0].file = "not-in-the-cloud.png"
     w.data.pages[0].sections = [mk("section", {}, [mk("image", { src: "/images/not-in-the-cloud.png", alt: "x" })])]
     assert.equal((await fetch(`${lab.panel}/api/workspace`, { method: "PUT", headers, body: JSON.stringify(w) })).status, 200)
-    const r = await fetch(`${lab.panel}/api/sites/lab/publish`, { method: "POST", headers })
+    const r = await confirmed((b) => fetch(`${lab.panel}/api/sites/lab/publish`, { method: "POST", headers, body: JSON.stringify(b) }))
     assert.equal(r.status, 502)
     assert.match((await r.json()).error, /nothing was published/)
     assert.equal(lab.commits.length, 0)

@@ -145,7 +145,7 @@ export function HomeWebsitePanel() {
           {items.map((i) => (
             <li key={i.key} className="border-b border-line-soft last:border-b-0">
               <Link to={i.draft ? draftHref(i.draft.id) : postsHref} className="flex items-center gap-2.5 px-3 py-1.5 hover:bg-raised">
-                {i.cover ? <SiteImage path={i.cover} siteUrl={site.overview?.siteUrl} className="h-9 w-14 shrink-0 rounded-[5px]" /> : <CoverPlaceholder title={i.title} className="h-9 w-14 shrink-0 rounded-[5px] text-xs" />}
+                {i.cover ? <SiteImage path={i.cover} siteUrl={site.overview?.siteUrl} connectionId={site.connectionId} className="h-9 w-14 shrink-0 rounded-[5px]" /> : <CoverPlaceholder title={i.title} className="h-9 w-14 shrink-0 rounded-[5px] text-xs" />}
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13px] text-ink">{i.title}</span>
                   <span className="flex items-center gap-1.5 text-[10px] text-faint">

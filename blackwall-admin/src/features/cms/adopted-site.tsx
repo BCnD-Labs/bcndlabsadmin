@@ -13,7 +13,9 @@ import { StatusMarker } from "@/components/common/tags"
 import { postsHref } from "@/lib/routes"
 import type { Site } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import type { PublishChoice, PublishPlan } from "@shared/publish-plan"
 import { api } from "@/services/connector"
+import { reviewPublish } from "@/services/publish-review"
 import { forConnection } from "@/services/site"
 import { useUi } from "@/stores/ui"
 import { useWorkspace } from "@/stores/workspace"
@@ -93,7 +95,15 @@ function RegionEditor({ site, page, region, onSaved }: { site: Site; page: Adopt
   const save = async () => {
     setBusy(true)
     try {
-      const r = await api<AdoptedPageFile & { changed: boolean }>(forConnection("site/region", site.connectionId), { method: "PUT", body: JSON.stringify({ path: page.path, name: region.name, content: text, baseSha: page.sha }) })
+      type Saved = AdoptedPageFile & { changed: boolean; committed?: { pr?: { url: string; number: number } } }
+      const send = (body: object) => api<Saved & { plan: PublishPlan }>(forConnection("site/region", site.connectionId), { method: "PUT", body: JSON.stringify({ path: page.path, name: region.name, content: text, baseSha: page.sha, ...body }) })
+      // Nothing is written until the owner has seen the exact change and confirmed it.
+      const r = await reviewPublish({ title: `Save “${region.name}” on ${page.path}`, plan: async () => (await send({ plan: true })).plan, run: (choice: PublishChoice) => send(choice) })
+      if (!r) return
+      if (r.committed?.pr) {
+        toast.success(`Opened pull request #${r.committed.pr.number}`, { description: "Nothing changes on the site until you merge it.", action: { label: "View", onClick: () => window.open(r.committed!.pr!.url, "_blank", "noreferrer") } })
+        return
+      }
       onSaved(r)
       toast.success(r.changed ? `Saved “${region.name}”` : "Nothing changed", { description: r.changed ? "Committed to the repository; your host redeploys on its own." : undefined })
     } catch (e) {

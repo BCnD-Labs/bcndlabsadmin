@@ -1,6 +1,5 @@
 import { create } from "zustand"
 import type { PublishChoice, PublishPlan } from "@shared/publish-plan"
-import { useConnections } from "./connector"
 
 /**
  * Review before anything is committed to a repository: the files that would change and a diff of each. The screen itself is
@@ -8,9 +7,9 @@ import { useConnections } from "./connector"
  */
 export interface ReviewRequest {
   title: string
-  /** The branch it would commit to, for the labels. */
-  branch: string
   plan: () => Promise<PublishPlan>
+  /** A picture to show in the review (an image about to be uploaded). */
+  preview?: { src: string; alt: string }
   run: (choice: PublishChoice) => Promise<unknown>
   resolve: (value: unknown) => void
   reject: (e: Error) => void
@@ -19,7 +18,7 @@ export interface ReviewRequest {
 export const useReview = create<{ req?: ReviewRequest; plan?: PublishPlan; error?: string; busy: boolean }>()(() => ({ busy: false }))
 
 /** Works out the changes, asks the owner, then runs the publish with their choice. Resolves with the publish result, or undefined if they cancelled. */
-export function reviewPublish<T>(input: { title: string; branch: string; plan: () => Promise<PublishPlan>; run: (choice: PublishChoice) => Promise<T> }): Promise<T | undefined> {
+export function reviewPublish<T>(input: { title: string; preview?: ReviewRequest["preview"]; plan: () => Promise<PublishPlan>; run: (choice: PublishChoice) => Promise<T> }): Promise<T | undefined> {
   return new Promise<T | undefined>((resolve, reject) => {
     useReview.setState({ req: { ...input, resolve: resolve as (v: unknown) => void, reject }, plan: undefined, error: undefined, busy: false })
     input.plan().then((plan) => useReview.setState({ plan }), (e: Error) => { useReview.setState({ req: undefined }); reject(e) })
@@ -27,9 +26,3 @@ export function reviewPublish<T>(input: { title: string; branch: string; plan: (
 }
 
 export const closeReview = (value?: unknown) => { useReview.getState().req?.resolve(value); useReview.setState({ req: undefined, plan: undefined, error: undefined, busy: false }) }
-
-/** The branch a website connection publishes to, for labels. */
-export function branchOf(connectionId: string | undefined): string {
-  const list = useConnections.getState().list.filter((c) => c.provider === "website")
-  return (list.find((c) => c.id === connectionId) ?? list.find((c) => c.status === "ok") ?? list[0])?.config.branch || "main"
-}

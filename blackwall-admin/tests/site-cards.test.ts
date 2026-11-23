@@ -1,3 +1,4 @@
+import { confirmed } from "./lab-review.ts"
 import assert from "node:assert/strict"
 import { test } from "node:test"
 import { startSiteLab } from "../server/site-lab.ts"
@@ -89,7 +90,7 @@ test("publishing to an adopted site uses its card template, changes only the fil
   const headers = { "X-Blackwall": "1", "Content-Type": "application/json" }
   const read = async () => (await (await fetch(`${lab.panel}/api/workspace`, { headers })).json())
   const setTemplate = async (cardTemplate: string | undefined) => { const w = await read(); w.data.sites[0].cardTemplate = cardTemplate; assert.equal((await fetch(`${lab.panel}/api/workspace`, { method: "PUT", headers, body: JSON.stringify(w) })).status, 200) }
-  const publish = (slug: string, body: object) => fetch(`${lab.panel}/api/site/posts/${slug}`, { method: "PUT", headers, body: JSON.stringify({ post: { title: "Hello", excerpt: "Intro", markdown: "# Hi", ...body } }) })
+  const publish = (slug: string, body: object) => confirmed((b) => fetch(`${lab.panel}/api/site/posts/${slug}?connection=${lab.connection}`, { method: "PUT", headers, body: JSON.stringify({ post: { title: "Hello", excerpt: "Intro", markdown: "# Hi", ...body }, ...b }) }))
   try {
     await setTemplate(`<li class="entry"{{attrs}}><a href="{{href}}">{{title}}</a> {{chips}}{{thumb}}</li>`)
     const first = await publish("hello", { categories: ["Case Study", "Web"], featured: true, thumbnail: "/img/t.png", thumbnailAlt: "A thumb", tags: ["Week 1"] })

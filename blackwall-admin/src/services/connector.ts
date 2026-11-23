@@ -137,5 +137,7 @@ export function useConnectionFor(provider: ProviderId) {
   const selected = usePrefs((s) => provider === "github" || provider === "analytics" ? s.feedConnections[provider] : undefined)
   const list = useConnections((s) => s.list)
   const all = list.filter((c) => c.provider === provider)
+  // A website connection is never guessed: with one connection it is that one, with several the site (or page) has to name its own.
+  if (provider === "website") return all.length === 1 ? all[0] : undefined
   return selected ? all.find((c) => c.id === selected) : all.find((c) => c.status === "ok") ?? all[0]
 }

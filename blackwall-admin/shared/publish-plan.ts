@@ -12,19 +12,58 @@ export interface PlanFile {
   hidden?: boolean
 }
 
+/** Where a publish would land. Shown at the top of every review so the destination can't be mistaken. */
+export interface PublishTarget {
+  repo: string
+  branch: string
+  /** The site's public address as the owner entered it, or "" when none is set. */
+  siteUrl: string
+}
+
+/** Something the owner should know before confirming. It never blocks by itself. */
+export interface PlanWarning {
+  code: string
+  message: string
+}
+
+/** The wording Blackwall suggests for the commit and, in pull request mode, for the branch and pull request. The owner edits all of it. */
+export interface PlanText {
+  message: string
+  prTitle: string
+  prBody: string
+  branch: string
+}
+
 export interface PublishPlan {
   /** The branch's commit when the plan was made. Sent back with the publish, it makes the publish refuse if someone pushed meanwhile. */
   head: string
   files: PlanFile[]
   unchanged: number
+  /** Identifies exactly these changes on exactly this commit. A write must send it back, and is refused if the files or the branch differ now. */
+  token: string
+  target?: PublishTarget
+  /** Who the commit will be made as, when GitHub told us. */
+  author?: { name: string; email: string }
+  suggested: PlanText
+  warnings: PlanWarning[]
+  /** The time the changes were built with (a post's updated time). Sent back with the write so the files are byte-identical to the reviewed ones. */
+  stamp?: string
 }
 
 /** What the owner chose on the review screen. */
 export interface PublishChoice {
   mode: "direct" | "pr"
   expectedHead: string
+  /** The plan being confirmed. */
+  token: string
   /** Files the owner agreed to replace. */
   acknowledge: string[]
+  /** The commit message, and for a pull request its branch, title and description, as the owner wrote them. */
+  message: string
+  prTitle?: string
+  prBody?: string
+  branch?: string
+  stamp?: string
 }
 
 export type DiffRow = { kind: "same" | "add" | "del"; text: string } | { kind: "gap"; hidden: number }

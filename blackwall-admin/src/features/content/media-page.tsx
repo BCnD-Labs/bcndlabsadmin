@@ -11,13 +11,16 @@ import { Panel } from "@/components/common/panel"
 import { SourceBadge } from "@/components/common/source-badge"
 import { cn } from "@/lib/utils"
 import { deleteSiteMedia, listSiteMedia, uploadSiteImage, useSite } from "@/services/site"
+import { useCurrentSite } from "@/features/cms/use-cms"
 import { SiteImage } from "./site-image"
 
 const size = (b: number) => (b < 1024 ? `${b} B` : b < 1024 * 1024 ? `${Math.round(b / 1024)} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`)
 
 /** CMS → Media: the images in your site's images folder. Uploads are committed to the repository. */
 export function MediaPage() {
-  const site = useSite()
+  // Each site uses its own repository: the media library shows the current site's, never "whichever works first".
+  const current = useCurrentSite()
+  const site = useSite(current?.adopted ? current.connectionId : undefined)
   const live = site.status === "live"
   const [items, setItems] = useState<SiteMediaItem[] | null>(null)
   const [error, setError] = useState<string>()
@@ -26,10 +29,10 @@ export function MediaPage() {
   const ref = useRef<HTMLInputElement>(null)
 
   const load = useCallback(() => {
-    listSiteMedia()
+    listSiteMedia(site.connectionId)
       .then((m) => (setItems(m), setError(undefined)))
       .catch((e: Error) => setError(e.message))
-  }, [])
+  }, [site.connectionId])
   useEffect(() => {
     if (live) load()
   }, [live, load])
@@ -39,7 +42,8 @@ export function MediaPage() {
     setBusy(true)
     for (const f of Array.from(files)) {
       try {
-        const item = await uploadSiteImage(f)
+        const item = await uploadSiteImage(f, site.connectionId)
+        if (!item) continue
         setItems((list) => [item, ...(list ?? []).filter((x) => x.path !== item.path)])
         toast.success(`Uploaded ${item.name}`)
       } catch (e) {
@@ -93,7 +97,7 @@ export function MediaPage() {
         >
           {items.map((m) => (
             <li key={m.path} className={cn("group flex flex-col overflow-hidden rounded-[10px] bg-raised", confirm === m.path && "ring-1 ring-red/60")}>
-              <SiteImage path={m.path} siteUrl={site.overview?.siteUrl} alt={m.name} className="aspect-square w-full border-b border-line" />
+              <SiteImage path={m.path} siteUrl={site.overview?.siteUrl} connectionId={site.connectionId} alt={m.name} className="aspect-square w-full border-b border-line" />
               <div className="flex items-center gap-1 px-2 py-1.5">
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-xs text-ink" title={m.name}>{m.name}</span>
@@ -106,9 +110,10 @@ export function MediaPage() {
                       size="xs"
                       onClick={async () => {
                         try {
-                          await deleteSiteMedia(m.path)
-                          setItems((l) => (l ?? []).filter((x) => x.path !== m.path))
-                          toast("Image removed from the site")
+                          if (await deleteSiteMedia(m.path, site.connectionId)) {
+                            setItems((l) => (l ?? []).filter((x) => x.path !== m.path))
+                            toast("Image removed from the site")
+                          }
                         } catch (e) {
                           toast.error((e as Error).message)
                         }

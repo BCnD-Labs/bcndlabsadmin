@@ -2,10 +2,15 @@ import assert from "node:assert/strict"
 import { test } from "node:test"
 import { startSiteLab } from "../server/site-lab.ts"
 import { scheduleKey, type ScheduledPost } from "../shared/site.ts"
+import { confirmed, withConnection } from "./lab-review.ts"
 
 const headers = { "X-Blackwall": "1", "Content-Type": "application/json" }
-const post = (lab: { panel: string }, path: string, body: object = {}) => fetch(`${lab.panel}/api/${path}`, { method: "POST", headers, body: JSON.stringify(body) })
-const put = (lab: { panel: string }, path: string, body: object = {}) => fetch(`${lab.panel}/api/${path}`, { method: "PUT", headers, body: JSON.stringify(body) })
+type Lab = { panel: string; connection: string }
+const post = (lab: Lab, path: string, body: object = {}) => fetch(`${lab.panel}/api/${withConnection(lab, path)}`, { method: "POST", headers, body: JSON.stringify(body) })
+const put = (lab: Lab, path: string, body: object = {}) => fetch(`${lab.panel}/api/${withConnection(lab, path)}`, { method: "PUT", headers, body: JSON.stringify(body) })
+/** The write, sent the way the review screen sends it: after a plan, carrying its token and a commit message. */
+const publish = (lab: Lab, path: string, extra: object = {}, body: object = {}) => confirmed((b) => post(lab, path, { ...body, ...b }), extra)
+const publishPut = (lab: Lab, path: string, extra: object = {}, body: object = {}) => confirmed((b) => put(lab, path, { ...body, ...b }), extra)
 
 test("a plan shows what a publish would change and writes nothing; once published, the next plan is empty", async () => {
   const lab = await startSiteLab({ panelPort: 0, sitePort: 0, formsPort: 0, deployMs: 10 })
@@ -15,12 +20,15 @@ test("a plan shows what a publish would change and writes nothing; once publishe
     assert.ok(plan.plan.files.length > 5 && plan.plan.files.every((f: { status: string }) => f.status === "added"))
     assert.match(plan.plan.files.find((f: { path: string }) => f.path === "index.html").after, /<html/)
     assert.equal(plan.plan.head, lab.branch.head)
-    const done = await (await post(lab, "sites/lab/publish", { expectedHead: plan.plan.head })).json()
+    assert.equal((await post(lab, "sites/lab/publish")).status, 400, "a write that never reviewed a plan is refused")
+    assert.equal(lab.commits.length, 0)
+    const done = await (await publish(lab, "sites/lab/publish")).json()
     assert.equal(lab.commits.length, 1)
+    assert.equal(lab.commits[0].message, "Test change", "the commit says what the owner wrote")
     assert.ok(done.sha)
     const again = await (await post(lab, "sites/lab/publish", { plan: true })).json()
     assert.deepEqual(again.plan.files, [], "nothing differs now")
-    const noop = await (await post(lab, "sites/lab/publish")).json()
+    const noop = await (await publish(lab, "sites/lab/publish")).json()
     assert.equal(noop.unchanged, true)
     assert.equal(lab.commits.length, 1, "publishing with nothing to change makes no commit")
   } finally { await lab.close() }
@@ -33,18 +41,18 @@ test("a file Blackwall never made, or one edited elsewhere since, is not replace
     const plan = (await (await post(lab, "sites/lab/publish", { plan: true })).json()).plan
     assert.deepEqual(plan.files.filter((f: { conflict?: string }) => f.conflict).map((f: { path: string; conflict: string }) => [f.path, f.conflict]), [["index.html", "not-blackwalls"]])
     assert.equal(plan.files.find((f: { path: string }) => f.path === "index.html").before, "<p>my own hand-written home page</p>", "the diff shows what would be lost")
-    const refused = await post(lab, "sites/lab/publish")
+    const refused = await publish(lab, "sites/lab/publish")
     assert.equal(refused.status, 409)
     assert.match((await refused.json()).error, /index\.html \(not made by Blackwall\)/)
     assert.equal(lab.commits.length, 0)
-    assert.equal((await post(lab, "sites/lab/publish", { acknowledge: ["index.html"] })).status, 200)
+    assert.equal((await publish(lab, "sites/lab/publish", { acknowledge: ["index.html"] })).status, 200)
     assert.match(lab.branch.files.get("index.html")!.toString(), /<html/)
 
     // The owner edits a file Blackwall wrote, from somewhere else.
     lab.branch.files.set("style.css", Buffer.from("/* I tuned this by hand */"))
     const edited = (await (await post(lab, "sites/lab/publish", { plan: true })).json()).plan
     assert.deepEqual(edited.files.map((f: { path: string; conflict?: string }) => [f.path, f.conflict]), [["style.css", "edited-elsewhere"]])
-    const refusedAgain = await post(lab, "sites/lab/publish")
+    const refusedAgain = await publish(lab, "sites/lab/publish")
     assert.equal(refusedAgain.status, 409)
     assert.match((await refusedAgain.json()).error, /style\.css \(edited since Blackwall wrote it\)/)
     assert.equal(lab.branch.files.get("style.css")!.toString(), "/* I tuned this by hand */")
@@ -56,20 +64,68 @@ test("a publish is refused if the branch moved after the owner reviewed it", asy
   try {
     const plan = (await (await post(lab, "sites/lab/publish", { plan: true })).json()).plan
     lab.branch.head = "pushed-from-elsewhere"
-    const refused = await post(lab, "sites/lab/publish", { expectedHead: plan.head })
+    const send = (extra: object) => post(lab, "sites/lab/publish", { token: plan.token, expectedHead: plan.head, message: "Reviewed", ...extra })
+    const refused = await send({})
     assert.equal(refused.status, 409)
     assert.match((await refused.json()).error, /branch changed since you reviewed/)
+    const refusedPr = await send({ mode: "pr" })
+    assert.equal(refusedPr.status, 409, "a pull request is held to the same check")
     assert.equal(lab.commits.length, 0)
+    assert.equal(lab.pulls.length, 0)
+  } finally { await lab.close() }
+})
+
+test("a write is refused unless it carries the plan that was reviewed, even if the branch hasn't moved", async () => {
+  const lab = await startSiteLab({ panelPort: 0, sitePort: 0, formsPort: 0, deployMs: 10, handwritten: true })
+  const body = { post: { title: "Hello", excerpt: "Intro", markdown: "# Hi" } }
+  try {
+    const plan = (await (await put(lab, "site/posts/hello", { ...body, plan: true })).json()).plan
+    // The owner reviewed this text; the request now carries different text.
+    const changed = await put(lab, "site/posts/hello", { post: { ...body.post, markdown: "# Something else" }, token: plan.token, expectedHead: plan.head, stamp: plan.stamp, message: "x" })
+    assert.equal(changed.status, 409)
+    assert.match((await changed.json()).error, /no longer the ones you reviewed/)
+    assert.equal((await put(lab, "site/posts/hello", { ...body, expectedHead: plan.head, message: "x" })).status, 400, "no token, no write")
+    assert.equal((await put(lab, "site/posts/hello", { ...body, token: plan.token, expectedHead: plan.head, stamp: plan.stamp })).status, 400, "no commit message, no write")
+    assert.equal(lab.commits.length, 0)
+    const ok = await put(lab, "site/posts/hello", { ...body, token: plan.token, expectedHead: plan.head, stamp: plan.stamp, message: "Add the hello post" })
+    assert.equal(ok.status, 200)
+    assert.equal(lab.commits[0].message, "Add the hello post")
+  } finally { await lab.close() }
+})
+
+test("commits carry the owner's wording and the account's private address, with no tool branding", async () => {
+  const lab = await startSiteLab({ panelPort: 0, sitePort: 0, formsPort: 0, deployMs: 10, handwritten: true })
+  try {
+    const body = { post: { title: "Hello", excerpt: "Intro", markdown: "# Hi" } }
+    const plan = (await (await put(lab, "site/posts/hello", { ...body, plan: true })).json()).plan
+    assert.equal(plan.suggested.message, "Add post: Hello", "the suggested message is plain")
+    assert.deepEqual(plan.author, { name: "Lab Owner", email: "4242+lab-owner@users.noreply.github.com" })
+    assert.deepEqual(plan.target, { repo: "lab/site", branch: "main", siteUrl: lab.site })
+    await publishPut(lab, "site/posts/hello", { message: "Add the hello post\n\nFirst entry for the blog." }, body)
+    assert.equal(lab.commits[0].message, "Add the hello post\n\nFirst entry for the blog.")
+    assert.deepEqual(lab.commits[0].author, plan.author)
+    assert.deepEqual(lab.commits[0].committer, plan.author)
+    assert.doesNotMatch(JSON.stringify([...lab.made.values()]), /blackwall|pagesmith/i, "nothing in the commit names the tool")
   } finally { await lab.close() }
 })
 
 test("pull request mode leaves the live branch alone and opens a pull request", async () => {
   const lab = await startSiteLab({ panelPort: 0, sitePort: 0, formsPort: 0, deployMs: 10 })
   try {
-    const out = await (await post(lab, "sites/lab/publish", { mode: "pr" })).json()
+    const plan = (await (await post(lab, "sites/lab/publish", { plan: true })).json()).plan
+    assert.match(plan.suggested.branch, /^update\/\d{8}-\d{6}$/)
+    assert.match(plan.suggested.prBody, /^- Added `index\.html`/m, "the suggested description is a plain list of the files")
+    const dup = await publish(lab, "sites/lab/publish", { mode: "pr", branch: "main" })
+    assert.equal(dup.status, 400, "a pull request can't use the live branch")
+    const bad = await publish(lab, "sites/lab/publish", { mode: "pr", branch: "bad name..x" })
+    assert.equal(bad.status, 400)
+    const out = await (await publish(lab, "sites/lab/publish", { mode: "pr", branch: "update/first-version", prTitle: "First version of the site", prBody: "Everything for the first release." })).json()
     assert.equal(lab.commits.length, 0, "main was not touched")
     assert.equal(lab.branch.files.size, 0)
-    assert.match(out.branch, /^blackwall\/\d{8}-\d{6}$/)
+    assert.equal(out.branch, "update/first-version", "the owner's branch name is used")
+    assert.equal(lab.pulls[0].title, "First version of the site")
+    assert.equal(lab.pulls[0].body, "Everything for the first release.")
+    assert.equal((await publish(lab, "sites/lab/publish", { mode: "pr", branch: "update/first-version" })).status, 409, "a branch name already taken is refused, not overwritten")
     assert.deepEqual(out.pr, { url: "https://github.com/lab/site/pull/1", number: 1 })
     assert.equal(lab.pulls.length, 1)
     assert.equal(lab.pulls[0].base, "main")
@@ -87,12 +143,12 @@ test("posts on an adopted site: the plan lists the three files, a hand-written p
     assert.equal(lab.commits.length, 0)
 
     lab.branch.files.set("blog/posts/hello.html", Buffer.from("<p>my own page</p>"))
-    const clash = await put(lab, "site/posts/hello", body)
+    const clash = await publishPut(lab, "site/posts/hello", {}, body)
     assert.equal(clash.status, 409)
     assert.match((await clash.json()).error, /blog\/posts\/hello\.html \(not made by Blackwall\)/)
     assert.equal(lab.branch.files.get("blog/posts/hello.html")!.toString(), "<p>my own page</p>")
 
-    const pr = await (await put(lab, "site/posts/other", { post: { title: "Other", markdown: "x" }, mode: "pr" })).json()
+    const pr = await (await publishPut(lab, "site/posts/other", { mode: "pr" }, { post: { title: "Other", markdown: "x" } })).json()
     assert.equal(lab.commits.length, 0, "the live branch is untouched")
     assert.equal(pr.committed.pr.number, 1)
     assert.ok(lab.branches.get(pr.committed.branch)!.files.has("blog/posts/other.html"))
