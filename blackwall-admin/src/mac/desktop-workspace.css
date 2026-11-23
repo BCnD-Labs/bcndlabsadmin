@@ -111,7 +111,7 @@ html[data-runtime="mac-native"][data-theme="graphite"][data-accent="blue"]:not([
 html[data-runtime="mac-native"] .mac-dw-top > .mac-dw-date { position: relative; }
 html[data-runtime="mac-native"] .mac-dw-top > .mac-dw-date[aria-expanded="true"] { border-color: var(--bw-blue); color: var(--bw-text); }
 html[data-runtime="mac-native"] .mac-dw-overdue-dot { position: absolute; top: -3px; right: -3px; width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--bw-ground); background: #ef5350; }
-html[data-runtime="mac-native"] .mac-dw-sidebar { position: absolute; z-index: 60; top: var(--mac-dw-below-top); right: 10px; bottom: 10px; display: flex; flex-direction: column; width: 360px; max-width: calc(100vw - 70px); border: 1px solid var(--bw-border); border-radius: 6px; overflow: hidden; background: var(--bw-ground); box-shadow: 0 12px 30px #0009; animation: mac-dw-slide .16s ease-out; }
+html[data-runtime="mac-native"] .mac-dw-sidebar { position: absolute; z-index: 45; top: var(--mac-dw-below-top); right: 10px; bottom: 10px; display: flex; flex-direction: column; width: 360px; max-width: calc(100vw - 70px); border: 1px solid var(--bw-border); border-radius: 6px; overflow: hidden; background: var(--bw-ground); box-shadow: 0 12px 30px #0009; animation: mac-dw-slide .16s ease-out; }
 @keyframes mac-dw-slide { from { transform: translateX(24px); } to { transform: none; } }
 html[data-runtime="mac-native"] .mac-dw-sidebar-head { display: flex; align-items: center; gap: 7px; flex: none; height: 30px; padding: 0 5px 0 7px; border-bottom: 1px solid var(--bw-line); background: var(--bw-titlebar); color: var(--bw-text); }
 html[data-runtime="mac-native"] .mac-dw-sidebar-head strong { font-size: 13px; font-weight: 650; }

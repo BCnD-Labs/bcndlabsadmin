@@ -38,6 +38,7 @@ function DayNav({ label }: { label: string }) {
 export function CalendarTool() {
   const date = useDock((s) => s.date)
   const setDate = useDock((s) => s.setDate)
+  const openForm = useUi((s) => s.openForm)
   const [month, setMonth] = useState(() => startOfMonth(parseKey(date)))
   const pick = (value: string) => {
     setDate(value)
@@ -53,6 +54,11 @@ export function CalendarTool() {
         <Button variant="quiet" size="icon-sm" aria-label="Next month" onClick={() => setMonth(addMonths(month, 1))}><ChevronRight /></Button>
       </div>
       <PlannerCalendar selected={date} month={month} onSelect={pick} />
+      {/* Calendar items are tasks with a date (and optional time), the same as the full Planner's "+" on a day. */}
+      <div className="mac-tool-row">
+        <span className="mac-tool-spacer" />
+        <Button variant="outline" size="xs" onClick={() => openForm({ kind: "task", defaults: { due: date } })}><Plus /> Add on {isToday(parseKey(date)) ? "today" : format(parseKey(date), "MMM d")}</Button>
+      </div>
     </div>
   )
 }
