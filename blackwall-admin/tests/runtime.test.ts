@@ -12,19 +12,20 @@ function made(over: Partial<Site> = {}) {
   return { site, pages }
 }
 
-test("buildSite writes pagesmith.js to the root in every mode, and no page carries inline runtime JS", () => {
+test("buildSite writes js/main.js in every mode, and no page carries inline runtime JS", () => {
   for (const framework of [undefined, "bootstrap" as const]) {
     const { site, pages } = made({ framework })
     const files = buildSite(site, pages, [], [], [], [])
-    assert.ok(files["pagesmith.js"]?.length, `has pagesmith.js (${framework ?? "plain"})`)
-    assert.ok(/data-ps-carousel|data-theme-toggle/.test(files["pagesmith.js"]), "runtime looks real")
+    assert.ok(files["js/main.js"]?.length, `has js/main.js (${framework ?? "plain"})`)
+    assert.ok(/data-ps-carousel|data-theme-toggle/.test(files["js/main.js"]), "runtime looks real")
     for (const [name, html] of Object.entries(files)) {
       if (!name.endsWith(".html")) continue
       // The only inline <script> left is the theme hint; everything else loads the file.
       const inline = (html.match(/<script(?! src)/g) ?? []).length
       const hint = (html.match(/data-theme",t\);d\.setAttribute\("data-bs-theme/g) ?? []).length
       assert.equal(inline, hint, `${name}: only the theme hint can be inline`)
-      assert.ok(html.includes("pagesmith.js"), `${name} links to pagesmith.js`)
+      assert.match(html, /<script src="(\.\.\/)*(js\/main\.js)" defer>/, `${name} links to js/main.js`)
+      assert.doesNotMatch(html, /pagesmith|blackwall/i, `${name} carries no tool name`)
     }
   }
 })
@@ -77,7 +78,7 @@ test("an older-shape site with no carousel/gallery/modal still builds, and empty
 
 test("the runtime JS is defer-safe and only wires elements the renderer wrote", () => {
   // Spot-check: every data-ps-* in the runtime maps to a selector querySelectorAll finds at load.
-  const selectors = ["[data-ps-carousel]", "[data-ps-lightbox]", "[data-ps-copy]", "[data-ps-counter]", "[data-ps-modal-open]", "[data-ps-filter]", "[data-theme-toggle]", "form[data-blackwall-form]"]
+  const selectors = ["[data-ps-carousel]", "[data-ps-lightbox]", "[data-ps-copy]", "[data-ps-counter]", "[data-ps-modal-open]", "[data-ps-filter]", "[data-theme-toggle]", "form[data-form]"]
   for (const sel of selectors) assert.ok(SITE_RUNTIME.includes(sel), `runtime hooks ${sel}`)
 })
 

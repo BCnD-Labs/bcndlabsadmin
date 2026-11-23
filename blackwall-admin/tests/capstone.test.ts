@@ -65,7 +65,7 @@ test("a site saved before these settings builds exactly the way it did, and stil
   assert.equal(site.framework, undefined)
   const files = buildSite(site, pages, [], [])
   assert.ok("theme.css" in files && "style.css" in files && "about/index.html" in files && !("css/style.css" in files))
-  assert.ok(files["index.html"].includes('href="/theme.css"') && !files["index.html"].includes("bootstrap"))
+  assert.ok(files["index.html"].includes('href="theme.css"') && !files["index.html"].includes("bootstrap"))
   assert.ok(!files["theme.css"].includes("data-theme") && !files["theme.css"].includes("--font-heading"))
   assert.ok(!files["index.html"].includes("data-theme-toggle") && !files["index.html"].includes("fonts.googleapis"))
   const data = { ...emptyWorkspace(), sites: [site], pages }

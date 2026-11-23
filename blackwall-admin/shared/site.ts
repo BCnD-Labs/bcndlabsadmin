@@ -93,6 +93,8 @@ export interface SiteOverview {
 
 /** Pieces of the site's own markup reused for post pages (URLs already site-root relative). */
 export interface SiteChrome {
+  /** The page's own language ("en"); posts are written in the same one. */
+  lang?: string
   head: string
   header: string
   footer: string
@@ -158,7 +160,9 @@ export function extractChrome(html: string, fromFile: string): SiteChrome {
   const footer = /<footer\b[^>]*>[\s\S]*?<\/footer>/i.exec(html)?.[0] ?? ""
   const title = /<title>([^<]*)<\/title>/i.exec(head)?.[1] ?? ""
   const bodyClass = /<body[^>]*\bclass=["']([^"']*)["']/i.exec(html)?.[1] ?? ""
+  const lang = /<html[^>]*\blang=["']([A-Za-z0-9-]{2,12})["']/i.exec(html)?.[1]
   return {
+    ...(lang ? { lang } : {}),
     head: rootRelative(links.join("\n    "), fromFile),
     header: rootRelative(header, fromFile).replace(NOT_CURRENT, ""),
     footer: rootRelative(footer, fromFile).replace(NOT_CURRENT, ""),
@@ -176,61 +180,161 @@ export function formatPostDate(iso: string): string {
   return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
 }
 
-/** Minimal post styles, scoped to `.bw-post` so they only fill gaps the site's CSS leaves. */
-const POST_CSS = `.bw-post{max-width:46rem}
-.bw-post-meta{opacity:.75;margin:.25rem 0 1.25rem}
-.bw-post-cover{display:block;width:100%;height:auto;border-radius:12px;margin:0 0 1.5rem}
-.bw-post-body img{max-width:100%;height:auto;border-radius:8px}
-.bw-post-body pre{overflow-x:auto;padding:1rem;border-radius:8px;background:rgba(127,127,127,.12)}
-.bw-post-body blockquote{margin:1rem 0;padding-left:1rem;border-left:3px solid currentColor;opacity:.85}
-.bw-post-back{display:inline-block;margin-bottom:.75rem}`
+/**
+ * The default look of a post page, written once to `post.css` next to the posts. It only fills gaps the site's own stylesheet leaves;
+ * after it is written it belongs to the site, which is free to change it.
+ */
+export const POST_CSS = `.post {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
 
-/** The full HTML page for a post. `blogHref` is the link back to the blog index (site-root path). */
-export function renderPostPage(post: SitePost, chrome: SiteChrome, blogHref: string, opts: { baseHref?: string } = {}): string {
+.post-back {
+  display: inline-block;
+  margin-bottom: 0.75rem;
+}
+
+.post-meta {
+  margin: 0.25rem 0 1.25rem;
+  opacity: 0.75;
+}
+
+.post-cover {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0 0 1.5rem;
+  border-radius: 12px;
+}
+
+.post-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.post-content pre {
+  overflow-x: auto;
+  padding: 1rem;
+  border-radius: 8px;
+  background: rgba(127, 127, 127, 0.12);
+}
+
+.post-content blockquote {
+  margin: 1rem 0;
+  padding-left: 1rem;
+  border-left: 3px solid currentColor;
+  opacity: 0.85;
+}
+`
+
+/** The path a site is served under: "https://owner.github.io/site/" is "/site", the top of a domain is "". */
+export function siteBase(siteUrl?: string): string {
+  try {
+    return new URL(siteUrl ?? "").pathname.replace(/\/+$/, "")
+  } catch {
+    return ""
+  }
+}
+
+/**
+ * A root path from the site ("/img/a.png", or with the site's own folder already in front: "/site/img/a.png") written as a link relative to
+ * the file that contains it ("../../img/a.png"). Relative links work wherever the site is served, so nothing depends on the site's address
+ * and a prefix can never be added twice. Anything that isn't a root path (a full address, "#top", an already-relative link) is returned as is.
+ */
+export function toRelative(url: string | undefined, fromFile: string, base = ""): string | undefined {
+  if (!url || !url.startsWith("/") || url.startsWith("//")) return url
+  const [path, ...rest] = url.split(/(?=[?#])/)
+  const tail = rest.join("")
+  const at = base && (path.toLowerCase() === base.toLowerCase() || path.toLowerCase().startsWith(`${base.toLowerCase()}/`)) ? path.slice(base.length) : path
+  const target = trimSlashes(at)
+  const depth = trimSlashes(fromFile).split("/").length - 1
+  if (!target) return `${depth ? "../".repeat(depth) : "./"}${tail}`
+  const rel = relativePath(fromFile, target)
+  return `${rel}${at.endsWith("/") ? "/" : ""}${tail}`
+}
+
+const LOCAL_ATTR = /\b(href|src|poster)=(["'])([^"']*)\2/gi
+
+/** Every root-path link and picture in `html` made relative to `fromFile` (see `toRelative`). Other text is untouched. */
+export function localize(html: string, fromFile: string, base = ""): string {
+  return html.replace(LOCAL_ATTR, (_all, attr: string, q: string, url: string) => `${attr}=${q}${toRelative(url, fromFile, base)}${q}`)
+}
+
+/** Indents rendered Markdown to sit inside the page, leaving the text of code blocks exactly as written. */
+function indentBody(html: string, pad = "          "): string {
+  let inPre = false
+  return html.split("\n").map((line) => {
+    const out = inPre || !line ? line : pad + line
+    if (/<pre[\s>]/.test(line)) inPre = true
+    if (/<\/pre>/.test(line)) inPre = false
+    return out
+  }).join("\n")
+}
+
+/** A full address for a site path, for the few places that need one (social previews). Undefined without a site address. */
+function absoluteUrl(siteUrl: string | undefined, path: string | undefined): string | undefined {
+  if (!path) return undefined
+  if (/^https?:\/\//i.test(path)) return path
+  if (!siteUrl) return undefined
+  const base = siteBase(siteUrl)
+  const rooted = path.startsWith("/") ? path : `/${path}`
+  const at = base && rooted.toLowerCase().startsWith(`${base.toLowerCase()}/`) ? rooted.slice(base.length) : rooted
+  try {
+    return new URL(`${base}${at}`, siteUrl).href
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * The full HTML page for a post. `blogHref` is the link back to the blog index (a root path).
+ * With `file` (the post's path in the repository) every root-path link is written relative to that file; the page then works from any
+ * address the site is served at. `inlineStyles` embeds the default look instead of linking `post.css`, for previews only.
+ */
+export function renderPostPage(post: SitePost, chrome: SiteChrome, blogHref: string, opts: { baseHref?: string; file?: string; siteUrl?: string; inlineStyles?: boolean } = {}): string {
   const title = escapeHtml(post.title)
   const site = chrome.siteName ? ` — ${escapeHtml(chrome.siteName)}` : ""
   const tags = post.tags.filter(Boolean)
-  return `<!doctype html>
-<!--
-  Published with Blackwall: ${escapeHtml(post.slug)}
-  Edit this post in Blackwall (CMS → Posts). Changes made to this file directly
-  are replaced the next time the post is updated there.
--->
-<html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    ${opts.baseHref ? `<base href="${escapeHtml(opts.baseHref)}">` : ""}
-    ${chrome.head}
-    <title>${title}${site}</title>
-    <meta name="description" content="${escapeHtml(post.excerpt)}">
-    <meta property="og:title" content="${title}">
-    <meta property="og:description" content="${escapeHtml(post.excerpt)}">
-    ${post.cover ? `<meta property="og:image" content="${escapeHtml(post.cover)}">` : ""}
-    <style>${POST_CSS}</style>
-  </head>
-  <body class="${escapeHtml([chrome.bodyClass, "page-post"].filter(Boolean).join(" "))}">
-  ${chrome.header}
-  <main>
-    <section class="section">
-      <div class="container">
-        <a class="bw-post-back label" href="${escapeHtml(blogHref)}">← Blog</a>
-        <article class="bw-post">
-          ${tags.length ? `<ul class="chips">${tags.map((t) => `<li class="chip">${escapeHtml(t)}</li>`).join("")}</ul>` : ""}
-          <h1>${title}</h1>
-          <p class="bw-post-meta"><time datetime="${escapeHtml(post.date)}">${formatPostDate(post.date)}</time></p>
-          ${post.cover ? `<img class="bw-post-cover" src="${escapeHtml(post.cover)}" alt="${escapeHtml(post.coverAlt ?? "")}">` : ""}
-          <div class="bw-post-body">
-${renderMarkdown(post.markdown)}
-          </div>
-        </article>
-      </div>
-    </section>
-  </main>
-  ${chrome.footer}
-  </body>
-</html>
-`
+  const here = (html: string) => (opts.file ? localize(html, opts.file, siteBase(opts.siteUrl)) : html)
+  const back = opts.file ? toRelative(blogHref, opts.file, siteBase(opts.siteUrl)) : blogHref
+  const cover = opts.file ? toRelative(post.cover, opts.file, siteBase(opts.siteUrl)) : post.cover
+  const share = absoluteUrl(opts.siteUrl, post.cover)
+  const lines = [
+    "<!doctype html>",
+    `<html lang="${escapeHtml(chrome.lang ?? "en")}">`,
+    "  <head>",
+    '    <meta charset="utf-8">',
+    '    <meta name="viewport" content="width=device-width, initial-scale=1">',
+    ...(opts.baseHref ? [`    <base href="${escapeHtml(opts.baseHref)}">`] : []),
+    `    <title>${title}${site}</title>`,
+    `    <meta name="description" content="${escapeHtml(post.excerpt)}">`,
+    `    <meta property="og:title" content="${title}">`,
+    `    <meta property="og:description" content="${escapeHtml(post.excerpt)}">`,
+    ...(share ? [`    <meta property="og:image" content="${escapeHtml(share)}">`] : []),
+    ...(chrome.head.trim() ? [`    ${here(chrome.head)}`] : []),
+    opts.inlineStyles ? `    <style>${POST_CSS}</style>` : '    <link rel="stylesheet" href="post.css">',
+    "  </head>",
+    `  <body${[chrome.bodyClass, "page-post"].filter(Boolean).length ? ` class="${escapeHtml([chrome.bodyClass, "page-post"].filter(Boolean).join(" "))}"` : ""}>`,
+    ...(chrome.header.trim() ? [`    ${here(chrome.header)}`] : []),
+    "    <main>",
+    '      <article class="post">',
+    `        <a class="post-back" href="${escapeHtml(back ?? blogHref)}">← Blog</a>`,
+    ...(tags.length ? [`        <ul class="chips">${tags.map((t) => `<li class="chip">${escapeHtml(t)}</li>`).join("")}</ul>`] : []),
+    `        <h1>${title}</h1>`,
+    `        <p class="post-meta"><time datetime="${escapeHtml(post.date)}">${formatPostDate(post.date)}</time></p>`,
+    ...(cover ? [`        <img class="post-cover" src="${escapeHtml(cover)}" alt="${escapeHtml(post.coverAlt ?? "")}">`] : []),
+    '        <div class="post-content">',
+    indentBody(here(renderMarkdown(post.markdown)).trim()),
+    "        </div>",
+    "      </article>",
+    "    </main>",
+    ...(chrome.footer.trim() ? [`    ${here(chrome.footer)}`] : []),
+    "  </body>",
+    "</html>",
+  ]
+  return `${lines.join("\n")}\n`
 }
 
 /** The kebab-case form of a category, safe in an attribute and easy for a site's own script to match: "Case Study" → "case-study". */

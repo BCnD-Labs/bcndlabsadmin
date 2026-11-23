@@ -95,10 +95,10 @@ test("publishing to an adopted site uses its card template, changes only the fil
     await setTemplate(`<li class="entry"{{attrs}}><a href="{{href}}">{{title}}</a> {{chips}}{{thumb}}</li>`)
     const first = await publish("hello", { categories: ["Case Study", "Web"], featured: true, thumbnail: "/img/t.png", thumbnailAlt: "A thumb", tags: ["Week 1"] })
     assert.equal(first.status, 200, await first.clone().text())
-    assert.deepEqual(lab.commits.at(-1)!.changed.concat(lab.commits.at(-1)!.added).sort(), ["blog/blog.html", "blog/posts/hello.html", "blog/posts/index.json"])
+    assert.deepEqual(lab.commits.at(-1)!.changed.concat(lab.commits.at(-1)!.added).sort(), ["blog/blog.html", "blog/posts/hello.html", "blog/posts/index.json", "blog/posts/post.css"])
     const index = lab.branch.files.get("blog/blog.html")!.toString()
     assert.match(index, /<li class="entry" data-category="case-study web" data-featured="true"><a href="posts\/hello\.html">Hello<\/a> <ul class="chips"><li class="chip chip--category">Case Study<\/li>/)
-    assert.match(index, /<img class="post-thumb" src="\/img\/t\.png" alt="A thumb" loading="lazy">/)
+    assert.match(index, /<img class="post-thumb" src="\.\.\/img\/t\.png" alt="A thumb" loading="lazy">/)
     assert.ok(index.includes("<title>Blog - Example Studio</title>") && index.includes('<div class="cards">'), "the rest of the blog page is untouched")
     const manifest = JSON.parse(lab.branch.files.get("blog/posts/index.json")!.toString())
     assert.deepEqual(manifest.posts[0].categories, ["Case Study", "Web"])
@@ -123,19 +123,6 @@ test("publishing to an adopted site uses its card template, changes only the fil
   } finally {
     await lab.close()
   }
-})
-
-test("a project site (served under a path) gets that path in front of root-relative pictures and links", async () => {
-  const { underSiteBase } = await import("../server/providers/website.ts")
-  const under = underSiteBase("https://example-owner.github.io/example-site")
-  assert.equal(under("/img/a.png"), "/example-site/img/a.png")
-  assert.equal(under("/example-site/img/a.png"), "/example-site/img/a.png", "already prefixed: unchanged")
-  assert.equal(under("https://cdn.example/a.png"), "https://cdn.example/a.png", "full addresses are left alone")
-  assert.equal(under("//cdn.example/a.png"), "//cdn.example/a.png")
-  assert.equal(under(undefined), undefined)
-  const top = underSiteBase("https://example.com")
-  assert.equal(top("/img/a.png"), "/img/a.png", "a site at the top of its domain: unchanged")
-  assert.equal(underSiteBase("")("/img/a.png"), "/img/a.png", "no site address: unchanged")
 })
 
 test("opening a post that is only on the site keeps its categories, Featured and thumbnail", () => {

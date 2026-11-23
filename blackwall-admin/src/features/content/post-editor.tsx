@@ -463,7 +463,7 @@ const FALLBACK_CSS = `<style>body{font-family:system-ui,sans-serif;line-height:1
 function buildPreview(draft: Draft, chrome: SiteChrome, siteUrl?: string, blogUrl?: string, date?: string) {
   const post = draftToPost(draft, date)
   const blogHref = blogUrl ? new URL(blogUrl).pathname : "/"
-  let html = renderPostPage(post, chrome.head ? chrome : { ...chrome, head: FALLBACK_CSS }, blogHref, { baseHref: siteUrl ? `${siteUrl}/` : undefined })
+  let html = renderPostPage(post, chrome.head ? chrome : { ...chrome, head: FALLBACK_CSS }, blogHref, { baseHref: siteUrl ? `${siteUrl}/` : undefined, inlineStyles: true })
   // Images uploaded this session may not be on the live site yet.
   for (const [path, blob] of localImages) html = html.split(`"${path}"`).join(`"${blob}"`).split(`(${path})`).join(`(${blob})`)
   // Links in the preview open in a new tab instead of navigating the frame.

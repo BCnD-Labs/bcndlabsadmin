@@ -133,12 +133,12 @@ test("pull request mode leaves the live branch alone and opens a pull request", 
   } finally { await lab.close() }
 })
 
-test("posts on an adopted site: the plan lists the three files, a hand-written page at the same address is protected, and pull request mode works", async () => {
+test("posts on an adopted site: the plan lists the four files, a hand-written page at the same address is protected, and pull request mode works", async () => {
   const lab = await startSiteLab({ panelPort: 0, sitePort: 0, formsPort: 0, deployMs: 10, handwritten: true })
   const body = { post: { title: "Hello", excerpt: "Intro", markdown: "# Hi" } }
   try {
     const plan = (await (await put(lab, "site/posts/hello", { ...body, plan: true })).json()).plan
-    assert.deepEqual(plan.files.map((f: { path: string; status: string }) => [f.path, f.status]).sort(), [["blog/blog.html", "changed"], ["blog/posts/hello.html", "added"], ["blog/posts/index.json", "added"]])
+    assert.deepEqual(plan.files.map((f: { path: string; status: string }) => [f.path, f.status]).sort(), [["blog/blog.html", "changed"], ["blog/posts/hello.html", "added"], ["blog/posts/index.json", "added"], ["blog/posts/post.css", "added"]])
     assert.equal(plan.files.every((f: { conflict?: string }) => !f.conflict), true, "editing inside the posts region of the blog index is not a conflict")
     assert.equal(lab.commits.length, 0)
 
@@ -235,4 +235,24 @@ test("the review's diff shows only the changed lines with a little context, and 
   assert.deepEqual(lineDiff("", "x\ny").filter((r) => r.kind === "add").length, 2)
   const huge = Array.from({ length: 800 }, (_, i) => `l${i}`).join("\n")
   assert.ok(lineDiff(huge, huge + "\nmore").length > 0, "very large files fall back instead of hanging")
+})
+
+test("a site published with the older manifest name keeps its ownership tracking, and moves to the neutral name", async () => {
+  const lab = await startSiteLab({ panelPort: 0, sitePort: 0, formsPort: 0, deployMs: 10 })
+  try {
+    assert.equal((await publish(lab, "sites/lab/publish")).status, 200)
+    assert.ok(lab.branch.files.has(".site-manifest.json") && !lab.branch.files.has(".blackwall-site.json"))
+    const manifest = JSON.parse(lab.branch.files.get(".site-manifest.json")!.toString())
+    assert.deepEqual(Object.keys(manifest), ["files", "hashes"], "no generator or site name is recorded in the repository")
+
+    // As an older version left it.
+    lab.branch.files.set(".blackwall-site.json", lab.branch.files.get(".site-manifest.json")!)
+    lab.branch.files.delete(".site-manifest.json")
+    lab.branch.files.set("style.css", Buffer.from("/* tuned by hand */"))
+    const plan = (await (await post(lab, "sites/lab/publish", { plan: true })).json()).plan
+    assert.deepEqual(plan.files.filter((f: { conflict?: string }) => f.conflict).map((f: { path: string; conflict: string }) => [f.path, f.conflict]), [["style.css", "edited-elsewhere"]], "an edited file is still noticed")
+    assert.ok(plan.files.some((f: { path: string; status: string }) => f.path === ".blackwall-site.json" && f.status === "removed"))
+    assert.equal((await publish(lab, "sites/lab/publish", { acknowledge: ["style.css"] })).status, 200)
+    assert.ok(lab.branch.files.has(".site-manifest.json") && !lab.branch.files.has(".blackwall-site.json"))
+  } finally { await lab.close() }
 })

@@ -10,8 +10,7 @@
  * renderer wrote. Nothing in the editor's React tree knows this file exists.
  */
 
-export const SITE_RUNTIME = `/* Pagesmith runtime. Generated; don't edit by hand. */
-(function () {
+export const SITE_RUNTIME = `(function () {
   var doc = document;
   var reduced = matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -34,7 +33,7 @@ export const SITE_RUNTIME = `/* Pagesmith runtime. Generated; don't edit by hand
   });
 
   /* Forms. Submits in the background, shows the success or verify panel without a page reload. */
-  doc.querySelectorAll("form[data-blackwall-form]").forEach(function (f) {
+  doc.querySelectorAll("form[data-form]").forEach(function (f) {
     f.addEventListener("submit", function (e) {
       if (f.action.endsWith("#")) return;
       e.preventDefault();

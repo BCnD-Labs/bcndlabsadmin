@@ -12,8 +12,9 @@ import { SITE_IMAGES_DIR, assetCloudPath, usedAssets } from "../shared/assets.ts
 import { siteOrigin } from "../shared/sitebuilder.ts"
 import type { LivePage, LiveReport } from "../shared/site-live.ts"
 
-/** Paths Blackwall generated last time, so files it no longer makes are removed (and nothing else is). */
-const MANIFEST = ".blackwall-site.json"
+/** The list of files made last time (with their fingerprints), so files no longer made are removed and nothing else is. An older name is still read, and replaced. */
+const MANIFEST = ".site-manifest.json"
+const OLD_MANIFEST = ".blackwall-site.json"
 
 /** The library pictures this site uses, read from Nextcloud. A picture that can't be read stops the publish, rather than putting a broken image on the site. */
 async function pictureFiles(store: ConnectionStore, ws: Collections, siteId: string) {
@@ -55,7 +56,7 @@ export async function publishSite(store: ConnectionStore, ws: Collections, siteI
   let previous: string[] = []
   let wrote: Record<string, string> = {}
   try {
-    const m = JSON.parse((await repo.read(at(MANIFEST))) ?? "{}")
+    const m = JSON.parse((await repo.read(at(MANIFEST))) ?? (await repo.read(at(OLD_MANIFEST))) ?? "{}")
     previous = m.files ?? []
     wrote = m.hashes ?? {}
   } catch {
@@ -67,10 +68,12 @@ export async function publishSite(store: ConnectionStore, ws: Collections, siteI
   const changes = [
     ...paths.map((p) => ({ path: at(p), content: files[p] })),
     ...gone.map((p) => ({ path: at(p), delete: true as const })),
-    { path: at(MANIFEST), content: `${JSON.stringify({ generator: "Blackwall", site: site.name, files: paths, hashes }, null, 2)}\n` },
+    { path: at(MANIFEST), content: `${JSON.stringify({ files: paths, hashes }, null, 2)}\n` },
   ]
+  // A manifest under the older name is replaced by the new one.
+  if ((await repo.read(at(OLD_MANIFEST))) !== null) changes.push({ path: at(OLD_MANIFEST), delete: true })
   // What Blackwall made last time, with the fingerprint it wrote ("" when an older publish didn't record one).
-  const owned = new Map<string, string>([...previous.map((p) => [at(p), wrote[p] ?? ""] as [string, string]), [at(MANIFEST), ""]])
+  const owned = new Map<string, string>([...previous.map((p) => [at(p), wrote[p] ?? ""] as [string, string]), [at(MANIFEST), ""], [at(OLD_MANIFEST), ""]])
   const posts = ws.drafts.filter((d) => d.siteId === site.id && d.publishedAt).length
   const pages = ws.pages.filter((p) => p.siteId === site.id).length
   const message = `Update ${site.name}: ${pages} ${pages === 1 ? "page" : "pages"}, ${posts} ${posts === 1 ? "post" : "posts"}`

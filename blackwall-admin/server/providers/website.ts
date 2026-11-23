@@ -8,10 +8,13 @@ import {
   extractChrome,
   joinUrl,
   parseManifest,
+  POST_CSS,
   postPath,
   relativePath,
   renderPostPage,
+  siteBase,
   sortPosts,
+  toRelative,
   trimSlashes,
   updateIndexBlock,
   type ScheduledPost,
@@ -377,16 +380,6 @@ export async function siteRaw(c: StoredConnection, path: string) {
 
 // --- writing -------------------------------------------------------------------
 
-/**
- * Root-relative paths ("/img/a.png") are written for a site served from the top of its domain. A project site (served under a path, like
- * https://example-owner.github.io/example-site) needs that path in front, or the picture and the link back to the blog point at the wrong place.
- */
-export function underSiteBase(siteUrl: string) {
-  let base = ""
-  try { base = new URL(siteUrl).pathname.replace(/\/+$/, "") } catch { /* no site address yet: leave paths alone */ }
-  return (path: string | undefined) => (path && base && path.startsWith("/") && !path.startsWith("//") && path !== base && !path.startsWith(`${base}/`) ? `${base}${path}` : path)
-}
-
 async function writePosts(c: StoredConnection, message: string, mutate: (posts: SitePost[]) => { posts: SitePost[]; changes: PostChange[] }, template?: string, opts: DeliverOptions = {}) {
   const { cfg, repo } = repoFor(c)
   const delivery = await withTarget(cfg, repo, opts)
@@ -394,15 +387,17 @@ async function writePosts(c: StoredConnection, message: string, mutate: (posts: 
   const [manifestText, index, chrome] = await Promise.all([repo.read(manifestPath), repo.read(cfg.blogIndex), siteChrome(c)])
   const before = parseManifest(manifestText).posts
   const { posts, changes } = mutate(before)
-  const under = underSiteBase(cfg.siteUrl)
-  const blogHref = under(`/${cfg.blogIndex}`)!
-  // What is written into the pages points at the right place for this site; the saved list keeps the paths as they were entered.
-  const shown = (p: SitePost): SitePost => ({ ...p, cover: under(p.cover), thumbnail: under(p.thumbnail) })
+  const base = siteBase(cfg.siteUrl)
+  // Pictures in the blog list are written relative to the blog page, so they load wherever the site is served; the saved list keeps the paths as they were entered.
+  const shown = (p: SitePost): SitePost => ({ ...p, cover: toRelative(p.cover, cfg.blogIndex, base), thumbnail: toRelative(p.thumbnail, cfg.blogIndex, base) })
   const all: Change[] = changes.map((ch) => {
     if (!("render" in ch)) return ch
     const post = posts.find((p) => p.slug === ch.render)!
-    return { path: ch.path, content: renderPostPage(shown(post), chrome, blogHref) }
+    return { path: ch.path, content: renderPostPage(post, chrome, `/${cfg.blogIndex}`, { file: ch.path, siteUrl: cfg.siteUrl }) }
   })
+  // The default post styling lives in its own stylesheet next to the posts. It is written once; after that it belongs to the site.
+  const stylePath = `${cfg.postsDir}/post.css`
+  if (changes.some((c) => "render" in c) && (await repo.read(stylePath)) === null) all.push({ path: stylePath, content: POST_CSS })
   all.push({ path: manifestPath, content: `${JSON.stringify({ version: 1, posts: sortPosts(posts) }, null, 2)}\n` })
   let region = false
   if (index) {
