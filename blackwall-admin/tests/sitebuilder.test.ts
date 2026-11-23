@@ -21,11 +21,11 @@ test("a course-portal site builds every page, published posts only, and the supp
   const blog = files["blog/index.html"]
   assert.ok(blog.indexOf("Week 10") < blog.indexOf("Week 9"), "newest week first")
   assert.ok(!blog.includes("Week 11"))
-  assert.ok(blog.includes('href="/posts/forms/"'))
+  assert.ok(blog.includes('href="../posts/forms/"'), "links between the site's files are relative to the page")
   assert.match(files["_redirects"], /^\/about \/projects\/ 301/)
   assert.match(files["about/index.html"], /url=\/projects\//)
   assert.match(files["sitemap.xml"], /https:\/\/bcndlabs.dev\/posts\/grid\//)
-  assert.ok(files["index.html"].includes('<a href="/projects/">Projects</a>'), "renamed page shows in the menu")
+  assert.ok(files["index.html"].includes('<a href="projects/">Projects</a>'), "renamed page shows in the menu")
 })
 
 test("text is escaped and links are limited to safe schemes", () => {
@@ -38,7 +38,7 @@ test("text is escaped and links are limited to safe schemes", () => {
   assert.equal(safeHref("https://x.dev"), "https://x.dev")
 })
 
-import { checkSite, cloneBlocks, importHtml, nameFirstHeading, siteFromSite, buildCss, buildTheme, PAGE_KINDS, section } from "../shared/sitebuilder.ts"
+import { bare, checkSite, cloneBlocks, importHtml, nameFirstHeading, siteFromSite, buildCss, buildTheme, PAGE_KINDS, section } from "../shared/sitebuilder.ts"
 import { crc32, makeZip } from "../shared/zip.ts"
 import { validWorkspace, emptyWorkspace } from "../shared/workspace.ts"
 
@@ -147,7 +147,7 @@ test("library pictures go into the published markup with their size, previews us
   const post = { id: "d", title: "T", slug: "t", kind: "post" as const, status: "ready" as const, excerpt: "", body: "![x](/images/gone.webp)", siteId: "s1", cover: "/images/team.webp", publishedAt: ts, createdAt: ts, updatedAt: ts }
   assert.match(checkSite(site, [page], [post], [], [asset]).map((i) => i.text).join("\n"), /gone\.webp/)
   const files = buildSite(site, [page], [post], [], [], [asset])
-  assert.match(files["posts/t/index.html"], /class="post__cover" src="\/images\/team.webp" width="1200"/)
+  assert.match(files["posts/t/index.html"], /class="post__cover" src="\.\.\/\.\.\/images\/team.webp" width="1200"/)
 })
 
 test("a .zip can carry picture bytes next to text files, with the right checksum", () => {
@@ -181,7 +181,7 @@ test("a site with none of the new fields publishes exactly as it did: no drop-do
   const files = buildSite(site, pages, posts, [])
   const html = files["index.html"]
   assert.ok(!html.includes("has-sub") && !html.includes('class="bs') && !html.includes("data-bw"))
-  assert.equal(files["style.css"], buildCss())
+  assert.equal(files["style.css"], bare(buildCss()))
   assert.ok(!files["style.css"].includes(".site-nav .sub") && !files["style.css"].includes(".bs-a-center"))
   const footer = html.slice(html.indexOf('<footer'))
   for (const p of pages) assert.ok(footer.includes(`>${p.title}</a>`), `${p.title} in footer`)
@@ -192,7 +192,7 @@ test("a nested page becomes a drop-down that needs no script, and is reachable b
   const pages = [page("home", 0), page("work", 1), page("one", 2, { parentId: "work" }), page("two", 3, { parentId: "work" })]
   const files = buildSite(site, pages, [], [])
   const html = files["index.html"]
-  assert.match(html, /<li class="has-sub"><a href="\/work\/">WORK<\/a>\n\s*<ul class="sub" aria-label="WORK pages">\n\s*<li><a href="\/one\/">ONE<\/a><\/li>/)
+  assert.match(html, /<li class="has-sub"><a href="work\/">WORK<\/a>\n\s*<ul class="sub" aria-label="WORK pages">\n\s*<li><a href="one\/">ONE<\/a><\/li>/)
   assert.match(files["style.css"], /\.has-sub:focus-within > \.sub/)
   assert.match(files["style.css"], /\.has-sub:hover > \.sub/)
   // Pages do link the shared pagesmith.js file. What matters is the menu itself works without JS — CSS does the opening.
