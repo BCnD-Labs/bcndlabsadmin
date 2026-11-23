@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { addDays, addMonths, format, isToday, startOfMonth } from "date-fns"
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Pencil, Plus } from "lucide-react"
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Pencil, Plus } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -54,10 +54,10 @@ export function CalendarTool() {
         <Button variant="quiet" size="icon-sm" aria-label="Next month" onClick={() => setMonth(addMonths(month, 1))}><ChevronRight /></Button>
       </div>
       <PlannerCalendar selected={date} month={month} onSelect={pick} />
-      {/* Calendar items are tasks with a date (and optional time), the same as the full Planner's "+" on a day. */}
+      {/* Adds a task or an event (the form has the switch) on the chosen day. */}
       <div className="mac-tool-row">
         <span className="mac-tool-spacer" />
-        <Button variant="outline" size="xs" onClick={() => openForm({ kind: "task", defaults: { due: date } })}><Plus /> Add on {isToday(parseKey(date)) ? "today" : format(parseKey(date), "MMM d")}</Button>
+        <Button variant="outline" size="xs" aria-label={`Add on ${format(parseKey(date), "MMMM d")}`} onClick={() => openForm({ kind: "task", defaults: { due: date } })}><Plus /> Add</Button>
       </div>
     </div>
   )
@@ -69,26 +69,30 @@ export function TasksTool() {
   const tasks = useWorkspace((s) => s.tasks)
   const courses = useWorkspace((s) => s.courses)
   const toggleTask = useWorkspace((s) => s.toggleTask)
-  const openForm = useUi((s) => s.openForm)
   const navigate = useNavigate()
   const [showDone, setShowDone] = useState(false)
   const today = todayKey()
   const onDay = tasks.filter((t) => t.due === date || t.focusDate === date || t.scheduledDate === date)
   const overdue = date === today ? tasks.filter((t) => !t.done && t.due && t.due < today && !onDay.includes(t)) : []
-  const open = [...overdue.map((t) => ({ t, late: true })), ...onDay.filter((t) => !t.done).map((t) => ({ t, late: false }))]
+  // Events (all day first, then by time) sit above the day's tasks; only tasks count as open.
+  const events = onDay.filter((t) => t.kind === "event").sort((a, b) => (a.scheduledTime ?? "").localeCompare(b.scheduledTime ?? ""))
+  const open = [...overdue.map((t) => ({ t, late: true })), ...onDay.filter((t) => !t.done && t.kind !== "event").map((t) => ({ t, late: false }))]
   const done = onDay.filter((t) => t.done)
   const go = (id: string) => navigate(`/productivity?date=${date}&task=${id}`)
   const row = ({ t, late }: { t: (typeof tasks)[number]; late: boolean }) => {
     const course = courses.find((c) => c.id === t.courseId)
     const time = t.scheduledTime ?? t.time
+    const event = t.kind === "event"
     return (
-      <li key={t.id} className="mac-task" data-done={t.done} data-late={late}>
-        <Checkbox checked={t.done} aria-label={t.done ? `Reopen ${t.title}` : `Complete ${t.title}`} onCheckedChange={() => toggleTask(t.id)} />
+      <li key={t.id} className="mac-task" data-done={t.done} data-late={late} data-event={event || undefined}>
+        {/* Events are never completed, so they get a calendar mark where a task has its checkbox. */}
+        {event ? <CalendarDays className="mac-task-event" aria-hidden /> : <Checkbox checked={t.done} aria-label={t.done ? `Reopen ${t.title}` : `Complete ${t.title}`} onCheckedChange={() => toggleTask(t.id)} />}
         <div className="mac-task-main">
           <button type="button" onClick={() => go(t.id)}>{t.title}</button>
-          {(late || time || course) && <span className="mac-task-chips">
+          {(late || time || course || event) && <span className="mac-task-chips">
             {late && t.due && <PropChip kind="overdue" label="Due" value={format(parseKey(t.due), "MMM d")} />}
-            {time && <PropChip kind="date" label="Time" value={formatTime(time)} />}
+            {event && !time && <PropChip kind="date" label="Event" value="All day" />}
+            {time && <PropChip kind="date" label={event ? "Event" : "Time"} value={formatTime(time)} />}
             {course && <PropChip kind="course" label="Course" value={courseLabel(course)} />}
           </span>}
         </div>
@@ -100,10 +104,8 @@ export function TasksTool() {
       <div className="mac-tool-row">
         <strong>{isToday(parseKey(date)) ? "Today" : format(parseKey(date), "EEE, MMM d")}</strong>
         <span className="mac-tool-count">{open.length ? `${open.length} open` : "none"}</span>
-        <span className="mac-tool-spacer" />
-        <Button variant="outline" size="xs" onClick={() => openForm({ kind: "task", defaults: { due: date } })}><Plus /> Task</Button>
       </div>
-      {open.length ? <ul className="mac-task-list">{open.map(row)}</ul> : <p className="mac-tool-empty">Nothing is scheduled or due on this day.</p>}
+      {open.length || events.length ? <ul className="mac-task-list">{events.map((t) => row({ t, late: false }))}{open.map(row)}</ul> : <p className="mac-tool-empty">Nothing is scheduled or due on this day.</p>}
       {done.length > 0 && <>
         <button type="button" className="mac-task-done-toggle" aria-expanded={showDone} onClick={() => setShowDone((v) => !v)}>{done.length} completed {showDone ? <ChevronUp /> : <ChevronDown />}</button>
         {showDone && <ul className="mac-task-list">{done.map((t) => row({ t, late: false }))}</ul>}

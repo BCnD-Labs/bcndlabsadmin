@@ -14,6 +14,8 @@ test("standalone calendar events are additive and require their own scheduled da
   const event = task({ kind: "event", scheduledDate: "2026-11-03", scheduledTime: "10:00", durationMinutes: 45, links: [{ label: "Call", url: "https://example.com" }] })
   assert.ok(validTask(JSON.parse(JSON.stringify(event))))
   assert.equal(event.due, undefined)
+  // An all-day event is one with no time (what the task form saves when "All day" is on).
+  assert.ok(validTask(JSON.parse(JSON.stringify(task({ kind: "event", scheduledDate: "2026-11-03" })))))
   assert.ok(!validTask({ ...event, scheduledDate: undefined }))
   assert.ok(!validTask({ ...event, scheduledDate: "2026-02-30" }))
   assert.ok(!validTask({ ...legacy, kind: "appointment" }))

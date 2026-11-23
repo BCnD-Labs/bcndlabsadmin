@@ -8,6 +8,7 @@ import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Textarea } from "@/components/ui/textarea"
 import { kindInfo, learningType } from "@/features/learning/learning-utils"
 import type { LearningItemType, Subtask, Task, WorkEffort, WorkStatus } from "@/lib/types"
@@ -30,11 +31,15 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
   const courses = useWorkspace((s) => s.courses)
   const { create, update, remove } = useWorkspace.getState()
   const base = existing ?? defaults
+  // An event keeps its day in scheduledDate (and its time in scheduledTime); the form edits both kinds through `due` and `time`.
+  const baseEvent = base?.kind === "event"
   const [draft, setDraft] = useState({
+    event: baseEvent,
+    allDay: baseEvent ? !base?.scheduledTime : true,
     title: base?.title ?? "",
     details: base?.details ?? "",
-    due: base?.due ?? "",
-    time: base?.time ?? "",
+    due: (baseEvent ? base?.scheduledDate : base?.due) ?? "",
+    time: (baseEvent ? base?.scheduledTime : base?.time) ?? "",
     courseId: base?.courseId,
     learningType: base?.learningType ?? ("assignment" as LearningItemType),
     starred: base?.starred ?? false,
@@ -58,14 +63,16 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
   const score = draft.score.trim() === "" ? undefined : Number(draft.score)
   const scoreBad = score !== undefined && (!Number.isFinite(score) || score < 0 || score > 100)
   // Coursework reads as what it is: "New assignment", "Exam updated".
-  const noun = draft.courseId ? type.label : "Task"
+  const noun = draft.event ? "Event" : draft.courseId ? type.label : "Task"
   // Assignments, exams and milestones move through a lifecycle; events don't.
   const tracked = !!draft.courseId && draft.learningType !== "event"
   const finished = (status?: WorkStatus) => status === "submitted" || status === "graded"
 
-  const canSave = draft.title.trim().length > 0 && !(scored && scoreBad)
+  // An event needs its day; a task's due date is optional.
+  const canSave = draft.title.trim().length > 0 && !(scored && scoreBad) && (!draft.event || !!draft.due)
   const navigate = useNavigate()
   const save = () => {
+    if (draft.event) return saveEvent()
     const values = {
       title: draft.title.trim(),
       details: draft.details.trim() || undefined,
@@ -83,6 +90,8 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
       links: cleanLinks(draft.links),
       recordLinks: draft.recordLinks.length ? draft.recordLinks : undefined,
       score: draft.courseId && scored ? score : undefined,
+      // Turning an event back into a task: its day becomes the due date above.
+      ...(existing?.kind === "event" && { kind: undefined, scheduledDate: undefined, scheduledTime: undefined }),
     }
     if (existing) {
       const completedAt = values.done ? (existing.completedAt ?? new Date().toISOString()) : undefined
@@ -92,6 +101,25 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
       create("tasks", { ...values, completedAt: values.done ? new Date().toISOString() : undefined })
       toast.success(`${noun} added`)
     }
+    onDone()
+  }
+  // Events have a day and an optional time (none means all day). They are never completed, so done, steps and coursework fields don't apply.
+  const saveEvent = () => {
+    const values: Partial<Task> = {
+      kind: "event",
+      title: draft.title.trim(),
+      details: draft.details.trim() || undefined,
+      scheduledDate: draft.due,
+      scheduledTime: (!draft.allDay && draft.time) || undefined,
+      starred: draft.starred,
+      links: cleanLinks(draft.links),
+      recordLinks: draft.recordLinks.length ? draft.recordLinks : undefined,
+      due: undefined, time: undefined, done: false, completedAt: undefined, courseId: undefined, learningType: undefined,
+      status: undefined, effort: undefined, workType: undefined, subtasks: undefined, topicIds: undefined, score: undefined,
+    }
+    if (existing) update("tasks", existing.id, values)
+    else create("tasks", values as Omit<Task, "id" | "createdAt" | "updatedAt">)
+    toast.success(existing ? "Event updated" : "Event added")
     onDone()
   }
 
@@ -110,9 +138,44 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
           : undefined
       }
     >
+      <ToggleGroup type="single" size="sm" variant="outline" value={draft.event ? "event" : "task"} onValueChange={(v) => { if (v) set({ event: v === "event" }) }} aria-label="Item type" className="self-start">
+        <ToggleGroupItem value="task" className="px-3 text-xs">Task</ToggleGroupItem>
+        <ToggleGroupItem value="event" className="px-3 text-xs">Event</ToggleGroupItem>
+      </ToggleGroup>
       <Field label="Title" htmlFor="task-title">
-        <Input id="task-title" autoFocus value={draft.title} onChange={(e) => set({ title: e.target.value })} placeholder="What needs doing?" />
+        <Input id="task-title" autoFocus value={draft.title} onChange={(e) => set({ title: e.target.value })} placeholder={draft.event ? "What's happening?" : "What needs doing?"} />
       </Field>
+      {draft.event ? <>
+        <Field label="Details" htmlFor="task-details">
+          <Textarea id="task-details" rows={3} value={draft.details} onChange={(e) => set({ details: e.target.value })} placeholder="Optional" />
+        </Field>
+        <div className="flex flex-wrap items-end gap-4">
+          <Field label="Date" htmlFor="task-due" className="w-44">
+            <Input id="task-due" type="date" required value={draft.due} onChange={(e) => set({ due: e.target.value })} />
+          </Field>
+          <div className="flex items-center gap-2 pb-1.5">
+            <Switch id="task-allday" checked={draft.allDay} onCheckedChange={(allDay) => set({ allDay })} />
+            <Label htmlFor="task-allday" className="text-xs font-normal">All day</Label>
+          </div>
+          {!draft.allDay && (
+            <Field label="Time" htmlFor="task-time" className="w-32">
+              <Input id="task-time" type="time" value={draft.time} onChange={(e) => set({ time: e.target.value })} />
+            </Field>
+          )}
+          <div className="flex items-center gap-2 pb-1.5">
+            <Switch id="task-star" checked={draft.starred} onCheckedChange={(starred) => set({ starred })} />
+            <Label htmlFor="task-star" className="inline-flex items-center gap-1 text-xs font-normal">
+              <Star className="size-3.5 text-amber" aria-hidden /> Starred
+            </Label>
+          </div>
+        </div>
+        <Field label="Linked notes, tasks and pages" htmlFor="task-records" hint="Notes, tasks, and website pages or posts that belong with this. The links show on both sides.">
+          <LinkedRecordsField value={draft.recordLinks} onChange={(recordLinks) => set({ recordLinks })} selfId={existing?.id} backlinks={existing ? tasksLinkingTask({ tasks: allTasks }, existing.id) : []} />
+        </Field>
+        <Field label="Linked documents" htmlFor="task-links" hint="Notes, specs or files that live elsewhere. They open in their own app.">
+          <DocLinksField value={draft.links} onChange={(links) => set({ links })} />
+        </Field>
+      </> : <>
       {(hasCourses || draft.courseId) && (
         <div className="grid gap-x-4 gap-y-3.5 sm:grid-cols-2">
           <Field label="Learning" htmlFor="task-course">
@@ -203,6 +266,7 @@ export function TaskForm({ id, defaults, onDone }: { id?: string; defaults?: Par
       <Field label="Linked documents" htmlFor="task-links" hint="Notes, specs or files that live elsewhere. They open in their own app.">
         <DocLinksField value={draft.links} onChange={(links) => set({ links })} />
       </Field>
+      </>}
     </FormFrame>
   )
 }
