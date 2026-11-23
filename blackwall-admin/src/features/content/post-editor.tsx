@@ -1,5 +1,6 @@
 import { WorkspaceGrid, GridItem } from "@/components/common/workspace-grid"
-import { useWorkspaceSync } from "@/services/workspace-sync"
+import { saveState } from "@/services/draft-status"
+import { flushWorkspace, useWorkspaceSync } from "@/services/workspace-sync"
 import { format } from "date-fns"
 import { CalendarClock, ExternalLink, FileX, ImagePlus, Loader2, Rocket, Trash2, Undo2, X } from "lucide-react"
 import { useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from "react"
@@ -80,6 +81,8 @@ function Editor({ draft }: { draft: Draft }) {
   const pagesmith = own && !own.adopted ? own : undefined
   const siteOfPost = draft.siteId
   useEffect(() => { if (siteOfPost) selectSite(siteOfPost) }, [siteOfPost])
+  // Closing the editor sends whatever is still waiting, instead of leaving it for the usual short delay.
+  useEffect(() => () => flushWorkspace(), [])
 
   // Put keystrokes in the workspace immediately. Only network saves are debounced,
   // so incoming server updates cannot be mistaken for unsaved editor changes.
@@ -88,7 +91,10 @@ function Editor({ draft }: { draft: Draft }) {
     if (patch.title !== undefined && !slugTouched) next.slug = slugify(patch.title) || "untitled"
     update("drafts", draft.id, { ...next, slug: slugify(next.slug) || "untitled" })
   }
-  const dirty = false
+  // Whether the server has the latest words, read from the sync engine: every keystroke is stored on this device at once.
+  const sync = useWorkspaceSync((s) => s.status)
+  const saving = saveState(sync)
+  const dirty = sync !== "saved"
 
   // The current local copy, as the publish panel sees it.
   const current: Draft = { ...draft, ...value, slug: slugify(value.slug) || "untitled" }
@@ -118,7 +124,7 @@ function Editor({ draft }: { draft: Draft }) {
         badge={value.kind === "post" && <PostStateChip state={item?.state ?? "draft"} edited={item?.edited} date={item?.date} />}
         subtitle={
           <span aria-live="polite" data-testid="save-state">
-            {dirty ? "Saving…" : `Edited ${timeAgo(draft.updatedAt)}`} · {words} {words === 1 ? "word" : "words"}
+            <span title={saving.detail} data-tone={saving.tone}>{dirty ? saving.label : `Saved on server · edited ${timeAgo(draft.updatedAt)}`}</span> · {words} {words === 1 ? "word" : "words"}
           </span>
         }
         actions={
@@ -218,7 +224,7 @@ function Editor({ draft }: { draft: Draft }) {
           )}
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-soft px-4 py-2 text-[11px] text-muted-foreground">
             <span>{words} {words === 1 ? "word" : "words"} · Markdown</span>
-            <span aria-live="polite" data-testid="editor-save-state">{dirty ? "Saving…" : <EditorSyncLabel />}</span>
+            <span aria-live="polite" data-testid="editor-save-state" title={saving.detail} data-tone={saving.tone}>{saving.label}</span>
           </div>
         </section>
 
@@ -619,9 +625,6 @@ function PublishPanel({ draft, item, site, onRemoteSlug }: { draft: Draft; item?
   }
 }
 
-function EditorSyncLabel() {
-  return useWorkspaceSync((s) => s.message)
-}
 
 function SiteSelect({ id, value, onChange }: { id: string; value?: string; onChange: (v: string | undefined) => void }) {
   const sites = useWorkspace((s) => s.sites)
