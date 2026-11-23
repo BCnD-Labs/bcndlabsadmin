@@ -41,6 +41,14 @@ function later() {
   timer = setTimeout(() => void syncWorkspace(), 700)
 }
 
+/** Send pending edits now instead of after the usual short wait (the page is being hidden or left). Edits are already stored on this device. */
+export function flushWorkspace() {
+  clearTimeout(timer)
+  if (active) void syncWorkspace()
+}
+const leaving = () => { if (typeof document === "undefined" || document.visibilityState !== "visible") flushWorkspace() }
+const events = () => (typeof window !== "undefined" && typeof window.addEventListener === "function" ? window : undefined)
+
 /** Start only after authentication; every state change (including Undo/import) joins the outbox. */
 export function startWorkspaceSync() {
   if (active) return
@@ -59,11 +67,15 @@ export function startWorkspaceSync() {
     useWorkspaceSync.setState({ status: "pending", message: "Changes saved on this device; waiting for server." })
     later()
   })
+  events()?.addEventListener("pagehide", leaving)
+  events()?.addEventListener("visibilitychange", leaving)
   void syncWorkspace()
 }
 export function stopWorkspaceSync() {
   active = false
   generation++
+  events()?.removeEventListener("pagehide", leaving)
+  events()?.removeEventListener("visibilitychange", leaving)
   stopSubscription?.()
   clearTimeout(timer)
   conflictRemote = undefined

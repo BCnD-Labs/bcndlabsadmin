@@ -100,3 +100,21 @@ test("a request can't turn off review: the unattended flag is only ever set by t
     assert.equal(lab.commits.length, 0)
   } finally { await lab.close() }
 })
+
+test("an edited post can be restored from history: every commit keeps that moment's Markdown in the post list", async () => {
+  const lab = await startSiteLab({ panelPort: 0, sitePort: 0, formsPort: 0, deployMs: 10, handwritten: true })
+  try {
+    const put = (markdown: string) => confirmed((b) => send(lab, "PUT", "site/posts/hello", { post: { title: "Hello", excerpt: "Intro", markdown }, ...b }), { message: "Save the post" })
+    assert.equal((await put("First draft of the words.")).status, 200)
+    assert.equal((await put("Second draft, rewritten.")).status, 200)
+    assert.equal(lab.commits.length, 2)
+    const listAt = (sha: string) => JSON.parse(lab.trees.get(lab.made.get(sha)!.tree)!.get("blog/posts/index.json")!.toString()).posts[0]
+    assert.equal(listAt(lab.commits[0].sha).markdown, "First draft of the words.", "the first commit still holds the first words")
+    assert.equal(listAt(lab.commits[1].sha).markdown, "Second draft, rewritten.")
+    const html = (sha: string) => lab.trees.get(lab.made.get(sha)!.tree)!.get("blog/posts/hello.html")!.toString()
+    assert.match(html(lab.commits[0].sha), /First draft/)
+    assert.match(html(lab.commits[1].sha), /Second draft/)
+    // Nothing else the owner wrote changed across the two commits.
+    for (const f of ["index.html", "about/index.html", "css/style.css", "js/app.js"]) assert.ok(lab.trees.get(lab.made.get(lab.commits[1].sha)!.tree)!.get(f)!.equals(Buffer.from(lab.live.files.get(f)!)), f)
+  } finally { await lab.close() }
+})

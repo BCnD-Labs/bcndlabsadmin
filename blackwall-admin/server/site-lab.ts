@@ -179,7 +179,7 @@ export async function startSiteLab(opts: { panelPort?: number; sitePort?: number
   const panelPort = await listen(panel, opts.panelPort ?? 8790)
 
   return {
-    panel: `http://127.0.0.1:${panelPort}`, connection: website.id, site: siteOrigin, forms: formsOrigin, dist, commits, branch, live, branches, pulls, made, store, workspace, api,
+    panel: `http://127.0.0.1:${panelPort}`, connection: website.id, site: siteOrigin, forms: formsOrigin, dist, commits, branch, live, branches, pulls, made, trees, store, workspace, api,
     close: async () => {
       globalThis.fetch = realFetch
       for (const s of [panel, siteServer, formsServer]) { s.closeAllConnections(); s.close() }
