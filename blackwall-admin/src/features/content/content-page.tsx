@@ -146,7 +146,7 @@ export function ContentPage({ adopted }: { adopted?: Site } = {}) {
             shown.length ? (
               <ul className="bw-card-grid pt-3" aria-label="Posts">
                 {shown.map((i) => (
-                  <PostCard key={i.key} item={i} siteUrl={site.overview?.siteUrl} postsBase={site.overview} />
+                  <PostCard key={i.key} item={i} siteUrl={site.overview?.siteUrl} postsBase={site.overview} connectionId={site.connectionId} />
                 ))}
               </ul>
             ) : (
@@ -224,7 +224,7 @@ export function PostStateChip({ state, edited, date }: { state: PostState; edite
   )
 }
 
-function PostCard({ item, siteUrl, postsBase }: { item: PostItem; siteUrl?: string; postsBase?: { postsUrl: string } }) {
+function PostCard({ item, siteUrl, postsBase, connectionId }: { item: PostItem; siteUrl?: string; postsBase?: { postsUrl: string }; connectionId?: string }) {
   const navigate = useNavigate()
   const create = useWorkspace((s) => s.create)
   const remove = useWorkspace((s) => s.remove)
@@ -258,7 +258,7 @@ function PostCard({ item, siteUrl, postsBase }: { item: PostItem; siteUrl?: stri
     <li className={cn("bw-panel group relative flex flex-col overflow-hidden transition-colors hover:bg-raised", busy && "opacity-60")} data-testid="post-card">
       <button type="button" onClick={edit} className="flex flex-1 flex-col text-left" aria-label={`Edit ${item.title}`}>
         {item.cover ? (
-          <SiteImage path={item.cover} siteUrl={siteUrl} className="aspect-[2/1] w-full" />
+          <SiteImage path={item.cover} siteUrl={siteUrl} connectionId={connectionId} className="aspect-[2/1] w-full" />
         ) : (
           <CoverPlaceholder title={item.title} className="h-20 w-full" />
         )}

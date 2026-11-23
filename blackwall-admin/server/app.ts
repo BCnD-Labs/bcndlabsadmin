@@ -116,9 +116,9 @@ async function feedConnection(store: ConnectionStore, provider: "github" | "anal
   return connection
 }
 
-/** The website connection a request is about: the one named in `?connection=`, else the first working one. Each site can have its own. */
+/** The website connection a request is about: the one named in `?connection=`. There is no "first working one" fallback, so a request can never land in a repository nobody chose. */
 async function websiteConnection(store: ConnectionStore, id: string | null) {
-  if (!id) return store.firstOk("website")
+  if (!id) throw new ProviderError("Say which website connection this is for. Choose one in the site's settings; nothing was read or written.", 409)
   const connection = await store.get(id)
   if (!connection || connection.provider !== "website") throw new ProviderError("That website connection no longer exists. Choose another in the site's settings.", 409)
   return connection
@@ -134,13 +134,29 @@ async function cardTemplateFor(workspace: WorkspaceStore, connectionId: string):
   return template
 }
 
-/** What a publish request may ask for. Anything else is ignored. */
-function deliverOptions(body: { mode?: string; plan?: boolean; expectedHead?: string; acknowledge?: unknown } | undefined): DeliverOptions {
+/** The address the app has for the site that publishes through this connection, so it can be checked against the repository. */
+async function domainFor(workspace: WorkspaceStore, connectionId: string): Promise<string | undefined> {
+  const data = (await workspace.readWorkspace().catch(() => undefined))?.data
+  return data?.sites.find((s) => s.connectionId === connectionId)?.domain || undefined
+}
+
+type DeliverBody = { mode?: string; plan?: boolean; expectedHead?: string; acknowledge?: unknown; token?: unknown; message?: unknown; prTitle?: unknown; prBody?: unknown; branch?: unknown; stamp?: unknown }
+const text = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : undefined)
+
+/** What a publish request may ask for. Anything else is ignored; `internal` and `siteDomain` can never come from a request. */
+function deliverOptions(body: DeliverBody | undefined, siteDomain?: string): DeliverOptions {
   return {
     mode: body?.mode === "pr" ? "pr" : "direct",
     plan: body?.plan === true,
     expectedHead: typeof body?.expectedHead === "string" && /^[A-Za-z0-9]{1,64}$/.test(body.expectedHead) ? body.expectedHead : undefined,
+    token: typeof body?.token === "string" && /^[a-f0-9]{40}$/.test(body.token) ? body.token : undefined,
+    message: text(body?.message, 5000),
+    prTitle: text(body?.prTitle, 300),
+    prBody: text(body?.prBody, 20_000),
+    branch: text(body?.branch, 100),
+    stamp: text(body?.stamp, 40),
     acknowledge: Array.isArray(body?.acknowledge) ? body.acknowledge.filter((p): p is string => typeof p === "string").slice(0, 500) : [],
+    siteDomain,
   }
 }
 
@@ -221,7 +237,7 @@ export function createApi(opts: ApiOptions) {
     const data = structuredClone(snap.data)
     const d = data.drafts.find((x) => x.id === s.draftId)!
     d.publishedAt = d.publishedAt ?? s.publishAt
-    const result = await publishSite(opts.store, data, s.siteId!, { mode: s.mode ?? "direct" })
+    const result = await publishSite(opts.store, data, s.siteId!, { mode: s.mode ?? "direct", internal: true })
     if ("plan" in result && !("sha" in result)) throw new Error("Nothing was published")
     await markPublished(s, result as { sha: string; pr?: unknown })
   }
@@ -240,9 +256,9 @@ export function createApi(opts: ApiOptions) {
       try {
         if (s.siteId && s.draftId) await runPagesmith(s)
         else {
-          const site = s.connectionId ? await opts.store.get(s.connectionId) : await opts.store.firstOk("website")
-          if (!site || site.provider !== "website") throw new Error("Website publishing isn't connected")
-          await publishPost(site, { ...s.post, date: s.publishAt }, undefined, await cardTemplateFor(opts.workspace, site.id), { mode: s.mode ?? "direct" })
+          const site = s.connectionId ? await opts.store.get(s.connectionId) : undefined
+          if (!site || site.provider !== "website") throw new Error("This scheduled post has no website connection (or it was removed), so it can't be published. Cancel it and schedule it again from a site.")
+          await publishPost(site, { ...s.post, date: s.publishAt }, undefined, await cardTemplateFor(opts.workspace, site.id), { mode: s.mode ?? "direct", internal: true, siteDomain: await domainFor(opts.workspace, site.id) })
         }
         await opts.store.deleteSchedule(key)
         await notifier.siteCleared(key)
@@ -336,7 +352,7 @@ export function createApi(opts: ApiOptions) {
     // --- CMS sites: build and commit ------------------------------------------
     if (parts[0] === "sites" && parts[2] === "publish" && method === "POST" && parts[1]) {
       // The body may ask for a plan only, a pull request, the commit it reviewed, and the files it agreed to replace.
-      const body = (await readJson(req).catch(() => ({}))) as { mode?: string; plan?: boolean; expectedHead?: string; acknowledge?: unknown }
+      const body = (await readJson(req).catch(() => ({}))) as DeliverBody
       return send(res, 200, await publishSite(store, (await opts.workspace.readWorkspace()).data, parts[1], deliverOptions(body)))
     }
     if (parts[0] === "sites" && parts[2] === "live" && method === "POST" && parts[1]) {
@@ -520,21 +536,21 @@ export function createApi(opts: ApiOptions) {
       if (what === "scan" && method === "GET") return send(res, 200, await scanSite(site))
       if (what === "page" && method === "GET") return send(res, 200, await readAdoptedPage(site, url.searchParams.get("path") ?? ""))
       if (what === "region" && method === "PUT") {
-        const body = await readJson<{ path?: string; name?: string; content?: string; baseSha?: string }>(req, 2 * 1024 * 1024)
+        const body = await readJson<{ path?: string; name?: string; content?: string; baseSha?: string } & DeliverBody>(req, 2 * 1024 * 1024)
         if (typeof body.path !== "string" || typeof body.name !== "string" || typeof body.content !== "string" || typeof body.baseSha !== "string") throw new ProviderError("Send the page, the region, its new text and the version you edited", 400)
-        return send(res, 200, await saveRegion(site, body.path, body.name, body.content, body.baseSha))
+        return send(res, 200, await saveRegion(site, body.path, body.name, body.content, body.baseSha, deliverOptions(body as DeliverBody, await domainFor(opts.workspace, site.id))))
       }
       // PUT /api/site/posts/:slug  { post, previousSlug? }   DELETE /api/site/posts/:slug
       if (what === "posts" && slug && method === "PUT") {
-        const body = await readJson<{ post?: Partial<SitePost>; previousSlug?: string; mode?: string; plan?: boolean; expectedHead?: string; acknowledge?: unknown }>(req, 2 * 1024 * 1024)
-        const want = deliverOptions(body)
+        const body = await readJson<{ post?: Partial<SitePost>; previousSlug?: string } & DeliverBody>(req, 2 * 1024 * 1024)
+        const want = deliverOptions(body, await domainFor(opts.workspace, site.id))
         const result = await publishPost(site, { ...body.post, slug }, body.previousSlug, await cardTemplateFor(opts.workspace, site.id), want)
         // A pull request isn't live yet, so the schedule stays until the post really is published.
         if (!want.plan && result.committed && !result.committed.pr) await store.deleteSchedule(slug)
         return send(res, 200, result)
       }
       // DELETE /api/site/posts/:slug  (the body may carry the same plan/pr/expectedHead/acknowledge options)
-      if (what === "posts" && slug && method === "DELETE") return send(res, 200, await unpublishPost(site, slug, await cardTemplateFor(opts.workspace, site.id), deliverOptions(await readJson<Parameters<typeof deliverOptions>[0]>(req).catch(() => ({})))))
+      if (what === "posts" && slug && method === "DELETE") return send(res, 200, await unpublishPost(site, slug, await cardTemplateFor(opts.workspace, site.id), deliverOptions(await readJson<DeliverBody>(req).catch(() => ({})), await domainFor(opts.workspace, site.id))))
       // PUT /api/site/schedule/:slug  { post, publishAt }   DELETE /api/site/schedule/:slug
       if (what === "schedule" && slug && method === "PUT") {
         const body = await readJson<{ post?: Partial<SitePost>; publishAt?: string }>(req, 2 * 1024 * 1024)
@@ -561,13 +577,13 @@ export function createApi(opts: ApiOptions) {
       }
       if (what === "media" && method === "GET") return send(res, 200, await siteMedia(site))
       if (what === "media" && method === "POST") {
-        const body = await readJson<{ name?: string; data?: string }>(req, 12 * 1024 * 1024)
+        const body = await readJson<{ name?: string; data?: string } & DeliverBody>(req, 12 * 1024 * 1024)
         if (typeof body.name !== "string" || typeof body.data !== "string") throw new ProviderError("Send a file name and its data", 400)
-        return send(res, 201, await uploadImage(site, body.name, body.data))
+        return send(res, 200, await uploadImage(site, body.name, body.data, deliverOptions(body, await domainFor(opts.workspace, site.id))))
       }
       if (what === "media" && method === "DELETE") {
-        await deleteImage(site, url.searchParams.get("path") ?? "")
-        return send(res, 204, null)
+        const body = await readJson<DeliverBody>(req).catch(() => ({}) as DeliverBody)
+        return send(res, 200, await deleteImage(site, url.searchParams.get("path") ?? "", deliverOptions(body, await domainFor(opts.workspace, site.id))))
       }
       // GET /api/site/raw?path=/assets/blog_images/x.png  (image bytes, for previews before the site redeploys)
       if (what === "raw" && method === "GET") {

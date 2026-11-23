@@ -53,8 +53,8 @@ export async function startSiteLab(opts: { panelPort?: number; sitePort?: number
   /* ---- stand-in GitHub: a branch, commits, and a host that picks each commit up after a short "deploy" */
   const branch = { head: "c0", files: new Map<string, Buffer>() }
   const live = { files: new Map<string, Buffer>() }
-  const commits: { sha: string; message: string; added: string[]; changed: string[]; removed: string[]; at: string }[] = []
-  const blobs = new Map<string, Buffer>(), trees = new Map<string, Map<string, Buffer>>(), made = new Map<string, { message: string; tree: string; parent: string }>()
+  const commits: { sha: string; message: string; author?: { name: string; email: string }; committer?: { name: string; email: string }; added: string[]; changed: string[]; removed: string[]; at: string }[] = []
+  const blobs = new Map<string, Buffer>(), trees = new Map<string, Map<string, Buffer>>(), made = new Map<string, { message: string; tree: string; parent: string; author?: { name: string; email: string }; committer?: { name: string; email: string } }>()
   const branches = new Map<string, { head: string; files: Map<string, Buffer> }>()
   const pulls: { number: number; title: string; head: string; base: string; body: string }[] = []
   let n = 0
@@ -63,9 +63,13 @@ export async function startSiteLab(opts: { panelPort?: number; sitePort?: number
     const p = url.pathname.replace("/repos/lab/site", "") || "/"
     const input = raw ? JSON.parse(raw) : {}
     if (p === "/") return Response.json({ full_name: "lab/site", permissions: { push: true } })
+    if (p === "/pages") return new Response("{}", { status: 404 })
     if (p.startsWith("/branches/")) return Response.json({ name: "main" })
     if (p.startsWith("/contents/")) {
-      const file = branch.files.get(decodeURIComponent(p.slice("/contents/".length)))
+      const at = decodeURIComponent(p.slice("/contents/".length))
+      const inside = [...branch.files].filter(([f]) => path.posix.dirname(f) === at)
+      if (inside.length && !accept.includes("raw")) return Response.json(inside.map(([f, b]) => ({ type: "file", path: f, name: path.posix.basename(f), size: b.length })))
+      const file = branch.files.get(at)
       if (!file) return new Response("{}", { status: 404 })
       return accept.includes("raw") ? new Response(new Uint8Array(file)) : Response.json({ type: "file" })
     }
@@ -78,14 +82,14 @@ export async function startSiteLab(opts: { panelPort?: number; sitePort?: number
       for (const e of input.tree as { path: string; sha: string | null }[]) { if (e.sha) next.set(e.path, blobs.get(e.sha)!); else next.delete(e.path) }
       const sha = nextId("t"); trees.set(sha, next); return Response.json({ sha }, { status: 201 })
     }
-    if (p === "/git/commits" && method === "POST") { const sha = nextId("c"); made.set(sha, { message: input.message, tree: input.tree, parent: input.parents?.[0] }); return Response.json({ sha }, { status: 201 }) }
-    if (p === "/git/refs" && method === "POST") { const name = String(input.ref).replace("refs/heads/", ""); const commit = made.get(input.sha)!; branches.set(name, { head: input.sha, files: trees.get(commit.tree)! }); return Response.json({ ref: input.ref }, { status: 201 }) }
+    if (p === "/git/commits" && method === "POST") { const sha = nextId("c"); made.set(sha, { message: input.message, tree: input.tree, parent: input.parents?.[0], author: input.author, committer: input.committer }); return Response.json({ sha }, { status: 201 }) }
+    if (p === "/git/refs" && method === "POST") { const name = String(input.ref).replace("refs/heads/", ""); if (branches.has(name)) return Response.json({ message: "Reference already exists" }, { status: 422 }); const commit = made.get(input.sha)!; branches.set(name, { head: input.sha, files: trees.get(commit.tree)! }); return Response.json({ ref: input.ref }, { status: 201 }) }
     if (p === "/pulls" && method === "POST") { const pr = { number: pulls.length + 1, title: input.title, head: input.head, base: input.base, body: input.body }; pulls.push(pr); return Response.json({ html_url: `https://github.com/lab/site/pull/${pr.number}`, number: pr.number }, { status: 201 }) }
     if (p.startsWith("/git/refs/heads/") && method === "PATCH") {
       const commit = made.get(input.sha)!, files = trees.get(commit.tree)!
       if (commit.parent !== branch.head) return Response.json({ message: "Update is not a fast forward" }, { status: 422 })
       const same = (a?: Buffer, b?: Buffer) => !!a && !!b && a.equals(b)
-      commits.push({ sha: input.sha, message: commit.message, at: new Date().toISOString(), added: [...files.keys()].filter((f) => !branch.files.has(f)).sort(), changed: [...files.keys()].filter((f) => branch.files.has(f) && !same(files.get(f), branch.files.get(f))).sort(), removed: [...branch.files.keys()].filter((f) => !files.has(f)).sort() })
+      commits.push({ sha: input.sha, message: commit.message, author: commit.author, committer: commit.committer, at: new Date().toISOString(), added: [...files.keys()].filter((f) => !branch.files.has(f)).sort(), changed: [...files.keys()].filter((f) => branch.files.has(f) && !same(files.get(f), branch.files.get(f))).sort(), removed: [...branch.files.keys()].filter((f) => !files.has(f)).sort() })
       branch.head = input.sha; branch.files = files
       setTimeout(() => { live.files = new Map(files) }, opts.deployMs ?? 3000)
       return Response.json({ object: { sha: input.sha } })
@@ -115,6 +119,7 @@ export async function startSiteLab(opts: { panelPort?: number; sitePort?: number
     const url = String(input instanceof Request ? input.url : input)
     const method = init?.method ?? "GET"
     const headers = new Headers(init?.headers)
+    if (url === "https://api.github.com/user") return Response.json({ login: "lab-owner", id: 4242, name: "Lab Owner" })
     if (url.startsWith(GITHUB)) return github(new URL(url), method, typeof init?.body === "string" ? init.body : "", headers.get("accept") ?? "")
     if (url.startsWith(CLOUD)) return dav(new URL(url), method, init?.body ? Buffer.from(await new Response(init.body).arrayBuffer()) : undefined)
     return realFetch(input, init)
@@ -160,7 +165,7 @@ export async function startSiteLab(opts: { panelPort?: number; sitePort?: number
   const snapshot = await workspace.readWorkspace()
   await workspace.writeWorkspace(snapshot.id, snapshot.revision, {
     ...emptyWorkspace(),
-    sites: [{ ...t.site, id: "lab", domain: `127.0.0.1:${sitePort}`, formEndpoint: formsOrigin, comments: true, createdAt: now, updatedAt: now, ...(opts.handwritten ? { name: "Example Studio", adopted: true, connectionId: website.id } : {}) }],
+    sites: [{ ...t.site, id: "lab", domain: `127.0.0.1:${sitePort}`, formEndpoint: formsOrigin, comments: true, createdAt: now, updatedAt: now, connectionId: website.id, ...(opts.handwritten ? { name: "Example Studio", adopted: true } : {}) }],
     pages: opts.handwritten ? [] : t.pages.map((p, i) => ({ ...p, id: `lab-p${i}`, siteId: "lab", createdAt: now, updatedAt: now })),
     forms: [{ id: "lab-form", name: "Contact", submitLabel: "Send", successMessage: "Thanks!", fields: [{ id: "name", label: "Name", type: "text", required: true }, { id: "message", label: "Message", type: "textarea", required: true }], createdAt: now, updatedAt: now }],
     assets: [{ id: "lab-asset", name: "Lab photo", file: "lab-photo.png", folder: "/Blackwall/assets", mime: "image/png", alt: "A sample photo", width: 1, height: 1, bytes: PIXEL.length, createdAt: now, updatedAt: now }],
@@ -174,7 +179,7 @@ export async function startSiteLab(opts: { panelPort?: number; sitePort?: number
   const panelPort = await listen(panel, opts.panelPort ?? 8790)
 
   return {
-    panel: `http://127.0.0.1:${panelPort}`, site: siteOrigin, forms: formsOrigin, dist, commits, branch, live, branches, pulls, made, store, workspace, api,
+    panel: `http://127.0.0.1:${panelPort}`, connection: website.id, site: siteOrigin, forms: formsOrigin, dist, commits, branch, live, branches, pulls, made, store, workspace, api,
     close: async () => {
       globalThis.fetch = realFetch
       for (const s of [panel, siteServer, formsServer]) { s.closeAllConnections(); s.close() }

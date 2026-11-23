@@ -96,7 +96,8 @@ function Editor({ draft }: { draft: Draft }) {
 
   const insertImage = async (file: File) => {
     try {
-      const img = await uploadSiteImage(file)
+      const img = await uploadSiteImage(file, site.connectionId)
+      if (!img) return
       const el = bodyRef.current
       const md = `![${file.name.replace(/\.[^.]+$/, "")}](${img.path})`
       const at = el ? el.selectionStart : value.body.length
@@ -143,10 +144,12 @@ function Editor({ draft }: { draft: Draft }) {
             <CoverField
               cover={value.cover}
               siteUrl={site.overview?.siteUrl}
+              connectionId={site.connectionId}
               canUpload={live}
               onUpload={async (file) => {
                 try {
-                  const img = await uploadSiteImage(file)
+                  const img = await uploadSiteImage(file, site.connectionId)
+                  if (!img) return
                   set({ cover: img.path })
                   toast.success(item?.state === "published" ? "Cover uploaded. Update the post to show it on the site." : "Cover uploaded")
                 } catch (e) {
@@ -254,7 +257,7 @@ function Editor({ draft }: { draft: Draft }) {
                   <label htmlFor="post-featured" className="grid gap-0.5 text-[13px] font-medium text-ink">Featured<span className="text-[11px] font-normal text-muted-foreground">Listed before the other posts.</span></label>
                   <Switch id="post-featured" checked={!!value.featured} onCheckedChange={(featured) => set({ featured: featured || undefined })} />
                 </div>
-                <ThumbnailField value={value.thumbnail} alt={value.thumbnailAlt} canUpload={live} onChange={(thumbnail, thumbnailAlt) => set({ thumbnail, thumbnailAlt })} />
+                <ThumbnailField value={value.thumbnail} alt={value.thumbnailAlt} canUpload={live} connectionId={site.connectionId} onChange={(thumbnail, thumbnailAlt) => set({ thumbnail, thumbnailAlt })} />
               </>
             )}
             {value.kind === "post" && value.cover && (
@@ -292,14 +295,15 @@ function Editor({ draft }: { draft: Draft }) {
 }
 
 /** A small picture for the post's card in the blog list: uploaded to the site's images folder, with a description. */
-function ThumbnailField({ value, alt, canUpload, onChange }: { value?: string; alt?: string; canUpload: boolean; onChange: (thumbnail: string | undefined, alt: string | undefined) => void }) {
+function ThumbnailField({ value, alt, canUpload, connectionId, onChange }: { value?: string; alt?: string; canUpload: boolean; connectionId?: string; onChange: (thumbnail: string | undefined, alt: string | undefined) => void }) {
   const ref = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const take = async (file?: File) => {
     if (!file) return
     setBusy(true)
     try {
-      const img = await uploadSiteImage(file)
+      const img = await uploadSiteImage(file, connectionId)
+      if (!img) return
       onChange(img.path, alt)
       toast.success("Thumbnail uploaded. Update the post to show it in the blog list.")
     } catch (e) {
@@ -359,7 +363,7 @@ function ImageButton({ disabled, onFile, children }: { disabled?: boolean; onFil
 }
 
 /** Cover image: drop or pick a file; it's committed to the site's images folder straight away. */
-function CoverField({ cover, siteUrl, canUpload, onUpload, onRemove }: { cover?: string; siteUrl?: string; canUpload: boolean; onUpload: (f: File) => Promise<void>; onRemove: () => void }) {
+function CoverField({ cover, siteUrl, connectionId, canUpload, onUpload, onRemove }: { cover?: string; siteUrl?: string; connectionId?: string; canUpload: boolean; onUpload: (f: File) => Promise<void>; onRemove: () => void }) {
   const [busy, setBusy] = useState(false)
   const [over, setOver] = useState(false)
   const ref = useRef<HTMLInputElement>(null)
@@ -379,7 +383,7 @@ function CoverField({ cover, siteUrl, canUpload, onUpload, onRemove }: { cover?:
   if (cover)
     return (
       <div className="group relative border-b border-line" onDragOver={(e) => { e.preventDefault(); setOver(true) }} onDragLeave={() => setOver(false)} onDrop={drop}>
-        <SiteImage path={cover} siteUrl={siteUrl} className="h-40 w-full sm:h-44" />
+        <SiteImage path={cover} siteUrl={siteUrl} connectionId={connectionId} className="h-40 w-full sm:h-44" />
         <div className={cn("absolute inset-x-0 bottom-0 flex justify-end gap-1.5 bg-gradient-to-t from-black/60 to-transparent p-2.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100", (busy || over) && "opacity-100")}>
           <Button variant="ghost" size="sm" disabled={!canUpload || busy} onClick={() => ref.current?.click()}>
             {busy ? <Loader2 className="animate-spin" /> : <ImagePlus />} Replace

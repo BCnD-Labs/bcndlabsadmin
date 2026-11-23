@@ -23,6 +23,7 @@ import {
 } from "../../shared/site.ts"
 import { ProviderError, getJson, need } from "../http.ts"
 import { deliver, type DeliverOptions } from "../publish-plan.ts"
+import { guardTarget } from "../site-target.ts"
 import type { StoredConnection } from "../store.ts"
 import type { TestResult } from "./index.ts"
 
@@ -59,19 +60,48 @@ export type Change = { path: string; content: string | Buffer } | { path: string
 /** A post page to (re)render from the updated post list before committing. */
 type PostChange = Change | { path: string; render: string }
 
+const identities = new Map<string, { at: number; who: Promise<{ name: string; email: string } | undefined> }>()
+
 /** The handful of GitHub REST calls publishing needs. */
 export class Repo {
   private readonly headers: Record<string, string>
   readonly repo: string
   readonly branch: string
+  private readonly tokenKey: string
   constructor(token: string, repo: string, branch: string) {
     this.repo = repo
     this.branch = branch
+    this.tokenKey = createHash("sha256").update(token).digest("hex")
     this.headers = {
       Authorization: `Bearer ${token}`,
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
       "User-Agent": "blackwall-admin",
+    }
+  }
+
+  /**
+   * Who commits are made as: the token's GitHub account, under its private "noreply" address, so the owner's real email isn't written into
+   * a public history. Undefined when GitHub doesn't say (the commit then uses GitHub's own default for the token).
+   */
+  identity(): Promise<{ name: string; email: string } | undefined> {
+    const hit = identities.get(this.tokenKey)
+    if (hit && Date.now() - hit.at < 10 * 60_000) return hit.who
+    const who = getJson<any>("https://api.github.com/user", { headers: this.headers }, "GitHub").then(
+      (u) => (u?.login && u?.id ? { name: String(u.name || u.login), email: `${u.id}+${u.login}@users.noreply.github.com` } : undefined),
+      () => undefined,
+    )
+    identities.set(this.tokenKey, { at: Date.now(), who })
+    return who
+  }
+
+  /** What GitHub Pages reports for this repository, or null when it is off or can't be read. */
+  async pages(): Promise<{ htmlUrl?: string; cname?: string | null } | null> {
+    try {
+      const p = await this.call<any>("/pages")
+      return { htmlUrl: p?.html_url, cname: p?.cname }
+    } catch {
+      return null
     }
   }
 
@@ -137,7 +167,7 @@ export class Repo {
    * Writes and deletes several files as one commit. By default it lands on the branch. With `expectedHead` it is refused if the branch
    * has moved since the changes were reviewed; with `branch` it goes to a new branch instead, leaving the live one alone.
    */
-  async commitTo(message: string, changes: Change[], opts: { expectedHead?: string; branch?: string } = {}, attempt = 1): Promise<{ sha: string; branch: string }> {
+  async commitTo(message: string, changes: Change[], opts: { expectedHead?: string; branch?: string; author?: { name: string; email: string } } = {}, attempt = 1): Promise<{ sha: string; branch: string }> {
     const head = await this.head()
     if (opts.expectedHead && head !== opts.expectedHead) throw new ProviderError("The branch changed since you reviewed these changes (someone pushed). Nothing was written; review them again.", 409)
     const base = await this.call<any>(`/git/commits/${head}`)
@@ -152,9 +182,15 @@ export class Repo {
       tree.push({ path: c.path, mode: "100644", type: "blob", sha: blob.sha })
     }
     const newTree = await this.call<any>("/git/trees", "POST", { base_tree: base.tree.sha, tree })
-    const commit = await this.call<any>("/git/commits", "POST", { message, tree: newTree.sha, parents: [head] })
+    const who = opts.author ? { author: opts.author, committer: opts.author } : {}
+    const commit = await this.call<any>("/git/commits", "POST", { message, tree: newTree.sha, parents: [head], ...who })
     if (opts.branch) {
-      await this.call("/git/refs", "POST", { ref: `refs/heads/${opts.branch}`, sha: commit.sha })
+      try {
+        await this.call("/git/refs", "POST", { ref: `refs/heads/${opts.branch}`, sha: commit.sha })
+      } catch (e) {
+        if (/HTTP 422/.test((e as Error).message)) throw new ProviderError(`A branch named “${opts.branch}” already exists. Pick another name; nothing was published.`, 409)
+        throw e
+      }
       return { sha: commit.sha, branch: opts.branch }
     }
     try {
@@ -169,11 +205,6 @@ export class Repo {
     return { sha: commit.sha, branch: this.branch }
   }
 
-  /** Writes and deletes several files as one commit on the branch. Retries once if the branch moved meanwhile. */
-  async commit(message: string, changes: Change[]): Promise<string> {
-    return (await this.commitTo(message, changes)).sha
-  }
-
   /** A pull request from `head` into this repository's branch. */
   async createPullRequest(title: string, head: string, body: string): Promise<{ url: string; number: number }> {
     const pr = await this.call<any>("/pulls", "POST", { title, head, base: this.branch, body })
@@ -186,6 +217,20 @@ const encodePath = (p: string) => trimSlashes(p).split("/").map(encodeURICompone
 export function repoFor(c: StoredConnection) {
   const cfg = siteConfig(c)
   return { cfg, repo: new Repo(need(c.secrets.token, "GitHub token"), cfg.repo, cfg.branch) }
+}
+
+/**
+ * Checks that this site's address and this repository belong together, and describes where a publish would land. Every plan and every write
+ * runs it; it throws when they disagree. `domain` is the site record's own address when the app has one.
+ */
+export async function checkTarget(cfg: SiteConfig, repo: Repo, domain?: string) {
+  return guardTarget({ repo: cfg.repo, branch: cfg.branch, siteUrl: cfg.siteUrl, domain, pages: () => repo.pages() })
+}
+
+/** The options a write passes to `deliver`: the request's own, plus where it lands. */
+export async function withTarget(cfg: SiteConfig, repo: Repo, opts: DeliverOptions): Promise<DeliverOptions> {
+  const { target, warnings } = await checkTarget(cfg, repo, opts.siteDomain)
+  return { ...opts, target, warnings: [...(opts.warnings ?? []), ...warnings] }
 }
 
 export async function testWebsite(c: StoredConnection): Promise<TestResult> {
@@ -296,19 +341,21 @@ export async function readAdoptedPage(c: StoredConnection, rawPath: string): Pro
 }
 
 /**
- * Changes the text inside one marked region of one page, and nothing else. The file is read again first:
- * if it is no longer what the editor showed (the owner pushed from somewhere else), nothing is written.
+ * Changes the text inside one marked region of one page, and nothing else, through the same reviewed write as every other change.
+ * The file is read again first: if it is no longer what the editor showed (the owner pushed from somewhere else), nothing is written.
  */
-export async function saveRegion(c: StoredConnection, rawPath: string, name: string, content: string, baseSha: string) {
+export async function saveRegion(c: StoredConnection, rawPath: string, name: string, content: string, baseSha: string, opts: DeliverOptions = {}) {
   const page = await readAdoptedPage(c, rawPath)
   if (page.sha !== baseSha) throw new ProviderError("This page was changed somewhere else since you opened it. Reload it to see the new version; nothing was saved.", 409)
   const region = findRegions(page.html).find((r) => r.name === name)
   if (!region) throw new ProviderError(`This page has no “${name}” region any more, so nothing was saved.`, 409)
   const next = replaceRegion(page.html, name, regionBody(region, content))
-  if (next === null || next === page.html) return { ...page, changed: false as const }
-  const { repo } = repoFor(c)
-  const sha = await repo.commit(`Edit “${name}” on ${page.path} (via Blackwall)`, [{ path: page.path, content: next }])
-  return { ...(await readAdoptedPage(c, page.path)), changed: true as const, commit: sha }
+  const { cfg, repo } = repoFor(c)
+  const changes: Change[] = next === null || next === page.html ? [] : [{ path: page.path, content: next }]
+  const done = await deliver(repo, { message: `Update ${name} on ${page.path}` }, changes, new Map([[page.path, ""]]), await withTarget(cfg, repo, opts))
+  if (opts.plan) return { plan: done.plan }
+  if (!done.committed) return { ...page, changed: false as const, plan: done.plan }
+  return { ...(await readAdoptedPage(c, page.path)), changed: true as const, commit: done.committed.sha, plan: done.plan, committed: done.committed }
 }
 
 export async function siteMedia(c: StoredConnection): Promise<SiteMediaItem[]> {
@@ -342,6 +389,7 @@ export function underSiteBase(siteUrl: string) {
 
 async function writePosts(c: StoredConnection, message: string, mutate: (posts: SitePost[]) => { posts: SitePost[]; changes: PostChange[] }, template?: string, opts: DeliverOptions = {}) {
   const { cfg, repo } = repoFor(c)
+  const delivery = await withTarget(cfg, repo, opts)
   const manifestPath = `${cfg.postsDir}/index.json`
   const [manifestText, index, chrome] = await Promise.all([repo.read(manifestPath), repo.read(cfg.blogIndex), siteChrome(c)])
   const before = parseManifest(manifestText).posts
@@ -364,15 +412,21 @@ async function writePosts(c: StoredConnection, message: string, mutate: (posts: 
   }
   // What Blackwall owns here: its list of posts, the post pages it made, and (only the text inside its region of) the blog index.
   const owned = new Map<string, string>([[manifestPath, ""], ...before.map((p) => [postPath(cfg.postsDir, p.slug), ""] as [string, string]), ...(region ? [[cfg.blogIndex, ""] as [string, string]] : [])])
-  const done = await deliver(repo, message, all, owned, opts, { title: message, body: "Made with Blackwall." })
+  const done = await deliver(repo, { message }, all, owned, delivery)
   return { posts: sortPosts(posts), plan: done.plan, committed: done.committed }
 }
 
+/** A time a client echoed back from a plan: a real ISO time within a day of now, else nothing (the server then uses its own). */
+const validStamp = (v: string | undefined) => (v && /^\d{4}-\d\d-\d\dT[\d:.]+Z$/.test(v) && Math.abs(Date.now() - Date.parse(v)) < 24 * 3600_000 ? v : undefined)
+
 /** Publishes or updates a post. `previousSlug` renames it: the old page is removed in the same commit. */
 export async function publishPost(c: StoredConnection, input: Partial<SitePost>, previousSlug?: string, template?: string, opts: DeliverOptions = {}) {
+  // The time is fixed when the plan is made and echoed back with the write, so what is written is exactly what was reviewed.
+  const now = validStamp(opts.stamp) ?? new Date().toISOString()
+  opts = { ...opts, stamp: now }
   let post: SitePost
   try {
-    post = cleanPost(input)
+    post = cleanPost(input.date === undefined ? { ...input, date: now } : input)
   } catch (e) {
     throw new ProviderError((e as Error).message, 400)
   }
@@ -380,11 +434,11 @@ export async function publishPost(c: StoredConnection, input: Partial<SitePost>,
   const { cfg, repo } = repoFor(c)
   const before = parseManifest(await repo.read(`${cfg.postsDir}/index.json`)).posts
   const updating = before.some((p) => p.slug === (previousSlug ?? post.slug))
-  const result = await writePosts(c, `${updating ? "Update" : "Publish"} post: ${post.title} (via Blackwall)`, (posts) => {
+  const result = await writePosts(c, `${updating ? "Update" : "Add"} post: ${post.title}`, (posts) => {
     const old = posts.find((p) => p.slug === (previousSlug ?? post.slug))
     if (old) {
       post.date = old.date
-      post.updated = new Date().toISOString()
+      post.updated = now
     }
     if (posts.some((p) => p.slug === post.slug && p !== old)) throw new ProviderError(`Another post already uses ${post.slug}`, 409)
     const changes: PostChange[] = [{ path: postPath(cfg.postsDir, post.slug), render: post.slug }]
@@ -398,7 +452,7 @@ export async function publishPost(c: StoredConnection, input: Partial<SitePost>,
 export async function unpublishPost(c: StoredConnection, slug: string, template?: string, opts: DeliverOptions = {}) {
   if (!SLUG_RE.test(slug)) throw new ProviderError("Bad slug", 400)
   const { cfg } = repoFor(c)
-  return writePosts(c, `Remove post: ${slug} (via Blackwall)`, (posts) => {
+  return writePosts(c, `Remove post: ${slug}`, (posts) => {
     const old = posts.find((p) => p.slug === slug)
     if (!old) throw new ProviderError("That post isn't published", 404)
     return { posts: posts.filter((p) => p !== old), changes: [{ path: postPath(cfg.postsDir, slug), delete: true }] }
@@ -407,8 +461,11 @@ export async function unpublishPost(c: StoredConnection, slug: string, template?
 
 const IMAGE_TYPES: Record<string, string> = { png: "png", jpg: "jpg", jpeg: "jpg", gif: "gif", webp: "webp", avif: "avif", svg: "svg" }
 
-/** Commits an image to the images folder and returns its site path. */
-export async function uploadImage(c: StoredConnection, name: string, base64: string): Promise<SiteMediaItem> {
+/**
+ * Puts an image in the images folder through the reviewed write, as a commit of that one file and nothing else.
+ * Returns where it goes and the plan; the file is only written when the plan's token comes back confirmed.
+ */
+export async function uploadImage(c: StoredConnection, name: string, base64: string, opts: DeliverOptions = {}) {
   const { cfg, repo } = repoFor(c)
   const ext = IMAGE_TYPES[(name.split(".").pop() ?? "").toLowerCase()]
   if (!ext) throw new ProviderError("Use a PNG, JPG, GIF, WebP, AVIF or SVG image", 400)
@@ -426,13 +483,15 @@ export async function uploadImage(c: StoredConnection, name: string, base64: str
   let file = `${stem}.${ext}`
   for (let i = 2; taken.has(file); i++) file = `${stem}-${i}.${ext}`
   const path = `${cfg.imagesDir}/${file}`
-  await repo.commit(`Add image: ${file} (via Blackwall)`, [{ path, content: bytes }])
-  return { path: `/${path}`, name: file, size: bytes.length, url: cfg.siteUrl ? joinUrl(cfg.siteUrl, path) : "" }
+  const done = await deliver(repo, { message: `Add image: ${file}` }, [{ path, content: bytes }], new Map(), await withTarget(cfg, repo, opts))
+  const item: SiteMediaItem = { path: `/${path}`, name: file, size: bytes.length, url: cfg.siteUrl ? joinUrl(cfg.siteUrl, path) : "" }
+  return { item, plan: done.plan, committed: done.committed }
 }
 
-export async function deleteImage(c: StoredConnection, path: string) {
+export async function deleteImage(c: StoredConnection, path: string, opts: DeliverOptions = {}) {
   const { cfg, repo } = repoFor(c)
   const clean = trimSlashes(path)
   if (!clean.startsWith(`${cfg.imagesDir}/`) || clean.includes("..")) throw new ProviderError("Not a site image", 400)
-  await repo.commit(`Remove image: ${clean.split("/").pop()} (via Blackwall)`, [{ path: clean, delete: true }])
+  const done = await deliver(repo, { message: `Remove image: ${clean.split("/").pop()}` }, [{ path: clean, delete: true }], new Map([[clean, ""]]), await withTarget(cfg, repo, opts))
+  return { plan: done.plan, committed: done.committed }
 }

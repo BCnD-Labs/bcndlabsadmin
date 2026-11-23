@@ -5,7 +5,7 @@ import type { PublishPlan } from "@shared/publish-plan"
 import { cloneBlocks, siteFromSite, siteFromTemplate } from "@shared/sitebuilder"
 import type { Site, SitePage } from "@/lib/types"
 import { api } from "@/services/connector"
-import { branchOf, reviewPublish } from "@/services/publish-review"
+import { reviewPublish } from "@/services/publish-review"
 import { syncWorkspace, useWorkspaceSync } from "@/services/workspace-sync"
 import { usePrefs } from "@/stores/prefs"
 import { useWorkspace } from "@/stores/workspace"
@@ -143,7 +143,6 @@ export async function publishSite(site: Site): Promise<PublishOutcome | undefine
   const post = (body: object) => api<PublishOutcome & { plan: PublishPlan }>(`sites/${site.id}/publish`, { method: "POST", body: JSON.stringify(body) })
   const r = await reviewPublish({
     title: `Publish ${site.name}`,
-    branch: branchOf(site.connectionId),
     plan: async () => (await post({ plan: true })).plan,
     run: async (choice) => {
       setRun(site.id, { state: "publishing" })

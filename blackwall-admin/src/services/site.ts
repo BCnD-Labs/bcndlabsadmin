@@ -4,7 +4,7 @@ import { FALLBACK_CHROME, type ScheduledPost, type SiteChrome, type SiteMediaIte
 import type { Draft } from "@/lib/types"
 import type { PublishChoice, PublishPlan } from "@shared/publish-plan"
 import { api, useConnectionFor, useConnections, useSession } from "./connector"
-import { branchOf, reviewPublish } from "./publish-review"
+import { reviewPublish } from "./publish-review"
 import type { SourceStatus } from "./types"
 
 /**
@@ -50,7 +50,7 @@ export const useSiteStore = create<SiteState>()((set, get) => {
     publish: async (post, previousSlug) => {
       const conn = get().loadedFor
       const send = (body: object) => api<PostResult>(forConnection(`site/posts/${post.slug}`, conn), { method: "PUT", body: JSON.stringify({ post, previousSlug, ...body }) })
-      const r = await reviewPublish({ title: `Publish “${post.title}”`, branch: branchOf(conn), plan: async () => (await send({ plan: true })).plan, run: (choice: PublishChoice) => send(choice) })
+      const r = await reviewPublish({ title: `Publish “${post.title}”`, plan: async () => (await send({ plan: true })).plan, run: (choice: PublishChoice) => send(choice) })
       if (!r) return { url: "", cancelled: true }
       if (previousSlug && previousSlug !== post.slug && !r.committed?.pr) await api(forConnection(`site/schedule/${previousSlug}`, conn), { method: "DELETE" }).catch(() => {})
       await reload()
@@ -68,7 +68,7 @@ export const useSiteStore = create<SiteState>()((set, get) => {
     unpublish: async (slug) => {
       const conn = get().loadedFor
       const send = (body: object) => api<PostResult>(forConnection(`site/posts/${slug}`, conn), { method: "DELETE", body: JSON.stringify(body) })
-      const r = await reviewPublish({ title: "Take this post off the site", branch: branchOf(conn), plan: async () => (await send({ plan: true })).plan, run: (choice: PublishChoice) => send(choice) })
+      const r = await reviewPublish({ title: "Take this post off the site", plan: async () => (await send({ plan: true })).plan, run: (choice: PublishChoice) => send(choice) })
       if (!r) return { url: "", cancelled: true }
       await reload()
       return { url: "", pr: r.committed?.pr, unchanged: !r.committed }
@@ -81,6 +81,8 @@ export interface SiteFeed {
   overview?: SiteOverview
   error?: string
   refresh: () => void
+  /** The website connection this feed reads, so what is written later goes to the same repository. */
+  connectionId?: string
 }
 
 /** Loads the site overview once the website connection is known. Pass a connection to use that site's own repository instead of the first one. */
@@ -96,11 +98,12 @@ export function useSite(connectionId?: string): SiteFeed {
   }, [usable, conn?.id, load])
   const refresh = () => conn && void load(conn.id, true)
   if (session === "offline" || !conn) return { status: "not-connected", refresh }
-  if (conn.status === "error") return { status: "error", error: conn.message, refresh }
-  if (!usable) return { status: "not-connected", refresh }
-  if (loadedFor !== conn.id || (loading && !overview)) return { status: "loading", refresh }
-  if (error && !overview) return { status: "error", error, refresh }
-  return { status: "live", overview, error, refresh }
+  const id = conn.id
+  if (conn.status === "error") return { status: "error", error: conn.message, refresh, connectionId: id }
+  if (!usable) return { status: "not-connected", refresh, connectionId: id }
+  if (loadedFor !== conn.id || (loading && !overview)) return { status: "loading", refresh, connectionId: id }
+  if (error && !overview) return { status: "error", error, refresh, connectionId: id }
+  return { status: "live", overview, error, refresh, connectionId: id }
 }
 
 const chromePromises = new Map<string, Promise<SiteChrome>>()
@@ -140,28 +143,45 @@ const fileToBase64 = (file: File) =>
     r.readAsDataURL(file)
   })
 
-/** Commits an image to the site's images folder; returns its site path. */
-export async function uploadSiteImage(file: File): Promise<SiteMediaItem> {
+interface ImageResult { item: SiteMediaItem; plan: PublishPlan; committed?: { sha: string; branch: string; pr?: { url: string; number: number } } }
+
+/**
+ * Adds an image to a site's images folder, after showing the owner exactly what would be committed (just that file) and where.
+ * Resolves undefined if they cancelled, in which case nothing was written. Throws if no connection was named.
+ */
+export async function uploadSiteImage(file: File, connectionId?: string): Promise<SiteMediaItem | undefined> {
+  if (!connectionId) throw new Error("This post's site has no website connection yet, so the image has nowhere to go. Choose one in the site's settings.")
   if (file.size > 8 * 1024 * 1024) throw new Error("Images can be up to 8 MB")
-  const item = await api<SiteMediaItem>("site/media", { method: "POST", body: JSON.stringify({ name: file.name, data: await fileToBase64(file) }) })
-  localImages.set(item.path, URL.createObjectURL(file))
-  return item
+  const data = await fileToBase64(file)
+  const local = URL.createObjectURL(file)
+  const send = (body: object) => api<ImageResult>(forConnection("site/media", connectionId), { method: "POST", body: JSON.stringify({ name: file.name, data, ...body }) })
+  const r = await reviewPublish({ title: `Add image “${file.name}”`, preview: { src: local, alt: "The image being added" }, plan: async () => (await send({ plan: true })).plan, run: (choice: PublishChoice) => send(choice) })
+  if (!r) { URL.revokeObjectURL(local); return undefined }
+  localImages.set(r.item.path, local)
+  return r.item
 }
 
-export const listSiteMedia = () => api<SiteMediaItem[]>("site/media")
-export const deleteSiteMedia = (path: string) => api(`site/media?path=${encodeURIComponent(path)}`, { method: "DELETE" })
+export const listSiteMedia = (connectionId?: string) => api<SiteMediaItem[]>(forConnection("site/media", connectionId))
+
+/** Removes an image from the repository, after the owner has reviewed it. Resolves false if they cancelled. */
+export async function deleteSiteMedia(path: string, connectionId?: string): Promise<boolean> {
+  const send = (body: object) => api<{ plan: PublishPlan }>(forConnection(`site/media?path=${encodeURIComponent(path)}`, connectionId), { method: "DELETE", body: JSON.stringify(body) })
+  const r = await reviewPublish({ title: `Remove ${path.split("/").pop()} from the site`, plan: async () => (await send({ plan: true })).plan, run: (choice: PublishChoice) => send(choice) })
+  return !!r
+}
 
 const rawCache = new Map<string, Promise<string>>()
 /** Image bytes through the server (works before the site has redeployed, and for private repos). */
-export function rawImageUrl(path: string): Promise<string> {
-  let p = rawCache.get(path)
+export function rawImageUrl(path: string, connectionId?: string): Promise<string> {
+  const key = `${connectionId ?? ""}|${path}`
+  let p = rawCache.get(key)
   if (!p) {
-    p = fetch(`/api/site/raw?path=${encodeURIComponent(path)}`, { headers: { "X-Blackwall": "1" } }).then(async (r) => {
+    p = fetch(`/api/${forConnection(`site/raw?path=${encodeURIComponent(path)}`, connectionId)}`, { headers: { "X-Blackwall": "1" } }).then(async (r) => {
       if (!r.ok) throw new Error(`HTTP ${r.status}`)
       return URL.createObjectURL(await r.blob())
     })
-    p.catch(() => rawCache.delete(path))
-    rawCache.set(path, p)
+    p.catch(() => rawCache.delete(key))
+    rawCache.set(key, p)
   }
   return p
 }

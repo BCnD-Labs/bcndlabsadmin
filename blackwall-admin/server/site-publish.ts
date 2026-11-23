@@ -2,7 +2,7 @@ import { buildSite } from "../shared/sitebuilder.ts"
 import { trimSlashes } from "../shared/site.ts"
 import type { Collections } from "../shared/workspace.ts"
 import { ProviderError } from "./http.ts"
-import { repoFor } from "./providers/website.ts"
+import { repoFor, withTarget } from "./providers/website.ts"
 import { deliver, gitBlobSha, type DeliverOptions } from "./publish-plan.ts"
 import type { ConnectionStore } from "./store.ts"
 import { approvedComments } from "../shared/site-inbox.ts"
@@ -42,9 +42,12 @@ export async function publishSite(store: ConnectionStore, ws: Collections, siteI
   const site = ws.sites.find((s) => s.id === siteId)
   if (!site) throw new ProviderError("That site doesn't exist", 404)
   if (site.adopted) throw new ProviderError("This site is run from its own files. Blackwall only changes the marked regions and the posts it publishes, so it doesn't rebuild or publish the whole site.", 409)
-  const c = site.connectionId ? await store.get(site.connectionId) : await store.firstOk("website")
-  if (!c || c.provider !== "website") throw new ProviderError("Choose a GitHub repository to publish to in Site settings.", 409)
+  // A site publishes only to the repository it was explicitly given, never to whichever connection happens to work first.
+  if (!site.connectionId) throw new ProviderError("Choose the GitHub repository this site publishes to in Site settings. Nothing was published.", 409)
+  const c = await store.get(site.connectionId)
+  if (!c || c.provider !== "website") throw new ProviderError("This site's repository connection no longer exists. Choose another in Site settings. Nothing was published.", 409)
   const { cfg, repo } = repoFor(c)
+  const delivery = await withTarget(cfg, repo, { ...opts, siteDomain: site.domain })
   const root = trimSlashes(site.root ?? "")
   const at = (p: string) => (root ? `${root}/${p}` : p)
   const comments = approvedComments(await readInbox(store), site.id)
@@ -70,8 +73,8 @@ export async function publishSite(store: ConnectionStore, ws: Collections, siteI
   const owned = new Map<string, string>([...previous.map((p) => [at(p), wrote[p] ?? ""] as [string, string]), [at(MANIFEST), ""]])
   const posts = ws.drafts.filter((d) => d.siteId === site.id && d.publishedAt).length
   const pages = ws.pages.filter((p) => p.siteId === site.id).length
-  const message = `Publish ${site.name}: ${pages} pages, ${posts} posts (via Blackwall)`
-  const done = await deliver(repo, message, changes, owned, opts, { title: message, body: `Built from the Blackwall site “${site.name}”: ${pages} pages and ${posts} posts.` })
+  const message = `Update ${site.name}: ${pages} ${pages === 1 ? "page" : "pages"}, ${posts} ${posts === 1 ? "post" : "posts"}`
+  const done = await deliver(repo, { message }, changes, owned, delivery)
   if (opts.plan) return { plan: done.plan }
   return {
     sha: done.committed?.sha ?? done.plan.head,

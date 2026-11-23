@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
 import { HANDWRITTEN, startSiteLab } from "../server/site-lab.ts"
+import { confirmed, withConnection } from "./lab-review.ts"
 import { adoptedPreview, cleanPagePath, findRegions, htmlTitle, pagePaths, regionBody, regionText, repoPathOf, replaceRegion, stylesheetPaths } from "../shared/site-adopt.ts"
 import { updateIndexBlock, type SitePost } from "../shared/site.ts"
 import { emptyWorkspace, validWorkspace } from "../shared/workspace.ts"
@@ -85,7 +86,7 @@ test("an older saved workspace still loads, and adopted must be a yes or no", ()
 test("scan, read and save a region: only that region changes, and a page changed elsewhere is never overwritten", async () => {
   const lab = await startSiteLab({ panelPort: 0, sitePort: 0, formsPort: 0, deployMs: 50, handwritten: true })
   const headers = { "X-Blackwall": "1", "Content-Type": "application/json" }
-  const get = async (p: string) => (await fetch(`${lab.panel}/api/site/${p}`, { headers })).json()
+  const get = async (p: string) => (await fetch(`${lab.panel}/api/site/${withConnection(lab, p)}`, { headers })).json()
   try {
     const scan = await get("scan")
     assert.deepEqual(scan.pages.map((p: { path: string }) => p.path), ["index.html", "about/index.html", "blog/blog.html"])
@@ -97,12 +98,20 @@ test("scan, read and save a region: only that region changes, and a page changed
     const about = await get("page?path=about/index.html")
     assert.deepEqual(about.regions, [], "a page without markers has nothing Blackwall may edit")
     assert.deepEqual(Object.keys(about.styles), ["css/style.css"], "its stylesheet is read from the repo for the preview")
-    assert.equal((await fetch(`${lab.panel}/api/site/page?path=${encodeURIComponent("../secret.html")}`, { headers })).status, 400)
+    assert.equal((await fetch(`${lab.panel}/api/site/page?path=${encodeURIComponent("../secret.html")}&connection=${lab.connection}`, { headers })).status, 400)
 
-    const put = (body: object) => fetch(`${lab.panel}/api/site/region`, { method: "PUT", headers, body: JSON.stringify(body) })
-    const saved = await put({ path: "index.html", name: "intro", content: "<p>We make <b>big</b> things.</p>", baseSha: home.sha })
+    const put = (body: object) => fetch(`${lab.panel}/api/site/region?connection=${lab.connection}`, { method: "PUT", headers, body: JSON.stringify(body) })
+    const edit = { path: "index.html", name: "intro", content: "<p>We make <b>big</b> things.</p>", baseSha: home.sha }
+    assert.equal((await put(edit)).status, 400, "saving a region without reviewing it writes nothing")
+    assert.equal(lab.commits.length, 0)
+    const plan = (await (await put({ ...edit, plan: true })).json()).plan
+    assert.deepEqual(plan.files.map((f: { path: string; status: string }) => [f.path, f.status]), [["index.html", "changed"]], "the review shows the one file")
+    assert.equal(plan.suggested.message, "Update intro on index.html")
+    assert.equal(lab.commits.length, 0, "a plan writes nothing")
+    const saved = await confirmed((b) => put({ ...edit, ...b }), { message: "Rewrite the intro" })
     assert.equal(saved.status, 200, await saved.clone().text())
     assert.equal(lab.commits.length, 1)
+    assert.equal(lab.commits[0].message, "Rewrite the intro")
     assert.deepEqual(lab.commits[0].changed, ["index.html"], "one file, nothing else")
     const after = lab.branch.files.get("index.html")!.toString()
     assert.ok(after.includes("<p>We make <b>big</b> things.</p>"))
@@ -110,13 +119,13 @@ test("scan, read and save a region: only that region changes, and a page changed
 
     // The owner pushed a change from somewhere else; the old version in the editor must not overwrite it.
     lab.branch.files.set("index.html", Buffer.from(after.replace("hand-written", "edited elsewhere")))
-    const stale = await put({ path: "index.html", name: "intro", content: "<p>Stale</p>", baseSha: home.sha })
+    const stale = await confirmed((b) => put({ path: "index.html", name: "intro", content: "<p>Stale</p>", baseSha: home.sha, ...b }))
     assert.equal(stale.status, 409)
     assert.match((await stale.json()).error, /changed somewhere else/)
     assert.equal(lab.commits.length, 1, "nothing was committed")
     assert.ok(lab.branch.files.get("index.html")!.toString().includes("edited elsewhere"))
 
-    const missing = await put({ path: "index.html", name: "nope", content: "x", baseSha: (await get("page?path=index.html")).sha })
+    const missing = await put({ path: "index.html", name: "nope", content: "x", baseSha: (await get("page?path=index.html")).sha, plan: true })
     assert.equal(missing.status, 409)
   } finally {
     await lab.close()

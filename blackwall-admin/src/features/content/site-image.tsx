@@ -10,23 +10,23 @@ import { localImages, rawImageUrl } from "@/services/site"
  * the live site, then the repository through Blackwall's server (for images the
  * site hasn't redeployed with yet).
  */
-export function SiteImage({ path, siteUrl, alt = "", className }: { path: string; siteUrl?: string; alt?: string; className?: string }) {
-  return <SiteImageInner key={path} path={path} siteUrl={siteUrl} alt={alt} className={className} />
+export function SiteImage({ path, siteUrl, alt = "", className, connectionId }: { path: string; siteUrl?: string; alt?: string; className?: string; connectionId?: string }) {
+  return <SiteImageInner key={`${connectionId ?? ""}|${path}`} path={path} siteUrl={siteUrl} alt={alt} className={className} connectionId={connectionId} />
 }
 
-function SiteImageInner({ path, siteUrl, alt, className }: { path: string; siteUrl?: string; alt: string; className?: string }) {
+function SiteImageInner({ path, siteUrl, alt, className, connectionId }: { path: string; siteUrl?: string; alt: string; className?: string; connectionId?: string }) {
   const [src, setSrc] = useState<string | undefined>(() => localImages.get(path) ?? (siteUrl ? joinUrl(siteUrl, path) : undefined))
   const [state, setState] = useState<"trying" | "raw" | "failed">(src ? "trying" : "raw")
   useEffect(() => {
     if (state !== "raw") return
     let live = true
-    rawImageUrl(path)
+    rawImageUrl(path, connectionId)
       .then((u) => live && setSrc(u))
       .catch(() => live && setState("failed"))
     return () => {
       live = false
     }
-  }, [state, path])
+  }, [state, path, connectionId])
   if (state === "failed")
     return (
       <span className={cn("flex items-center justify-center bg-well text-faint", className)} title={`Couldn't load ${path}`}>
