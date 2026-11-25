@@ -44,6 +44,13 @@ export const CONNECTION_GUIDANCE: Record<ProviderId, { category: Category; /** W
     prepare: "You’ll need your mail provider's SMTP details and, for Gmail or Outlook, an app password.",
     steps: ["Find your provider's SMTP host and port (Gmail: smtp.gmail.com, 587).", "Create an app password if your account uses two-step sign-in.", "Enter them with the address to send to, then test: an email should arrive."],
   },
+  proton: {
+    feeds: "Mail inbox and composer",
+    category: "mail",
+    outcome: "Read and send Proton mail, move messages to Trash, and save attachments to Nextcloud.",
+    prepare: "Install Proton Mail Bridge beside the Blackwall server. Use its generated mailbox username and password, not your Proton login password.",
+    steps: ["Add your domain in Proton Mail settings and finish DNS verification and MX records.", "Run Bridge on the same machine and network namespace as Blackwall's server.", "Sign in to Bridge and copy the IMAP/SMTP username and generated password, then enter them here and test."],
+  },
   forms: {
     feeds: "Website → Forms inbox, comments and sign-ups",
     category: "website",

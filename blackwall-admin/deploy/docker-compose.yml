@@ -57,6 +57,26 @@ services:
       - ${APP_UPDATES_DIR_HOST:-/opt/blackwall/app-updates}:/app-updates:ro
     networks: [internal]
 
+  # Bridge binds only to loopback; sharing the app's network namespace lets the
+  # server reach it without publishing IMAP/SMTP to the host or tailnet.
+  bridge:
+    profiles: [proton]
+    build: ./bridge
+    image: blackwall-proton-bridge:3.27.2
+    pull_policy: build
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    network_mode: "service:app"
+    depends_on:
+      app:
+        condition: service_started
+        restart: true
+    environment:
+      BRIDGE_KEY_PASSPHRASE: ${BRIDGE_KEY_PASSPHRASE:-}
+    volumes:
+      - bridge-data:/var/lib/proton-bridge
+
   backup:
     build: ./backup
     image: blackwall-backup:latest
@@ -89,6 +109,7 @@ services:
 
 volumes:
   db-data:
+  bridge-data:
 
 networks:
   internal:

@@ -12,6 +12,7 @@ export const launcherHref = MIKOSHI
 export const mikoshiStatusHref = `${MIKOSHI}/status`
 export const filesHref = "/files"
 export const docsHref = "/docs"
+export const mailHref = "/mail"
 
 /** Productivity → Planner holds tasks, the calendar with the daily log, and notes on one page. */
 export const plannerHref = PRODUCTIVITY

@@ -22,6 +22,7 @@ import { LauncherPage } from "@/features/mikoshi/launcher-page"
 import { MikoshiStatusPage } from "@/features/mikoshi/upcoming-pages"
 import { FilesPage } from "@/features/mikoshi/storage-page"
 import { DocsPage } from "@/features/documents/docs-page"
+import { MailPage } from "@/features/mail/mail-page"
 import { NotFound } from "@/components/layout/not-found"
 import { RouteError } from "@/components/layout/route-error"
 
@@ -87,6 +88,7 @@ export const blackwallPages: RouteObject[] = [
       { path: "mikoshi/status", element: <MikoshiStatusPage /> },
       { path: "files", element: <FilesPage /> },
       { path: "docs", element: <DocsPage /> },
+      { path: "mail", element: <MailPage /> },
       // Files used to live under Mikoshi.
       { path: "mikoshi/storage", element: <Navigate to="/files" replace /> },
       // Old addresses (bookmarks, links in notes).

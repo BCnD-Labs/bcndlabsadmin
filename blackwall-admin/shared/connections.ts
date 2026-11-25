@@ -3,7 +3,7 @@
  * Secret fields are sent to the connector once and never returned to the browser.
  */
 
-export type ProviderId = "github" | "azure" | "cloudflare" | "analytics" | "website" | "nextcloud" | "ntfy" | "email" | "forms" | "other"
+export type ProviderId = "github" | "azure" | "cloudflare" | "analytics" | "website" | "nextcloud" | "ntfy" | "email" | "proton" | "forms" | "other"
 
 export interface FieldDef {
   key: string
@@ -166,6 +166,19 @@ export const PROVIDERS: ProviderDef[] = [
       { key: "password", label: "Password or app password", secret: true },
       { key: "from", label: "Send from", placeholder: "Defaults to the username" },
       { key: "to", label: "Send to", required: true, placeholder: "alerts@example.com" },
+    ],
+  },
+  {
+    id: "proton",
+    name: "Proton Mail Bridge",
+    blurb: "Read and send Proton mail from Blackwall. Bridge must run beside the Blackwall server; its generated password stays on the server.",
+    help: { label: "Set up Proton Mail Bridge", url: "https://proton.me/support/protonmail-bridge-configure-client" },
+    fields: [
+      { key: "username", label: "Bridge username", required: true, placeholder: "you@example.com" },
+      { key: "from", label: "Send from", placeholder: "you@yourdomain.com", help: "Optional. Use a domain address already added to your Proton account; otherwise the Bridge username is used." },
+      { key: "password", label: "Bridge password", secret: true, required: true, help: "Use the password shown by Bridge, not your Proton account password." },
+      { key: "imapPort", label: "IMAP port", advanced: true, placeholder: "1143" },
+      { key: "smtpPort", label: "SMTP port", advanced: true, placeholder: "1025" },
     ],
   },
   {
