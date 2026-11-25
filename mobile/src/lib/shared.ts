@@ -20,3 +20,6 @@ export { MAX_RECORD_LINKS as MAX_LINKS, hasLink, modulesOf, noteTitle as noteLin
 export { canEditFile, extensionOf, formatSize, isOffice, isTextFile, joinPath, parentOf, TEXT_LIMIT } from "../../../blackwall-admin/shared/storage.ts"
 export type { EditingCreator, EditingInfo, FolderListing, StorageEntry, StorageInfo } from "../../../blackwall-admin/shared/storage.ts"
 export { ICON_SLUG } from "../../../blackwall-admin/shared/icons.ts"
+
+export { displayName, formatAddress, initials, replyRecipients, subjectFor, MAIL_PAGE_SIZE, MAIL_MAX_ATTACHMENTS, MAIL_MAX_RECIPIENTS } from "../../../blackwall-admin/shared/mail.ts"
+export type { MailFolder, MailSummary, MailMessage, MailAttachment, MailPageResult, OutgoingMail, ReplyMode } from "../../../blackwall-admin/shared/mail.ts"

@@ -3,6 +3,7 @@ import { DevScreen } from "../screens/DevScreen.tsx"
 import { FilesScreen } from "../screens/FilesScreen.tsx"
 import { HomeScreen } from "../screens/HomeScreen.tsx"
 import { InsightsScreen } from "../screens/InsightsScreen.tsx"
+import { MailScreen } from "../screens/MailScreen.tsx"
 import { LearningScreen } from "../screens/LearningScreen.tsx"
 import { JournalScreen } from "../screens/JournalScreen.tsx"
 import { MikoshiScreen } from "../screens/mikoshi/MikoshiScreen.tsx"
@@ -29,5 +30,6 @@ export const SCREENS: Record<ScreenKey, ComponentType<ScreenProps>> = {
   social: SocialScreen,
   mikoshi: MikoshiScreen,
   files: FilesScreen,
+  mail: MailScreen,
 }
 
