@@ -38,7 +38,7 @@ export function NativeShell({ address, onOpenSettings, onUseWeb }: NativeHomePro
           {kept.map((k) => { const Kept = SCREENS[k]; return <View key={k} style={k === current ? styles.page : styles.hidden}><CrashGuard scope="screen" label={findDestination(k).label} onUseWeb={onUseWeb} onOpenSettings={onOpenSettings}><Kept onOpenSettings={onOpenSettings} onNavigate={setCurrent} onUseWeb={onUseWeb} focused={k === current} /></CrashGuard></View> })}
           <SnackHost />
         </View>
-        <PillNav current={current} moreOpen={moreOpen} onMoreOpen={setMoreOpen} onSelect={setCurrent} onOpenSettings={onOpenSettings} />
+        <PillNav current={current} moreOpen={moreOpen} onMoreOpen={setMoreOpen} onSelect={setCurrent} />
         <QuickAdd />
       </View>
       </QuickAddProvider>
