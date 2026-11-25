@@ -2,6 +2,7 @@
 /** Same height as the nav pill, so the two sit as a pair on the bottom edge. */
 export const FAB = 42
 export const FAB_EDGE = 12
+export const pillHeight = (fontScale: number) => Math.max(FAB, 24 + Math.min(fontScale, 2) * 14)
 const GAP = 8
 const NAV_MAX = 300
 
