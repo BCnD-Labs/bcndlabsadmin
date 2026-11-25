@@ -10,7 +10,7 @@ import type { IconName } from "../ui.tsx"
 export const NAV_CLEARANCE = FAB_EDGE + pillHeight(2) + 10
 
 /** Screens the shell can show. */
-export type ScreenKey = "home" | "planner" | "journal" | "learning" | "dev" | "notes" | "insights" | "website" | "social" | "mikoshi" | "files"
+export type ScreenKey = "home" | "planner" | "journal" | "learning" | "dev" | "notes" | "insights" | "website" | "social" | "mikoshi" | "files" | "mail"
 export type GroupName = "Daily" | "Build" | "Homelab"
 
 export type Destination = {
@@ -38,6 +38,7 @@ export const DESTINATIONS: readonly Destination[] = [
   { key: "social", label: "Social", icon: "megaphone-outline", activeIcon: "megaphone", group: "Build" },
   { key: "mikoshi", label: "Mikoshi", icon: "server-outline", activeIcon: "server", group: "Homelab" },
   { key: "files", label: "Files", icon: "folder-open-outline", activeIcon: "folder-open", group: "Homelab" },
+  { key: "mail", label: "Mail", icon: "mail-outline", activeIcon: "mail", group: "Daily" },
 ]
 
 /** Screens that keep their state (open tools, scroll) while you visit another screen, once they have been opened. */
