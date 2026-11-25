@@ -7,12 +7,12 @@ import { chipTone, kit, type ChipKind } from "./tokens.ts"
  * (`DUE Today 18:00`, `COURSE Networking`). Without a label it is a plain tag, for table columns whose
  * header already names the property.
  */
-export function PropChip({ kind, label, value }: { kind: ChipKind; label?: string; value: string }) {
+export function PropChip({ kind, label, value, readable = false }: { kind: ChipKind; label?: string; value: string; readable?: boolean }) {
   const tone = chipTone[kind]
   return (
     <View style={[s.chip, { backgroundColor: tone.fill }]} accessible accessibilityLabel={label ? `${label}: ${value}` : value}>
-      {label ? <Text style={s.key} numberOfLines={1}>{label.toUpperCase()}</Text> : null}
-      <Text style={[s.value, { color: tone.ink }]} numberOfLines={1}>{value}</Text>
+      {label ? <Text style={[s.key, readable && { fontSize: 11 }]} numberOfLines={1}>{label.toUpperCase()}</Text> : null}
+      <Text style={[s.value, { color: tone.ink }, readable && { fontSize: 11, lineHeight: 15 }]} numberOfLines={1}>{value}</Text>
     </View>
   )
 }

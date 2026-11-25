@@ -60,8 +60,8 @@ export function StackedBar({ parts, height = 10 }: { parts: StackPart[]; height?
 
 /** The row of headline numbers at the top of a page. */
 export function StatStrip({ children, compact = false }: { children: ReactNode; compact?: boolean }) { return <View style={[s.strip, compact && s.stripCompact]}>{children}</View> }
-export function StatCell({ label, value, tint = c.text, children, compact = false }: { label: string; value: string | number; tint?: string; children?: ReactNode; compact?: boolean }) {
-  return <View style={[s.cell, compact && s.cellCompact]} accessible accessibilityLabel={`${label}: ${value}`}>{compact ? <><Text style={[s.cellValue, s.cellValueCompact, { color: tint }]}>{value}</Text><Text style={[s.cellLabel, s.cellLabelCompact]} numberOfLines={2}>{label.toUpperCase()}</Text></> : <><Text style={s.cellLabel} numberOfLines={1}>{label.toUpperCase()}</Text><Text style={[s.cellValue, { color: tint }]}>{value}</Text>{children}</>}</View>
+export function StatCell({ label, value, tint = c.text, children, compact = false, labelSize }: { label: string; value: string | number; tint?: string; children?: ReactNode; compact?: boolean; labelSize?: number }) {
+  return <View style={[s.cell, compact && s.cellCompact]} accessible accessibilityLabel={`${label}: ${value}`}>{compact ? <><Text style={[s.cellValue, s.cellValueCompact, { color: tint }]}>{value}</Text><Text style={[s.cellLabel, s.cellLabelCompact, labelSize ? { fontSize: labelSize, lineHeight: labelSize + 4 } : undefined]} numberOfLines={2}>{label.toUpperCase()}</Text></> : <><Text style={s.cellLabel} numberOfLines={1}>{label.toUpperCase()}</Text><Text style={[s.cellValue, { color: tint }]}>{value}</Text>{children}</>}</View>
 }
 
 /** Seven small blocks, one per day, filled on days with a completion. Oldest first. */
