@@ -1,12 +1,21 @@
-import { ImapFlow, type FetchMessageObject } from "imapflow"
-import { simpleParser } from "mailparser"
+import { ImapFlow, type FetchMessageObject, type ImapFlowOptions, type MessageStructureObject } from "imapflow"
+import { simpleParser, type ParsedMail } from "mailparser"
 import nodemailer from "nodemailer"
+import { MAIL_MAX_ATTACHMENTS, MAIL_MAX_RECIPIENTS, MAIL_PAGE_SIZE, folderRole, splitAddresses, validAddress, type MailActionName, type MailFolder, type MailSummary, type OutgoingMail } from "../../shared/mail.ts"
 import type { StoredConnection } from "../store.ts"
 import { ProviderError, need } from "../http.ts"
 import { cleanPath, dav } from "./nextcloud.ts"
 import type { TestResult } from "./index.ts"
 
 const MAX_MESSAGE = 20 * 1024 * 1024
+/** How much of each listed message is read to make its preview line. */
+const PREVIEW_BYTES = 32 * 1024
+
+/** The mail libraries, replaceable in tests so no test needs a running Bridge. */
+export const mailTransports = {
+  imap: (options: ImapFlowOptions) => new ImapFlow(options),
+  smtp: (options: Parameters<typeof nodemailer.createTransport>[0]) => nodemailer.createTransport(options),
+}
 const address = (items?: { name?: string; address?: string }[]) =>
   (items ?? []).map((item) => item.name ? `${item.name} <${item.address ?? ""}>` : item.address ?? "").join(", ")
 
@@ -27,7 +36,7 @@ export function bridgeSettings(c: StoredConnection) {
 
 async function withImap<T>(c: StoredConnection, fn: (client: ImapFlow) => Promise<T>): Promise<T> {
   const s = bridgeSettings(c)
-  const client = new ImapFlow({ host: s.host, port: s.imapPort, secure: false, doSTARTTLS: true,
+  const client = mailTransports.imap({ host: s.host, port: s.imapPort, secure: false, doSTARTTLS: true,
     tls: { rejectUnauthorized: false }, auth: { user: s.username, pass: s.password },
     logger: false, connectionTimeout: 10_000, socketTimeout: 30_000, disableAutoIdle: true })
   try {
@@ -39,40 +48,74 @@ async function withImap<T>(c: StoredConnection, fn: (client: ImapFlow) => Promis
   }
 }
 
-const summary = (m: FetchMessageObject) => ({
+const summary = (m: FetchMessageObject): MailSummary => ({
   uid: m.uid, subject: m.envelope?.subject || "(no subject)", from: address(m.envelope?.from),
   to: address(m.envelope?.to), date: new Date(m.envelope?.date ?? m.internalDate ?? 0).toISOString(),
-  unread: !m.flags?.has("\\Seen"), size: m.size ?? 0,
+  unread: !m.flags?.has("\\Seen"), starred: !!m.flags?.has("\\Flagged"), answered: !!m.flags?.has("\\Answered"), size: m.size ?? 0,
 })
+
+/** A message's reply chain, for the In-Reply-To and References headers. */
+const chain = (parsed: ParsedMail) => [...(Array.isArray(parsed.references) ? parsed.references : parsed.references ? [parsed.references] : []), ...(parsed.messageId ? [parsed.messageId] : [])]
+
+/** A message's words. The parser leaves them out when HTML sits beside attachments, so the HTML is then read on its own. */
+async function wordsOf(parsed: ParsedMail) {
+  if (parsed.text?.trim() || !parsed.html) return parsed.text ?? ""
+  return (await simpleParser(Buffer.from(`Content-Type: text/html; charset=utf-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n${parsed.html}`))).text ?? ""
+}
 
 export async function parseMailMessage(meta: FetchMessageObject, source: Buffer) {
   const parsed = await simpleParser(source)
-  return { ...summary(meta), text: parsed.text ?? "", html: typeof parsed.html === "string" ? parsed.html : "",
-    attachments: parsed.attachments.map((a, index) => ({ index, name: a.filename || `attachment-${index + 1}`, mime: a.contentType, size: a.size })),
-    attachmentData: parsed.attachments.map((a) => a.content) }
+  const html = typeof parsed.html === "string" ? parsed.html : ""
+  return { ...summary(meta), cc: address(meta.envelope?.cc), replyTo: address(meta.envelope?.replyTo), text: await wordsOf(parsed), html,
+    attachments: parsed.attachments.map((a, index) => ({ index, name: a.filename || `attachment-${index + 1}`, mime: a.contentType, size: a.size, inline: !!a.related })),
+    attachmentData: parsed.attachments.map((a) => a.content), messageId: parsed.messageId ?? "", references: chain(parsed) }
 }
 
-export async function mailFolders(c: StoredConnection) {
-  return withImap(c, async (client) => (await client.list()).filter((f) => !f.flags.has("\\Noselect"))
-    .map((f) => ({ path: f.path, name: f.name, specialUse: f.specialUse ?? null })))
+/** The first readable words of a message, from the start of its source. */
+export async function previewText(source: Buffer) {
+  try {
+    const parsed = await simpleParser(source, { skipImageLinks: true, skipTextToHtml: true, skipTextLinks: true })
+    return (await wordsOf(parsed)).replace(/https?:\/\/\S+|\[[^\]\n]*\]/g, " ").replace(/[\s͏​-‏⁠﻿]+/g, " ").trim().slice(0, 180)
+  } catch { return "" }
 }
+
+const hasFiles = (part?: MessageStructureObject): boolean => !!part && (part.disposition?.toLowerCase() === "attachment" || !!part.childNodes?.some(hasFiles))
+
+export async function mailFolders(c: StoredConnection): Promise<MailFolder[]> {
+  return withImap(c, async (client) => (await client.list({ statusQuery: { messages: true, unseen: true } })).filter((f) => !f.flags.has("\\Noselect"))
+    .map((f) => ({ path: f.path, name: f.name, specialUse: f.specialUse ?? null, total: f.status?.messages, unread: f.status?.unseen })))
+}
+
+/** The addresses mail can be sent from: the connection's "Send from" first, then the Bridge sign-in. */
+export const mailAddresses = (c: StoredConnection) => [...new Set([c.config.from, c.config.username].filter((a): a is string => !!a && validAddress(a)))]
 
 /** The most recently received messages, newest first. Bridge syncs the newest mail first, so a higher UID does not mean newer. */
-export function newestUids(messages: { uid: number; internalDate?: Date | string }[], limit: number) {
+export function newestUids(messages: { uid: number; internalDate?: Date | string }[], limit: number, skip = 0) {
   const at = (m: { internalDate?: Date | string }) => new Date(m.internalDate ?? 0).getTime() || 0
-  return [...messages].sort((a, b) => at(b) - at(a) || b.uid - a.uid).slice(0, limit).map((m) => m.uid)
+  return [...messages].sort((a, b) => at(b) - at(a) || b.uid - a.uid).slice(skip, skip + limit).map((m) => m.uid)
 }
 
-export async function mailList(c: StoredConnection, folder: string) {
+export async function mailList(c: StoredConnection, folder: string, { query = "", page = 0 }: { query?: string; page?: number } = {}) {
   return withImap(c, async (client) => {
+    const empty = { messages: [] as MailSummary[], total: 0, page, pageSize: MAIL_PAGE_SIZE }
     const mailbox = await client.mailboxOpen(folder, { readOnly: true })
-    if (!mailbox.exists) return []
+    if (!mailbox.exists) return empty
+    let matches: Set<number> | null = null
+    if (query) {
+      const found = await client.search({ or: [{ subject: query }, { from: query }, { to: query }, { cc: query }, { body: query }] }, { uid: true })
+      if (found === false) throw new ProviderError("Search didn't finish. Try again.", 502)
+      matches = new Set(found)
+    }
     const dates = []
-    for await (const m of client.fetch("1:*", { uid: true, internalDate: true })) dates.push({ uid: m.uid, internalDate: m.internalDate })
-    const uids = newestUids(dates, 100)
-    const messages = []
-    for await (const m of client.fetch(uids.join(","), { uid: true, flags: true, envelope: true, internalDate: true, size: true }, { uid: true })) messages.push(summary(m))
-    return messages.sort((a, b) => uids.indexOf(a.uid) - uids.indexOf(b.uid))
+    for await (const m of client.fetch("1:*", { uid: true, internalDate: true })) if (!matches || matches.has(m.uid)) dates.push({ uid: m.uid, internalDate: m.internalDate })
+    const uids = newestUids(dates, MAIL_PAGE_SIZE, page * MAIL_PAGE_SIZE)
+    if (!uids.length) return { ...empty, total: dates.length }
+    const found: { summary: MailSummary; source?: Buffer }[] = []
+    for await (const m of client.fetch(uids.join(","), { uid: true, flags: true, envelope: true, internalDate: true, size: true, bodyStructure: true, source: { start: 0, maxLength: PREVIEW_BYTES } }, { uid: true })) {
+      found.push({ summary: { ...summary(m), hasAttachments: hasFiles(m.bodyStructure) }, source: m.source })
+    }
+    const messages = await Promise.all(found.map(async (m) => ({ ...m.summary, snippet: m.source ? await previewText(m.source) : "" })))
+    return { ...empty, total: dates.length, messages: messages.sort((a, b) => uids.indexOf(a.uid) - uids.indexOf(b.uid)) }
   })
 }
 
@@ -90,32 +133,88 @@ export async function mailRead(c: StoredConnection, folder: string, uid: number)
   })
 }
 
-export async function mailTrash(c: StoredConnection, folder: string, uid: number) {
+const ROLE_FOR = { archive: "\\Archive", spam: "\\Junk", trash: "\\Trash" } as const
+
+/** Marks or moves messages. Nothing here deletes mail. */
+export async function mailAction(c: StoredConnection, folder: string, uids: number[], action: MailActionName, target?: string) {
   return withImap(c, async (client) => {
-    const trash = (await client.list()).find((f) => f.specialUse === "\\Trash")?.path
-    if (!trash) throw new ProviderError("Proton's Trash folder was not found; nothing was deleted", 409)
-    if (trash === folder) throw new ProviderError("Message is already in Trash", 409)
+    const range = uids.join(",")
+    let destination = ""
+    if (action === "archive" || action === "spam" || action === "trash" || action === "inbox" || action === "move" || action === "label") {
+      const folders = await client.list()
+      const found = action === "inbox" ? folders.find((f) => f.path.toUpperCase() === "INBOX")
+        : action === "move" || action === "label" ? folders.find((f) => f.path === target && !f.flags.has("\\Noselect"))
+        : folders.find((f) => folderRole({ path: f.path, name: f.name, specialUse: f.specialUse ?? null }) === ROLE_FOR[action])
+      if (!found) throw new ProviderError(action === "move" || action === "label" ? "That folder no longer exists; nothing was moved" : `Proton's ${action} folder was not found; nothing was moved`, 409)
+      if (action === "label" && !found.path.startsWith("Labels/")) throw new ProviderError("That is not a label", 400)
+      if (found.path === folder) throw new ProviderError(`Already in ${found.name}`, 409)
+      destination = found.path
+    }
     await client.mailboxOpen(folder)
-    const existing = await client.fetchOne(String(uid), { uid: true }, { uid: true })
-    if (!existing) throw new ProviderError("Message no longer exists", 404)
-    const moved = await client.messageMove(String(uid), trash, { uid: true })
-    if (!moved) throw new ProviderError("Could not move message to Trash", 502)
-    return { moved: true, trash }
+    const options = { uid: true }
+    let done: unknown
+    if (action === "read") done = await client.messageFlagsAdd(range, ["\\Seen"], options)
+    else if (action === "unread") done = await client.messageFlagsRemove(range, ["\\Seen"], options)
+    else if (action === "star") done = await client.messageFlagsAdd(range, ["\\Flagged"], options)
+    else if (action === "unstar") done = await client.messageFlagsRemove(range, ["\\Flagged"], options)
+    // A label is a second place for the same message, so it is copied there and stays where it was.
+    else if (action === "label") done = await client.messageCopy(range, destination, options)
+    else done = await client.messageMove(range, destination, options)
+    if (!done) throw new ProviderError("Proton didn't make that change. Refresh and try again.", 502)
+    return { done: true, destination: destination || undefined }
   })
 }
 
-export async function mailSend(c: StoredConnection, input: { to: string; subject: string; text: string }) {
+export const mailTrash = (c: StoredConnection, folder: string, uid: number) => mailAction(c, folder, [uid], "trash")
+
+function recipients(list: string | undefined) {
+  const found = splitAddresses(list ?? "")
+  if (found.some((a) => !validAddress(a.address) || /[\r\n]/.test(a.name))) throw new ProviderError("Check the recipient addresses: one of them isn't a valid email address", 400)
+  return found
+}
+
+/** Checks an outgoing message before any server is contacted. */
+export function outgoing(c: StoredConnection, input: OutgoingMail) {
   const s = bridgeSettings(c)
-  if (!/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(input.to) || input.to.length > 254) throw new ProviderError("Enter one valid recipient address", 400)
-  if (!input.subject.trim() || input.subject.length > 300 || !input.text.trim() || input.text.length > 100_000) throw new ProviderError("Add a subject and message", 400)
-  const transport = nodemailer.createTransport({ host: s.host, port: s.smtpPort, secure: false, requireTLS: true,
+  const to = recipients(input.to), cc = recipients(input.cc), bcc = recipients(input.bcc)
+  const count = to.length + cc.length + bcc.length
+  if (!count) throw new ProviderError("Add at least one recipient", 400)
+  if (count > MAIL_MAX_RECIPIENTS) throw new ProviderError(`A message can go to ${MAIL_MAX_RECIPIENTS} recipients at most`, 400)
+  if (/[\r\n]/.test(input.subject) || input.subject.length > 300 || input.text.length > 200_000 || !(input.subject.trim() || input.text.trim())) throw new ProviderError("Add a subject (up to 300 characters) or a message", 400)
+  const allowed = mailAddresses(c)
+  const from = input.from || c.config.from || s.username
+  if (!validAddress(from)) throw new ProviderError("Send from must be one valid email address", 400)
+  if (input.from && !allowed.includes(input.from)) throw new ProviderError("Choose one of your own addresses to send from", 400)
+  let bytes = 0
+  const attachments = (input.attachments ?? []).map((a) => {
+    const content = Buffer.from(String(a.data), "base64")
+    bytes += content.length
+    return { filename: String(a.name).replace(/[\u0000-\u001f]/g, "_").slice(0, 200) || "attachment", contentType: /^[\w.+-]+\/[\w.+-]+$/.test(a.mime) ? a.mime : "application/octet-stream", content }
+  })
+  if (bytes > MAIL_MAX_ATTACHMENTS) throw new ProviderError("Attachments can total 15 MB at most", 413)
+  return { from, to, cc, bcc, subject: input.subject, text: input.text, attachments }
+}
+
+export async function mailSend(c: StoredConnection, input: OutgoingMail) {
+  const s = bridgeSettings(c)
+  const message: ReturnType<typeof outgoing> & { inReplyTo?: string; references?: string[] } = outgoing(c, input)
+  const reply = input.reply
+  if (reply) {
+    const original = await mailRead(c, reply.folder, reply.uid)
+    if (reply.mode !== "forward" && original.messageId) Object.assign(message, { inReplyTo: original.messageId, references: original.references })
+    for (const index of reply.include ?? []) {
+      const meta = original.attachments[index], content = original.attachmentData[index]
+      if (!meta || !content) throw new ProviderError("An attachment from the original message is no longer there; nothing was sent", 409)
+      message.attachments.push({ filename: meta.name, contentType: meta.mime, content: Buffer.from(content) })
+    }
+    if (message.attachments.reduce((sum, a) => sum + a.content.length, 0) > MAIL_MAX_ATTACHMENTS) throw new ProviderError("Attachments can total 15 MB at most", 413)
+  }
+  const transport = mailTransports.smtp({ host: s.host, port: s.smtpPort, secure: false, requireTLS: true,
     tls: { rejectUnauthorized: false }, auth: { user: s.username, pass: s.password },
     connectionTimeout: 10_000, greetingTimeout: 10_000 })
   try {
-    const from = c.config.from || s.username
-    if (!/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(from)) throw new ProviderError("Send from must be one valid email address", 400)
-    const sent = await transport.sendMail({ from, to: input.to, subject: input.subject, text: input.text })
-    return { sent: true, id: sent.messageId }
+    const sent = await transport.sendMail(message)
+    return { sent: true, id: sent.messageId as string }
   } finally { transport.close() }
 }
 
