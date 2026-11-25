@@ -1,3 +1,4 @@
+import { FAB_EDGE, pillHeight } from "./layout.ts"
 import type { IconName } from "../ui.tsx"
 
 /**
@@ -6,7 +7,7 @@ import type { IconName } from "../ui.tsx"
  */
 
 /** Bottom padding lets the final row clear the floating pill and the Planner add button. */
-export const NAV_CLEARANCE = 140
+export const NAV_CLEARANCE = FAB_EDGE + pillHeight(2) + 10
 
 /** Screens the shell can show. "settings" is an action (opens native Settings), not a screen. */
 export type ScreenKey = "home" | "planner" | "journal" | "learning" | "dev" | "notes" | "insights" | "website" | "social" | "mikoshi" | "files"
