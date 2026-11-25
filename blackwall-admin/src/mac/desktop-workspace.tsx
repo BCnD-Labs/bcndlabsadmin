@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useRoutes } from "react-router-dom"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import { createStore, useStore, type StoreApi } from "zustand"
-import { BarChart3, ClipboardList, Image as ImageIcon, LayoutGrid, Newspaper, SlidersHorizontal, BookOpen, Minimize2, Minus, PanelLeftClose, PanelLeftOpen, ChevronDown, CalendarDays, FileText, Folder, FolderOpen, Globe, GraduationCap, Home, LayoutDashboard, Maximize2, Pin, Search, Server, Settings2, X } from "lucide-react"
+import { BarChart3, ClipboardList, Image as ImageIcon, LayoutGrid, Newspaper, SlidersHorizontal, BookOpen, Minimize2, Minus, PanelLeftClose, PanelLeftOpen, ChevronDown, CalendarDays, FileText, Folder, FolderOpen, Globe, GraduationCap, Home, LayoutDashboard, Mail, Maximize2, Pin, Search, Server, Settings2, X } from "lucide-react"
 import { blackwallPages } from "@/app-routes"
 import { useNav } from "@/components/layout/nav-config"
 import { QuickCreate } from "@/components/layout/quick-create"
@@ -19,6 +19,7 @@ import { BrowserApp, BrowserTitle, useBrowser } from "./browser-window"
 import { PlannerSidebar } from "./planner-sidebar"
 import { todayKey } from "@/lib/dates"
 import { useWorkspace } from "@/stores/workspace"
+import { appForPath } from "./app-for-path"
 import { windowSections } from "./window-sections"
 import { MacLinkNavigation } from "./tool-navigation"
 import { MAC_DESKTOP_TOP, fitWindowRect, moveAroundLocked, overlaps, placeOutsideLocked, resizeAroundLocked, type WindowRect } from "./window-geometry"
@@ -31,6 +32,7 @@ const APP = {
   learning: { title: "Learning", route: "/productivity/learning", icon: GraduationCap, tone: "learning" },
   projects: { title: "Projects", route: "/productivity/projects", icon: Folder, tone: "projects" },
   website: { title: "CMS", route: "/cms", icon: Globe, tone: "website" },
+  mail: { title: "Mail", route: "/mail", icon: Mail, tone: "neutral" },
   files: { title: "Files", route: "/files", icon: FolderOpen, tone: "neutral" },
   mikoshi: { title: "Mikoshi", route: "/mikoshi", icon: Server, tone: "neutral" },
   /** Not a page: its window holds the browser (browser-window.tsx), so the route is never navigated to. */
@@ -55,7 +57,7 @@ const APP_IDS = Object.keys(APP) as AppId[]
 const IDS: Id[] = ["notes", ...APP_IDS]
 /** The rail follows the Android launcher's groups (Daily, Build, Homelab); Files (with Docs) and the Browser are the Mac's own group; Assets is a tab of the CMS window, beside Websites and Social, the two places its pictures are used. */
 const RAIL_GROUPS: Id[][] = [
-  ["home", "learning", "journal", "notes"],
+  ["home", "learning", "journal", "notes", "mail"],
   ["projects", "website"],
   ["files", "browser"],
   ["mikoshi"],
@@ -69,30 +71,13 @@ const isWidget = (id: Id): id is "notes" => id === "notes"
 function fitWindow(value: WindowState, bounds: { width: number; height: number }, rail: number): WindowState {
   return { ...value, ...fitWindowRect(value, bounds, rail, value.collapsed) }
 }
-function appForPath(path: string): AppId {
-  if (path.startsWith("/journal")) return "journal"
-  if (path.startsWith("/productivity/learning")) return "learning"
-  if (path.startsWith("/productivity/projects")) return "projects"
-  if (path.startsWith("/work/projects")) return "projects"
-  if (path.startsWith("/productivity/insights") || path === "/analytics") return "home"
-  if (path.startsWith("/productivity") || path.startsWith("/work") || path.startsWith("/notes") || path.startsWith("/knowledge")) return "planner_app"
-  if (path.startsWith("/development")) return "projects"
-  if (path.startsWith("/assets")) return "website"
-  if (path.startsWith("/files")) return "files"
-  if (path.startsWith("/docs")) return "files"
-  if (path.startsWith("/cms") || path.startsWith("/content")) return "website"
-  if (path.startsWith("/social")) return "website"
-  if (path.startsWith("/mikoshi")) return "mikoshi"
-  if (path.startsWith("/settings")) return "settings"
-  return "home"
-}
 const visibleRect = (value: WindowState): WindowRect => ({ x: value.x, y: value.y, width: value.width, height: value.collapsed ? 30 : value.height })
 const LiveNotes = memo(NotesTool)
 
 /** The size a window opens at: the same whenever it is opened after being closed. */
 function defaultSize(id: AppId): { width: number; height: number } {
   const width = window.innerWidth, height = window.innerHeight
-  const big = id === "planner_app" || id === "learning" || id === "files"
+  const big = id === "planner_app" || id === "learning" || id === "files" || id === "mail"
   return { width: Math.min(id === "website" ? 1320 : big ? 1000 : 820, width - 105), height: Math.min(id === "website" ? 820 : big ? 650 : 560, height - 90) }
 }
 
