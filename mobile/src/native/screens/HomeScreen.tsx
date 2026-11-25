@@ -22,7 +22,7 @@ import { learningGroups } from "./home-groups.ts"
 import { learningProgress } from "./learning/learning-view.ts"
 import { completedOn } from "./planner/log/log-rules.ts"
 import { SLOTS, hasAnswers, readSlotCheckIn, reviewId } from "./journal-review.ts"
-import type { ScreenKey } from "../nav/destinations.ts"
+import type { ScreenProps } from "../nav/screens.tsx"
 import { HOME_LABELS, moveHomePanel, toggleItem, type HomePanel } from "./home-prefs.ts"
 import { useHomePrefs } from "./useHomePrefs.ts"
 
@@ -32,7 +32,7 @@ interface DueCell { text: string; tone: "today" | "overdue" | "plain" }
 interface TagCell { kind: ChipKind; text: string }
 
 /** A compact live overview; every count and row comes from the current workspace. */
-export function HomeScreen({ onOpenSettings, onNavigate }: { onOpenSettings: () => void; onNavigate?: (screen: ScreenKey) => void }) {
+export function HomeScreen({ onOpenSettings, onNavigate }: ScreenProps) {
   const { data, status, message, refreshing, refresh, mutate } = useWorkspace()
   const { width } = useWindowDimensions()
   const [editor, setEditor] = useState<Editor | null>(null)
@@ -104,10 +104,10 @@ export function HomeScreen({ onOpenSettings, onNavigate }: { onOpenSettings: () 
         {recentDone.map(({ task, day }) => <Pressable key={task.id} onPress={() => setEditor({ mode: "edit", id: task.id })} style={s.recentRow} accessibilityRole="button" accessibilityLabel={`Open completed task ${task.title}`}><Icon name="checkmark-circle" size={17} tint={kit.good} /><Text style={s.recentTitle} numberOfLines={1}>{task.title}</Text><Text style={s.recentDate}>{shortDay(day)}</Text></Pressable>)}
       </WorkspaceSection> : null}
       {panel === "journal" ? <WorkspaceSection compact title="Journal" icon="book-outline" tint={kit.hue.journal} count="Check-ins" flush right={<Pressable onPress={() => onNavigate?.("journal")} disabled={!onNavigate} style={s.sectionLink} accessibilityRole="button" accessibilityLabel="Open Journal"><Icon name="arrow-forward" size={15} tint={kit.hue.journal} /></Pressable>}>
-        <View style={s.journalRow}>{SLOTS.map(slot => { const saved = todayJournal?.entries?.find(item => item.id === reviewId("daily", today, slot.key)); const done = !!saved && hasAnswers(readSlotCheckIn(slot.key, saved.text)); return <Pressable key={slot.key} onPress={() => onNavigate?.("journal")} disabled={!onNavigate} style={[s.journalChip, done && s.journalChipDone]} accessibilityRole="button" accessibilityLabel={`${slot.label} check-in ${done ? "complete" : "not complete"}. Open Journal`}><Text style={[s.journalChipText, done && s.journalChipDoneText]}>{done ? "✓ " : ""}{slot.label}</Text></Pressable> })}<Pressable onPress={() => onNavigate?.("journal")} disabled={!onNavigate} style={s.journalAdd} accessibilityRole="button" accessibilityLabel="Open Journal to add a log"><Icon name="add" size={19} tint={kit.hue.journal} /></Pressable></View>
+        <View style={s.journalRow}>{SLOTS.map(slot => { const saved = todayJournal?.entries?.find(item => item.id === reviewId("daily", today, slot.key)); const done = !!saved && hasAnswers(readSlotCheckIn(slot.key, saved.text)); return <Pressable key={slot.key} onPress={() => onNavigate?.("journal", { screen: "journal", day: today, slot: slot.key })} disabled={!onNavigate} style={[s.journalChip, done && s.journalChipDone]} accessibilityRole="button" accessibilityLabel={`${slot.label} check-in ${done ? "complete" : "not complete"}. Open this check-in`}><Text style={[s.journalChipText, done && s.journalChipDoneText]}>{done ? "✓ " : ""}{slot.label}</Text></Pressable> })}</View>
       </WorkspaceSection> : null}
       {panel === "projects" && projects.length ? <WorkspaceSection compact title="Projects" icon="folder-outline" tint={kit.hue.projects} count={`${activeProjects} active`} flush right={<Pressable onPress={() => onNavigate?.("dev")} disabled={!onNavigate} style={s.sectionLink} accessibilityRole="button" accessibilityLabel="Open Projects"><Icon name="arrow-forward" size={15} tint={kit.hue.projects} /></Pressable>}>
-        {projects.map(project => <Pressable key={project.id} onPress={() => onNavigate?.("dev")} disabled={!onNavigate} style={s.projectRow} accessibilityRole="button" accessibilityLabel={`Open Projects to view ${project.name}`}><View style={s.projectMark} /><Text style={s.projectTitle} numberOfLines={1}>{project.name}</Text><PropChip kind={statusKind(project.status)} value={project.status.toUpperCase()} /></Pressable>)}
+        {projects.map(project => <Pressable key={project.id} onPress={() => onNavigate?.("dev", { screen: "dev", projectId: project.id })} disabled={!onNavigate} style={s.projectRow} accessibilityRole="button" accessibilityLabel={`Open Projects to view ${project.name}`}><View style={s.projectMark} /><Text style={s.projectTitle} numberOfLines={1}>{project.name}</Text><PropChip kind={statusKind(project.status)} value={project.status.toUpperCase()} /></Pressable>)}
       </WorkspaceSection> : null}
       {panel === "events" ? <WorkspaceSection compact title="Upcoming events" icon="calendar-outline" tint={c.amber} count={events.length ? `${events.length} next` : undefined} collapsible flush {...collapseProps("events")}>
         {events.map(t => <Line key={t.id} date={t.scheduledDate} title={t.title} tag={t.scheduledTime ? { kind: "date", text: t.scheduledTime } : undefined} chips={eventChips(t.scheduledDate, t.scheduledTime)} detail={t.details?.trim().split("\n")[0]} selected={sel === t.id} onSelect={() => setSel(t.id)} onOpen={() => openRow(() => setEditor({ mode: "edit", id: t.id }))} />)}
@@ -212,7 +212,6 @@ const s = StyleSheet.create({
   journalChipDone: { backgroundColor: chipTone.status.fill, borderColor: kit.goodBorder },
   journalChipText: { color: c.text2, fontSize: 10, fontWeight: "700" },
   journalChipDoneText: { color: chipTone.status.ink },
-  journalAdd: { marginLeft: "auto", width: 32, height: 32, alignItems: "center", justifyContent: "center" },
   projectRow: { minHeight: 34, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 8, borderBottomWidth: 1, borderColor: c.line },
   projectMark: { width: 7, height: 7, borderRadius: 2, backgroundColor: kit.hue.projects },
   projectTitle: { flex: 1, minWidth: 0, color: c.text, fontSize: 12.5, fontWeight: "600" },

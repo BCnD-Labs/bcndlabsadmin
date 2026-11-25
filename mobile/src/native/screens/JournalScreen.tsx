@@ -1,4 +1,5 @@
-import { useState } from "react"
+import type { ScreenProps } from "../nav/screens.tsx"
+import { useEffect, useState } from "react"
 import { shape } from "../../shape.ts"
 import { Modal, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native"
 import { KeyboardFrame, KeyboardScrollView, TextInput } from "../editing/keyboard.tsx"
@@ -30,7 +31,7 @@ const MOODS = ["Great", "Okay", "Low", "Rough"]
 const ENERGY = ["High", "Medium", "Low"]
 
 /** Journal entries share the existing workspace with the web and Mac apps. Review text stays readable there. */
-export function JournalScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
+export function JournalScreen({ onOpenSettings, navigationTarget }: ScreenProps) {
   const { data, status, message, refreshing, refresh, mutate } = useWorkspace()
   const [period, setPeriod] = useState<Period>("daily")
   const [reflections, setReflections] = useState(false)
@@ -38,6 +39,14 @@ export function JournalScreen({ onOpenSettings }: { onOpenSettings: () => void }
   const [day, setDay] = useState(() => todayKey())
   /** The check-in being answered. No slot means the whole period (a review) or the earlier one-per-day check-in. */
   const [target, setTarget] = useState<{ slot?: Slot } | null>(null)
+  useEffect(() => {
+    if (navigationTarget?.screen !== "journal") return
+    setPeriod("daily")
+    setReflections(false)
+    setDay(navigationTarget.day)
+    setTarget({ slot: navigationTarget.slot })
+    setError(null)
+  }, [navigationTarget])
   const [taskId, setTaskId] = useState<string | null>(null)
   const [drafts, setDrafts] = useState<Record<string, CheckIn>>({})
   const [slotDrafts, setSlotDrafts] = useState<Record<string, Answers>>({})
