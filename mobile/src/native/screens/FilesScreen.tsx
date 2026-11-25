@@ -19,7 +19,7 @@ type Viewer = { entry: StorageEntry; load: Load<string> }
  * files edit in Nextcloud's office editor (Collabora) when it is set up, other files open in Nextcloud in the
  * browser. Uploads, renames and deletes stay in Web view.
  */
-export function FilesScreen({ onOpenSettings, focused = true }: ScreenProps) {
+export function FilesScreen({ onOpenSettings, onUseWeb, focused = true }: ScreenProps) {
   const { address } = useWorkspace()
   const [info, setInfo] = useState<Load<StorageInfo>>({ state: "loading" })
   const [path, setPath] = useState("/")
@@ -96,7 +96,7 @@ export function FilesScreen({ onOpenSettings, focused = true }: ScreenProps) {
       ) : listing.state === "loading" ? (
         <Text style={s.meta}>Loading {folderName}…</Text>
       ) : listing.state === "error" ? (
-        <View style={s.empty}><Text style={s.title}>{listing.notConnected ? "Nextcloud isn't connected" : "Couldn't open this folder"}</Text><Text style={s.meta}>{listing.message}</Text></View>
+        <View style={s.empty}><Text style={s.title}>{listing.notConnected ? "Nextcloud isn't connected" : "Couldn't open this folder"}</Text><Text style={s.meta}>{listing.message}</Text>{listing.notConnected && onUseWeb ? <Pressable onPress={() => onUseWeb("/settings/connections")} style={s.newButton} accessibilityRole="button" accessibilityLabel="Connect Nextcloud in Web view"><Text style={s.newText}>Connect</Text></Pressable> : null}</View>
       ) : (<>
         {notice ? <Text style={s.meta}>{notice}</Text> : null}
         {creating && creators.length ? <NewDocument dir={path} creators={creators} onCreate={(t) => { setCreating(false); setEditTarget(t) }} onCancel={() => setCreating(false)} /> : null}
