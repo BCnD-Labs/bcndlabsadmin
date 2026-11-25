@@ -1,6 +1,6 @@
 # Proton Mail in Blackwall
 
-Blackwall connects to Proton Mail Bridge over IMAP and SMTP on **the server's loopback** (`127.0.0.1`, default ports `1143` and `1025`). It does not use a Proton account password. Settings → Connections stores Bridge's generated password in Blackwall's encrypted connection store. Mail is fetched on demand; it is not copied into the workspace. The Mail page reads the latest 100 messages per folder, sends plain-text mail, moves messages to Proton Trash, previews common attachments, and saves attachments directly to Nextcloud without replacing an existing file. Messages over 20 MB cannot be opened yet.
+Blackwall connects to Proton Mail Bridge over IMAP and SMTP on **the server's loopback** (`127.0.0.1`, default ports `1143` and `1025`). It does not use a Proton account password. Settings → Connections stores Bridge's generated password in Blackwall's encrypted connection store. Mail is fetched on demand; it is not copied into the workspace. The Mail page reads the 100 most recently received messages per folder, sends plain-text mail, moves messages to Proton Trash, previews common attachments, and saves attachments directly to Nextcloud without replacing an existing file. Messages over 20 MB cannot be opened yet.
 
 ## Owner setup
 
