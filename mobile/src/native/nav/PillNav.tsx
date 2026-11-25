@@ -15,11 +15,10 @@ type Props = {
   moreOpen: boolean
   onMoreOpen: (open: boolean) => void
   onSelect: (key: ScreenKey) => void
-  onOpenSettings: () => void
 }
 
 /** Persistent floating track. Only taps navigate; the selected pill slides as visual feedback. */
-export function PillNav({ current, moreOpen, onMoreOpen, onSelect, onOpenSettings }: Props) {
+export function PillNav({ current, moreOpen, onMoreOpen, onSelect }: Props) {
   const reduce = useReduceMotion()
   const { width, height, fontScale } = useWindowDimensions()
   const [keyboard, setKeyboard] = useState(false)
@@ -52,8 +51,7 @@ export function PillNav({ current, moreOpen, onMoreOpen, onSelect, onOpenSetting
 
   function choose(d: Destination) {
     onMoreOpen(false)
-    if (d.key === "settings") onOpenSettings()
-    else onSelect(d.key)
+    onSelect(d.key)
   }
 
   if (keyboard) return null
