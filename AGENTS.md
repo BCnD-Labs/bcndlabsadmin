@@ -6,15 +6,16 @@ Working rules for coding agents (Claude Code, Codex and others) in this repo. Re
 
 Blackwall is Blake's personal admin dashboard (a.k.a. Mikoshi OS), shipped as three UIs that share one server:
 
-- the hosted **web app** (`blackwall-admin/`): the always-current fallback and the source of truth for the UI;
-- the **Mac app** (`blackwall-admin/desktop/`): an Electron shell with a tabbed browser and a pinned Blackwall tab; native pages are added over time;
-- the **Android app** (`mobile/`): an Expo WebView shell with a Settings Web/Native toggle; native screens are added over time.
+- the **Mac app** (`blackwall-admin/desktop/` and `blackwall-admin/src/mac/`): **the primary UI and the one Blake uses**. An Electron app with its own windowed desktop workspace (a sidebar of apps, each in a window, plus a browser);
+- the **Android app** (`mobile/`): an Expo WebView shell with a Settings Web/Native toggle; native screens are added over time;
+- the hosted **web app** (`blackwall-admin/`): a backup.
 
 All three talk to the same Node server and Postgres workspace. Layout and appearance choices are per browser/device.
 
 ## Where things live
 
 - `blackwall-admin/src/`: React 19 + Vite + Tailwind 4 + Zustand web app. `src/features/` holds pages, `src/components/common|layout|ui/` the shared components.
+- `blackwall-admin/src/mac/`: the Mac app's windowed desktop workspace. It shows the same pages from `src/features/` in its own windows.
 - `blackwall-admin/server/`: the Node server (TypeScript run directly by Node 24), providers, storage, update check.
 - `blackwall-admin/shared/`: types and validation used by both server and web (workspace records live here).
 - `blackwall-admin/desktop/`: Electron main process, shell UI and its tests.
@@ -58,6 +59,11 @@ Blake decides product questions and merges. Two builders work from GitHub issues
 - Workspace changes are additive: new fields are optional, nothing is renamed or removed, and an older saved workspace must still load. Add a test that loads an older-shape fixture whenever you add a field (see `blackwall-admin/tests/workspace.test.ts` and `planner.test.ts`).
 - Never silently lose or overwrite user data. Stale writes are rejected by revision checks; keep that behavior.
 - Data honesty: never fabricate totals, charts or connection states. Sample data is labeled as sample data.
+
+**Mac first**
+- Build and finish new features and UI changes in the Mac app's windowed workspace. The web app and the Mac's Classic view are backups: do their web-only work after Blake has tested the Mac version and calls it final. Never point Blake to either as the way to use a feature.
+- A new section is not done until it has a sidebar icon (or a tab in an app) and a window in `src/mac/desktop-workspace.tsx`, a path in `src/mac/app-for-path.ts`, and its show/hide switch in Settings. Adding it to the web sidebar alone does not reach the Mac app.
+- Blake tests with Settings → About → Update from source, which builds the app from the local checkout.
 
 **Design**
 - Follow `docs/design/BLACKWALL_DESIGN.md`. Reuse the shared components in `src/components/common|layout|ui/` instead of adding page-specific widths, footers, inputs or radii.
