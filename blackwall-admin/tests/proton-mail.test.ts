@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert"
 import { test } from "node:test"
-import { bridgeSettings, mailSend, parseMailMessage, saveMailAttachment } from "../server/providers/proton.ts"
+import { bridgeSettings, mailSend, newestUids, parseMailMessage, saveMailAttachment } from "../server/providers/proton.ts"
 import type { StoredConnection } from "../server/store.ts"
 
 const connection: StoredConnection = {
@@ -31,6 +31,18 @@ test("a MIME message exposes decoded text and attachment bytes in stable index o
   assert.equal(parsed.attachments[0].name, "report.txt")
   assert.equal(parsed.attachmentData[0].toString(), "report bytes")
   assert.equal(parsed.unread, true)
+})
+
+test("the message list follows the received date, because Bridge numbers its newest mail first", () => {
+  // As after a first sync: UID 1 is the newest synced message, older mail has higher numbers, and later arrivals are added at the end.
+  const mailbox = [
+    { uid: 1, internalDate: new Date("2026-03-03T00:00:00Z") },
+    { uid: 2, internalDate: new Date("2026-02-02T00:00:00Z") },
+    { uid: 3, internalDate: "2020-01-01T00:00:00Z" },
+    { uid: 4, internalDate: new Date("2026-04-04T00:00:00Z") },
+  ]
+  assert.deepEqual(newestUids(mailbox, 3), [4, 1, 2])
+  assert.deepEqual(newestUids([{ uid: 1 }, { uid: 2 }], 5), [2, 1])
 })
 
 test("sending validates the recipient before opening SMTP", async () => {

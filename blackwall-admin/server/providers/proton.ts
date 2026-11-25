@@ -57,15 +57,22 @@ export async function mailFolders(c: StoredConnection) {
     .map((f) => ({ path: f.path, name: f.name, specialUse: f.specialUse ?? null })))
 }
 
+/** The most recently received messages, newest first. Bridge syncs the newest mail first, so a higher UID does not mean newer. */
+export function newestUids(messages: { uid: number; internalDate?: Date | string }[], limit: number) {
+  const at = (m: { internalDate?: Date | string }) => new Date(m.internalDate ?? 0).getTime() || 0
+  return [...messages].sort((a, b) => at(b) - at(a) || b.uid - a.uid).slice(0, limit).map((m) => m.uid)
+}
+
 export async function mailList(c: StoredConnection, folder: string) {
   return withImap(c, async (client) => {
-    await client.mailboxOpen(folder, { readOnly: true })
-    const found = await client.search({ all: true }, { uid: true })
-    const uids = Array.isArray(found) ? found.sort((a, b) => a - b).slice(-100).reverse() : []
-    if (!uids.length) return []
+    const mailbox = await client.mailboxOpen(folder, { readOnly: true })
+    if (!mailbox.exists) return []
+    const dates = []
+    for await (const m of client.fetch("1:*", { uid: true, internalDate: true })) dates.push({ uid: m.uid, internalDate: m.internalDate })
+    const uids = newestUids(dates, 100)
     const messages = []
     for await (const m of client.fetch(uids.join(","), { uid: true, flags: true, envelope: true, internalDate: true, size: true }, { uid: true })) messages.push(summary(m))
-    return messages.sort((a, b) => b.uid - a.uid)
+    return messages.sort((a, b) => uids.indexOf(a.uid) - uids.indexOf(b.uid))
   })
 }
 
