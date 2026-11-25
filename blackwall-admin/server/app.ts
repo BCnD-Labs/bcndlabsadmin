@@ -18,7 +18,8 @@ import { Notifier } from "./notify.ts"
 import { collectInbox, deleteInbox, readInbox, setInboxStatus } from "./forms-inbox.ts"
 import { checkLive, publishSite } from "./site-publish.ts"
 import { handleStorage } from "./storage.ts"
-import { mailFolders, mailList, mailRead, mailSend, mailTrash, saveMailAttachment } from "./providers/proton.ts"
+import { mailAction, mailAddresses, mailFolders, mailList, mailRead, mailSend, mailTrash, saveMailAttachment } from "./providers/proton.ts"
+import { MAIL_ACTIONS, type MailActionName, type OutgoingMail } from "../shared/mail.ts"
 import type { WorkspaceStore } from "./workspace.ts"
 import type { System } from "./system.ts"
 import { MAC, type UpdatesDir, readUpdateManifest } from "./app-updates.ts"
@@ -359,16 +360,33 @@ export function createApi(opts: ApiOptions) {
       if (!c || c.status !== "ok") throw new ProviderError("Connect and test Proton Mail Bridge in Settings → Connections first", 409)
       const folder = url.searchParams.get("folder") || "INBOX"
       if (folder.length > 500 || /[\u0000-\u001f]/.test(folder)) throw new ProviderError("Invalid mail folder", 400)
-      if (parts[1] === "folders" && method === "GET") return send(res, 200, { folders: await mailFolders(c) })
-      if (parts[1] === "messages" && parts.length === 2 && method === "GET") return send(res, 200, { messages: await mailList(c, folder) })
+      if (parts[1] === "folders" && method === "GET") return send(res, 200, { folders: await mailFolders(c), addresses: mailAddresses(c) })
+      if (parts[1] === "messages" && parts.length === 2 && method === "GET") {
+        const query = (url.searchParams.get("q") ?? "").trim()
+        const page = Number(url.searchParams.get("page") ?? 0)
+        if (query.length > 200 || /[\u0000-\u001f]/.test(query) || !Number.isSafeInteger(page) || page < 0) throw new ProviderError("Invalid mail search", 400)
+        return send(res, 200, await mailList(c, folder, { query, page }))
+      }
+      if (parts[1] === "actions" && method === "POST") {
+        const body = await readJson<{ uids?: unknown; action?: unknown; target?: unknown }>(req)
+        const uids = Array.isArray(body.uids) ? body.uids : []
+        if (!uids.length || uids.length > 200 || !uids.every((n) => Number.isSafeInteger(n) && (n as number) > 0) || !MAIL_ACTIONS.includes(body.action as MailActionName)) throw new ProviderError("Invalid mail action", 400)
+        return send(res, 200, await mailAction(c, folder, uids as number[], body.action as MailActionName, typeof body.target === "string" ? body.target : undefined))
+      }
       if (parts[1] === "send" && method === "POST") {
-        const body = await readJson<{ to?: string; subject?: string; text?: string }>(req, 120_000)
-        return send(res, 200, await mailSend(c, { to: typeof body.to === "string" ? body.to : "", subject: typeof body.subject === "string" ? body.subject : "", text: typeof body.text === "string" ? body.text : "" }))
+        // 15 MB of attachments is about 20 MB once encoded.
+        const body = await readJson<Record<string, unknown>>(req, 22 * 1024 * 1024)
+        const text = (value: unknown) => (typeof value === "string" ? value : "")
+        const reply = body.reply as OutgoingMail["reply"]
+        if (reply !== undefined && !(typeof reply?.folder === "string" && reply.folder.length <= 500 && !/[\u0000-\u001f]/.test(reply.folder) && Number.isSafeInteger(reply.uid) && reply.uid > 0 && ["reply", "replyAll", "forward"].includes(reply.mode) && (reply.include === undefined || (Array.isArray(reply.include) && reply.include.length <= 100 && reply.include.every((n) => Number.isSafeInteger(n) && n >= 0))))) throw new ProviderError("Invalid reply", 400)
+        const files = Array.isArray(body.attachments) ? body.attachments : []
+        if (files.length > 50 || !files.every((f) => typeof f?.name === "string" && typeof f.mime === "string" && typeof f.data === "string")) throw new ProviderError("Invalid attachment", 400)
+        return send(res, 200, await mailSend(c, { from: text(body.from), to: text(body.to), cc: text(body.cc), bcc: text(body.bcc), subject: text(body.subject), text: text(body.text), attachments: files as OutgoingMail["attachments"], reply }))
       }
       const uid = Number(parts[2])
       if (parts[1] === "messages" && Number.isSafeInteger(uid) && uid > 0) {
         if (parts.length === 3 && method === "GET") {
-          const { attachmentData: _attachmentData, ...message } = await mailRead(c, folder, uid)
+          const { attachmentData: _attachmentData, messageId: _messageId, references: _references, ...message } = await mailRead(c, folder, uid)
           return send(res, 200, message)
         }
         if (parts[3] === "trash" && method === "POST") return send(res, 200, await mailTrash(c, folder, uid))

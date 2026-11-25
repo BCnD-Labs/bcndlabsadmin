@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert"
 import { test } from "node:test"
-import { bridgeSettings, mailSend, newestUids, parseMailMessage, saveMailAttachment } from "../server/providers/proton.ts"
+import { bridgeSettings, mailAction, mailSend, mailTransports, newestUids, outgoing, parseMailMessage, previewText, saveMailAttachment } from "../server/providers/proton.ts"
 import type { StoredConnection } from "../server/store.ts"
 
 const connection: StoredConnection = {
@@ -95,4 +95,48 @@ test("mail API reports an unconnected Bridge without pretending mail is availabl
     await new Promise<void>((resolve) => server.close(() => resolve()))
     rmSync(root, { recursive: true, force: true })
   }
+})
+
+test("outgoing mail takes several recipients, only your own sender, and refuses bad input", () => {
+  const mine = { ...connection, config: { username: "person@example.com", from: "me@domain.test" } }
+  const made = outgoing(mine, { to: '"Lee, Jordan" <j@x.test>, sam@y.test', cc: "c@z.test", subject: "Hi", text: "" })
+  assert.equal(made.from, "me@domain.test")
+  assert.deepEqual(made.to, [{ name: "Lee, Jordan", address: "j@x.test" }, { name: "", address: "sam@y.test" }])
+  assert.equal(outgoing(mine, { from: "person@example.com", to: "a@b.test", subject: "Hi", text: "x" }).from, "person@example.com")
+  assert.throws(() => outgoing(mine, { from: "someone@else.test", to: "a@b.test", subject: "Hi", text: "x" }), /own addresses/)
+  assert.throws(() => outgoing(mine, { to: "a@b.test, nope", subject: "Hi", text: "x" }), /recipient/)
+  assert.throws(() => outgoing(mine, { to: "", subject: "Hi", text: "x" }), /recipient/)
+  assert.throws(() => outgoing(mine, { to: "a@b.test", subject: "Hi\r\nBcc: x@y.test", text: "x" }), /subject/)
+  assert.throws(() => outgoing(mine, { to: "a@b.test", subject: "Big", text: "", attachments: [{ name: "a.bin", mime: "x/y", data: Buffer.alloc(16 * 1024 * 1024).toString("base64") }] }), /15 MB/)
+})
+
+test("a preview line is the readable start of a message, even when only part of it was read", async () => {
+  const source = Buffer.from("Subject: Hi\r\nContent-Type: text/html; charset=utf-8\r\n\r\n<html><body><p>Hello <b>there</b>, see https://example.com/a/very/long/link now.</p><p>More")
+  assert.equal(await previewText(source), "Hello there, see now. More")
+  const withFile = Buffer.from('Subject: Hi\r\nContent-Type: multipart/mixed; boundary="b"\r\n\r\n--b\r\nContent-Type: text/html; charset=utf-8\r\n\r\n<p>Café <b>notes</b></p>\r\n--b\r\nContent-Type: application/pdf\r\nContent-Disposition: attachment; filename="a.pdf"\r\n\r\nx\r\n--b--\r\n')
+  assert.equal(await previewText(withFile), "Café notes")
+  assert.match((await parseMailMessage({ seq: 1, uid: 1, flags: new Set() }, withFile)).text, /Café notes/)
+})
+
+test("actions mark or move mail, never delete it, and refuse a folder that is not there", async () => {
+  const calls: unknown[][] = []
+  const original = mailTransports.imap
+  const folder = (path: string, specialUse?: string) => ({ path, name: path, specialUse, flags: new Set<string>() })
+  const record = (name: string) => async (...args: unknown[]) => { calls.push([name, ...args]); return true }
+  mailTransports.imap = (() => ({ usable: true, connect: async () => {}, logout: async () => {}, mailboxOpen: async () => ({}),
+    list: async () => [folder("INBOX"), folder("Archive", "\\Archive"), folder("Trash", "\\Trash"), folder("Labels/Work")],
+    messageFlagsAdd: record("add"), messageFlagsRemove: record("remove"), messageMove: record("move"), messageCopy: record("copy"),
+  })) as unknown as typeof original
+  try {
+    await mailAction(connection, "INBOX", [1, 2], "archive")
+    await mailAction(connection, "INBOX", [3], "star")
+    await mailAction(connection, "INBOX", [4], "unread")
+    await mailAction(connection, "INBOX", [5], "label", "Labels/Work")
+    assert.deepEqual(calls, [["move", "1,2", "Archive", { uid: true }], ["add", "3", ["\\Flagged"], { uid: true }], ["remove", "4", ["\\Seen"], { uid: true }], ["copy", "5", "Labels/Work", { uid: true }]])
+    await assert.rejects(mailAction(connection, "INBOX", [1], "spam"), /nothing was moved/)
+    await assert.rejects(mailAction(connection, "INBOX", [1], "move", "Folders/Gone"), /nothing was moved/)
+    await assert.rejects(mailAction(connection, "Trash", [1], "trash"), /Already in/)
+    await assert.rejects(mailAction(connection, "INBOX", [1], "label", "Archive"), /not a label/)
+    assert.equal(calls.length, 4)
+  } finally { mailTransports.imap = original }
 })
