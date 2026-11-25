@@ -17,6 +17,8 @@ test("the app's security policy lets it show its own object-URL pictures but loa
     const directive = (name: string) => csp.split(";").map((d) => d.trim()).find((d) => d.startsWith(`${name} `)) ?? ""
     assert.match(directive("img-src"), /\bblob:/, "library pictures are shown from blob: addresses")
     assert.ok(!directive("img-src").includes("http"), "no outside image hosts")
+    assert.match(directive("frame-src"), /\bblob:/, "attachment PDF previews use local object URLs")
+    assert.ok(!directive("frame-src").includes("http"), "frames cannot load outside sites")
     assert.equal(directive("script-src"), "", "scripts fall back to default-src 'self'")
     assert.match(directive("default-src"), /^default-src 'self'$/)
     assert.ok(!/unsafe-eval|unsafe-inline/.test(directive("default-src")) && !csp.includes("jsdelivr"))

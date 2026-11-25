@@ -18,6 +18,7 @@ import { Notifier } from "./notify.ts"
 import { collectInbox, deleteInbox, readInbox, setInboxStatus } from "./forms-inbox.ts"
 import { checkLive, publishSite } from "./site-publish.ts"
 import { handleStorage } from "./storage.ts"
+import { mailFolders, mailList, mailRead, mailSend, mailTrash, saveMailAttachment } from "./providers/proton.ts"
 import type { WorkspaceStore } from "./workspace.ts"
 import type { System } from "./system.ts"
 import { MAC, type UpdatesDir, readUpdateManifest } from "./app-updates.ts"
@@ -350,6 +351,52 @@ export function createApi(opts: ApiOptions) {
     // --- Mikoshi storage (Nextcloud over WebDAV) --------------------------------
     if (parts[0] === "storage") {
       return handleStorage(store, req, res, url, parts.slice(1).join("/"), method, (status, body) => send(res, status, body), (limit) => readJson(req, limit))
+    }
+
+    // Proton Bridge stays on server loopback. Message bytes never pass through workspace storage.
+    if (parts[0] === "mail") {
+      const c = await store.firstOk("proton")
+      if (!c || c.status !== "ok") throw new ProviderError("Connect and test Proton Mail Bridge in Settings → Connections first", 409)
+      const folder = url.searchParams.get("folder") || "INBOX"
+      if (folder.length > 500 || /[\u0000-\u001f]/.test(folder)) throw new ProviderError("Invalid mail folder", 400)
+      if (parts[1] === "folders" && method === "GET") return send(res, 200, { folders: await mailFolders(c) })
+      if (parts[1] === "messages" && parts.length === 2 && method === "GET") return send(res, 200, { messages: await mailList(c, folder) })
+      if (parts[1] === "send" && method === "POST") {
+        const body = await readJson<{ to?: string; subject?: string; text?: string }>(req, 120_000)
+        return send(res, 200, await mailSend(c, { to: typeof body.to === "string" ? body.to : "", subject: typeof body.subject === "string" ? body.subject : "", text: typeof body.text === "string" ? body.text : "" }))
+      }
+      const uid = Number(parts[2])
+      if (parts[1] === "messages" && Number.isSafeInteger(uid) && uid > 0) {
+        if (parts.length === 3 && method === "GET") {
+          const { attachmentData: _attachmentData, ...message } = await mailRead(c, folder, uid)
+          return send(res, 200, message)
+        }
+        if (parts[3] === "trash" && method === "POST") return send(res, 200, await mailTrash(c, folder, uid))
+        const index = Number(parts[4])
+        if (parts[3] === "attachments" && Number.isSafeInteger(index) && index >= 0) {
+          const message = await mailRead(c, folder, uid)
+          const attachment = message.attachments[index]
+          const data = message.attachmentData[index]
+          if (!attachment || !data) throw new ProviderError("Attachment no longer exists", 404)
+          if (parts.length === 5 && method === "GET") {
+            res.statusCode = 200
+            res.setHeader("Content-Type", "application/octet-stream")
+            res.setHeader("Content-Length", data.length)
+            res.setHeader("Cache-Control", "no-store")
+            res.setHeader("X-Content-Type-Options", "nosniff")
+            return res.end(data)
+          }
+          if (parts[5] === "save" && method === "POST") {
+            const nextcloud = await store.firstOk("nextcloud")
+            if (!nextcloud || nextcloud.status !== "ok") throw new ProviderError("Connect Nextcloud in Settings → Connections first", 409)
+            const body = await readJson<{ folder?: string }>(req)
+            if (typeof body.folder !== "string") throw new ProviderError("Choose a Nextcloud folder", 400)
+            const path = await saveMailAttachment(nextcloud, body.folder, attachment, data)
+            return send(res, 201, { path })
+          }
+        }
+      }
+      return send(res, 404, { error: "Unknown mail action" })
     }
 
     // --- CMS sites: build and commit ------------------------------------------

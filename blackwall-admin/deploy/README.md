@@ -111,3 +111,13 @@ DATABASE_URL=postgres://blackwall:<password>@<server>:5432/blackwall BLACKWALL_S
 ```
 
 (Postgres isn't published by default. Run this inside the app container, or re-enter the connections in the panel.)
+
+## Proton Mail Bridge
+
+The Mail page uses the `bridge` companion container. Enable it with `COMPOSE_PROFILES=proton` in the stack environment; existing stacks continue without it. It shares the app's network namespace so Blackwall reaches Bridge at `127.0.0.1`; its IMAP/SMTP ports are not published. The container installs a checksum-pinned [official Proton Bridge release](https://github.com/ProtonMail/proton-bridge/releases), with a GPG/Pass keychain in the persistent `bridge-data` volume.
+
+Set `BRIDGE_KEY_PASSPHRASE` in the stack environment to a separate random value (`openssl rand -hex 32`) and keep it in your password manager. If the passphrase changes without rekeying the GPG key, Bridge cannot unlock its saved account. On first start the container waits in Bridge's CLI. On Mikoshi, run `docker attach blackwall-bridge-1`, enter `login`, complete Proton's sign-in and 2FA, enter `info` to obtain the generated IMAP/SMTP credentials, then enter `exit`. The container then starts Bridge as an unattended service. Enter the generated credentials in Blackwall → Settings → Connections → Proton Mail Bridge. Do not enter the Proton account password there.
+
+If you leave the CLI before login, remove `.bridge-ready` from the `bridge-data` volume and restart `bridge` to repeat onboarding. Keep Bridge's connection mode on STARTTLS. The companion service must restart when `app` is recreated; Compose's `depends_on.restart` handles explicit stack updates. Mail stored in Proton remains there if the local Bridge cache is lost, but Bridge would need to sign in again.
+
+For domain DNS and a full send/receive/attachment check, see [the Proton Mail setup guide](../../docs/proton-mail.md).

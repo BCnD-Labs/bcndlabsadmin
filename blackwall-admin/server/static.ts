@@ -22,7 +22,7 @@ const SECURITY_HEADERS: Record<string, string> = {
   "Content-Security-Policy":
     // blob: lets the app show your own pictures, which it fetches from Nextcloud and displays as object URLs it makes in the browser (never from outside).
     // Google Fonts hosts for styles and fonts only (never scripts): the site editor's preview shows a site's chosen fonts.
-    "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'",
+    "default-src 'self'; img-src 'self' data: blob:; frame-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'",
 }
 
 /** Serves the built panel (dist/) with an SPA fallback to index.html. */

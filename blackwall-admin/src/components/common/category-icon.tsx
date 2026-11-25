@@ -1,4 +1,4 @@
-import { BarChart3, Bell, Server, CalendarDays, Cloud, FileText, FolderKanban, FolderOpen, FileType2, GitBranch, Globe, GraduationCap, LayoutDashboard, ListChecks, Megaphone, NotebookPen, Plug, StickyNote, type LucideIcon } from "lucide-react"
+import { BarChart3, Bell, Server, CalendarDays, Cloud, FileText, FolderKanban, FolderOpen, FileType2, GitBranch, Globe, GraduationCap, LayoutDashboard, ListChecks, Mail, Megaphone, NotebookPen, Plug, StickyNote, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export const CATEGORIES = {
@@ -20,6 +20,7 @@ export const CATEGORIES = {
   azure: Cloud,
   cloudflare: Globe,
   social: Megaphone,
+  mail: Mail,
 } satisfies Record<string, LucideIcon>
 
 export type Category = keyof typeof CATEGORIES
