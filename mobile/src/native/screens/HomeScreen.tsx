@@ -146,7 +146,7 @@ function Line({ title, subtitle, icon, date, due, tag, chips = [], detail, selec
   return <View style={[s.item, selected && s.itemOn, nested && s.itemNested]}>
     <View style={s.row}>
       {onComplete ? <TaskCheck checked={false} compact onPress={onComplete} label={`Complete ${title}`} /> : parts ? <View style={s.dateBlock} accessible accessibilityLabel={`${parts.month} ${parts.day}`}><Text style={s.dateMonth}>{parts.month}</Text><Text style={s.dateDay}>{parts.day}</Text></View> : <View style={s.simpleIcon}><Icon name={icon ?? "document-text-outline"} size={17} tint={c.accent} /></View>}
-      <Pressable onPress={onSelect} style={s.rowBody} accessibilityRole="button" accessibilityState={{ selected }} accessibilityLabel={selected ? `Selected ${title}. Use Open to edit` : `Preview ${title}`}><Text style={s.rowTitle} numberOfLines={2}>{title}</Text>{subtitle ? <Text style={s.meta} numberOfLines={1}>{subtitle}</Text> : null}</Pressable>
+      <Pressable onPress={selected ? onOpen : onSelect} style={s.rowBody} accessibilityRole="button" accessibilityState={{ selected }} accessibilityLabel={selected ? `Open ${title} to edit` : `Preview ${title}`}><Text style={s.rowTitle} numberOfLines={2}>{title}</Text>{subtitle ? <Text style={s.meta} numberOfLines={1}>{subtitle}</Text> : null}</Pressable>
       {due ? <Text style={[s.dueText, due.tone === "today" && s.dueToday, due.tone === "overdue" && s.dueOver]} numberOfLines={1}>{due.text}</Text> : null}
       {tag ? <View style={s.tagCol}><PropChip kind={tag.kind} value={tag.text} /></View> : null}
     </View>
