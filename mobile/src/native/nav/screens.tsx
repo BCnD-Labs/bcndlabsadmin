@@ -10,10 +10,11 @@ import { NotesScreen } from "../screens/NotesScreen.tsx"
 import { PlannerScreen } from "../screens/PlannerScreen.tsx"
 import { WebsiteScreen } from "../screens/WebsiteScreen.tsx"
 import { SocialScreen } from "../screens/SocialScreen.tsx"
+import type { NavigationTarget } from "./target.ts"
 import type { ScreenKey } from "./destinations.ts"
 
 /** `focused` is false while a screen that stays mounted in the background (see KEEP_ALIVE) is not the one on show. */
-export type ScreenProps = { onOpenSettings: () => void; onNavigate?: (screen: ScreenKey) => void; focused?: boolean; /** Opens Web view on a page, for the things native screens don't do yet. */ onUseWeb?: (path?: string) => void }
+export type ScreenProps = { onOpenSettings: () => void; onNavigate?: (screen: ScreenKey, target?: NavigationTarget) => void; navigationTarget?: NavigationTarget; focused?: boolean; /** Opens Web view on a page, for the things native screens don't do yet. */ onUseWeb?: (path?: string) => void }
 
 /** Every screen the shell can show, by destination key. A new screen needs an entry here and in destinations.ts. */
 export const SCREENS: Record<ScreenKey, ComponentType<ScreenProps>> = {

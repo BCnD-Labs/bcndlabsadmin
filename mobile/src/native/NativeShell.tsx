@@ -6,6 +6,7 @@ import { WorkspaceProvider } from "./data/WorkspaceProvider.tsx"
 import { PillNav } from "./nav/PillNav.tsx"
 import { QuickAdd, QuickAddProvider } from "./quickadd/QuickAdd.tsx"
 import { KEEP_ALIVE, findDestination, type ScreenKey } from "./nav/destinations.ts"
+import { targetFor, type NavigationTarget } from "./nav/target.ts"
 import { SCREENS } from "./nav/screens.tsx"
 import { SnackHost } from "./snack/SnackHost.tsx"
 import type { NativeHomeProps } from "./index.ts"
@@ -13,6 +14,11 @@ import type { NativeHomeProps } from "./index.ts"
 /** Shared screen host with a persistent floating pill, an anchored More menu and the quick-add button. */
 export function NativeShell({ address, onOpenSettings, onUseWeb }: NativeHomeProps) {
   const [current, setCurrent] = useState<ScreenKey>("home")
+  const [navigationTarget, setNavigationTarget] = useState<NavigationTarget>()
+  function navigate(screen: ScreenKey, target?: NavigationTarget) {
+    setNavigationTarget(targetFor(screen, target))
+    setCurrent(screen)
+  }
   const [moreOpen, setMoreOpen] = useState(false)
   const Current = SCREENS[current]
   // Screens in KEEP_ALIVE stay mounted (hidden) after their first visit, so e.g. open Mikoshi tools keep their place.
@@ -34,11 +40,11 @@ export function NativeShell({ address, onOpenSettings, onUseWeb }: NativeHomePro
       <QuickAddProvider>
       <View style={styles.root}>
         <View style={styles.page} accessibilityElementsHidden={moreOpen} importantForAccessibility={moreOpen ? "no-hide-descendants" : "auto"}>
-          {KEEP_ALIVE.includes(current) ? null : <CrashGuard key={current} scope="screen" label={findDestination(current).label} onUseWeb={onUseWeb} onOpenSettings={onOpenSettings}><Current onOpenSettings={onOpenSettings} onNavigate={setCurrent} onUseWeb={onUseWeb} /></CrashGuard>}
-          {kept.map((k) => { const Kept = SCREENS[k]; return <View key={k} style={k === current ? styles.page : styles.hidden}><CrashGuard scope="screen" label={findDestination(k).label} onUseWeb={onUseWeb} onOpenSettings={onOpenSettings}><Kept onOpenSettings={onOpenSettings} onNavigate={setCurrent} onUseWeb={onUseWeb} focused={k === current} /></CrashGuard></View> })}
+          {KEEP_ALIVE.includes(current) ? null : <CrashGuard key={current} scope="screen" label={findDestination(current).label} onUseWeb={onUseWeb} onOpenSettings={onOpenSettings}><Current onOpenSettings={onOpenSettings} onNavigate={navigate} navigationTarget={targetFor(current, navigationTarget)} onUseWeb={onUseWeb} /></CrashGuard>}
+          {kept.map((k) => { const Kept = SCREENS[k]; return <View key={k} style={k === current ? styles.page : styles.hidden}><CrashGuard scope="screen" label={findDestination(k).label} onUseWeb={onUseWeb} onOpenSettings={onOpenSettings}><Kept onOpenSettings={onOpenSettings} onNavigate={navigate} navigationTarget={k === current ? targetFor(k, navigationTarget) : undefined} onUseWeb={onUseWeb} focused={k === current} /></CrashGuard></View> })}
           <SnackHost />
         </View>
-        <PillNav current={current} moreOpen={moreOpen} onMoreOpen={setMoreOpen} onSelect={setCurrent} />
+        <PillNav current={current} moreOpen={moreOpen} onMoreOpen={setMoreOpen} onSelect={screen => navigate(screen)} />
         <QuickAdd />
       </View>
       </QuickAddProvider>

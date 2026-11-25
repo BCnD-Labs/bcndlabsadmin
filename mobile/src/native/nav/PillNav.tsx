@@ -2,13 +2,12 @@ import { useEffect, useRef, useState } from "react"
 import { Animated, Easing, Keyboard, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native"
 import { plannerColor as c } from "../planner-theme.ts"
 import { Icon } from "../ui.tsx"
-import { navLayout } from "./layout.ts"
+import { FAB_EDGE, navLayout, pillHeight } from "./layout.ts"
 import { DESTINATIONS, PRIMARY, type Destination, type ScreenKey } from "./destinations.ts"
 import { useReduceMotion } from "./useReduceMotion.ts"
 
 const ACCENT = c.accent
-const HEIGHT = 42
-const EDGE = 12
+const EDGE = FAB_EDGE
 const INSET = 3
 
 type Props = {
@@ -30,7 +29,7 @@ export function PillNav({ current, moreOpen, onMoreOpen, onSelect }: Props) {
   const primary = PRIMARY.some((d) => d.key === current)
   const selected = moreOpen || !primary ? "more" : current
   const { barWidth, barLeft } = navLayout(width)
-  const barHeight = Math.max(HEIGHT, 24 + Math.min(fontScale, 2) * 14)
+  const barHeight = pillHeight(fontScale)
   const selectedSlot = slots[selected]
 
   useEffect(() => {

@@ -1,3 +1,4 @@
+import type { ScreenProps } from "../nav/screens.tsx"
 import { useState } from "react"
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native"
 import type { Collections } from "../../lib/shared.ts"
@@ -21,10 +22,10 @@ const statusTint: Record<Project["status"], string> = { active: c.green, planned
 const projectTint: Record<Project["color"], string> = { teal: "#26a69a", amber: c.amber, red: "#ef5350", slate: "#90a4ae" }
 
 /** Native projects show saved records and repository links, without invented GitHub activity. */
-export function DevScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
+export function DevScreen({ onOpenSettings, navigationTarget }: ScreenProps) {
   const { data, status, message, refreshing, refresh } = useWorkspace()
   const [filter, setFilter] = useState<"all" | Project["status"]>("all")
-  const [open, setOpen] = useState<string | null>(null)
+  const [open, setOpen] = useState<string | null>(() => navigationTarget?.screen === "dev" ? navigationTarget.projectId : null)
   const [editor, setEditor] = useState<Project | "new" | null>(null)
   const [notice, setNotice] = useState("")
   const projects = data?.projects.filter(p => filter === "all" || p.status === filter) ?? []

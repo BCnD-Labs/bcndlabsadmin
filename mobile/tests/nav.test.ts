@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
 import { DESTINATIONS, NAV_CLEARANCE, PRIMARY, findDestination } from "../src/native/nav/destinations.ts"
+import { FAB, FAB_EDGE, pillHeight } from "../src/native/nav/layout.ts"
 
 test("destination keys are unique", () => {
   assert.equal(new Set(DESTINATIONS.map((d) => d.key)).size, DESTINATIONS.length)
@@ -24,7 +25,10 @@ test("findDestination falls back to the first destination", () => {
   assert.equal(findDestination("nope" as never).key, DESTINATIONS[0].key)
 })
 
-test("screens keep at least 88 of bottom clearance for the bubble", () => {
-  assert.ok(NAV_CLEARANCE >= 88)
+test("screen clearance covers both controls at maximum font scale with breathing room", () => {
+  assert.equal(pillHeight(1), 42)
+  assert.equal(pillHeight(2), 52)
+  assert.equal(pillHeight(3), 52)
+  assert.equal(NAV_CLEARANCE, FAB_EDGE + Math.max(FAB, pillHeight(2)) + 10)
 })
 
