@@ -34,18 +34,86 @@ export function bridgeSettings(c: StoredConnection) {
   }
 }
 
-async function withImap<T>(c: StoredConnection, fn: (client: ImapFlow) => Promise<T>): Promise<T> {
+/**
+ * Every Mac, Android and web screen reaches Bridge through here, and Bridge does real work on each login (it unlocks the
+ * account's keys). So all mail requests share one IMAP session, one at a time, kept for a few seconds between them
+ * instead of logging in again for each folder list, page, message and attachment. A password Bridge rejects is not
+ * retried for a minute, because repeated failed logins are what get a Bridge client locked out.
+ */
+export const BRIDGE_IDLE_MS = 15_000
+export const BRIDGE_REJECTED_MS = 60_000
+const REJECTED = "Bridge rejected the saved sign-in. In Bridge run `info`, copy its current username and password into Settings → Connections, and test it."
+const UNREACHABLE = "Proton Mail Bridge isn't answering. It may be restarting or still syncing; try again in a minute."
+
+type Pooled = { key: string; client: ImapFlow; make: typeof mailTransports.imap; timer?: ReturnType<typeof setTimeout> }
+let pooled: Pooled | null = null
+let queue: Promise<unknown> = Promise.resolve()
+const rejectedUntil = new Map<string, number>()
+
+const sessionKey = (c: StoredConnection, port: number) => `${c.id}:${c.updatedAt}:${port}`
+
+/** Turns the mail libraries' errors into messages that say what to do. Anything else passes through. */
+export function bridgeError(error: unknown): unknown {
+  if (error instanceof ProviderError) return error
+  const e = error as { authenticationFailed?: boolean; code?: string; responseText?: string } | undefined
+  if (e?.authenticationFailed || e?.code === "EAUTH") return new ProviderError(REJECTED, 409)
+  if (e?.code && ["ECONNREFUSED", "ECONNRESET", "ETIMEDOUT", "ESOCKET", "ECONNECTION", "ETIMEOUT", "NoConnection", "EPIPE"].includes(e.code)) return new ProviderError(UNREACHABLE, 503)
+  return error
+}
+
+function drop(entry: Pooled | null) {
+  if (!entry) return
+  if (entry.timer) clearTimeout(entry.timer)
+  if (pooled === entry) pooled = null
+  if (entry.client.usable) void entry.client.logout().catch(() => entry.client.close())
+  else entry.client.close()
+}
+
+/** Forget what is known about the saved sign-in, so the next request really tries Bridge (used when the connection is tested). */
+export function resetBridgeSession() { drop(pooled); rejectedUntil.clear() }
+
+async function session<T>(c: StoredConnection, key: string, fn: (client: ImapFlow) => Promise<T>): Promise<T> {
   const s = bridgeSettings(c)
-  const client = mailTransports.imap({ host: s.host, port: s.imapPort, secure: false, doSTARTTLS: true,
-    tls: { rejectUnauthorized: false }, auth: { user: s.username, pass: s.password },
-    logger: false, connectionTimeout: 10_000, socketTimeout: 30_000, disableAutoIdle: true })
-  try {
-    await client.connect()
-    return await fn(client)
-  } finally {
-    if (client.usable) await client.logout().catch(() => {})
-    else client.close()
+  let entry = pooled
+  if (entry && (entry.key !== key || entry.make !== mailTransports.imap || !entry.client.usable)) { drop(entry); entry = null }
+  if (entry?.timer) clearTimeout(entry.timer)
+  if (!entry) {
+    const client = mailTransports.imap({ host: s.host, port: s.imapPort, secure: false, doSTARTTLS: true,
+      tls: { rejectUnauthorized: false }, auth: { user: s.username, pass: s.password },
+      logger: false, connectionTimeout: 10_000, socketTimeout: 30_000, disableAutoIdle: true })
+    entry = { key, client, make: mailTransports.imap }
+    const current = entry
+    // A dropped socket must not crash the server; the next request simply logs in again.
+    client.on?.("error", () => drop(current))
+    client.on?.("close", () => { if (pooled === current) pooled = null })
+    try { await client.connect() } catch (error) {
+      drop(current)
+      const mapped = bridgeError(error)
+      if (mapped instanceof ProviderError && mapped.status === 409) rejectedUntil.set(key, Date.now() + BRIDGE_REJECTED_MS)
+      throw mapped
+    }
   }
+  const current = entry
+  pooled = null
+  try {
+    const result = await fn(current.client)
+    pooled = current
+    current.timer = setTimeout(() => drop(current), BRIDGE_IDLE_MS)
+    current.timer.unref?.()
+    return result
+  } catch (error) {
+    // Whatever went wrong, the next request starts from a clean session.
+    drop(current)
+    throw bridgeError(error)
+  }
+}
+
+async function withImap<T>(c: StoredConnection, fn: (client: ImapFlow) => Promise<T>): Promise<T> {
+  const key = sessionKey(c, bridgeSettings(c).imapPort)
+  if ((rejectedUntil.get(key) ?? 0) > Date.now()) throw new ProviderError(REJECTED, 409)
+  const run = queue.then(() => session(c, key, fn))
+  queue = run.catch(() => {})
+  return run
 }
 
 const summary = (m: FetchMessageObject): MailSummary => ({
@@ -215,15 +283,16 @@ export async function mailSend(c: StoredConnection, input: OutgoingMail) {
   try {
     const sent = await transport.sendMail(message)
     return { sent: true, id: sent.messageId as string }
-  } finally { transport.close() }
+  } catch (error) { throw bridgeError(error) } finally { transport.close() }
 }
 
 export async function testProton(c: StoredConnection): Promise<TestResult> {
   const s = bridgeSettings(c)
+  resetBridgeSession()
   const folders = await mailFolders(c)
   const transport = nodemailer.createTransport({ host: s.host, port: s.smtpPort, secure: false, requireTLS: true,
     tls: { rejectUnauthorized: false }, auth: { user: s.username, pass: s.password }, connectionTimeout: 10_000 })
-  try { await transport.verify() } finally { transport.close() }
+  try { await transport.verify() } catch (error) { throw bridgeError(error) } finally { transport.close() }
   return { status: "ok", account: s.username, summary: [{ label: "Mail folders", value: String(folders.length) }, { label: "Send", value: "Ready" }] }
 }
 

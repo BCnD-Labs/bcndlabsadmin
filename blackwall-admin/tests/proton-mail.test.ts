@@ -140,3 +140,30 @@ test("actions mark or move mail, never delete it, and refuse a folder that is no
     assert.equal(calls.length, 4)
   } finally { mailTransports.imap = original }
 })
+
+test("mail requests share one Bridge login, run one at a time, and never retry a rejected password for a minute", async () => {
+  const { bridgeError, resetBridgeSession, mailFolders } = await import("../server/providers/proton.ts")
+  const original = mailTransports.imap
+  resetBridgeSession()
+  let logins = 0, running = 0, overlap = 0
+  const good = () => { logins++; return { usable: true, connect: async () => {}, logout: async () => {}, close: () => {}, on: () => {},
+    list: async () => { running++; overlap = Math.max(overlap, running); await new Promise((r) => setTimeout(r, 5)); running--; return [] } } }
+  mailTransports.imap = good as unknown as typeof original
+  try {
+    await Promise.all([mailFolders(connection), mailFolders(connection), mailFolders(connection)])
+    await mailFolders(connection)
+    assert.equal(logins, 1); assert.equal(overlap, 1)
+    resetBridgeSession()
+    let attempts = 0
+    mailTransports.imap = (() => ({ usable: false, on: () => {}, close: () => {}, connect: async () => { attempts++; throw Object.assign(new Error("Command failed"), { authenticationFailed: true }) } })) as unknown as typeof original
+    const rejected = { ...connection, id: "rejected" }
+    await assert.rejects(mailFolders(rejected), /Bridge rejected the saved sign-in/)
+    await assert.rejects(mailFolders(rejected), /Bridge rejected the saved sign-in/)
+    assert.equal(attempts, 1)
+    // Saving the connection again (new updatedAt) or testing it tries Bridge afresh.
+    await assert.rejects(mailFolders({ ...rejected, updatedAt: "2026-01-02" }), /rejected/)
+    assert.equal(attempts, 2)
+  } finally { mailTransports.imap = original; resetBridgeSession() }
+  assert.equal((bridgeError(Object.assign(new Error("x"), { code: "ECONNREFUSED" })) as { status: number }).status, 503)
+  assert.equal((bridgeError(Object.assign(new Error("x"), { code: "EAUTH" })) as { status: number }).status, 409)
+})
