@@ -6,6 +6,7 @@ import { todayKey } from "../data/sync-view.ts"
 import { KeyboardFrame, TextInput } from "../editing/keyboard.tsx"
 import { PropChip } from "../kit/PropChip.tsx"
 import { FAB, FAB_EDGE } from "../nav/layout.ts"
+import { SIDEBAR_WIDTH } from "../nav/orientation.ts"
 import { plannerColor as c } from "../planner-theme.ts"
 import { DraftEditor } from "../screens/DraftEditor.tsx"
 import { LearningReflectionSheet } from "../screens/LearningReflections.tsx"
@@ -39,7 +40,7 @@ export function useQuickAddDue(due: string | undefined, active: boolean) {
 }
 
 /** The round + at the bottom right, its menu, and the editors it opens. Lives in the shell so every screen shares it. */
-export function QuickAdd() {
+export function QuickAdd({ sidebar = false }: { sidebar?: boolean }) {
   const { data, status } = useWorkspace()
   const dueCtx = useContext(DueContext)
   const [menu, setMenu] = useState(false)
@@ -73,7 +74,7 @@ export function QuickAdd() {
 
   return <>
     {menu ? <Pressable style={StyleSheet.absoluteFill} onPress={() => setMenu(false)} accessibilityRole="button" accessibilityLabel="Close quick add menu" /> : null}
-    {menu ? <View style={s.menu} accessibilityViewIsModal>
+    {menu ? <View style={[s.menu, sidebar && s.menuSide]} accessibilityViewIsModal>
       <ScrollView keyboardShouldPersistTaps="handled" style={s.menuScroll}>
         {QUICK_GROUPS.map(group => <View key={group}>
           <Text style={s.group} accessibilityRole="header">{group.toUpperCase()}</Text>
@@ -85,7 +86,7 @@ export function QuickAdd() {
       </ScrollView>
       {notice ? <Text style={s.notice} accessibilityLiveRegion="polite">{notice}</Text> : null}
     </View> : null}
-    {keyboard && !menu ? null : <Pressable onPress={open} hitSlop={4} style={({ pressed }) => [s.fab, (menu || pressed) && s.fabOn]} accessibilityRole="button" accessibilityLabel="Quick add" accessibilityState={{ expanded: menu }}>
+    {keyboard && !menu ? null : <Pressable onPress={open} hitSlop={4} style={({ pressed }) => [s.fab, sidebar && s.fabSide, (menu || pressed) && s.fabOn]} accessibilityRole="button" accessibilityLabel="Quick add" accessibilityState={{ expanded: menu }}>
       <Icon name={menu ? "close" : "add"} size={22} tint={c.accent} />
     </Pressable>}
     {data && (active === "task" || active === "event") ? <TaskSheet key={active} editor={{ mode: "create", kind: active, due: active === "event" ? dueCtx.get() ?? today : dueCtx.get() }} data={data} today={today} onClose={close} /> : null}
@@ -122,6 +123,8 @@ function ReflectOn({ data, onClose, onPick }: { data: NonNullable<ReturnType<typ
 const s = StyleSheet.create({
   // Same surface as the nav pill: panel fill, thin line, accent icon.
   fab: { position: "absolute", right: FAB_EDGE, bottom: FAB_EDGE, width: FAB, height: FAB, borderRadius: FAB / 2, alignItems: "center", justifyContent: "center", backgroundColor: c.panel, borderWidth: 1, borderColor: c.line, elevation: 10, shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 12, shadowOffset: { width: 0, height: 5 } },
+  // In landscape the button sits in the sidebar's foot and its menu opens beside it.
+  fabSide: { right: undefined, left: (SIDEBAR_WIDTH - FAB) / 2 }, menuSide: { right: undefined, left: SIDEBAR_WIDTH + 8, bottom: FAB_EDGE },
   fabOn: { backgroundColor: c.selected, borderColor: c.selectedBorder },
   menu: { position: "absolute", right: FAB_EDGE, bottom: FAB_EDGE + FAB + 8, width: 232, maxHeight: "70%", borderRadius: 14, padding: 4, backgroundColor: c.raised, borderWidth: 1, borderColor: c.border, elevation: 14, shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 12, shadowOffset: { width: 0, height: 5 } },
   menuScroll: { flexGrow: 0 }, group: { color: c.muted, fontSize: 10, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.6, paddingHorizontal: 8, paddingTop: 7, paddingBottom: 3 },
