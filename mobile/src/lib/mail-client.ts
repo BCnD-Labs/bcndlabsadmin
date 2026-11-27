@@ -1,4 +1,4 @@
-import type { MailFolder, MailMessage, MailPageResult, MailSummary } from "./shared.ts"
+import { MAIL_ACTIONS, type MailFolder, type MailMessage, type MailPageResult, type MailSummary, type OutgoingMail } from "./shared.ts"
 
 /** Native Mail only talks to Blackwall's authenticated server API. */
 export type MailResult<T> = { ok: true; value: T } | { ok: false; kind: "signed-out" | "not-connected" | "too-large" | "error"; message: string }
@@ -45,7 +45,10 @@ export function parseMessage(v: unknown): MailMessage | null {
   return attachments.some((a) => !a) ? null : { ...summary, cc: v.cc, replyTo: v.replyTo, text: v.text, html: v.html, attachments: attachments as MailMessage["attachments"] }
 }
 
-export async function mailRequest<T>(url: string, parse: (v: unknown) => T | null, fetchImpl: typeof fetch = fetch, body?: unknown): Promise<MailResult<T>> {
+type Reader<T> = (response: Response) => Promise<T | null>
+type Options = { body?: unknown; /** What a 409 means for this call; the default is "Bridge isn't connected". */ conflict?: string; limit?: number }
+
+async function call<T>(url: string, read: Reader<T>, fetchImpl: typeof fetch, { body, conflict, limit }: Options = {}): Promise<MailResult<T>> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
   try {
@@ -55,18 +58,61 @@ export async function mailRequest<T>(url: string, parse: (v: unknown) => T | nul
         credentials: "include", headers: { Accept: "application/json", "X-Blackwall": "1", ...(body === undefined ? {} : { "Content-Type": "application/json" }) } })
     } catch { return { ok: false, kind: "error", message: "Couldn't reach Blackwall. Check the connection and try again." } }
     if (response.status === 401) return { ok: false, kind: "signed-out", message: "Sign in under Settings to see mail." }
-    if (response.status === 409) return { ok: false, kind: "not-connected", message: "Connect and test Proton Mail Bridge in Blackwall Settings → Connections." }
-    if (response.status === 413) return { ok: false, kind: "too-large", message: "This message is too large to open in Blackwall." }
+    if (response.status === 409) return conflict ? { ok: false, kind: "error", message: conflict } : { ok: false, kind: "not-connected", message: "Connect and test Proton Mail Bridge in Blackwall Settings → Connections." }
+    if (response.status === 413) return { ok: false, kind: "too-large", message: "This is too large for Blackwall to handle here." }
     if (!response.ok) return { ok: false, kind: "error", message: `Blackwall answered ${response.status}. Try again.` }
+    if (limit !== undefined && Number(response.headers.get("Content-Length") ?? 0) > limit) return { ok: false, kind: "too-large", message: "This attachment is too large to open on the phone." }
     try {
-      const value = parse(await response.json())
+      const value = await read(response)
       return value === null ? { ok: false, kind: "error", message: "Blackwall returned an unexpected mail response." } : { ok: true, value }
     } catch { return { ok: false, kind: "error", message: "Blackwall returned an unreadable mail response." } }
   } finally { clearTimeout(timer) }
 }
+
+export const mailRequest = <T>(url: string, parse: (v: unknown) => T | null, fetchImpl: typeof fetch = fetch, options?: Options) =>
+  call(url, async (response) => parse(await response.json()), fetchImpl, options)
 
 export const fetchMailFolders = (address: string, fetchImpl?: typeof fetch) => mailRequest(mailUrl(address, "folders"), parseFolders, fetchImpl)
 export const fetchMailPage = (address: string, folder: string, page: number, query: string, fetchImpl?: typeof fetch) =>
   mailRequest(mailUrl(address, "messages", folder, { page, q: query }), parsePage, fetchImpl)
 export const fetchMailMessage = (address: string, folder: string, uid: number, fetchImpl?: typeof fetch) =>
   mailRequest(mailUrl(address, `messages/${uid}`, folder), parseMessage, fetchImpl)
+
+export type MailActionBody = { uids: number[]; action: (typeof MAIL_ACTIONS)[number]; target?: string }
+/** Read, star, archive, spam, Trash, inbox, move and label. Nothing here deletes mail for good. */
+export const runMailAction = (address: string, folder: string, body: MailActionBody, fetchImpl?: typeof fetch) =>
+  mailRequest(mailUrl(address, "actions", folder), () => true, fetchImpl, { body, conflict: "That folder isn't available, or the message is already there. Nothing was moved." })
+
+export const sendMail = (address: string, mail: OutgoingMail, fetchImpl?: typeof fetch) =>
+  mailRequest(mailUrl(address, "send"), (v) => (record(v) && v.sent === true ? true : null), fetchImpl, { body: mail })
+
+export const trashMail = (address: string, folder: string, uid: number, fetchImpl?: typeof fetch) =>
+  mailRequest(mailUrl(address, `messages/${uid}/trash`, folder), () => true, fetchImpl, { body: {}, conflict: "Proton's Trash folder wasn't found. Nothing was moved." })
+
+/** Raw attachment bytes, refused up front when the server says they are bigger than `limit`. */
+export const fetchAttachment = (address: string, folder: string, uid: number, index: number, limit: number, fetchImpl: typeof fetch = fetch) =>
+  call(mailUrl(address, `messages/${uid}/attachments/${index}`, folder), async (r) => { const bytes = new Uint8Array(await r.arrayBuffer()); return bytes.length > limit ? null : bytes }, fetchImpl, { limit })
+
+export const saveAttachment = (address: string, folder: string, uid: number, index: number, to: string, fetchImpl?: typeof fetch) =>
+  mailRequest(mailUrl(address, `messages/${uid}/attachments/${index}/save`, folder), (v) => (record(v) && typeof v.path === "string" ? v.path : null), fetchImpl,
+    { body: { folder: to }, conflict: "A file with that name is already in that folder, or Nextcloud isn't connected. Choose another folder." })
+
+const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+/** Base64 for a data: address, since Hermes has no Buffer. */
+export function toBase64(bytes: Uint8Array) {
+  let out = ""
+  for (let i = 0; i < bytes.length; i += 3) {
+    const n = (bytes[i] << 16) | ((bytes[i + 1] ?? 0) << 8) | (bytes[i + 2] ?? 0)
+    out += B64[(n >> 18) & 63] + B64[(n >> 12) & 63] + (i + 1 < bytes.length ? B64[(n >> 6) & 63] : "=") + (i + 2 < bytes.length ? B64[n & 63] : "=")
+  }
+  return out
+}
+
+/** What the phone can show inline: pictures and plain text under a size cap. Everything else opens in Web view. */
+export const PREVIEW_LIMIT = 5 * 1024 * 1024
+export function previewKind(a: { mime: string; name: string; size: number }): "image" | "text" | null {
+  if (a.size > PREVIEW_LIMIT) return null
+  if (/^image\/(png|jpe?g|gif|webp)$/i.test(a.mime)) return "image"
+  if (a.size <= 200_000 && (/^text\/(plain|csv|markdown)$/i.test(a.mime) || /\.(txt|md|csv|log)$/i.test(a.name))) return "text"
+  return null
+}

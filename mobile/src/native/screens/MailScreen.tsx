@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { BackHandler, Pressable, StyleSheet, Text, TextInput, View } from "react-native"
-import { displayName, type MailMessage, type MailSummary } from "../../lib/shared.ts"
+import { displayName, type MailMessage, type MailSummary, type ReplyMode } from "../../lib/shared.ts"
+import { blankDraft, replyDraft, type MailDraft } from "../../lib/mail-compose.ts"
 import { fetchMailFolders, fetchMailMessage, fetchMailPage, type MailFolders, type MailResult } from "../../lib/mail-client.ts"
 import { mono } from "../../theme.ts"
 import { Tabs } from "../kit/Tabs.tsx"
@@ -11,6 +12,8 @@ import { selectedItem } from "../selected-item.ts"
 import { Icon } from "../ui.tsx"
 import { WorkspacePage, WorkspaceSection } from "../WorkspacePage.tsx"
 import { SmallButton } from "./learning/LearningControls.tsx"
+import { MailCompose } from "./MailCompose.tsx"
+import { MailReader } from "./MailReader.tsx"
 
 type Page = Awaited<ReturnType<typeof fetchMailPage>>
 const when = (value: string) => { const date = new Date(value); return Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString([], { month: "short", day: "numeric" }) }
@@ -29,6 +32,9 @@ export function MailScreen({ onOpenSettings, onUseWeb }: ScreenProps) {
   const [message, setMessage] = useState<MailResult<MailMessage> | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
+  const [listKey, setListKey] = useState(0)
+  const [composing, setComposing] = useState<MailDraft | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
   useEffect(() => {
     if (!address) return
@@ -48,7 +54,7 @@ export function MailScreen({ onOpenSettings, onUseWeb }: ScreenProps) {
     setList(null)
     void fetchMailPage(address, folder, page, query).then(result => { if (active) { setList(result); setRefreshing(false) } })
     return () => { active = false }
-  }, [address, folders?.ok, folder, page, query, refreshKey])
+  }, [address, folders?.ok, folder, page, query, refreshKey, listKey])
 
   useEffect(() => {
     if (!address || open === null) return
@@ -59,13 +65,19 @@ export function MailScreen({ onOpenSettings, onUseWeb }: ScreenProps) {
   }, [address, folder, open, refreshKey])
 
   useEffect(() => {
-    if (open === null) return
+    if (open === null || composing) return
     const sub = BackHandler.addEventListener("hardwareBackPress", () => { setOpen(null); return true })
     return () => sub.remove()
-  }, [open])
+  }, [open, composing])
 
   const switchFolder = (path: string) => { setFolder(path); setPage(0); setSelected(null); setOpen(null) }
   const search = () => { setQuery(draft.trim()); setPage(0); setSelected(null); setOpen(null) }
+  const mine = folders?.ok ? folders.value.addresses : []
+  const reply = (mode: ReplyMode) => { if (message?.ok) setComposing(replyDraft(mode, message.value, folder, mine, new Date(message.value.date).toLocaleString())) }
+  const changed = (leaves: boolean, patch?: Partial<Pick<MailMessage, "unread" | "starred">>) => {
+    if (leaves) { setOpen(null); setSelected(null); setNotice("Done.") } else if (patch) setMessage(m => (m?.ok ? { ok: true, value: { ...m.value, ...patch } } : m))
+    setListKey(n => n + 1)
+  }
   const refresh = () => { setRefreshing(true); setRefreshKey(n => n + 1) }
   const folderItems = folders?.ok ? folders.value.folders.map(f => ({ key: f.path, label: f.name, count: f.unread || undefined })) : []
   const currentFolder = folders?.ok ? folders.value.folders.find(f => f.path === folder) : undefined
@@ -76,17 +88,19 @@ export function MailScreen({ onOpenSettings, onUseWeb }: ScreenProps) {
     {!address ? <Text style={s.empty}>Set the Blackwall server address under Settings to see mail.</Text> : null}
     {folders && !folders.ok ? <View style={s.status}><Text style={s.error}>{folders.message}</Text>{folders.kind === "not-connected" && onUseWeb ? <SmallButton label="Connect Bridge" onPress={() => onUseWeb("/settings/connections")} /> : null}</View> : null}
     {!folders && address ? <Text style={s.empty}>Loading mail folders…</Text> : null}
-    {folders?.ok ? <>
+    {folders?.ok && address && composing ? <MailCompose address={address} start={composing} addresses={mine} onClose={() => setComposing(null)} onSent={() => { setComposing(null); setNotice("Message sent."); setListKey(n => n + 1) }} /> : null}
+    {folders?.ok && !composing ? <>
       <Tabs items={folderItems} value={folder} onChange={switchFolder} label="Mail folders" scrollable />
+      {notice ? <Text style={s.meta} accessibilityLiveRegion="polite" onPress={() => setNotice(null)}>{notice}</Text> : null}
       {open === null ? <>
-        <View style={s.search}><TextInput value={draft} onChangeText={setDraft} onSubmitEditing={search} returnKeyType="search" placeholder="Search this folder" placeholderTextColor={c.muted} style={s.input} accessibilityLabel="Search this mail folder" /><SmallButton label="Search" onPress={search} />{query ? <SmallButton label="Clear" onPress={() => { setDraft(""); setQuery(""); setPage(0) }} /> : null}</View>
+        <View style={s.search}><TextInput value={draft} onChangeText={setDraft} onSubmitEditing={search} returnKeyType="search" placeholder="Search this folder" placeholderTextColor={c.muted} style={s.input} accessibilityLabel="Search this mail folder" /><SmallButton label="Search" onPress={search} /><SmallButton label="Write" onPress={() => setComposing(blankDraft(mine[0] ?? ""))} />{query ? <SmallButton label="Clear" onPress={() => { setDraft(""); setQuery(""); setPage(0) }} /> : null}</View>
         <WorkspaceSection title={query ? `Results in ${currentFolder?.name ?? folder}` : currentFolder?.name ?? folder} icon="mail-outline" count={list?.ok ? String(list.value.total) : undefined} flush>
           {!list ? <Text style={s.empty}>Loading messages…</Text> : !list.ok ? <Text style={s.error}>{list.message}</Text> : !rows.length ? <Text style={s.empty}>{query ? "No matching messages." : "This folder is empty."}</Text> : rows.map(row => <MessageRow key={row.uid} row={row} selected={selected === row.uid} onPress={() => selected === row.uid ? setOpen(row.uid) : setSelected(row.uid)} onOpen={() => setOpen(row.uid)} />)}
         </WorkspaceSection>
         {list?.ok && list.value.total > list.value.pageSize ? <View style={s.paging}>{page > 0 ? <SmallButton label="Previous" onPress={() => setPage(n => n - 1)} /> : <View />}<Text style={s.meta}>Page {page + 1} of {Math.ceil(list.value.total / list.value.pageSize)}</Text>{(page + 1) * list.value.pageSize < list.value.total ? <SmallButton label="Next" onPress={() => setPage(n => n + 1)} /> : <View />}</View> : null}
       </> : <>
         <SmallButton label="← Messages" onPress={() => setOpen(null)} />
-        {!message ? <Text style={s.empty}>Opening message…</Text> : !message.ok ? <Text style={s.error}>{message.message}</Text> : <Reader message={message.value} onUseWeb={onUseWeb} />}
+        {!message ? <Text style={s.empty}>Opening message…</Text> : !message.ok ? <Text style={s.error}>{message.message}</Text> : <MailReader address={address!} folder={folder} folders={folders.value.folders} message={message.value} onChanged={changed} onReply={reply} onUseWeb={onUseWeb} />}
       </>}
     </> : null}
   </WorkspacePage>
@@ -103,22 +117,11 @@ function MessageRow({ row, selected, onPress, onOpen }: { row: MailSummary; sele
   </View>
 }
 
-function Reader({ message, onUseWeb }: { message: MailMessage; onUseWeb?: ScreenProps["onUseWeb"] }) {
-  const body = message.text.slice(0, 200_000)
-  return <WorkspaceSection title={message.subject} icon="mail-open-outline">
-    <Text style={s.sender}>{message.from}</Text><Text style={s.meta}>To: {message.to}</Text>{message.cc ? <Text style={s.meta}>Cc: {message.cc}</Text> : null}<Text style={s.meta}>{new Date(message.date).toLocaleString()}</Text>
-    <View style={s.body}><Text style={s.bodyText} selectable>{body || "This message has no plain-text version."}</Text></View>
-    {message.text.length > body.length ? <Text style={s.meta}>Showing the first 200,000 characters. Open Web view for the rest.</Text> : null}
-    {message.attachments.length ? <View style={s.attachments}><Text style={s.heading}>Attachments</Text>{message.attachments.map(a => <Text key={a.index} style={s.meta}>📎 {a.name}</Text>)}<Text style={s.meta}>Open in Web view to preview or save attachments.</Text></View> : null}
-    {(message.html && !body || message.text.length > body.length || message.attachments.length > 0) && onUseWeb ? <SmallButton label="Open in Web view" onPress={() => onUseWeb("/mail")} /> : null}
-  </WorkspaceSection>
-}
-
 const s = StyleSheet.create({
   status: { gap: 8 }, search: { flexDirection: "row", alignItems: "center", gap: 6 },
   input: { flex: 1, minWidth: 0, minHeight: 36, paddingHorizontal: 10, color: c.text, backgroundColor: c.panel, borderWidth: 1, borderColor: c.line },
   empty: { color: c.muted, fontSize: 12, padding: 10 }, error: { color: c.errorText, fontSize: 12, padding: 10 }, meta: { color: c.muted, fontSize: 11 },
   row: { minHeight: 62, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 9, paddingVertical: 6 }, unread: { width: 6, height: 6, borderRadius: 3, backgroundColor: c.accent }, spacer: { width: 6 },
   rowBody: { flex: 1, minWidth: 0, gap: 2 }, line: { flexDirection: "row", justifyContent: "space-between", gap: 6 }, sender: { color: c.text2, fontSize: 13, flexShrink: 1 }, bold: { color: c.text, fontWeight: "700" }, date: { color: c.muted, fontSize: 10, fontFamily: mono }, subject: { color: c.text2, fontSize: 12 }, snippet: { color: c.muted, fontSize: 11 },
-  paging: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, body: { paddingVertical: 12 }, bodyText: { color: c.text2, fontSize: 13, lineHeight: 20 }, attachments: { borderTopWidth: 1, borderColor: c.line, paddingVertical: 8, gap: 5 }, heading: { color: c.text, fontWeight: "700", fontSize: 12 },
+  paging: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
 })
