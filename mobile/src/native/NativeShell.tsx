@@ -4,6 +4,8 @@ import { CrashGuard } from "../components/CrashGuard.tsx"
 import { color } from "../theme.ts"
 import { WorkspaceProvider } from "./data/WorkspaceProvider.tsx"
 import { PillNav } from "./nav/PillNav.tsx"
+import { SideNav } from "./nav/SideNav.tsx"
+import { useLayoutMode } from "./nav/useLayoutMode.ts"
 import { QuickAdd, QuickAddProvider } from "./quickadd/QuickAdd.tsx"
 import { KEEP_ALIVE, findDestination, type ScreenKey } from "./nav/destinations.ts"
 import { targetFor, type NavigationTarget } from "./nav/target.ts"
@@ -20,6 +22,9 @@ export function NativeShell({ address, onOpenSettings, onUseWeb }: NativeHomePro
     setCurrent(screen)
   }
   const [moreOpen, setMoreOpen] = useState(false)
+  const { landscape } = useLayoutMode()
+  // The More menu belongs to the bottom bar; rotating to landscape closes it.
+  useEffect(() => { if (landscape) setMoreOpen(false) }, [landscape])
   const Current = SCREENS[current]
   // Screens in KEEP_ALIVE stay mounted (hidden) after their first visit, so e.g. open Mikoshi tools keep their place.
   const [seen, setSeen] = useState<ScreenKey[]>([])
@@ -38,14 +43,15 @@ export function NativeShell({ address, onOpenSettings, onUseWeb }: NativeHomePro
   return (
     <WorkspaceProvider key={address} address={address}>
       <QuickAddProvider>
-      <View style={styles.root}>
-        <View style={styles.page} accessibilityElementsHidden={moreOpen} importantForAccessibility={moreOpen ? "no-hide-descendants" : "auto"}>
+      <View style={[styles.root, landscape && styles.rootLandscape]}>
+        {landscape ? <SideNav key="side" current={current} onSelect={screen => navigate(screen)} /> : null}
+        <View key="page" style={styles.page} accessibilityElementsHidden={moreOpen} importantForAccessibility={moreOpen ? "no-hide-descendants" : "auto"}>
           {KEEP_ALIVE.includes(current) ? null : <CrashGuard key={current} scope="screen" label={findDestination(current).label} onUseWeb={onUseWeb} onOpenSettings={onOpenSettings}><Current onOpenSettings={onOpenSettings} onNavigate={navigate} navigationTarget={targetFor(current, navigationTarget)} onUseWeb={onUseWeb} /></CrashGuard>}
           {kept.map((k) => { const Kept = SCREENS[k]; return <View key={k} style={k === current ? styles.page : styles.hidden}><CrashGuard scope="screen" label={findDestination(k).label} onUseWeb={onUseWeb} onOpenSettings={onOpenSettings}><Kept onOpenSettings={onOpenSettings} onNavigate={navigate} navigationTarget={k === current ? targetFor(k, navigationTarget) : undefined} onUseWeb={onUseWeb} focused={k === current} /></CrashGuard></View> })}
           <SnackHost />
         </View>
-        <PillNav current={current} moreOpen={moreOpen} onMoreOpen={setMoreOpen} onSelect={screen => navigate(screen)} />
-        <QuickAdd />
+        {landscape ? null : <PillNav current={current} moreOpen={moreOpen} onMoreOpen={setMoreOpen} onSelect={screen => navigate(screen)} />}
+        <QuickAdd sidebar={landscape} />
       </View>
       </QuickAddProvider>
     </WorkspaceProvider>
@@ -54,7 +60,8 @@ export function NativeShell({ address, onOpenSettings, onUseWeb }: NativeHomePro
 
 const styles = StyleSheet.create({
   root: { flex: 1, position: "relative", backgroundColor: color.ground },
-  page: { flex: 1 },
+  rootLandscape: { flexDirection: "row" },
+  page: { flex: 1, minWidth: 0 },
   hidden: { display: "none" },
 })
 
