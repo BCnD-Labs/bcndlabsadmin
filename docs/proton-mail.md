@@ -11,3 +11,11 @@ Blackwall connects to Proton Mail Bridge over IMAP and SMTP on **the server's lo
 5. Open **Mail**. Send a message to another address, reply from there with a small PDF or image attachment, read it, preview the attachment, and use **Save to Nextcloud**. Move a test message to Trash and confirm it appears in Proton's Trash folder. You can test with your existing Proton address before switching the domain's MX records.
 
 The existing **Email (SMTP)** connection is for Blackwall notification delivery. It is separate from the Proton mailbox connection.
+
+## If Mail stops working or Bridge asks you to sign in again
+
+Blackwall shows "Bridge rejected the saved sign-in" when Bridge refuses the username or password saved in Settings → Connections, and "Proton Mail Bridge isn't answering" when it can't reach Bridge at all (it may be restarting or syncing).
+
+- **Rejected sign-in.** On Mikoshi run `docker logs --tail 100 blackwall-bridge-1` and look for a login, keychain or `gpg` error. Then `docker attach blackwall-bridge-1`, enter `info` and compare Bridge's generated username and password with the saved connection. If the account is not listed, enter `login` again, then `info`, paste the new values into Settings → Connections and test. Blackwall stops trying a rejected password for a minute so repeated attempts can't lock it out; testing or saving the connection tries again straight away.
+- **Not answering.** Check `docker ps` for the Bridge container. It restarts together with the app container, so give it a minute after an update.
+- Blackwall uses one shared Bridge session for all of Mail, one request at a time, so the Mac, Android and web Mail screens together never open more than one login.
